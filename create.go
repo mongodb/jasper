@@ -18,19 +18,19 @@ type CreateOptions struct {
 	OverrideEnviron  bool
 }
 
-func MakeCreationOptions(cmdStr string) *CreateOptions {
+func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 	args, err := shlex.Split(cmdStr)
 	if err != nil {
-		return errors.Wrap(err, "problem parsing shell command")
+		return nil, errors.Wrap(err, "problem parsing shell command")
 	}
 
 	if len(args) == 0 {
-		return errors.Errorf("'%s' did not parse to valid args array", cmdStr)
+		return nil, errors.Errorf("'%s' did not parse to valid args array", cmdStr)
 	}
 
 	return &CreateOptions{
 		Args: args,
-	}
+	}, nil
 }
 
 func (opts *CreateOptions) Validate() error {
@@ -57,8 +57,9 @@ func (opts *CreateOptions) Validate() error {
 	return nil
 }
 
-func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Command, error) {
-	if err := opts.Validate(); err != nil {
+func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
+	var err error
+	if err = opts.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}
 

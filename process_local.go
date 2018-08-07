@@ -27,21 +27,21 @@ func (p *localProcess) Info(ctx context.Context) ProcessInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	return p.proc.Info()
+	return p.proc.Info(ctx)
 }
 
 func (p *localProcess) Running(ctx context.Context) bool {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	return p.proc.Running()
+	return p.proc.Running(ctx)
 }
 
 func (p *localProcess) Complete(ctx context.Context) bool {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	return p.proc.Complete()
+	return p.proc.Complete(ctx)
 }
 
 func (p *localProcess) Signal(ctx context.Context, sig syscall.Signal) error {
@@ -55,13 +55,13 @@ func (p *localProcess) Wait(ctx context.Context) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	return errors.WithStack(p.proc.Wait(ctx, sig))
+	return errors.WithStack(p.proc.Wait(ctx))
 }
 
 type basicProcess struct {
 	id       string
 	hostname string
-	opts     CreateloOptions
+	opts     CreateOptions
 	cmd      *exec.Cmd
 }
 
@@ -71,7 +71,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		return nil, errors.Wrap(err, "problem finding hostname when creating process")
 	}
 
-	cmd, err := opts.Resolve()
+	cmd, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
@@ -82,10 +82,10 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 
 	return &basicProcess{
 		hostname: hn,
-		id:       uuid.NewV4().String(),
+		id:       uuid.Must(uuid.NewV4()).String(),
 		opts:     *opts,
 		cmd:      cmd,
-	}
+	}, nil
 }
 
 func (p *basicProcess) ID() string { return p.id }
@@ -115,7 +115,7 @@ func (p *basicProcess) Complete(ctx context.Context) bool {
 		return false
 	}
 
-	return p.cmd.Pid == -1
+	return p.cmd.Process.Pid == -1
 }
 
 func (p *basicProcess) Running(ctx context.Context) bool {
@@ -156,7 +156,11 @@ func (p *basicProcess) Wait(ctx context.Context) error {
 
 		select {
 		case sig <- p.cmd.Wait():
-		case sig <- ctx.Done():
+		case <-ctx.Done():
+			select {
+			case sig <- ctx.Err():
+			default:
+			}
 		}
 
 		return

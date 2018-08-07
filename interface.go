@@ -67,7 +67,7 @@ func (m *localProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	proc, err := manager.Create(ctx, opts)
+	proc, err := m.manager.Create(ctx, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -82,7 +82,7 @@ func (m *localProcessManager) List(ctx context.Context, f Filter) ([]Process, er
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	procs, err := manager.List(ctx, f)
+	procs, err := m.manager.List(ctx, f)
 	return procs, errors.WithStack(err)
 }
 
@@ -90,7 +90,7 @@ func (m *localProcessManager) Get(ctx context.Context, id string) (Process, erro
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	proc, err := manager.Get(ctx, id)
+	proc, err := m.manager.Get(ctx, id)
 	return proc, errors.WithStack(err)
 }
 
@@ -116,7 +116,7 @@ func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 	return proc, nil
 }
 
-func (m *basicProcessManager) List(ctx context.Context, f filter) ([]Process, error) {
+func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, error) {
 	out := []Process{}
 
 	for _, proc := range m.procs {
@@ -126,16 +126,15 @@ func (m *basicProcessManager) List(ctx context.Context, f filter) ([]Process, er
 
 		info := proc.Info(ctx)
 
-		switch f {
-		case Terminated && info.Complete:
+		switch {
+		case f == Terminated && info.Complete:
+		case f == Running && info.IsRunning:
 			continue
-		case Running && info.IsRunning:
+		case f == Successful && !info.Successful:
 			continue
-		case Successful && !info.Successful:
+		case f == Failed && info.Successful:
 			continue
-		case Failed && info.Successful:
-			continue
-		case All:
+		case f == All:
 		}
 
 		out = append(out, proc)
@@ -161,7 +160,7 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 	if len(m.procs) == 0 {
 		return nil
 	}
-	procs, err := m.List(ctx)
+	procs, err := m.List(ctx, All)
 	if err != nil {
 		return errors.WithStack(err)
 	}

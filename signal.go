@@ -24,14 +24,14 @@ func KillBlocking(ctx context.Context, p Process) error {
 }
 
 func TerminateBlocking(ctx context.Context, p Process) error {
-	if err := errors.WithStack(Teriminate(ctx, p)); err != nil {
+	if err := errors.WithStack(Terminate(ctx, p)); err != nil {
 		return errors.WithStack(err)
 	}
 
 	return errors.WithStack(p.Wait(ctx))
 }
 
-func TerminateAll(ctx cotnext.Context, procs []Process) error {
+func TerminateAll(ctx context.Context, procs []Process) error {
 	catcher := grip.NewBasicCatcher()
 
 	for _, proc := range procs {
@@ -45,7 +45,7 @@ func TerminateAll(ctx cotnext.Context, procs []Process) error {
 	return catcher.Resolve()
 }
 
-func KillAll(ctx cotnext.Context, procs []Process) error {
+func KillAll(ctx context.Context, procs []Process) error {
 	catcher := grip.NewBasicCatcher()
 
 	for _, proc := range procs {

@@ -9,7 +9,7 @@ import (
 
 func TestOutputOptions(t *testing.T) {
 	opts := OutputOptions{}
-	assert.NoError(opts.Validate())
+	assert.NoError(t, opts.Validate())
 
 	stdout := bytes.NewBuffer([]byte{})
 	stderr := bytes.NewBuffer([]byte{})
