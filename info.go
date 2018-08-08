@@ -7,5 +7,6 @@ type ProcessInfo struct {
 	IsRunning  bool
 	Successful bool
 	Complete   bool
+	Timeout    bool
 	Options    CreateOptions
 }

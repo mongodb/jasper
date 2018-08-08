@@ -22,9 +22,11 @@ type CreateOptions struct {
 
 	OnSuccess []*CreateOptions
 	OnFailure []*CreateOptions
+	OnTimeout []*CreateOptions
 
 	//
 	closers []func()
+	started bool
 }
 
 func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {

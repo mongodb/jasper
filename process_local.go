@@ -110,6 +110,8 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		return nil, errors.Wrap(err, "problem starting command")
 	}
 
+	opts.started = true
+
 	p := &basicProcess{
 		hostname: hn,
 		id:       uuid.Must(uuid.NewV4()).String(),
