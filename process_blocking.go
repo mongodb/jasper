@@ -6,16 +6,20 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
 type blockingProcess struct {
-	id   string
-	info *ProcessInfo
-	host string
-	opts CreateOptions
-	ops  chan func(*exec.Cmd)
+	id       string
+	info     *ProcessInfo
+	host     string
+	opts     CreateOptions
+	ops      chan func(*exec.Cmd)
+	tags     map[string]struct{}
+	triggers ProcessTriggerSequence
 }
 
 func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
@@ -33,9 +37,15 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		id:   uuid.Must(uuid.NewV4()).String(),
 		host: hn,
 		opts: *opts,
+		tags: make(map[string]struct{}),
 		ops:  make(chan func(*exec.Cmd)),
 	}
-	go p.reactor(start, cmd)
+
+	for _, t := range opts.Tags {
+		p.Tag(t)
+	}
+
+	go p.reactor(ctx, cmd)
 	return p, nil
 }
 
@@ -49,7 +59,7 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 	for {
 		select {
 		case err := <-signal:
-			p.info = &ProcessInfo{
+			info := ProcessInfo{
 				ID:         p.id,
 				Options:    p.opts,
 				Host:       p.host,
@@ -57,12 +67,18 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				IsRunning:  false,
 				Successful: cmd.ProcessState.Success(),
 			}
+			grip.Debug(message.WrapError(err, message.Fields{
+				"info":         info,
+				"num_triggers": len(p.triggers),
+			}))
 
+			p.info = &info
+			p.triggers.Run(info)
 			return
 		case <-ctx.Done():
 			cmd.Process.Kill()
 
-			p.info = &ProcessInfo{
+			info := ProcessInfo{
 				ID:         p.id,
 				Options:    p.opts,
 				Host:       p.host,
@@ -70,7 +86,8 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				IsRunning:  false,
 				Successful: false,
 			}
-
+			p.info = &info
+			p.triggers.Run(info)
 			return
 		case op := <-p.ops:
 			op(cmd)
@@ -95,7 +112,7 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 			IsRunning: cmd.Process.Pid > 0,
 		}
 		close(out)
-	}()
+	}
 
 	select {
 	case <-ctx.Done():
@@ -142,4 +159,70 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 	}
 
 	return errors.WithStack(<-out)
+}
+
+func (p *blockingProcess) RegisterTrigger(trigger ProcessTrigger) error {
+	if p.info != nil {
+		return errors.New("cannot register triggers after process completes")
+	}
+
+	if trigger == nil {
+		return errors.New("cannot register nil trigger")
+	}
+
+	p.triggers = append(p.triggers, trigger)
+
+	return nil
+}
+
+func (p *blockingProcess) Wait(ctx context.Context) error {
+	out := make(chan error)
+
+	if p.info != nil {
+		return errors.New("cannot register triggers after process completes")
+	}
+
+	waiter := func(cmd *exec.Cmd) {
+		select {
+		case <-ctx.Done():
+			out <- errors.New("operation canceled")
+			close(out)
+		default:
+
+		}
+	}
+
+	for {
+		select {
+		case p.ops <- waiter:
+			continue
+		case <-ctx.Done():
+			return errors.New("wait operation canceled")
+		case err := <-out:
+			return errors.WithStack(err)
+		}
+	}
+}
+
+func (p *blockingProcess) Tag(t string) {
+	_, ok := p.tags[t]
+	if ok {
+		return
+	}
+
+	p.tags[t] = struct{}{}
+	p.opts.Tags = append(p.opts.Tags, t)
+}
+
+func (p *blockingProcess) ResetTags() {
+	p.tags = make(map[string]struct{})
+	p.opts.Tags = []string{}
+}
+
+func (p *blockingProcess) GetTags() []string {
+	out := []string{}
+	for t := range p.tags {
+		out = append(out, t)
+	}
+	return out
 }

@@ -51,6 +51,34 @@ func (p *localProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	return errors.WithStack(p.proc.Signal(ctx, sig))
 }
 
+func (p *localProcess) Tag(t string) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	p.proc.Tag(t)
+}
+
+func (p *localProcess) ResetTags() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	p.proc.ResetTags()
+}
+
+func (p *localProcess) GetTags() []string {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.proc.GetTags()
+}
+
+func (p *localProcess) RegisterTrigger(trigger ProcessTrigger) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	return errors.WithStack(p.proc.RegisterTrigger(trigger))
+}
+
 func (p *localProcess) Wait(ctx context.Context) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -63,6 +91,8 @@ type basicProcess struct {
 	hostname string
 	opts     CreateOptions
 	cmd      *exec.Cmd
+	tags     map[string]struct{}
+	triggers ProcessTriggerSequence
 }
 
 func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
@@ -80,12 +110,19 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		return nil, errors.Wrap(err, "problem starting command")
 	}
 
-	return &basicProcess{
+	p := &basicProcess{
 		hostname: hn,
 		id:       uuid.Must(uuid.NewV4()).String(),
 		opts:     *opts,
 		cmd:      cmd,
-	}, nil
+		tags:     make(map[string]struct{}),
+	}
+
+	for _, t := range opts.Tags {
+		p.Tag(t)
+	}
+
+	return p, nil
 }
 
 func (p *basicProcess) ID() string { return p.id }
@@ -156,6 +193,7 @@ func (p *basicProcess) Wait(ctx context.Context) error {
 
 		select {
 		case sig <- p.cmd.Wait():
+			p.triggers.Run(p.Info(ctx))
 		case <-ctx.Done():
 			select {
 			case sig <- ctx.Err():
@@ -172,4 +210,41 @@ func (p *basicProcess) Wait(ctx context.Context) error {
 	case err := <-sig:
 		return errors.WithStack(err)
 	}
+}
+
+func (p *basicProcess) RegisterTrigger(trigger ProcessTrigger) error {
+	if p.cmd != nil || p.cmd.Process.Pid == -1 {
+		return errors.New("cannot register trigger for complete project")
+	}
+
+	if trigger == nil {
+		return errors.New("cannot register nil trigger")
+	}
+
+	p.triggers = append(p.triggers, trigger)
+
+	return nil
+}
+
+func (p *basicProcess) Tag(t string) {
+	_, ok := p.tags[t]
+	if ok {
+		return
+	}
+
+	p.tags[t] = struct{}{}
+	p.opts.Tags = append(p.opts.Tags, t)
+}
+
+func (p *basicProcess) ResetTags() {
+	p.tags = make(map[string]struct{})
+	p.opts.Tags = []string{}
+}
+
+func (p *basicProcess) GetTags() []string {
+	out := []string{}
+	for t := range p.tags {
+		out = append(out, t)
+	}
+	return out
 }

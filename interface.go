@@ -9,6 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO
+//   - process tests
+//   - manager tests
+//   - helpers to configure output
+//   - REST interface
+//   - gRPC interface
+
 type Process interface {
 	ID() string
 	Info(context.Context) ProcessInfo
@@ -16,22 +23,18 @@ type Process interface {
 	Complete(context.Context) bool
 	Signal(context.Context, syscall.Signal) error
 	Wait(context.Context) error
-}
+	RegisterTrigger(ProcessTrigger) error
 
-type ProcessInfo struct {
-	ID         string
-	Host       string
-	PID        int
-	IsRunning  bool
-	Successful bool
-	Complete   bool
-	Options    CreateOptions
+	Tag(string)
+	ResetTags()
+	GetTags() []string
 }
 
 // Manager provides a basic, high level process management interface
 type Manager interface {
 	Create(context.Context, *CreateOptions) (Process, error)
 	List(context.Context, Filter) ([]Process, error)
+	Group(context.Context, string) ([]Process, error)
 	Get(context.Context, string) (Process, error)
 	Close(context.Context) error
 }
@@ -101,6 +104,14 @@ func (m *localProcessManager) Close(ctx context.Context) error {
 	return errors.WithStack(m.manager.Close(ctx))
 }
 
+func (m *localProcessManager) Group(ctx context.Context, name string) ([]Process, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	procs, err := m.manager.Group(ctx, name)
+	return procs, errors.WithStack(err)
+}
+
 type basicProcessManager struct {
 	procs map[string]Process
 }
@@ -127,8 +138,9 @@ func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, er
 		info := proc.Info(ctx)
 
 		switch {
-		case f == Terminated && info.Complete:
-		case f == Running && info.IsRunning:
+		case f == Terminated && !info.Complete:
+			continue
+		case f == Running && !info.IsRunning:
 			continue
 		case f == Successful && !info.Successful:
 			continue
@@ -175,5 +187,31 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 		return errors.WithStack(KillAll(killCtx, procs))
 	}
 
+	for _, p := range m.procs {
+		info := p.Info(ctx)
+		for _, c := range info.Options.closers {
+			c()
+		}
+	}
+
 	return nil
+}
+
+func (m *basicProcessManager) Group(ctx context.Context, name string) ([]Process, error) {
+	out := []Process{}
+	for _, proc := range m.procs {
+		if ctx.Err() != nil {
+			return nil, errors.New("request canceled")
+		}
+
+		if sliceContains(proc.GetTags(), name) {
+			out = append(out, proc)
+		}
+	}
+
+	if len(out) == 0 {
+		return nil, errors.Errorf("no jobs tagged '%s'", name)
+	}
+
+	return out, nil
 }

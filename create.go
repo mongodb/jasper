@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/google/shlex"
 	"github.com/pkg/errors"
@@ -16,6 +17,14 @@ type CreateOptions struct {
 	WorkingDirectory string
 	Output           OutputOptions
 	OverrideEnviron  bool
+	Timeout          time.Duration
+	Tags             []string
+
+	OnSuccess []*CreateOptions
+	OnFailure []*CreateOptions
+
+	//
+	closers []func()
 }
 
 func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
@@ -36,6 +45,10 @@ func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 func (opts *CreateOptions) Validate() error {
 	if len(opts.Args) == 0 {
 		return errors.New("invalid command, must specify at least one argument")
+	}
+
+	if opts.Timeout > 0 && opts.Timeout < time.Second {
+		return errors.New("when specifying a timeout you must use out greater than one second")
 	}
 
 	if err := opts.Output.Validate(); err != nil {
@@ -84,12 +97,23 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 		args = opts.Args[1:]
 	}
 
-	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		opts.closers = append(opts.closers, cancel)
+	}
 
+	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
 	cmd.Dir = opts.WorkingDirectory
 	cmd.Stderr = opts.Output.GetError()
 	cmd.Stdout = opts.Output.GetOutput()
 	cmd.Env = env
 
 	return cmd, nil
+}
+
+func (opts *CreateOptions) Close() {
+	for _, c := range opts.closers {
+		c()
+	}
 }
