@@ -2,58 +2,119 @@ package jasper
 
 import (
 	"bytes"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOutputOptions(t *testing.T) {
-	opts := OutputOptions{}
-	assert.NoError(t, opts.Validate())
-
 	stdout := bytes.NewBuffer([]byte{})
 	stderr := bytes.NewBuffer([]byte{})
 
-	opts.Output = stdout
-	opts.Error = stderr
-	assert.NoError(t, opts.Validate())
+	type testCase func(*testing.T, OutputOptions)
 
-	// invalid if both streams are the same
-	opts.Output = stderr
-	assert.Error(t, opts.Validate())
-	opts.Output = stdout
-	assert.NoError(t, opts.Validate())
+	cases := map[string]testCase{
+		"NilOptionsValidate": func(t *testing.T, opts OutputOptions) {
+			assert.Zero(t, opts)
+			assert.NoError(t, opts.Validate())
+		},
+		"ErrorOutputSpecified": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			opts.Error = stderr
+			assert.NoError(t, opts.Validate())
+		},
+		"StreamsMustBeDifferent": func(t *testing.T, opts OutputOptions) {
+			// invalid if both streams are the same
+			opts.Error = stderr
+			opts.Output = stderr
+			assert.Error(t, opts.Validate())
+		},
+		"SuppressErrorWhenSpecified": func(t *testing.T, opts OutputOptions) {
+			opts.Error = stderr
+			opts.SuppressError = true
+			assert.Error(t, opts.Validate())
+		},
+		"SuppressOutputWhenSpecified": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			opts.SuppressOutput = true
+			assert.Error(t, opts.Validate())
+		},
+		"RedirectErrorToNillFails": func(t *testing.T, opts OutputOptions) {
+			opts.SendOutputToError = true
+			assert.Error(t, opts.Validate())
+		},
+		"RedirectOutputToError": func(t *testing.T, opts OutputOptions) {
+			opts.SendOutputToError = true
+			assert.Error(t, opts.Validate())
+		},
+		"SuppressAndRedirectOutputIsInvalid": func(t *testing.T, opts OutputOptions) {
+			opts.SuppressOutput = true
+			opts.SendOutputToError = true
+			assert.Error(t, opts.Validate())
+		},
+		"SuppressAndRedirectErrorIsInvalid": func(t *testing.T, opts OutputOptions) {
+			opts.SuppressError = true
+			opts.SendErrorToOutput = true
+			assert.Error(t, opts.Validate())
+		},
+		"DiscardIsNilForOutput": func(t *testing.T, opts OutputOptions) {
+			opts.Error = stderr
+			opts.Output = ioutil.Discard
 
-	// if the redirection and suppression options don't make
-	// sense, validate should error, for stderr
-	opts.SuppressError = true
-	assert.Error(t, opts.Validate())
-	opts.Error = nil
-	assert.NoError(t, opts.Validate())
-	opts.SendOutputToError = true
-	assert.Error(t, opts.Validate())
-	opts.SuppressError = false
-	opts.Error = stderr
-	assert.NoError(t, opts.Validate())
-	opts.SendOutputToError = false
-	assert.NoError(t, opts.Validate())
+			assert.True(t, opts.outputIsNull())
+			assert.False(t, opts.errorIsNull())
+		},
+		"NilForOutputIsValid": func(t *testing.T, opts OutputOptions) {
+			opts.Error = stderr
+			assert.True(t, opts.outputIsNull())
+			assert.False(t, opts.errorIsNull())
+		},
+		"DiscardIsNilForError": func(t *testing.T, opts OutputOptions) {
+			opts.Error = ioutil.Discard
+			opts.Output = stdout
+			assert.True(t, opts.errorIsNull())
+			assert.False(t, opts.outputIsNull())
+		},
+		"NilForErrorIsValid": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			assert.True(t, opts.errorIsNull())
+			assert.False(t, opts.outputIsNull())
+		},
+		"OutputGetterNilIsIoDiscard": func(t *testing.T, opts OutputOptions) {
+			assert.Equal(t, ioutil.Discard, opts.GetOutput())
+		},
+		"OutputGetterWhenPopulatedIsCorrect": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			assert.Equal(t, stdout, opts.GetOutput())
+		},
+		"ErrorGetterNilIsIoDiscard": func(t *testing.T, opts OutputOptions) {
+			assert.Equal(t, ioutil.Discard, opts.GetError())
+		},
+		"ErrorGetterWhenPopulatedIsCorrect": func(t *testing.T, opts OutputOptions) {
+			opts.Error = stderr
+			assert.Equal(t, stderr, opts.GetError())
+		},
+		"RedirectErrorHasCorrectSemantics": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			opts.Error = stderr
+			opts.SendErrorToOutput = true
+			assert.Equal(t, stdout, opts.GetError())
 
-	// the same but for stdout
-	opts.SuppressOutput = true
-	assert.Error(t, opts.Validate())
-	opts.Output = nil
-	assert.NoError(t, opts.Validate())
-	opts.SendErrorToOutput = true
-	assert.Error(t, opts.Validate())
-	opts.SuppressOutput = false
-	opts.Output = stdout
-	assert.NoError(t, opts.Validate())
-	opts.SuppressOutput = false
-	assert.NoError(t, opts.Validate())
+		},
+		"RedirectOutputHasCorrectSemantics": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			opts.Error = stderr
+			opts.SendOutputToError = true
+			assert.Equal(t, stderr, opts.GetOutput())
+		},
+	}
 
-	// but should be valid if you suppress both
-	opts = OutputOptions{SuppressError: true, SuppressOutput: true}
-	assert.NoError(t, opts.Validate())
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			test(t, OutputOptions{})
+		})
+	}
 }
 
 func TestOutputOptionsIntegrationTableTest(t *testing.T) {
