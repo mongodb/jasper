@@ -79,10 +79,7 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	}
 
 	if opts.WorkingDirectory == "" {
-		opts.WorkingDirectory, err = os.Getwd()
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
+		opts.WorkingDirectory, _ = os.Getwd()
 	}
 
 	var env []string

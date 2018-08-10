@@ -48,5 +48,4 @@ func TestStringMembership(t *testing.T) {
 			assert.Equal(t, testCase.outcome, sliceContains(testCase.group, testCase.name))
 		})
 	}
-
 }
