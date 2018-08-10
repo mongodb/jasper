@@ -110,7 +110,7 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 	}
 
 	out := make(chan ProcessInfo)
-	p.ops <- func(cmd *exec.Cmd) {
+	operation := func(cmd *exec.Cmd) {
 		out <- ProcessInfo{
 			ID:        p.id,
 			Options:   p.opts,
@@ -122,10 +122,15 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 	}
 
 	select {
+	case p.ops <- operation:
+		select {
+		case res := <-out:
+			return res
+		case <-ctx.Done():
+			return ProcessInfo{}
+		}
 	case <-ctx.Done():
 		return ProcessInfo{}
-	case res := <-out:
-		return res
 	}
 }
 
@@ -135,27 +140,28 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 	}
 
 	out := make(chan bool)
-	p.ops <- func(cmd *exec.Cmd) {
+	operation := func(cmd *exec.Cmd) {
 		defer close(out)
 
-		if cmd.ProcessState == nil {
+		if cmd == nil || cmd.Process == nil {
 			out <- false
 			return
 		}
 
-		if cmd.ProcessState.Exited() {
-			out <- true
+		if cmd.Process.Pid <= 0 {
+			out <- false
 			return
 		}
 
-		if cmd.ProcessState.Pid() > 0 {
-			out <- true
-			return
-		}
-
-		out <- false
+		out <- true
 	}
-	return <-out
+
+	select {
+	case p.ops <- operation:
+		return <-out
+	case <-ctx.Done():
+		return false
+	}
 }
 
 func (p *blockingProcess) Complete(ctx context.Context) bool {
@@ -168,14 +174,28 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 	}
 
 	out := make(chan error)
-	p.ops <- func(cmd *exec.Cmd) {
+	operation := func(cmd *exec.Cmd) {
 		defer close(out)
+
+		if cmd == nil {
+			out <- errors.New("cannot signal nil process")
+			return
+		}
+
 		out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
 			sig, p.id)
-
 	}
-
-	return errors.WithStack(<-out)
+	select {
+	case p.ops <- operation:
+		select {
+		case res := <-out:
+			return res
+		case <-ctx.Done():
+			return errors.New("context canceled")
+		}
+	case <-ctx.Done():
+		return errors.New("context canceled")
+	}
 }
 
 func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTrigger) error {
@@ -193,13 +213,11 @@ func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTr
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) error {
-
 	if p.info != nil {
 		return nil
 	}
 
 	out := make(chan error)
-
 	waiter := func(cmd *exec.Cmd) {
 		timer := time.NewTimer(time.Duration(rand.Int63n(50)) * time.Millisecond)
 		defer timer.Stop()

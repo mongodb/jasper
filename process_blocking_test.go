@@ -2,7 +2,11 @@ package jasper
 
 import (
 	"context"
+	"os"
+	"os/exec"
+	"syscall"
 	"testing"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -10,35 +14,192 @@ import (
 
 func TestBlockingProcess(t *testing.T) {
 	t.Parallel()
-	for name, testCase := range map[string]func(context.Context, *testing.T, *blockingProcess){
-		"VerifyTestCaseConfiguration": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-			assert.NotNil(t, proc)
-			assert.NotNil(t, ctx)
-			assert.NotZero(t, proc.ID())
-			assert.NotNil(t, makeDefaultTrigger(ctx, nil, &proc.opts, "foo"))
-		},
-		"InfoIDPopulatedInBasicCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-			proc.info = &ProcessInfo{
-				ID: proc.ID(),
-			}
+	// we run the suite multiple times given that implementation
+	// is heavily threaded, there are timing concerns that require
+	// multiple executions.
+	for _, attempt := range []string{"First", "Second", "Third"} {
+		for name, testCase := range map[string]func(context.Context, *testing.T, *blockingProcess){
+			"VerifyTestCaseConfiguration": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				assert.NotNil(t, proc)
+				assert.NotNil(t, ctx)
+				assert.NotZero(t, proc.ID())
+				assert.False(t, proc.Complete(ctx))
+				assert.NotNil(t, makeDefaultTrigger(ctx, nil, &proc.opts, "foo"))
+			},
+			"InfoIDPopulatedInBasicCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				proc.info = &ProcessInfo{
+					ID: proc.ID(),
+				}
 
-			info := proc.Info(ctx)
-			assert.Equal(t, info.ID, proc.ID())
-		},
+				info := proc.Info(ctx)
+				assert.Equal(t, info.ID, proc.ID())
+			},
+			"InfoRetrunsZeroValueForCanceledCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+					cctx, cancel := context.WithCancel(ctx)
+					cancel()
 
-		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
-		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
-		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
-	} {
-		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+					assert.Zero(t, proc.Info(cctx))
+					close(signal)
+				}()
 
-			testCase(ctx, t, &blockingProcess{
-				id: uuid.Must(uuid.NewV4()).String(),
+				go func() {
+					<-proc.ops
+				}()
+
+				gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+				defer cancel()
+
+				select {
+				case <-signal:
+				case <-gracefulCtx.Done():
+					t.Error("reached timeout")
+				}
+			},
+			"SignalErrorsForCancledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+
+					cctx, cancel := context.WithCancel(ctx)
+					cancel()
+
+					assert.Error(t, proc.Signal(cctx, syscall.SIGTERM))
+					close(signal)
+				}()
+
+				go func() {
+					<-proc.ops
+				}()
+
+				gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+				defer cancel()
+
+				select {
+				case <-signal:
+				case <-gracefulCtx.Done():
+					t.Error("reached timeout")
+				}
+			},
+			"TestRegisterTriggerAfterComplete": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				proc.info = &ProcessInfo{}
+
+				assert.True(t, proc.Complete(ctx))
+				assert.Error(t, proc.RegisterTrigger(ctx, nil))
+				assert.Error(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, &proc.opts, "foo")))
+				assert.Len(t, proc.triggers, 0)
+			},
+			"TestRegisterPopulatedTrigger": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				assert.False(t, proc.Complete(ctx))
+				assert.Error(t, proc.RegisterTrigger(ctx, nil))
+				assert.NoError(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, &proc.opts, "foo")))
+				assert.Len(t, proc.triggers, 1)
+			},
+			"RunningIsFalseWhenCompleteIsSatisfied": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				proc.info = &ProcessInfo{}
+				assert.True(t, proc.Complete(ctx))
+				assert.False(t, proc.Running(ctx))
+			},
+			"RunningIsFalseWithEmptyPid": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+					assert.False(t, proc.Running(ctx))
+					close(signal)
+				}()
+
+				op := <-proc.ops
+
+				op(&exec.Cmd{
+					Process: &os.Process{},
+				})
+				<-signal
+			},
+			"RunningIsFalseWithNilCmd": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+					assert.False(t, proc.Running(ctx))
+					close(signal)
+				}()
+
+				op := <-proc.ops
+				op(nil)
+
+				<-signal
+			},
+			"RunningIsTrueWithValidPid": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+					assert.True(t, proc.Running(ctx))
+					close(signal)
+				}()
+
+				op := <-proc.ops
+				op(&exec.Cmd{
+					Process: &os.Process{Pid: 42},
+				})
+
+				<-signal
+			},
+			"RunningIsFalseWithCancledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				proc.ops <- func(_ *exec.Cmd) {}
+				cctx, cancel := context.WithCancel(ctx)
+				cancel()
+				assert.False(t, proc.Running(cctx))
+			},
+			"SignalIsErrorAfterComplete": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				proc.info = &ProcessInfo{}
+				assert.True(t, proc.Complete(ctx))
+
+				assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
+			},
+			"SignalNilProcessIsError": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+					assert.Nil(t, proc.info)
+					assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
+					close(signal)
+				}()
+
+				op := <-proc.ops
+				op(nil)
+
+				<-signal
+			},
+			"SignalErrorsInvalidProcess": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				signal := make(chan struct{})
+				go func() {
+					assert.Nil(t, proc.info)
+					assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
+					close(signal)
+				}()
+
+				op := <-proc.ops
+				op(&exec.Cmd{
+					Process: &os.Process{Pid: -42},
+				})
+
+				<-signal
+			},
+			// "": func(ctx context.Context, t *testing.T, proc *blockingProcess) {},
+			// "": func(ctx context.Context, t *testing.T, proc *blockingProcess) {},
+			// "": func(ctx context.Context, t *testing.T, proc *blockingProcess) {},
+			// "": func(ctx context.Context, t *testing.T, proc *blockingProcess) {},
+		} {
+			t.Run(attempt+name, func(t *testing.T) {
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				proc := &blockingProcess{
+					id:  uuid.Must(uuid.NewV4()).String(),
+					ops: make(chan func(*exec.Cmd), 1),
+				}
+
+				testCase(ctx, t, proc)
+
+				close(proc.ops)
 			})
-		})
 
+		}
 	}
-
 }
