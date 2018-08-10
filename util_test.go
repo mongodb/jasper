@@ -7,6 +7,7 @@ import (
 )
 
 func TestStringMembership(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		id      string
 		group   []string

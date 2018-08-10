@@ -178,9 +178,9 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 	return errors.WithStack(<-out)
 }
 
-func (p *blockingProcess) RegisterTrigger(trigger ProcessTrigger) error {
-	if p.info != nil {
-		return errors.New("cannot register triggers after process completes")
+func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTrigger) error {
+	if p.Complete(ctx) {
+		return errors.New("cannot register trigger after process exits")
 	}
 
 	if trigger == nil {

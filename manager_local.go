@@ -23,9 +23,10 @@ func (m *localProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 		return nil, errors.WithStack(err)
 	}
 
+	proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
+
 	proc = &localProcess{proc: proc}
 	m.manager.procs[proc.ID()] = proc
-	proc.RegisterTrigger(makeDefaultTrigger(ctx, m, opts, proc.ID()))
 
 	return proc, nil
 }
@@ -85,7 +86,7 @@ func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 
 	// TODO this will race because it runs later
 	if !m.skipDefaultTrigger {
-		proc.RegisterTrigger(makeDefaultTrigger(ctx, m, opts, proc.ID()))
+		proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 	}
 
 	m.procs[proc.ID()] = proc

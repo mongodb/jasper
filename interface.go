@@ -19,7 +19,7 @@ type Process interface {
 	Complete(context.Context) bool
 	Signal(context.Context, syscall.Signal) error
 	Wait(context.Context) error
-	RegisterTrigger(ProcessTrigger) error
+	RegisterTrigger(context.Context, ProcessTrigger) error
 
 	Tag(string)
 	ResetTags()

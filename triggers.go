@@ -72,7 +72,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 					continue
 				}
 				p.Tag(parentID)
-				p.RegisterTrigger(func(_ ProcessInfo) { cancel() })
+				p.RegisterTrigger(ctx, func(_ ProcessInfo) { cancel() })
 			}
 		}
 	}
