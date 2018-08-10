@@ -74,6 +74,10 @@ func (opts *CreateOptions) Validate() error {
 
 func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	var err error
+	if ctx.Err() != nil {
+		return nil, errors.New("cannot resolve command with canceled context")
+	}
+
 	if err = opts.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}

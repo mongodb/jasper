@@ -19,5 +19,4 @@ func (f Filter) Validate() error {
 	default:
 		return errors.Errorf("%s is not a valid filter", f)
 	}
-
 }

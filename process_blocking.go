@@ -2,9 +2,12 @@ package jasper
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
@@ -23,11 +26,6 @@ type blockingProcess struct {
 }
 
 func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
-	hn, err := os.Hostname()
-	if err != nil {
-		return nil, errors.Wrap(err, "problem finding hostname when creating process")
-	}
-
 	cmd, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
@@ -35,7 +33,6 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 
 	p := &blockingProcess{
 		id:   uuid.Must(uuid.NewV4()).String(),
-		host: hn,
 		opts: *opts,
 		tags: make(map[string]struct{}),
 		ops:  make(chan func(*exec.Cmd)),
@@ -44,6 +41,13 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 	for _, t := range opts.Tags {
 		p.Tag(t)
 	}
+
+	// don't check the error here, becaues we need to call Start to
+	// populate the process state, and we'll race to calls to
+	// methods with the reactor starting up if we skip it here.
+	_ = cmd.Start()
+	p.opts.started = true
+	p.host, _ = os.Hostname()
 
 	go p.reactor(ctx, cmd)
 	return p, nil
@@ -67,8 +71,11 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				IsRunning:  false,
 				Successful: cmd.ProcessState.Success(),
 			}
+
 			grip.Debug(message.WrapError(err, message.Fields{
-				"info":         info,
+				"id":           info.ID,
+				"cmd":          strings.Join(p.opts.Args, " "),
+				"success":      info.Successful,
 				"num_triggers": len(p.triggers),
 			}))
 
@@ -76,8 +83,8 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			p.triggers.Run(info)
 			return
 		case <-ctx.Done():
-			cmd.Process.Kill()
-
+			// note, the process might take a moment to
+			// die when it gets here.
 			info := ProcessInfo{
 				ID:         p.id,
 				Options:    p.opts,
@@ -131,6 +138,16 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 	p.ops <- func(cmd *exec.Cmd) {
 		defer close(out)
 
+		if cmd.ProcessState == nil {
+			out <- false
+			return
+		}
+
+		if cmd.ProcessState.Exited() {
+			out <- true
+			return
+		}
+
 		if cmd.ProcessState.Pid() > 0 {
 			out <- true
 			return
@@ -176,24 +193,31 @@ func (p *blockingProcess) RegisterTrigger(trigger ProcessTrigger) error {
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) error {
-	out := make(chan error)
 
 	if p.info != nil {
-		return errors.New("cannot register triggers after process completes")
+		return nil
 	}
 
+	out := make(chan error)
+
 	waiter := func(cmd *exec.Cmd) {
+		timer := time.NewTimer(time.Duration(rand.Int63n(50)) * time.Millisecond)
+		defer timer.Stop()
+
 		select {
 		case <-ctx.Done():
 			out <- errors.New("operation canceled")
 			close(out)
-		default:
-
+		case <-timer.C:
 		}
 	}
 
+	timer := time.NewTimer(0)
+	defer timer.Stop()
 	for {
 		select {
+		case <-timer.C:
+			timer.Reset(time.Duration(rand.Int63n(50)) * time.Millisecond)
 		case p.ops <- waiter:
 			continue
 		case <-ctx.Done():

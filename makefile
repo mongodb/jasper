@@ -15,6 +15,6 @@ coverage-html:$(buildDir)/cover.html
 $(buildDir):$(srcFiles) compile
 	@mkdir -p $@
 $(buildDir)/cover.out:$(buildDir) $(testFiles)
-	go test -coverprofile $@ -cover ./...
+	go test -v -coverprofile $@ -cover ./...
 $(buildDir)/cover.html:$(buildDir)/cover.out
 	go tool cover -html=$< -o $@

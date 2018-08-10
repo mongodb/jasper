@@ -96,29 +96,24 @@ type basicProcess struct {
 }
 
 func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
-	hn, err := os.Hostname()
-	if err != nil {
-		return nil, errors.Wrap(err, "problem finding hostname when creating process")
-	}
-
 	cmd, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
 
-	if err = cmd.Start(); err != nil {
-		return nil, errors.Wrap(err, "problem starting command")
-	}
+	// don't check the error here, if this fails, and we're
+	// interested in the outcome, we'll see that later.
+	_ = cmd.Start()
 
 	opts.started = true
 
 	p := &basicProcess{
-		hostname: hn,
-		id:       uuid.Must(uuid.NewV4()).String(),
-		opts:     *opts,
-		cmd:      cmd,
-		tags:     make(map[string]struct{}),
+		id:   uuid.Must(uuid.NewV4()).String(),
+		opts: *opts,
+		cmd:  cmd,
+		tags: make(map[string]struct{}),
 	}
+	p.hostname, _ = os.Hostname()
 
 	for _, t := range opts.Tags {
 		p.Tag(t)
@@ -154,6 +149,10 @@ func (p *basicProcess) Complete(ctx context.Context) bool {
 		return false
 	}
 
+	if p.cmd.ProcessState != nil && p.cmd.ProcessState.Exited() {
+		return true
+	}
+
 	return p.cmd.Process.Pid == -1
 }
 
@@ -171,13 +170,16 @@ func (p *basicProcess) Running(ctx context.Context) bool {
 		return true
 	}
 
-	// if we have a viable pid then it's running
-	return p.cmd.Process.Pid > 0
+	if p.cmd.Process.Pid < 0 {
+		return false
+	}
+
+	// if we have a viable pid then it's (probably) running
+	return true
 }
 
 func (p *basicProcess) Signal(ctx context.Context, sig syscall.Signal) error {
-	return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
-		sig, p.id)
+	return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 }
 
 func (p *basicProcess) Wait(ctx context.Context) error {
@@ -185,7 +187,7 @@ func (p *basicProcess) Wait(ctx context.Context) error {
 		return nil
 	}
 
-	if p.cmd.ProcessState.Exited() {
+	if p.cmd.ProcessState != nil && p.cmd.ProcessState.Exited() {
 		return nil
 	}
 
