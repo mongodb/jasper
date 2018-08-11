@@ -31,6 +31,13 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
 
+	// don't check the error here, becaues we need to call Start to
+	// populate the process state, and we'll race to calls to
+	// methods with the reactor starting up if we skip it here.
+	_ = cmd.Start()
+
+	opts.started = true
+
 	p := &blockingProcess{
 		id:   uuid.Must(uuid.NewV4()).String(),
 		opts: *opts,
@@ -42,11 +49,6 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		p.Tag(t)
 	}
 
-	// don't check the error here, becaues we need to call Start to
-	// populate the process state, and we'll race to calls to
-	// methods with the reactor starting up if we skip it here.
-	_ = cmd.Start()
-	p.opts.started = true
 	p.host, _ = os.Hostname()
 
 	go p.reactor(ctx, cmd)
@@ -97,7 +99,9 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			p.triggers.Run(info)
 			return
 		case op := <-p.ops:
-			op(cmd)
+			if op != nil {
+				op(cmd)
+			}
 		}
 	}
 
@@ -219,15 +223,16 @@ func (p *blockingProcess) Wait(ctx context.Context) error {
 
 	out := make(chan error)
 	waiter := func(cmd *exec.Cmd) {
-		timer := time.NewTimer(time.Duration(rand.Int63n(50)) * time.Millisecond)
-		defer timer.Stop()
-
-		select {
-		case <-ctx.Done():
-			out <- errors.New("operation canceled")
-			close(out)
-		case <-timer.C:
+		if p.info == nil {
+			return
 		}
+
+		if p.info.Successful {
+			out <- nil
+			return
+		}
+
+		out <- errors.New("task exited with error")
 	}
 
 	timer := time.NewTimer(0)
@@ -242,6 +247,13 @@ func (p *blockingProcess) Wait(ctx context.Context) error {
 			return errors.New("wait operation canceled")
 		case err := <-out:
 			return errors.WithStack(err)
+		default:
+			if p.info != nil {
+				if p.info.Successful {
+					return nil
+				}
+				return errors.New("operation failed")
+			}
 		}
 	}
 }

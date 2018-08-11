@@ -6,7 +6,7 @@ import (
 )
 
 // TODO
-//   - process tests
+//   - local process tests
 //   - manager tests
 //   - helpers to configure output
 //   - REST interface
