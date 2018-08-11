@@ -232,6 +232,46 @@ func TestMangerInterface(t *testing.T) {
 					assert.NoError(t, manager.Close(ctx))
 					assert.Equal(t, 1, counter)
 				},
+				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager) {
+					err := manager.Register(ctx, nil)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "not defined")
+				},
+				"RegisterProcessErrorsForCancledContext": func(ctx context.Context, t *testing.T, manager Manager) {
+					cctx, cancel := context.WithCancel(ctx)
+					cancel()
+					proc, err := newBasicProcess(ctx, trueCreateOpts())
+					assert.NoError(t, err)
+					err = manager.Register(cctx, proc)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "canceled")
+				},
+				"RegisterProcessErrorsWhenMissingID": func(ctx context.Context, t *testing.T, manager Manager) {
+					proc := &basicProcess{}
+					assert.Equal(t, proc.ID(), "")
+					err := manager.Register(ctx, proc)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "malformed")
+				},
+				"RegisterProcessModifiesManagerState": func(ctx context.Context, t *testing.T, manager Manager) {
+					proc, err := newBasicProcess(ctx, trueCreateOpts())
+					assert.NoError(t, err)
+					err = manager.Register(ctx, proc)
+					assert.NoError(t, err)
+					procs, err := manager.List(ctx, All)
+					assert.NoError(t, err)
+					assert.Len(t, procs, 1)
+					assert.Equal(t, procs[0].ID(), proc.ID())
+				},
+				"RegisterProcessErrorsForDuplicateProcess": func(ctx context.Context, t *testing.T, manager Manager) {
+					proc, err := newBasicProcess(ctx, trueCreateOpts())
+					assert.NoError(t, err)
+					assert.NotEmpty(t, proc)
+					err = manager.Register(ctx, proc)
+					assert.NoError(t, err)
+					err = manager.Register(ctx, proc)
+					assert.Error(t, err)
+				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {

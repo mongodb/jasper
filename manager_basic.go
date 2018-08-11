@@ -39,6 +39,29 @@ func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 	return proc, nil
 }
 
+func (m *basicProcessManager) Register(ctx context.Context, proc Process) error {
+	if ctx.Err() != nil {
+		return errors.New("context canceled")
+	}
+
+	if proc == nil {
+		return errors.New("process is not defined")
+	}
+
+	id := proc.ID()
+	if id == "" {
+		return errors.New("process is malformed")
+	}
+
+	_, ok := m.procs[id]
+	if ok {
+		return errors.New("cannot register process that exists")
+	}
+
+	m.procs[id] = proc
+	return nil
+}
+
 func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, error) {
 	out := []Process{}
 

@@ -20,6 +20,9 @@ type basicProcess struct {
 }
 
 func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
+	id := uuid.Must(uuid.NewV4()).String()
+	opts.AddEnvVar(EnvironID, id)
+
 	cmd, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
@@ -32,7 +35,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	opts.started = true
 
 	p := &basicProcess{
-		id:   uuid.Must(uuid.NewV4()).String(),
+		id:   id,
 		opts: *opts,
 		cmd:  cmd,
 		tags: make(map[string]struct{}),

@@ -26,6 +26,9 @@ type blockingProcess struct {
 }
 
 func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
+	id := uuid.Must(uuid.NewV4()).String()
+	opts.AddEnvVar(EnvironID, id)
+
 	cmd, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
@@ -39,7 +42,7 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 	opts.started = true
 
 	p := &blockingProcess{
-		id:   uuid.Must(uuid.NewV4()).String(),
+		id:   id,
 		opts: *opts,
 		tags: make(map[string]struct{}),
 		ops:  make(chan func(*exec.Cmd)),

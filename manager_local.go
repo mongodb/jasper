@@ -30,6 +30,13 @@ func (m *localProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 	return proc, nil
 }
 
+func (m *localProcessManager) Register(ctx context.Context, proc Process) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return errors.WithStack(m.manager.Register(ctx, proc))
+}
+
 func (m *localProcessManager) List(ctx context.Context, f Filter) ([]Process, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

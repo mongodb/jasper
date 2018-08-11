@@ -115,6 +115,14 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
+func (opts *CreateOptions) AddEnvVar(k, v string) {
+	if opts.Environment == nil {
+		opts.Environment = make(map[string]string)
+	}
+
+	opts.Environment[k] = v
+}
+
 func (opts *CreateOptions) Close() {
 	for _, c := range opts.closers {
 		c()

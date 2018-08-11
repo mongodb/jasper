@@ -8,10 +8,16 @@ import (
 	"github.com/mongodb/grip/message"
 )
 
+// ProcessTrigger describes the way to write cleanup functions for
+// processes, which provide ways of adding behavior to processes after
+// they complete.
 type ProcessTrigger func(ProcessInfo)
 
+// ProcessTriggerSequence is simply a convenience type to simplify
+// running more than one triggered operation.
 type ProcessTriggerSequence []ProcessTrigger
 
+// Run loops over triggers and calls each of them successively.
 func (s ProcessTriggerSequence) Run(info ProcessInfo) {
 	for _, trigger := range s {
 		trigger(info)
