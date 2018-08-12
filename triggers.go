@@ -30,31 +30,6 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 
 	return func(info ProcessInfo) {
 		switch {
-		case info.Successful:
-			for _, opt := range opts.OnSuccess {
-				p, err := m.Create(ctx, opt)
-				if err != nil {
-					grip.Warning(message.WrapError(err, message.Fields{
-						"trigger": "on-success",
-						"parent":  parentID,
-					}))
-					continue
-				}
-				p.Tag(parentID)
-			}
-		case !info.Successful:
-			for _, opt := range opts.OnSuccess {
-				p, err := m.Create(ctx, opt)
-				if err != nil {
-
-					grip.Warning(message.WrapError(err, message.Fields{
-						"trigger": "on-failure",
-						"parent":  parentID,
-					}))
-					continue
-				}
-				p.Tag(parentID)
-			}
 		case info.Timeout:
 			var (
 				newctx context.Context
@@ -80,7 +55,31 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 				p.Tag(parentID)
 				p.RegisterTrigger(ctx, func(_ ProcessInfo) { cancel() })
 			}
+		case info.Successful:
+			for _, opt := range opts.OnSuccess {
+				p, err := m.Create(ctx, opt)
+				if err != nil {
+					grip.Warning(message.WrapError(err, message.Fields{
+						"trigger": "on-success",
+						"parent":  parentID,
+					}))
+					continue
+				}
+				p.Tag(parentID)
+			}
+		case !info.Successful:
+			for _, opt := range opts.OnFailure {
+				p, err := m.Create(ctx, opt)
+				if err != nil {
+
+					grip.Warning(message.WrapError(err, message.Fields{
+						"trigger": "on-failure",
+						"parent":  parentID,
+					}))
+					continue
+				}
+				p.Tag(parentID)
+			}
 		}
 	}
-
 }
