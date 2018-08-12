@@ -12,17 +12,17 @@ import (
 )
 
 type CreateOptions struct {
-	Args             []string
-	Environment      map[string]string
-	WorkingDirectory string
-	Output           OutputOptions
-	OverrideEnviron  bool
-	Timeout          time.Duration
-	Tags             []string
-
-	OnSuccess []*CreateOptions
-	OnFailure []*CreateOptions
-	OnTimeout []*CreateOptions
+	Args             []string          `json:"args"`
+	Environment      map[string]string `json:"env,omitempty"`
+	WorkingDirectory string            `json:"working_directory,omitempty"`
+	Output           OutputOptions     `json:"output"`
+	OverrideEnviron  bool              `json:"override_env,omitempty"`
+	TimeoutSecs      int               `json:"timeout_secs,omitempty"`
+	Timeout          time.Duration     `json:"-"`
+	Tags             []string          `json:"tags"`
+	OnSuccess        []*CreateOptions  `json:"on_success"`
+	OnFailure        []*CreateOptions  `json:"on_failure"`
+	OnTimeout        []*CreateOptions  `json:"on_timeout"`
 
 	//
 	closers []func()
@@ -51,6 +51,16 @@ func (opts *CreateOptions) Validate() error {
 
 	if opts.Timeout > 0 && opts.Timeout < time.Second {
 		return errors.New("when specifying a timeout you must use out greater than one second")
+	}
+
+	if opts.Timeout != 0 && opts.TimeoutSecs != 0 {
+		return errors.New("cannot specify timeout (nanos) and timeout_secs")
+	}
+
+	if opts.TimeoutSecs > 0 && opts.Timeout == 0 {
+		opts.Timeout = time.Duration(opts.TimeoutSecs) * time.Second
+	} else if opts.Timeout != 0 {
+		opts.TimeoutSecs = int(opts.Timeout.Round(time.Second).Seconds())
 	}
 
 	if err := opts.Output.Validate(); err != nil {

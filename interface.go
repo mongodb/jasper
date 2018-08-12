@@ -7,8 +7,6 @@ import (
 
 // TODO
 //   - helpers to configure output
-//   - tests of default trigger
-//   - doc strings
 //   - high level documentation
 //   - REST interface
 //   - gRPC interface
@@ -78,10 +76,10 @@ type Process interface {
 	// Tag adds a tag to a process. Implementations should avoid
 	// allowing duplicate tags to exist.
 	Tag(string)
-	// ResetTags should clear all existing tags.
-	ResetTags()
 	// GetTags should return all tags for a process.
 	GetTags() []string
+	// ResetTags should clear all existing tags.
+	ResetTags()
 }
 
 // ProcessInfo reports on the current state of a process. It is always

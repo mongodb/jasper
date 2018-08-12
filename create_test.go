@@ -174,6 +174,26 @@ func TestCreateOptions(t *testing.T) {
 			assert.Equal(t, counter, 3)
 
 		},
+		"ConflictingTimeoutOptions": func(t *testing.T, opts *CreateOptions) {
+			opts.TimeoutSecs = 100
+			opts.Timeout = time.Hour
+
+			assert.Error(t, opts.Validate())
+		},
+		"ValidationOverrideDefaultsForSecond": func(t *testing.T, opts *CreateOptions) {
+			opts.TimeoutSecs = 100
+			opts.Timeout = 0
+
+			assert.NoError(t, opts.Validate())
+			assert.Equal(t, 100*time.Second, opts.Timeout)
+		},
+		"ValidationOverrideDefaultsForDuration": func(t *testing.T, opts *CreateOptions) {
+			opts.TimeoutSecs = 0
+			opts.Timeout = time.Second
+
+			assert.NoError(t, opts.Validate())
+			assert.Equal(t, 1, opts.TimeoutSecs)
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			opts := &CreateOptions{Args: []string{"ls"}}
