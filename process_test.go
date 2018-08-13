@@ -2,6 +2,8 @@ package jasper
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -22,6 +24,12 @@ func makeLockingProcess(pmake processConstructor) processConstructor {
 }
 
 func TestProcessImplementations(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	srvPort := 5000
+	httpClient := &http.Client{}
+
 	t.Parallel()
 
 	for cname, makeProc := range map[string]processConstructor{
@@ -29,6 +37,24 @@ func TestProcessImplementations(t *testing.T) {
 		"BlockingWithLock": makeLockingProcess(newBlockingProcess),
 		"BasicNoLock":      newBasicProcess,
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
+		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
+			srv := NewManagerService(NewLocalManager()).App()
+			srvPort++
+			srv.SetPrefix("jasper")
+
+			require.NoError(t, srv.SetPort(srvPort))
+			go func() {
+				srv.Run(ctx)
+			}()
+
+			time.Sleep(100 * time.Millisecond)
+			client := &restClient{
+				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", srvPort),
+				client: httpClient,
+			}
+
+			return client.Create(ctx, opts)
+		},
 	} {
 		t.Run(cname, func(t *testing.T) {
 			for name, testCase := range map[string]func(context.Context, *testing.T, *CreateOptions, processConstructor){
@@ -66,25 +92,26 @@ func TestProcessImplementations(t *testing.T) {
 				},
 				"ProcessLacksTagsByDefault": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					tags := proc.GetTags()
 					assert.Empty(t, tags)
 				},
 				"ProcessTagsPersist": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					opts.Tags = []string{"foo"}
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					tags := proc.GetTags()
 					assert.Contains(t, tags, "foo")
 				},
 				"InfoHasMatchingID": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
-					assert.Equal(t, proc.ID(), proc.Info(ctx).ID)
+					if assert.NoError(t, err) {
+						assert.Equal(t, proc.ID(), proc.Info(ctx).ID)
+					}
 				},
 				"ResetTags": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					proc.Tag("foo")
 					assert.Contains(t, proc.GetTags(), "foo")
 					proc.ResetTags()
@@ -92,7 +119,8 @@ func TestProcessImplementations(t *testing.T) {
 				},
 				"TagsAreSetLike": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
+
 					for i := 0; i < 100; i++ {
 						proc.Tag("foo")
 					}
@@ -103,7 +131,7 @@ func TestProcessImplementations(t *testing.T) {
 				},
 				"CompleteIsTrueAfterWait": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					time.Sleep(10 * time.Millisecond) // give the process time to start background machinery
 					assert.NoError(t, proc.Wait(ctx))
 					assert.True(t, proc.Complete(ctx))
@@ -112,6 +140,7 @@ func TestProcessImplementations(t *testing.T) {
 					opts.Args = []string{"sleep", "101"}
 					pctx, pcancel := context.WithCancel(ctx)
 					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
 					assert.True(t, proc.Running(ctx))
 					assert.NoError(t, err)
 					pcancel()
@@ -119,10 +148,13 @@ func TestProcessImplementations(t *testing.T) {
 				},
 				"RegisterTriggerErrorsForNil": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Error(t, proc.RegisterTrigger(ctx, nil))
 				},
 				"DefaultTriggerSucceeds": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote triggers are not supported on rest processes")
+					}
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
 					assert.NoError(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, opts, "foo")))
@@ -130,11 +162,11 @@ func TestProcessImplementations(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					ctx, cancel := context.WithCancel(context.Background())
+					tctx, cancel := context.WithCancel(ctx)
 					defer cancel()
 
 					opts := &CreateOptions{Args: []string{"ls"}}
-					testCase(ctx, t, opts, makeProc)
+					testCase(tctx, t, opts, makeProc)
 				})
 			}
 

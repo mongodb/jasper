@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"syscall"
@@ -62,11 +63,38 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	proc, err := s.manager.Create(r.Context(), opts)
+	if err := opts.Validate(); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrap(err, "invalid creation options").Error(),
+		})
+		return
+	}
+
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if opts.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), opts.Timeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
+
+	proc, err := s.manager.Create(ctx, opts)
 	if err != nil {
+		cancel()
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrap(err, "problem submitting request").Error(),
+		})
+		return
+	}
+
+	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
+		cancel()
+	}); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
+			Message:    errors.Wrap(err, "problem managing resources").Error(),
 		})
 		return
 	}
@@ -97,12 +125,7 @@ func (s *Service) listProcesses(rw http.ResponseWriter, r *http.Request) {
 
 	out := []ProcessInfo{}
 	for _, proc := range procs {
-		info := proc.Info(ctx)
-		if info.ID == "" {
-			continue
-		}
-
-		out = append(out, info)
+		out = append(out, proc.Info(ctx))
 	}
 
 	gimlet.WriteJSON(rw, out)
@@ -124,12 +147,7 @@ func (s *Service) listGroupMembers(rw http.ResponseWriter, r *http.Request) {
 
 	out := []ProcessInfo{}
 	for _, proc := range procs {
-		info := proc.Info(ctx)
-		if info.ID == "" {
-			continue
-		}
-
-		out = append(out, info)
+		out = append(out, proc.Info(ctx))
 	}
 
 	gimlet.WriteJSON(rw, out)
@@ -208,7 +226,7 @@ func (s *Service) addProcessTag(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Message:    "no new tags specified",
 		})
-
+		return
 	}
 
 	for _, t := range newtags {
@@ -235,6 +253,7 @@ func (s *Service) waitForProcess(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
 		})
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
@@ -249,6 +268,7 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrapf(err, "problem finding signal '%s'", vars["signal"]).Error(),
 		})
+		return
 	}
 
 	ctx := r.Context()
@@ -266,6 +286,7 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
 		})
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
@@ -277,6 +298,7 @@ func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
 		})
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})

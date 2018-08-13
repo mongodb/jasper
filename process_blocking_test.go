@@ -16,7 +16,7 @@ func TestBlockingProcess(t *testing.T) {
 	// we run the suite multiple times given that implementation
 	// is heavily threaded, there are timing concerns that require
 	// multiple executions.
-	for _, attempt := range []string{"First", "Second", "Third", "Fourth"} {
+	for _, attempt := range []string{"First", "Second", "Third", "Fourth", "Fifth"} {
 		t.Run(attempt, func(t *testing.T) {
 			t.Parallel()
 
@@ -167,6 +167,12 @@ func TestBlockingProcess(t *testing.T) {
 
 					<-signal
 				},
+				"SignalCancledProcessIsError": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+					cctx, cancel := context.WithCancel(ctx)
+					cancel()
+
+					assert.Error(t, proc.Signal(cctx, syscall.SIGTERM))
+				},
 				"SignalErrorsInvalidProcess": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
 					go func() {
@@ -197,7 +203,7 @@ func TestBlockingProcess(t *testing.T) {
 					assert.Contains(t, err.Error(), "operation canceled")
 					assert.True(t, time.Since(startAt) >= 500*time.Millisecond)
 				},
-				"WaitShouldReturnNilForSuccessfulCommands": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				"WaitShouldReturnNilForSuccessfulCommandsWithoutIDs": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.opts.Args = []string{"sleep", "10"}
 					proc.ops = make(chan func(*exec.Cmd))
 
@@ -206,7 +212,6 @@ func TestBlockingProcess(t *testing.T) {
 					assert.NoError(t, cmd.Start())
 					signal := make(chan struct{})
 					go func() {
-						time.Sleep(100 * time.Millisecond)
 						// this is the crucial
 						// assertion of this tests
 						assert.NoError(t, proc.Wait(ctx))
@@ -217,9 +222,40 @@ func TestBlockingProcess(t *testing.T) {
 						for {
 							select {
 							case op := <-proc.ops:
-								proc.info = &ProcessInfo{
+								proc.setInfo(ProcessInfo{
 									Successful: true,
+								})
+								if op != nil {
+									op(cmd)
 								}
+							}
+						}
+					}()
+					<-signal
+				},
+				"WaitShouldReturnNilForSuccessfulCommands": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+					proc.opts.Args = []string{"sleep", "10"}
+					proc.ops = make(chan func(*exec.Cmd))
+
+					cmd, err := proc.opts.Resolve(ctx)
+					assert.NoError(t, err)
+					assert.NoError(t, cmd.Start())
+					signal := make(chan struct{})
+					go func() {
+						// this is the crucial
+						// assertion of this tests
+						assert.NoError(t, proc.Wait(ctx))
+						close(signal)
+					}()
+
+					go func() {
+						for {
+							select {
+							case op := <-proc.ops:
+								proc.setInfo(ProcessInfo{
+									ID:         "foo",
+									Successful: true,
+								})
 								if op != nil {
 									op(cmd)
 								}
@@ -237,7 +273,6 @@ func TestBlockingProcess(t *testing.T) {
 					assert.NoError(t, cmd.Start())
 					signal := make(chan struct{})
 					go func() {
-						time.Sleep(100 * time.Millisecond)
 						// this is the crucial assertion
 						// of this tests.
 						assert.Error(t, proc.Wait(ctx))
@@ -248,9 +283,10 @@ func TestBlockingProcess(t *testing.T) {
 						for {
 							select {
 							case op := <-proc.ops:
-								proc.info = &ProcessInfo{
+								proc.setInfo(ProcessInfo{
+									ID:         "foo",
 									Successful: false,
-								}
+								})
 								if op != nil {
 									op(cmd)
 								}

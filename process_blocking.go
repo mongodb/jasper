@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -16,13 +17,15 @@ import (
 )
 
 type blockingProcess struct {
-	id       string
-	info     *ProcessInfo
-	host     string
-	opts     CreateOptions
-	ops      chan func(*exec.Cmd)
+	id   string
+	host string
+	opts CreateOptions
+	ops  chan func(*exec.Cmd)
+
+	mu       sync.RWMutex
 	tags     map[string]struct{}
 	triggers ProcessTriggerSequence
+	info     *ProcessInfo
 }
 
 func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
@@ -58,6 +61,32 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 	return p, nil
 }
 
+func (p *blockingProcess) setInfo(info ProcessInfo) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.info = &info
+}
+
+func (p *blockingProcess) hasInfo() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return p.info != nil
+}
+
+func (p *blockingProcess) getInfo() ProcessInfo {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	ret := ProcessInfo{}
+	if p.info == nil {
+		return ret
+	}
+
+	ret = *p.info
+
+	return ret
+}
 func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 	signal := make(chan error)
 	go func() {
@@ -68,23 +97,30 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 	for {
 		select {
 		case err := <-signal:
-			info := ProcessInfo{
-				ID:         p.id,
-				Options:    p.opts,
-				Host:       p.host,
-				Complete:   true,
-				IsRunning:  false,
-				Successful: cmd.ProcessState.Success(),
-			}
+			var info ProcessInfo
 
-			grip.Debug(message.WrapError(err, message.Fields{
-				"id":           info.ID,
-				"cmd":          strings.Join(p.opts.Args, " "),
-				"success":      info.Successful,
-				"num_triggers": len(p.triggers),
-			}))
+			func() {
+				p.mu.RLock()
+				defer p.mu.RUnlock()
 
-			p.info = &info
+				info = ProcessInfo{
+					ID:         p.id,
+					Options:    p.opts,
+					Host:       p.host,
+					Complete:   true,
+					IsRunning:  false,
+					Successful: cmd.ProcessState.Success(),
+				}
+
+				grip.Debug(message.WrapError(err, message.Fields{
+					"id":           p.ID,
+					"cmd":          strings.Join(p.opts.Args, " "),
+					"success":      info.Successful,
+					"num_triggers": len(p.triggers),
+				}))
+			}()
+
+			p.setInfo(info)
 			p.triggers.Run(info)
 			return
 		case <-ctx.Done():
@@ -98,7 +134,8 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				IsRunning:  false,
 				Successful: false,
 			}
-			p.info = &info
+
+			p.setInfo(info)
 			p.triggers.Run(info)
 			return
 		case op := <-p.ops:
@@ -112,8 +149,8 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 
 func (p *blockingProcess) ID() string { return p.id }
 func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
-	if p.info != nil {
-		return *p.info
+	if p.hasInfo() {
+		return p.getInfo()
 	}
 
 	out := make(chan ProcessInfo)
@@ -142,7 +179,7 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 }
 
 func (p *blockingProcess) Running(ctx context.Context) bool {
-	if p.info != nil {
+	if p.hasInfo() {
 		return false
 	}
 
@@ -172,11 +209,11 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 }
 
 func (p *blockingProcess) Complete(ctx context.Context) bool {
-	return p.info != nil
+	return p.hasInfo()
 }
 
 func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error {
-	if p.info != nil {
+	if p.hasInfo() {
 		return errors.New("cannot signal a process that has terminated")
 	}
 
@@ -206,12 +243,15 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 }
 
 func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTrigger) error {
-	if p.Complete(ctx) {
-		return errors.New("cannot register trigger after process exits")
-	}
-
 	if trigger == nil {
 		return errors.New("cannot register nil trigger")
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.info != nil {
+		return errors.New("cannot register trigger after process exits")
 	}
 
 	p.triggers = append(p.triggers, trigger)
@@ -220,17 +260,18 @@ func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTr
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) error {
-	if p.info != nil {
+	if p.hasInfo() {
 		return nil
 	}
 
 	out := make(chan error)
 	waiter := func(cmd *exec.Cmd) {
-		if p.info == nil {
+		info := p.getInfo()
+		if info.ID == "" {
 			return
 		}
 
-		if p.info.Successful {
+		if info.Successful {
 			out <- nil
 			return
 		}
@@ -251,8 +292,8 @@ func (p *blockingProcess) Wait(ctx context.Context) error {
 		case err := <-out:
 			return errors.WithStack(err)
 		default:
-			if p.info != nil {
-				if p.info.Successful {
+			if p.hasInfo() {
+				if p.getInfo().Successful {
 					return nil
 				}
 				return errors.New("operation failed")
@@ -262,6 +303,9 @@ func (p *blockingProcess) Wait(ctx context.Context) error {
 }
 
 func (p *blockingProcess) Tag(t string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	_, ok := p.tags[t]
 	if ok {
 		return
@@ -272,11 +316,17 @@ func (p *blockingProcess) Tag(t string) {
 }
 
 func (p *blockingProcess) ResetTags() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.tags = make(map[string]struct{})
 	p.opts.Tags = []string{}
 }
 
 func (p *blockingProcess) GetTags() []string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	out := []string{}
 	for t := range p.tags {
 		out = append(out, t)

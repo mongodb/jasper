@@ -80,10 +80,6 @@ func (c *restClient) Create(ctx context.Context, opts *CreateOptions) (Process, 
 		return nil, errors.Wrap(err, "problem reading process info from response")
 	}
 
-	if info.ID == "" {
-		return nil, errors.New("could not create process")
-	}
-
 	return &restProcess{
 		id:     info.ID,
 		client: c,
@@ -111,9 +107,6 @@ func (c *restClient) getListOfProcesses(req *http.Request) ([]Process, error) {
 
 	output := []Process{}
 	for _, info := range payload {
-		if info.ID == "" {
-			continue
-		}
 
 		output = append(output, &restProcess{
 			id:     info.ID,
