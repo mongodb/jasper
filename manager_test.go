@@ -50,8 +50,6 @@ func TestManagerInterface(t *testing.T) {
 	defer cancel()
 	srvPort := 3000
 
-	t.Parallel()
-
 	for mname, factory := range map[string]func() Manager{
 		"Basic/NoLock": func() Manager {
 			return &basicProcessManager{

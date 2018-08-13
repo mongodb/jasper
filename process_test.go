@@ -30,8 +30,6 @@ func TestProcessImplementations(t *testing.T) {
 	srvPort := 5000
 	httpClient := &http.Client{}
 
-	t.Parallel()
-
 	for cname, makeProc := range map[string]processConstructor{
 		"BlockingNoLock":   newBlockingProcess,
 		"BlockingWithLock": makeLockingProcess(newBlockingProcess),
