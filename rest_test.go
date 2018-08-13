@@ -3,7 +3,9 @@ package jasper
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"syscall"
 	"testing"
@@ -176,6 +178,16 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, err.Error(), "no process")
 
 		},
+		"CreateProcessEndpointErrorsWithMalformedData": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			body, err := makeBody(map[string]int{"tags": 42})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, "", ioutil.NopCloser(body))
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+			srv.createProcess(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -192,7 +204,7 @@ func TestRestService(t *testing.T) {
 				app.Run(ctx)
 			}()
 
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 			client := &restClient{
 				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", srvPort),
 				client: httpClient,
