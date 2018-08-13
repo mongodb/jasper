@@ -3,10 +3,12 @@ package jasper
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func trueCreateOpts() *CreateOptions {
@@ -42,6 +44,10 @@ func createProcs(ctx context.Context, opts *CreateOptions, manager Manager, num 
 }
 
 func TestMangerInterface(t *testing.T) {
+	httpClient := &http.Client{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	srvPort := 3000
 	for mname, factory := range map[string]func() Manager{
 		"Basic/NoLock": func() Manager {
 			return &basicProcessManager{
@@ -67,6 +73,28 @@ func TestMangerInterface(t *testing.T) {
 					procs:    map[string]Process{},
 					blocking: true,
 				},
+			}
+		},
+		"REST": func() Manager {
+			srv := (&Service{
+				manager: &localProcessManager{
+					manager: &basicProcessManager{
+						procs: map[string]Process{},
+					},
+				},
+			}).App()
+			srvPort++
+			srv.SetPrefix("jasper")
+
+			require.NoError(t, srv.SetPort(srvPort))
+			go func() {
+
+				require.NoError(t, srv.Run(ctx))
+			}()
+
+			return &restClient{
+				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1/", srvPort),
+				client: httpClient,
 			}
 		},
 	} {
@@ -127,7 +155,7 @@ func TestMangerInterface(t *testing.T) {
 				},
 				"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					assert.NoError(t, proc.Wait(ctx))
 
@@ -140,7 +168,7 @@ func TestMangerInterface(t *testing.T) {
 				},
 				"ListReturnsOneFailedCommand": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.Create(ctx, falseCreateOpts())
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Error(t, proc.Wait(ctx))
 
 					listOut, err := manager.List(ctx, Failed)
@@ -157,7 +185,7 @@ func TestMangerInterface(t *testing.T) {
 				},
 				"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					ret, err := manager.Get(ctx, proc.ID())
 					assert.NoError(t, err)
@@ -182,7 +210,7 @@ func TestMangerInterface(t *testing.T) {
 				},
 				"GroupPropgatesMatching": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
 					proc.Tag("foo")
 
@@ -255,12 +283,14 @@ func TestMangerInterface(t *testing.T) {
 				},
 				"RegisterProcessModifiesManagerState": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := newBasicProcess(ctx, trueCreateOpts())
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					err = manager.Register(ctx, proc)
 					assert.NoError(t, err)
+
 					procs, err := manager.List(ctx, All)
 					assert.NoError(t, err)
-					assert.Len(t, procs, 1)
+					require.True(t, len(procs) >= 1)
+
 					assert.Equal(t, procs[0].ID(), proc.ID())
 				},
 				"RegisterProcessErrorsForDuplicateProcess": func(ctx context.Context, t *testing.T, manager Manager) {
@@ -276,7 +306,7 @@ func TestMangerInterface(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					ctx, cancel := context.WithCancel(context.Background())
+					ctx, cancel := context.WithCancel(ctx)
 					defer cancel()
 					test(ctx, t, factory())
 				})

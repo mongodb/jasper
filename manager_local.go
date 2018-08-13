@@ -7,6 +7,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+func NewLocalManager() Manager {
+	return &localProcessManager{
+		manager: &basicProcessManager{
+			procs: map[string]Process{},
+		},
+	}
+}
+
 type localProcessManager struct {
 	mu      sync.RWMutex
 	manager *basicProcessManager
