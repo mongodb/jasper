@@ -93,6 +93,10 @@ func TestRestService(t *testing.T) {
 			err = client.Close(ctx)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
+
+			_, err = client.getProcessInfo(ctx, "foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
 		},
 		"ClientRequestsFailWithMalformedURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "http;//", 1)
@@ -114,6 +118,10 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, err.Error(), "problem making request")
 
 			err = client.Close(ctx)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			_, err = client.getProcessInfo(ctx, "foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 		},
@@ -256,7 +264,6 @@ func TestRestService(t *testing.T) {
 			_, err := client.Get(ctx, "foo")
 			assert.Error(t, err)
 		},
-		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {

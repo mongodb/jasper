@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -184,7 +185,7 @@ func (s *Service) getProcess(rw http.ResponseWriter, r *http.Request) {
 	if info.ID == "" {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
-			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
+			Message:    fmt.Sprintf("no process '%s' found", id),
 		})
 		return
 	}
