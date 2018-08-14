@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"syscall"
 	"testing"
@@ -264,7 +265,66 @@ func TestRestService(t *testing.T) {
 			_, err := client.Get(ctx, "foo")
 			assert.Error(t, err)
 		},
-		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
+		"MetricsErrorForInvalidProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			req, err := http.NewRequest(http.MethodGet, client.getURL("/process/%s/metrics", "foo"), nil)
+			require.NoError(t, err)
+			req = req.WithContext(ctx)
+			res, err := httpClient.Do(req)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusNotFound, res.StatusCode)
+		},
+		"MetricsPopulatedForValidProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			srv.manager = &MockManager{
+				Process: &MockProcess{
+					ProcID: "foo",
+					ProcInfo: ProcessInfo{
+						PID: os.Getpid(),
+					},
+				},
+			}
+
+			req, err := http.NewRequest(http.MethodGet, client.getURL("/process/%s/metrics", "foo"), nil)
+			require.NoError(t, err)
+			req = req.WithContext(ctx)
+			res, err := httpClient.Do(req)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+		},
+		"AddTagsWithNoTagsSpecifiedShouldError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			srv.manager = &MockManager{}
+
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/process/%s/tags", "foo"), nil)
+			require.NoError(t, err)
+			req = req.WithContext(ctx)
+			res, err := httpClient.Do(req)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+
+		},
+		"SignalInPassingCase": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			srv.manager = &MockManager{
+				Process: &MockProcess{},
+			}
+			proc := &restProcess{
+				client: client,
+				id:     "foo",
+			}
+
+			err := proc.Signal(ctx, syscall.SIGTERM)
+			assert.NoError(t, err)
+
+		},
+		"SignalFailsToParsePid": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/process/%s/signal/f", "foo"), nil)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+
+			srv.signalProcess(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/evergreen-ci/gimlet"
+	"github.com/mongodb/grip/message"
 	"github.com/pkg/errors"
 )
 
@@ -48,6 +49,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/tags").Version(1).Delete().Handler(s.deleteProcessTags)
 	app.AddRoute("/process/{id}/tags").Version(1).Post().Handler(s.addProcessTag)
 	app.AddRoute("/process/{id}/wait").Version(1).Get().Handler(s.waitForProcess)
+	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
@@ -191,6 +193,22 @@ func (s *Service) getProcess(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, info)
+}
+
+func (s *Service) processMetrics(rw http.ResponseWriter, r *http.Request) {
+	id := gimlet.GetVars(r)["id"]
+	ctx := r.Context()
+	proc, err := s.manager.Get(ctx, id)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
+		})
+		return
+	}
+
+	info := proc.Info(ctx)
+	gimlet.WriteJSON(rw, message.CollectProcessInfoWithChildren(int32(info.PID)))
 }
 
 func (s *Service) getProcessTags(rw http.ResponseWriter, r *http.Request) {
