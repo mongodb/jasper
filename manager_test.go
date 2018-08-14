@@ -5,71 +5,38 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
-	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func trueCreateOpts() *CreateOptions {
-	return &CreateOptions{
-		Args: []string{"true"},
-	}
-}
-
-func falseCreateOpts() *CreateOptions {
-	return &CreateOptions{
-		Args: []string{"false"},
-	}
-}
-
-func sleepCreateOpts(num int) *CreateOptions {
-	return &CreateOptions{
-		Args: []string{"sleep", fmt.Sprint(num)},
-	}
-}
-
-func createProcs(ctx context.Context, opts *CreateOptions, manager Manager, num int) ([]Process, error) {
-	catcher := grip.NewBasicCatcher()
-	out := []Process{}
-	for i := 0; i < num; i++ {
-		proc, err := manager.Create(ctx, opts)
-		catcher.Add(err)
-		if proc != nil {
-			out = append(out, proc)
-		}
-	}
-
-	return out, catcher.Resolve()
-}
-
 func TestManagerInterface(t *testing.T) {
+	t.Parallel()
+
 	httpClient := &http.Client{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	srvPort := 3000
 
-	for mname, factory := range map[string]func() Manager{
-		"Basic/NoLock": func() Manager {
+	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
+		"Basic/NoLock": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
 				procs: map[string]Process{},
 			}
 		},
-		"Basic/Lock": func() Manager {
+		"Basic/Lock": func(ctx context.Context, t *testing.T) Manager {
 			return &localProcessManager{
 				manager: &basicProcessManager{
 					procs: map[string]Process{},
 				},
 			}
 		},
-		"Basic/NoLock/BlockingProcs": func() Manager {
+		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
 				procs:    map[string]Process{},
 				blocking: true,
 			}
 		},
-		"Basic/Lock/BlockingProcs": func() Manager {
+		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &localProcessManager{
 				manager: &basicProcessManager{
 					procs:    map[string]Process{},
@@ -77,19 +44,12 @@ func TestManagerInterface(t *testing.T) {
 				},
 			}
 		},
-		"REST": func() Manager {
-			srv := NewManagerService(NewLocalManager()).App()
-			srvPort++
-			srv.SetPrefix("jasper")
+		"REST": func(ctx context.Context, t *testing.T) Manager {
+			srv, port := makeAndStartService(ctx, httpClient)
+			require.NotNil(t, srv)
 
-			require.NoError(t, srv.SetPort(srvPort))
-			go func() {
-				srv.Run(ctx)
-			}()
-
-			time.Sleep(100 * time.Millisecond)
 			return &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", srvPort),
+				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
 				client: httpClient,
 			}
 		},
@@ -331,9 +291,9 @@ func TestManagerInterface(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithCancel(ctx)
+					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
 					defer cancel()
-					test(tctx, t, factory())
+					test(tctx, t, factory(tctx, t))
 				})
 			}
 		})

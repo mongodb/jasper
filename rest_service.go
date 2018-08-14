@@ -3,6 +3,7 @@ package jasper
 import (
 	"context"
 	"net/http"
+	"os"
 	"strconv"
 	"syscall"
 
@@ -13,6 +14,7 @@ import (
 // Service defines a REST service that provides a remote manager, using
 // gimlet to publish routes.
 type Service struct {
+	hostID  string
 	manager Manager
 }
 
@@ -33,8 +35,10 @@ func NewManagerService(m Manager) *Service {
 // App constructs and returns a gimlet application for this
 // service. It attaches no middleware and does not start the service.
 func (s *Service) App() *gimlet.APIApp {
+	s.hostID, _ = os.Hostname()
 	app := gimlet.NewApp()
 
+	app.AddRoute("/").Version(1).Get().Handler(s.rootRoute)
 	app.AddRoute("/create").Version(1).Post().Handler(s.createProcess)
 	app.AddRoute("/list/{filter}").Version(1).Get().Handler(s.listProcesses)
 	app.AddRoute("/list/group/{name}").Version(1).Get().Handler(s.listGroupMembers)
@@ -51,6 +55,17 @@ func (s *Service) App() *gimlet.APIApp {
 
 func writeError(rw http.ResponseWriter, err gimlet.ErrorResponse) {
 	gimlet.WriteJSONResponse(rw, err.StatusCode, err)
+}
+
+func (s *Service) rootRoute(rw http.ResponseWriter, r *http.Request) {
+	gimlet.WriteJSON(rw, struct {
+		hostID string `json:"host_id"`
+		active bool   `json:"active"`
+	}{
+		hostID: s.hostID,
+		active: true,
+	})
+
 }
 
 func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {

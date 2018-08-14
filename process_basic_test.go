@@ -12,8 +12,6 @@ import (
 )
 
 func TestBasicProcess(t *testing.T) {
-	t.Parallel()
-
 	for name, testCase := range map[string]func(context.Context, *testing.T, *basicProcess){
 		"VerifyTestCaseConfiguration": func(ctx context.Context, t *testing.T, proc *basicProcess) {
 			assert.Nil(t, proc.cmd)

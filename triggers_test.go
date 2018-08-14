@@ -9,8 +9,6 @@ import (
 )
 
 func TestDefaultTrigger(t *testing.T) {
-	t.Parallel()
-
 	const parentID = "parent-trigger-id"
 
 	for name, testcase := range map[string]func(context.Context, *testing.T, Manager){

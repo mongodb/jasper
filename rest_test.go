@@ -9,14 +9,21 @@ import (
 	"strings"
 	"syscall"
 	"testing"
-	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+type neverJSON struct{}
+
+func (n *neverJSON) MarshalJSON() ([]byte, error)  { return nil, errors.New("always error") }
+func (n *neverJSON) UnmarshalJSON(in []byte) error { return errors.New("always error") }
+func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("always error") }
+func (n *neverJSON) Close() error                  { return errors.New("always error") }
+
 func TestRestService(t *testing.T) {
-	srvPort := 4000
+	t.Parallel()
 	httpClient := &http.Client{}
 
 	for name, test := range map[string]func(context.Context, *testing.T, *Service, *restClient){
@@ -36,6 +43,9 @@ func TestRestService(t *testing.T) {
 			// similarly about helper functions
 			client.prefix = ""
 			assert.Equal(t, "/foo", client.getURL("foo"))
+			_, err := makeBody(&neverJSON{})
+			assert.Error(t, err)
+			assert.Error(t, handleError(&http.Response{Body: &neverJSON{}, StatusCode: http.StatusTeapot}))
 		},
 		"EmptyCreateOpts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			proc, err := client.Create(ctx, &CreateOptions{})
@@ -188,25 +198,77 @@ func TestRestService(t *testing.T) {
 			srv.createProcess(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
+		"CreateFailPropogatesErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			srv.manager = &MockManager{
+				FailCreate: true,
+			}
+			proc, err := client.Create(ctx, trueCreateOpts())
+			assert.Error(t, err)
+			assert.Nil(t, proc)
+			assert.Contains(t, err.Error(), "problem submitting request")
+		},
+		"CreateFailsForTriggerReasons": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			srv.manager = &MockManager{
+				FailCreate: false,
+				Process: &MockProcess{
+					FailRegisterTrigger: true,
+				},
+			}
+			proc, err := client.Create(ctx, trueCreateOpts())
+			assert.Error(t, err)
+			assert.Nil(t, proc)
+			assert.Contains(t, err.Error(), "problem managing resources")
+		},
+		"InvalidFilterReturnsError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			req, err := http.NewRequest(http.MethodGet, client.getURL("/list/%s", "foo"), nil)
+			require.NoError(t, err)
+			out, err := client.getListOfProcesses(req)
+			assert.Error(t, err)
+			assert.Nil(t, out)
+		},
+		"WaitForProcessThatDoesNotExistShouldError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			proc := &restProcess{
+				client: client,
+				id:     "foo",
+			}
+
+			assert.Error(t, proc.Wait(ctx))
+		},
+		"SignalProcessThatDoesNotExistShouldError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			proc := &restProcess{
+				client: client,
+				id:     "foo",
+			}
+
+			assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
+		},
+		"SignalErrorsWithInvalidSyscall": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			proc, err := client.Create(ctx, trueCreateOpts())
+			require.NoError(t, err)
+
+			assert.Error(t, proc.Signal(ctx, syscall.Signal(-1)))
+		},
+		"GetProcessWhenInvalid": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			srv.manager = &MockManager{
+				Process: &MockProcess{},
+			}
+
+			_, err := client.Get(ctx, "foo")
+			assert.Error(t, err)
+		},
+		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
+		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
 			defer cancel()
 
-			srv := NewManagerService(NewLocalManager())
-			app := srv.App()
-			srvPort++
-			app.SetPrefix("jasper")
-			require.NoError(t, app.SetPort(srvPort))
+			srv, port := makeAndStartService(ctx, httpClient)
+			require.NotNil(t, srv)
 
-			go func() {
-				app.Run(ctx)
-			}()
-
-			time.Sleep(100 * time.Millisecond)
 			client := &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", srvPort),
+				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
 				client: httpClient,
 			}
 

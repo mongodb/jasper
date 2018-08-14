@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,10 +25,10 @@ func makeLockingProcess(pmake processConstructor) processConstructor {
 }
 
 func TestProcessImplementations(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	srvPort := 5000
 	httpClient := &http.Client{}
 
 	for cname, makeProc := range map[string]processConstructor{
@@ -36,18 +37,14 @@ func TestProcessImplementations(t *testing.T) {
 		"BasicNoLock":      newBasicProcess,
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
-			srv := NewManagerService(NewLocalManager()).App()
-			srvPort++
-			srv.SetPrefix("jasper")
 
-			require.NoError(t, srv.SetPort(srvPort))
-			go func() {
-				srv.Run(ctx)
-			}()
+			srv, port := makeAndStartService(ctx, httpClient)
+			if port < 100 || srv == nil {
+				return nil, errors.New("fixture creation failure")
+			}
 
-			time.Sleep(100 * time.Millisecond)
 			client := &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", srvPort),
+				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
 				client: httpClient,
 			}
 
@@ -59,7 +56,7 @@ func TestProcessImplementations(t *testing.T) {
 				"WithPopulatedArgsCommandCreationPasses": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					assert.NotZero(t, opts.Args)
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, proc)
 				},
 				"ErrorToCreateWithInvalidArgs": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
@@ -160,7 +157,7 @@ func TestProcessImplementations(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithCancel(ctx)
+					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
 					defer cancel()
 
 					opts := &CreateOptions{Args: []string{"ls"}}

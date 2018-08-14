@@ -7,7 +7,6 @@ import (
 )
 
 func TestFilters(t *testing.T) {
-	t.Parallel()
 	t.Run("ConstantsValidate", func(t *testing.T) {
 		for _, f := range []Filter{Running, Terminated, All, Failed, Successful} {
 			assert.NoError(t, f.Validate())

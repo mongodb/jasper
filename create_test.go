@@ -12,6 +12,7 @@ import (
 
 func TestCreateConstructor(t *testing.T) {
 	t.Parallel()
+
 	for _, test := range []struct {
 		id         string
 		shouldFail bool
@@ -62,6 +63,7 @@ func TestCreateConstructor(t *testing.T) {
 
 func TestCreateOptions(t *testing.T) {
 	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	for name, test := range map[string]func(t *testing.T, opts *CreateOptions){
