@@ -8,9 +8,6 @@ import (
 // TODO
 //   - helpers to configure output
 //   - high level documentation
-//   - REST interface
-//   - gRPC interface
-//   - Remote API
 //   - venturing
 
 // EnvironID is the environment variable that is set on all managed

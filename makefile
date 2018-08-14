@@ -19,3 +19,11 @@ $(buildDir)/cover.out:$(buildDir) $(testFiles) .FORCE
 $(buildDir)/cover.html:$(buildDir)/cover.out
 	go tool cover -html=$< -o $@
 .FORCE:
+
+
+proto:
+	@mkdir -p jrpc/internal
+	protoc --go_out=plugins=grpc:jrpc/internal *.proto
+	@sed -i 's%context "golang.org/x/net/context"%"context"%g' jrpc/internal/jasper.pb.go
+clean: 
+	rm *.pb.go mv 

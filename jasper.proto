@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package jasper; 
+option go_package = "internal";
+
+import "google/protobuf/empty.proto";
+
+message CreateOptions {
+  repeated string args = 1; 
+  string working_directory = 2; 
+  map<string, string> environment = 3; 
+  bool override_environ = 4;
+  int64 timeout_seconds = 5;
+  repeated string tags = 6;
+  repeated CreateOptions on_success = 7; 
+  repeated CreateOptions on_failure = 8; 
+  repeated CreateOptions on_timeout = 9; 
+}
+
+message ProcessInfo {
+  string id = 1; 
+  int64 pid = 2;
+  string host_id = 3;
+  bool running = 4;
+  bool successful = 5; 
+  bool complete = 6;
+  bool timedout = 7; 
+  CreateOptions options = 8;
+}
+
+message StatusResponse {
+  string host_id = 1; 
+  bool active = 2;  
+}
+
+message Filter {
+  FilterSpecifications name = 1;
+}
+
+enum  FilterSpecifications {
+  ALL = 0;
+  RUNNING = 1;
+  TERMINATED = 2;
+  FAILED = 3;
+  SUCCESSFUL = 4;
+}
+
+message SignalProcess {
+  JasperProcessID ProcessID = 1;
+  Signals signal = 2;
+}
+
+enum Signals {
+  UNKNOWN = 0;
+  SIGTERM = 1;
+  SIGKILL = 2;
+  SIGHUP = 3;
+  SIGINT = 4;
+  SIGUSR1 = 5;
+  SIGUSR2 = 6;
+}
+
+
+message TagName {
+  string value = 1;
+}
+
+message ProcessTags {
+  string processID = 1;
+  repeated string tags = 2;
+}
+
+message JasperProcessID {
+  string value = 1;
+  
+}
+
+message OperationOutcome {
+  bool succuess = 1;
+  string text = 2;
+}
+
+service JasperProcessManager {
+  rpc Status(google.protobuf.Empty) returns  (StatusResponse); 
+  rpc Create(CreateOptions) returns (ProcessInfo); 
+  rpc List(Filter) returns (stream ProcessInfo);
+  rpc Group(TagName) returns (stream ProcessInfo);
+  rpc Get(JasperProcessID) returns (ProcessInfo);
+  rpc Wait(JasperProcessID) returns (OperationOutcome);
+  rpc Signal(SignalProcess) returns (OperationOutcome);
+  rpc Close(google.protobuf.Empty) returns (OperationOutcome);
+  rpc TagProcess(ProcessTags) returns (OperationOutcome);
+  rpc ResetTags(JasperProcessID) returns (OperationOutcome);
+  rpc GetTags(JasperProcessID) returns (ProcessTags);
+}
