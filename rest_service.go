@@ -59,11 +59,11 @@ func writeError(rw http.ResponseWriter, err gimlet.ErrorResponse) {
 
 func (s *Service) rootRoute(rw http.ResponseWriter, r *http.Request) {
 	gimlet.WriteJSON(rw, struct {
-		hostID string `json:"host_id"`
-		active bool   `json:"active"`
+		HostID string `json:"host_id"`
+		Active bool   `json:"active"`
 	}{
-		hostID: s.hostID,
-		active: true,
+		HostID: s.hostID,
+		Active: true,
 	})
 
 }
