@@ -5,9 +5,9 @@ import (
 	"io"
 	"syscall"
 
+	"github.com/mongodb/jasper"
+	internal "github.com/mongodb/jasper/jrpc/internal"
 	"github.com/pkg/errors"
-	"github.com/tychoish/jasper"
-	internal "github.com/tychoish/jasper/jrpc/internal"
 	grpc "google.golang.org/grpc"
 )
 

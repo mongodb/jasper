@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
-	"github.com/tychoish/jasper"
 	grpc "google.golang.org/grpc"
 )
 
