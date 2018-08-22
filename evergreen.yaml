@@ -60,18 +60,6 @@ post:
         - "gopath/src/github.com/mongodb/jasper/build/race.*.out"
 
 tasks:
-  # the build (with and without the race detector) and lint tasks use
-  # a template that does not include test result parsing.
-  - name: lint
-    tags: ["report"]
-    commands:
-      - command: git.get_project
-        type: system
-        params:
-          directory: gopath/src/github.com/mongodb/jasper
-      - func: run-make
-        vars: { target: "lint" }
-
   - <<: *run-build
     tags: ["dist"]
     name: dist
@@ -98,7 +86,6 @@ buildvariants:
       - archlinux-test
     tasks: 
       - name: ".race"
-      - name: ".report"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04

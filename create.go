@@ -64,7 +64,7 @@ func (opts *CreateOptions) Validate() error {
 	if opts.TimeoutSecs > 0 && opts.Timeout == 0 {
 		opts.Timeout = time.Duration(opts.TimeoutSecs) * time.Second
 	} else if opts.Timeout != 0 {
-		opts.TimeoutSecs = int(opts.Timeout.Round(time.Second).Seconds())
+		opts.TimeoutSecs = int(opts.Timeout.Seconds())
 	}
 
 	if err := opts.Output.Validate(); err != nil {
