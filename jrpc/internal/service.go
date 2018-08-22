@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
+	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 )
 

@@ -26,9 +26,8 @@ $(buildDir)/cover.html:$(buildDir)/cover.out
 proto:
 	@mkdir -p jrpc/internal
 	protoc --go_out=plugins=grpc:jrpc/internal *.proto
-	@sed -i 's%context "golang.org/x/net/context"%"context"%g' jrpc/internal/jasper.pb.go
 clean: 
-	rm *.pb.go mv 
+	rm *.pb.go
 
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/

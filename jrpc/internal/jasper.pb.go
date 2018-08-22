@@ -9,7 +9,7 @@ import math "math"
 import empty "github.com/golang/protobuf/ptypes/empty"
 
 import (
-	"context"
+	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 )
 
@@ -53,7 +53,7 @@ func (x FilterSpecifications) String() string {
 	return proto.EnumName(FilterSpecifications_name, int32(x))
 }
 func (FilterSpecifications) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{0}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{0}
 }
 
 type Signals int32
@@ -91,7 +91,7 @@ func (x Signals) String() string {
 	return proto.EnumName(Signals_name, int32(x))
 }
 func (Signals) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{1}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{1}
 }
 
 type CreateOptions struct {
@@ -113,7 +113,7 @@ func (m *CreateOptions) Reset()         { *m = CreateOptions{} }
 func (m *CreateOptions) String() string { return proto.CompactTextString(m) }
 func (*CreateOptions) ProtoMessage()    {}
 func (*CreateOptions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{0}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{0}
 }
 func (m *CreateOptions) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateOptions.Unmarshal(m, b)
@@ -214,7 +214,7 @@ func (m *ProcessInfo) Reset()         { *m = ProcessInfo{} }
 func (m *ProcessInfo) String() string { return proto.CompactTextString(m) }
 func (*ProcessInfo) ProtoMessage()    {}
 func (*ProcessInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{1}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{1}
 }
 func (m *ProcessInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProcessInfo.Unmarshal(m, b)
@@ -302,7 +302,7 @@ func (m *StatusResponse) Reset()         { *m = StatusResponse{} }
 func (m *StatusResponse) String() string { return proto.CompactTextString(m) }
 func (*StatusResponse) ProtoMessage()    {}
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{2}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{2}
 }
 func (m *StatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StatusResponse.Unmarshal(m, b)
@@ -347,7 +347,7 @@ func (m *Filter) Reset()         { *m = Filter{} }
 func (m *Filter) String() string { return proto.CompactTextString(m) }
 func (*Filter) ProtoMessage()    {}
 func (*Filter) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{3}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{3}
 }
 func (m *Filter) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Filter.Unmarshal(m, b)
@@ -386,7 +386,7 @@ func (m *SignalProcess) Reset()         { *m = SignalProcess{} }
 func (m *SignalProcess) String() string { return proto.CompactTextString(m) }
 func (*SignalProcess) ProtoMessage()    {}
 func (*SignalProcess) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{4}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{4}
 }
 func (m *SignalProcess) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignalProcess.Unmarshal(m, b)
@@ -431,7 +431,7 @@ func (m *TagName) Reset()         { *m = TagName{} }
 func (m *TagName) String() string { return proto.CompactTextString(m) }
 func (*TagName) ProtoMessage()    {}
 func (*TagName) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{5}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{5}
 }
 func (m *TagName) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TagName.Unmarshal(m, b)
@@ -470,7 +470,7 @@ func (m *ProcessTags) Reset()         { *m = ProcessTags{} }
 func (m *ProcessTags) String() string { return proto.CompactTextString(m) }
 func (*ProcessTags) ProtoMessage()    {}
 func (*ProcessTags) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{6}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{6}
 }
 func (m *ProcessTags) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ProcessTags.Unmarshal(m, b)
@@ -515,7 +515,7 @@ func (m *JasperProcessID) Reset()         { *m = JasperProcessID{} }
 func (m *JasperProcessID) String() string { return proto.CompactTextString(m) }
 func (*JasperProcessID) ProtoMessage()    {}
 func (*JasperProcessID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{7}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{7}
 }
 func (m *JasperProcessID) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_JasperProcessID.Unmarshal(m, b)
@@ -554,7 +554,7 @@ func (m *OperationOutcome) Reset()         { *m = OperationOutcome{} }
 func (m *OperationOutcome) String() string { return proto.CompactTextString(m) }
 func (*OperationOutcome) ProtoMessage()    {}
 func (*OperationOutcome) Descriptor() ([]byte, []int) {
-	return fileDescriptor_jasper_9fb726cf2269ded4, []int{8}
+	return fileDescriptor_jasper_80cb48eceddc6462, []int{8}
 }
 func (m *OperationOutcome) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OperationOutcome.Unmarshal(m, b)
@@ -1060,9 +1060,9 @@ var _JasperProcessManager_serviceDesc = grpc.ServiceDesc{
 	Metadata: "jasper.proto",
 }
 
-func init() { proto.RegisterFile("jasper.proto", fileDescriptor_jasper_9fb726cf2269ded4) }
+func init() { proto.RegisterFile("jasper.proto", fileDescriptor_jasper_80cb48eceddc6462) }
 
-var fileDescriptor_jasper_9fb726cf2269ded4 = []byte{
+var fileDescriptor_jasper_80cb48eceddc6462 = []byte{
 	// 909 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x54, 0x5b, 0x8f, 0xdb, 0x44,
 	0x14, 0xc6, 0x71, 0x62, 0x27, 0x27, 0x34, 0x6b, 0x86, 0xb2, 0xb5, 0x42, 0x05, 0x51, 0x1e, 0xd8,
