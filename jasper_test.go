@@ -74,6 +74,7 @@ outerRetry:
 	for {
 		select {
 		case <-ctx.Done():
+			grip.Warning("timed out starting test service service")
 			return nil, -1
 		default:
 			port := getPortNumber()
@@ -81,7 +82,6 @@ outerRetry:
 			app := srv.App()
 			app.SetPrefix("jasper")
 			if err := app.SetPort(port); err != nil {
-				fmt.Println("WHAT")
 				continue outerRetry
 
 			}
@@ -89,7 +89,7 @@ outerRetry:
 				app.Run(ctx)
 			}()
 
-			timer := time.NewTimer(time.Millisecond)
+			timer := time.NewTimer(5 * time.Millisecond)
 			defer timer.Stop()
 			url := fmt.Sprintf("http://localhost:%d/jasper/v1/", port)
 
@@ -107,19 +107,19 @@ outerRetry:
 				case <-timer.C:
 					req, err := http.NewRequest(http.MethodGet, url, nil)
 					if err != nil {
-						timer.Reset(time.Millisecond)
+						timer.Reset(5 * time.Millisecond)
 						trials++
 						continue checkLoop
 					}
 					req = req.WithContext(ctx)
 					resp, err := client.Do(req)
 					if err != nil {
-						timer.Reset(time.Millisecond)
+						timer.Reset(5 * time.Millisecond)
 						trials++
 						continue checkLoop
 					}
 					if resp.StatusCode != http.StatusOK {
-						timer.Reset(time.Millisecond)
+						timer.Reset(5 * time.Millisecond)
 						trials++
 						continue checkLoop
 					}
