@@ -4,7 +4,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tychoish/jasper"
+	"github.com/mongodb/jasper"
 )
 
 func (opts *CreateOptions) Export() *jasper.CreateOptions {
