@@ -27,3 +27,8 @@ proto:
 	@sed -i 's%context "golang.org/x/net/context"%"context"%g' jrpc/internal/jasper.pb.go
 clean: 
 	rm *.pb.go mv 
+
+vendor-clean:
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
