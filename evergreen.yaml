@@ -72,17 +72,6 @@ tasks:
       - func: run-make
         vars: { target: "lint" }
 
-  - name: coverage
-    tags: [ "report" ]
-    commands:
-      - command: git.get_project
-        type: system
-        params:
-          directory: gopath/src/github.com/mongodb/jasper
-      - func: run-make
-        vars:
-          target: "coverage-html"
-
   - <<: *run-build
     tags: ["dist"]
     name: dist
