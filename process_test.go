@@ -163,8 +163,6 @@ func TestProcessImplementations(t *testing.T) {
 					testCase(tctx, t, opts, makeProc)
 				})
 			}
-
 		})
 	}
-
 }

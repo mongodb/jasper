@@ -42,7 +42,7 @@ func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResp
 
 func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*ProcessInfo, error) {
 	jopt := opts.Export()
-	proc, err := s.manager.Create(ctx, jopt)
+	proc, err := s.manager.Create(context.Background(), jopt)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

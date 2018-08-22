@@ -5,6 +5,7 @@ import (
 	"io"
 	"syscall"
 
+	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper"
 	internal "github.com/mongodb/jasper/jrpc/internal"
 	"github.com/pkg/errors"
@@ -101,7 +102,7 @@ func (m *jrpcManager) Get(ctx context.Context, name string) (jasper.Process, err
 }
 
 func (m *jrpcManager) Close(ctx context.Context) error {
-	resp, err := m.client.Close(ctx, nil)
+	resp, err := m.client.Close(ctx, &empty.Empty{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -178,7 +179,6 @@ func (p *jrpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 
 func (p *jrpcProcess) Wait(ctx context.Context) error {
 	resp, err := p.client.Wait(ctx, &internal.JasperProcessID{Value: p.info.Id})
-
 	if err != nil {
 		return errors.WithStack(err)
 	}

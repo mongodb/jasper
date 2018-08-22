@@ -10,7 +10,17 @@ import (
 func NewLocalManager() Manager {
 	return &localProcessManager{
 		manager: &basicProcessManager{
-			procs: map[string]Process{},
+			procs:    map[string]Process{},
+			blocking: false,
+		},
+	}
+}
+
+func NewLocalManagerBlockingProcesses() Manager {
+	return &localProcessManager{
+		manager: &basicProcessManager{
+			procs:    map[string]Process{},
+			blocking: true,
 		},
 	}
 }
