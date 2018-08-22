@@ -7,9 +7,11 @@ _testPackages := ./ ./jrpc ./jrpc/internal
 compile:
 	go build $(_testPackages)
 race:
-	go test -count 1 -v -race $(_testPackages)
+	go test -count 1 -v -race $(_testPackages) | tee $(buildDir)/race.sink.out
+	@grep -s -q -e "^PASS" $(buildDir)/race.sink.out && ! grep -s -q "^WARNING: DATA RACE" $(buildDir)/race.sink.out
 test: 
-	go test -v -cover $(_testPackages)
+	go test -v -cover $(_testPackages) | tee $(buildDir)/test.sink.out
+	@grep -s -q -e "^PASS" $(buildDir)/test.sink.out
 coverage:$(buildDir)/cover.out
 	@go tool cover -func=$< | sed -E 's%github.com/.*/jasper/%%' | column -t
 coverage-html:$(buildDir)/cover.html
@@ -17,7 +19,7 @@ coverage-html:$(buildDir)/cover.html
 $(buildDir):$(srcFiles) compile
 	@mkdir -p $@
 $(buildDir)/cover.out:$(buildDir) $(testFiles) .FORCE
-	go test -count 1 -v -coverprofile $@ -cover $(_testPackages)
+	go test -count 1 -v -coverprofile $@ -cover $(_testPackages) 
 $(buildDir)/cover.html:$(buildDir)/cover.out
 	go tool cover -html=$< -o $@
 .FORCE:
