@@ -24,7 +24,6 @@ func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("alway
 func (n *neverJSON) Close() error                  { return errors.New("always error") }
 
 func TestRestService(t *testing.T) {
-	t.Parallel()
 	httpClient := &http.Client{}
 
 	for name, test := range map[string]func(context.Context, *testing.T, *Service, *restClient){

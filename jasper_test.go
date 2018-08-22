@@ -96,7 +96,7 @@ outerRetry:
 			trials := 0
 		checkLoop:
 			for {
-				if trials > 10 {
+				if trials > 40 {
 					continue outerRetry
 				}
 
