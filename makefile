@@ -21,7 +21,7 @@ coverage-html:$(buildDir)/cover.html
 $(buildDir):$(srcFiles) compile
 	@mkdir -p $@
 $(buildDir)/cover.out:$(buildDir) $(testFiles) .FORCE
-	go test -count 1 -v -coverprofile $@ -cover $(_testPackages)
+	go test -v -coverprofile $@ -cover $(_testPackages)
 $(buildDir)/cover.html:$(buildDir)/cover.out
 	go tool cover -html=$< -o $@
 .FORCE:

@@ -58,10 +58,6 @@ func (m *jrpcManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Proce
 		})
 	}
 
-	if len(out) == 0 {
-		return nil, errors.New("found no matching processes")
-	}
-
 	return out, nil
 }
 
@@ -84,9 +80,6 @@ func (m *jrpcManager) Group(ctx context.Context, name string) ([]jasper.Process,
 			client: m.client,
 			info:   info,
 		})
-	}
-	if len(out) == 0 {
-		return nil, errors.New("found no matching processes")
 	}
 
 	return out, nil

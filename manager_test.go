@@ -24,26 +24,17 @@ func TestManagerInterface(t *testing.T) {
 				procs: map[string]Process{},
 			}
 		},
-		"Basic/Lock": func(ctx context.Context, t *testing.T) Manager {
-			return &localProcessManager{
-				manager: &basicProcessManager{
-					procs: map[string]Process{},
-				},
-			}
-		},
 		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
 				procs:    map[string]Process{},
 				blocking: true,
 			}
 		},
+		"Basic/Lock": func(ctx context.Context, t *testing.T) Manager {
+			return NewLocalManager()
+		},
 		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			return &localProcessManager{
-				manager: &basicProcessManager{
-					procs:    map[string]Process{},
-					blocking: true,
-				},
-			}
+			return NewLocalManagerBlockingProcesses()
 		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
 			srv, port := makeAndStartService(ctx, httpClient)

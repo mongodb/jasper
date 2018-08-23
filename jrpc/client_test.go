@@ -179,6 +179,36 @@ func TestJRPCManager(t *testing.T) {
 				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
+
+				///////////////////////////////////
+				//
+				// The following test cases are added
+				// specifically for the jrpc case
+
+				"RegisterIsDisabled": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					err := manager.Register(ctx, nil)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "cannot register")
+				},
+				"ListErrorsWithEmpty": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					procs, err := manager.List(ctx, jasper.All)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "no processes")
+					assert.Len(t, procs, 0)
+				},
+				"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					proc, err := manager.Create(ctx, trueCreateOpts())
+					assert.NoError(t, err)
+					assert.NotNil(t, proc)
+					assert.NotZero(t, proc.ID())
+
+					fetched, err := manager.Get(ctx, proc.ID())
+					assert.NoError(t, err)
+					assert.NotNil(t, fetched)
+					assert.Equal(t, proc.ID(), fetched.ID())
+				},
+				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
+				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
@@ -324,6 +354,48 @@ func TestJRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					assert.Error(t, proc.RegisterTrigger(ctx, nil))
+				},
+				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
+				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
+
+				///////////////////////////////////
+				//
+				// The following test cases are added
+				// specifically for the jrpc case
+
+				"CompleteReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					firstID := proc.ID()
+					assert.NoError(t, proc.Wait(ctx))
+					assert.True(t, proc.Complete(ctx))
+					proc.(*jrpcProcess).info.Id += "_foo"
+					proc.(*jrpcProcess).info.Complete = false
+					require.NotEqual(t, firstID, proc.ID())
+					assert.False(t, proc.Complete(ctx), proc.ID())
+				},
+
+				"RunningReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					firstID := proc.ID()
+					assert.NoError(t, proc.Wait(ctx))
+					proc.(*jrpcProcess).info.Id += "_foo"
+					proc.(*jrpcProcess).info.Complete = false
+					require.NotEqual(t, firstID, proc.ID())
+					assert.False(t, proc.Running(ctx), proc.ID())
+				},
+
+				"CompleteAlwaysReturnsTrueWhenProcessIsComplete": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					assert.NoError(t, proc.Wait(ctx))
+
+					assert.True(t, proc.Complete(ctx))
+
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 			} {
