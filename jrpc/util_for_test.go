@@ -82,11 +82,12 @@ func startJRPC(ctx context.Context, mngr jasper.Manager) (string, error) {
 		<-ctx.Done()
 		rpcSrv.Stop()
 	}()
+
 	return addr, nil
 }
 
 func getClient(ctx context.Context, addr string) (jasper.Manager, error) {
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure())
+	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}
