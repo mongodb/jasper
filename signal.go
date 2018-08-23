@@ -20,8 +20,9 @@ func TerminateAll(ctx context.Context, procs []Process) error {
 	catcher := grip.NewBasicCatcher()
 
 	for _, proc := range procs {
-
-		catcher.Add(Terminate(ctx, proc))
+		if proc.Running(ctx) {
+			catcher.Add(Terminate(ctx, proc))
+		}
 	}
 
 	for _, proc := range procs {
@@ -37,7 +38,9 @@ func KillAll(ctx context.Context, procs []Process) error {
 	catcher := grip.NewBasicCatcher()
 
 	for _, proc := range procs {
-		catcher.Add(Kill(ctx, proc))
+		if proc.Running(ctx) {
+			catcher.Add(Kill(ctx, proc))
+		}
 	}
 
 	for _, proc := range procs {

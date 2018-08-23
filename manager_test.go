@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -183,11 +184,6 @@ func TestManagerInterface(t *testing.T) {
 				"CloseEmptyManagerNoops": func(ctx context.Context, t *testing.T, manager Manager) {
 					assert.NoError(t, manager.Close(ctx))
 				},
-				"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					_, err := createProcs(ctx, sleepCreateOpts(100), manager, 10)
-					assert.NoError(t, err)
-					assert.NoError(t, manager.Close(ctx))
-				},
 				"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
 					_, err := createProcs(ctx, sleepCreateOpts(100), manager, 10)
 					assert.NoError(t, err)
@@ -208,9 +204,22 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Error(t, manager.Close(ctx))
 				},
+				"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					if runtime.GOOS == "windows" {
+						t.Skip("the sleep tests don't block correctly on windows")
+					}
+
+					_, err := createProcs(ctx, sleepCreateOpts(100), manager, 10)
+					assert.NoError(t, err)
+					assert.NoError(t, manager.Close(ctx))
+				},
 				"CloseExcutesClosersForProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
 						t.Skip("not supported on rest interfaces")
+					}
+
+					if runtime.GOOS == "windows" {
+						t.Skip("the sleep tests don't block correctly on windows")
 					}
 
 					opts := sleepCreateOpts(100)

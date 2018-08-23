@@ -94,10 +94,6 @@ func (s Signals) Export() syscall.Signal {
 		return syscall.SIGTERM
 	case Signals_SIGKILL:
 		return syscall.SIGKILL
-	case Signals_SIGUSR1:
-		return syscall.SIGUSR1
-	case Signals_SIGUSR2:
-		return syscall.SIGUSR2
 	default:
 		return syscall.Signal(0)
 	}
@@ -113,10 +109,6 @@ func ConvertSignal(s syscall.Signal) Signals {
 		return Signals_SIGTERM
 	case syscall.SIGKILL:
 		return Signals_SIGKILL
-	case syscall.SIGUSR1:
-		return Signals_SIGUSR1
-	case syscall.SIGUSR2:
-		return Signals_SIGUSR2
 	default:
 		return Signals_UNKNOWN
 	}

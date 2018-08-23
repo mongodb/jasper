@@ -2,6 +2,7 @@ package jrpc
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -148,6 +149,10 @@ func TestJRPCManager(t *testing.T) {
 					assert.NoError(t, manager.Close(ctx))
 				},
 				"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					if runtime.GOOS == "windows" {
+						t.Skip("the sleep tests don't block correctly on windows")
+					}
+
 					_, err := createProcs(ctx, sleepCreateOpts(100), manager, 10)
 					assert.NoError(t, err)
 					assert.NoError(t, manager.Close(ctx))
@@ -243,6 +248,10 @@ func TestJRPCProcess(t *testing.T) {
 					assert.Nil(t, proc)
 				},
 				"CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					if runtime.GOOS == "windows" {
+						t.Skip("the sleep tests don't block correctly on windows")
+					}
+
 					pctx, pcancel := context.WithTimeout(ctx, 200*time.Millisecond)
 					defer pcancel()
 					startAt := time.Now()
