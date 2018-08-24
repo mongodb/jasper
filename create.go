@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/google/shlex"
+	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/level"
+	"github.com/mongodb/grip/send"
 	"github.com/pkg/errors"
 )
 
@@ -41,6 +44,10 @@ func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 
 	return &CreateOptions{
 		Args: args,
+		Output: OutputOptions{
+			Output: send.MakeWriterSender(grip.GetSender(), level.Info),
+			Error:  send.MakeWriterSender(grip.GetSender(), level.Error),
+		},
 	}, nil
 }
 
