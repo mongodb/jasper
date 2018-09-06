@@ -3,7 +3,10 @@ package jasper
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -161,6 +164,125 @@ func TestProcessImplementations(t *testing.T) {
 
 					opts := &CreateOptions{Args: []string{"ls"}}
 					testCase(tctx, t, opts, makeProc)
+				})
+			}
+		})
+	}
+}
+
+func setupMongods(numProcs int) ([]CreateOptions, []string, error) {
+	dbPaths := make([]string, numProcs)
+	optslist := make([]CreateOptions, numProcs)
+	for i := 0; i < numProcs; i++ {
+		procName := "mongod"
+		port := getPortNumber()
+
+		dbPath, err := ioutil.TempDir("", procName)
+		if err != nil {
+			return nil, nil, err
+		}
+		dbPaths[i] = dbPath
+
+		opts := CreateOptions{Args: []string{procName, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
+		optslist[i] = opts
+	}
+
+	return optslist, dbPaths, nil
+}
+
+func teardownMongods(dbPaths []string) {
+	for _, dbPath := range dbPaths {
+		os.RemoveAll(dbPath)
+	}
+}
+
+func TestMongod(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for name, makeProc := range map[string]processConstructor{
+		"Blocking": newBlockingProcess,
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, test := range []struct {
+				id          string
+				numProcs    int
+				signal      syscall.Signal
+				sleepMillis time.Duration
+				expectError bool
+				errorString string
+			}{
+				{
+					id:          "WithSingleMongod",
+					numProcs:    1,
+					signal:      syscall.SIGKILL,
+					sleepMillis: 0,
+					expectError: true,
+					errorString: "operation failed",
+				},
+				{
+					id:          "With50MongodsAndSigkill",
+					numProcs:    50,
+					signal:      syscall.SIGKILL,
+					sleepMillis: 0,
+					expectError: true,
+					errorString: "operation failed",
+				},
+				{
+					id:          "With100MongodsAndSigkill",
+					numProcs:    100,
+					signal:      syscall.SIGKILL,
+					sleepMillis: 0,
+					expectError: true,
+					errorString: "operation failed",
+				},
+				{
+					id:          "With50MongodsAndSigterm",
+					numProcs:    50,
+					signal:      syscall.SIGTERM,
+					sleepMillis: 3000,
+					expectError: false,
+					errorString: "",
+				},
+			} {
+				t.Run(test.id, func(t *testing.T) {
+					optslist, dbPaths, err := setupMongods(test.numProcs)
+					defer teardownMongods(dbPaths)
+					require.NoError(t, err)
+
+					// Spawn concurrent mongods
+					procs := make([]Process, test.numProcs)
+					for i, opts := range optslist {
+						proc, err := makeProc(ctx, &opts)
+						require.NoError(t, err)
+						assert.True(t, proc.Running(ctx))
+						procs[i] = proc
+					}
+
+					waitError := make(chan error, test.numProcs)
+					for _, proc := range procs {
+						go func(proc Process) {
+							err := proc.Wait(ctx)
+							waitError <- err
+						}(proc)
+					}
+
+					// Signal to stop mongods
+					time.Sleep(test.sleepMillis * time.Millisecond)
+					for _, proc := range procs {
+						err := proc.Signal(ctx, test.signal)
+						assert.NoError(t, err)
+					}
+
+					// Check that the processes all received signal
+					for i := 0; i < test.numProcs; i++ {
+						err := <-waitError
+						if test.expectError {
+							assert.EqualError(t, err, test.errorString)
+						} else {
+							assert.NoError(t, err)
+						}
+					}
 				})
 			}
 		})
