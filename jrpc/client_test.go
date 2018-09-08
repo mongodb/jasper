@@ -169,6 +169,10 @@ func TestJRPCManager(t *testing.T) {
 					assert.Contains(t, err.Error(), "canceled")
 				},
 				"CloseErrorsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					if runtime.GOOS == "windows" {
+						t.Skip("context times out on windows")
+					}
+
 					procs, err := createProcs(ctx, trueCreateOpts(), manager, 10)
 					for _, p := range procs {
 						assert.NoError(t, p.Wait(ctx))

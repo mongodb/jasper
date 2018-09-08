@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"testing"
 	"time"
@@ -13,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tychoish/bond"
+	"github.com/tychoish/bond/recall"
 )
 
 type processConstructor func(context.Context, *CreateOptions) (Process, error)
@@ -170,20 +174,69 @@ func TestProcessImplementations(t *testing.T) {
 	}
 }
 
-func setupMongods(numProcs int) ([]CreateOptions, []string, error) {
+// Returns path to release and to mongod
+func downloadMongodb(t *testing.T) (string, string) {
+	var target string
+	var edition string
+	platform := runtime.GOOS
+	switch platform {
+	case "darwin":
+		target = "osx"
+		edition = "enterprise"
+	case "linux":
+		edition = "base"
+		target = platform
+	default:
+		edition = "enterprise"
+		target = platform
+	}
+	arch := bond.MongoDBArch("x86_64")
+	release := "4.0-stable"
+
+	dir, err := ioutil.TempDir("build", "mongodb")
+	require.NoError(t, err)
+
+	opts := bond.BuildOptions{
+		Target:  target,
+		Arch:    bond.MongoDBArch(arch),
+		Edition: bond.MongoDBEdition(edition),
+		Debug:   false,
+	}
+	releases := []string{release}
+	require.NoError(t, recall.DownloadReleases(releases, dir, opts))
+
+	catalog, err := bond.NewCatalog(dir)
+	require.NoError(t, err)
+
+	path, err := catalog.Get("4.0-current", string(edition), target, string(arch), false)
+	require.NoError(t, err)
+
+	var mongodPath string
+	if platform == "windows" {
+		mongodPath = filepath.Join(path, "bin", "mongod.exe")
+	} else {
+		mongodPath = filepath.Join(path, "bin", "mongod")
+	}
+	_, err = os.Stat(mongodPath)
+	require.NoError(t, err)
+
+	return dir, mongodPath
+}
+
+func setupMongods(numProcs int, mongodPath string) ([]CreateOptions, []string, error) {
 	dbPaths := make([]string, numProcs)
 	optslist := make([]CreateOptions, numProcs)
 	for i := 0; i < numProcs; i++ {
 		procName := "mongod"
 		port := getPortNumber()
 
-		dbPath, err := ioutil.TempDir("", procName)
+		dbPath, err := ioutil.TempDir("build", procName)
 		if err != nil {
 			return nil, nil, err
 		}
 		dbPaths[i] = dbPath
 
-		opts := CreateOptions{Args: []string{procName, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
+		opts := CreateOptions{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
 		optslist[i] = opts
 	}
 
@@ -197,8 +250,16 @@ func teardownMongods(dbPaths []string) {
 }
 
 func TestMongod(t *testing.T) {
+	if testing.Short() {
+		fmt.Println("SHORT")
+		t.Skip("skipping mongod tests in short mode")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	dir, mongodPath := downloadMongodb(t)
+	defer os.RemoveAll(dir)
 
 	for name, makeProc := range map[string]processConstructor{
 		"Blocking": newBlockingProcess,
@@ -224,7 +285,7 @@ func TestMongod(t *testing.T) {
 					id:          "With50MongodsAndSigkill",
 					numProcs:    50,
 					signal:      syscall.SIGKILL,
-					sleepMillis: 0,
+					sleepMillis: 2000,
 					expectError: true,
 					errorString: "operation failed",
 				},
@@ -232,21 +293,13 @@ func TestMongod(t *testing.T) {
 					id:          "With100MongodsAndSigkill",
 					numProcs:    100,
 					signal:      syscall.SIGKILL,
-					sleepMillis: 0,
+					sleepMillis: 4000,
 					expectError: true,
 					errorString: "operation failed",
 				},
-				{
-					id:          "With50MongodsAndSigterm",
-					numProcs:    50,
-					signal:      syscall.SIGTERM,
-					sleepMillis: 3000,
-					expectError: false,
-					errorString: "",
-				},
 			} {
 				t.Run(test.id, func(t *testing.T) {
-					optslist, dbPaths, err := setupMongods(test.numProcs)
+					optslist, dbPaths, err := setupMongods(test.numProcs, mongodPath)
 					defer teardownMongods(dbPaths)
 					require.NoError(t, err)
 
