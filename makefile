@@ -51,3 +51,6 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/mongodb/grip/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/mongodb/grip/buildscripts/
+	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/stretchr/testify
+	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/pkg/errors
