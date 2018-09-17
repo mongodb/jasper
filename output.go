@@ -89,9 +89,7 @@ func (l LogType) Validate() error {
 	}
 }
 
-// hack to get around the fact that slogger.DevNullAppender() doesn't work.
 func makeDevNullLogger() (send.Sender, error) {
-	// kim: O_RDONLY -> O_WRONLY
 	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
@@ -160,7 +158,6 @@ func (l LogType) Configure(opts *OutputOptions) error {
 
 	if opts.LogOptions.IgnoreOutput {
 		devNullLogger, err := makeDevNullLogger()
-		// devNullLogger, err := slogger.DevNullAppender()
 		if err != nil {
 			return err
 		}
@@ -171,7 +168,6 @@ func (l LogType) Configure(opts *OutputOptions) error {
 
 	if opts.LogOptions.IgnoreError {
 		devNullLogger, err := makeDevNullLogger()
-		// devNullLogger, err := slogger.DevNullAppender()
 		if err != nil {
 			return err
 		}
