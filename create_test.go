@@ -2,12 +2,14 @@ package jasper
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCreateConstructor(t *testing.T) {
@@ -198,8 +200,96 @@ func TestCreateOptions(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			opts := &CreateOptions{Args: []string{"ls"}}
+			opts := &CreateOptions{Args: []string{"ls"}, Output: OutputOptions{LogType: LogDefault}}
 			test(t, opts)
+		})
+	}
+}
+
+func TestFileLogging(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for _, testParams := range []struct {
+		id              string
+		outFileName     string
+		errFileName     string
+		commandArgs     []string
+		ignoreOutput    bool
+		ignoreError     bool
+		expectEmptyFile bool
+	}{
+		{
+			id:              "LoggerWritesOutputToFileEndpoint",
+			outFileName:     "out",
+			errFileName:     "",
+			commandArgs:     []string{"echo", "foobar"},
+			expectEmptyFile: false,
+			ignoreOutput:    false,
+			ignoreError:     false,
+		},
+		{
+			id:              "LoggerWritesErrorToFileEndpoint",
+			outFileName:     "out",
+			errFileName:     "nonexistent_file",
+			commandArgs:     []string{"cat", "nonexistent_file"},
+			expectEmptyFile: false,
+			ignoreOutput:    false,
+			ignoreError:     false,
+		},
+		{
+			id:              "LoggerIgnoresOutput",
+			outFileName:     "out",
+			errFileName:     "",
+			commandArgs:     []string{"echo", "foobar"},
+			expectEmptyFile: true,
+			ignoreOutput:    true,
+			ignoreError:     false,
+		},
+		{
+			id:              "LoggerIgnoresError",
+			outFileName:     "out",
+			errFileName:     "nonexistent_file",
+			commandArgs:     []string{"cat", "nonexistent_file"},
+			expectEmptyFile: true,
+			ignoreOutput:    false,
+			ignoreError:     true,
+		},
+	} {
+		t.Run(testParams.id, func(t *testing.T) {
+			opts := CreateOptions{}
+			opts.Output.LogType = LogFile
+			opts.Output.LogOptions.IgnoreOutput = testParams.ignoreOutput
+			opts.Output.LogOptions.IgnoreError = testParams.ignoreError
+
+			// Ensure file to cat doesn't exist so that command will write error message to standard error
+			if testParams.errFileName != "" {
+				_, err := os.Stat(testParams.errFileName)
+				require.True(t, os.IsNotExist(err))
+			}
+
+			file, err := ioutil.TempFile("build", testParams.outFileName)
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			info, err := file.Stat()
+			assert.Zero(t, info.Size())
+
+			opts.Output.LogOptions.FileName = file.Name()
+			opts.Args = testParams.commandArgs
+
+			cmd, err := opts.Resolve(ctx)
+			require.NoError(t, err)
+			require.NoError(t, cmd.Start())
+
+			cmd.Wait()
+			opts.Close()
+
+			info, err = file.Stat()
+			assert.NoError(t, err)
+			if testParams.expectEmptyFile {
+				assert.Zero(t, info.Size())
+			} else {
+				assert.NotZero(t, info.Size())
+			}
 		})
 	}
 }

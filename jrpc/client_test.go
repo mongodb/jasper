@@ -58,7 +58,7 @@ func TestJRPCManager(t *testing.T) {
 					assert.Contains(t, err.Error(), "no processes")
 				},
 				"CreateProcessFails": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					proc, err := manager.Create(ctx, &jasper.CreateOptions{})
+					proc, err := manager.Create(ctx, &jasper.CreateOptions{Output: jasper.OutputOptions{LogType: jasper.LogDefault}})
 					assert.Error(t, err)
 					assert.Nil(t, proc)
 				},
@@ -407,7 +407,7 @@ func TestJRPCProcess(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
 					defer cancel()
 
-					opts := &jasper.CreateOptions{Args: []string{"ls"}}
+					opts := &jasper.CreateOptions{Args: []string{"ls"}, Output: jasper.OutputOptions{LogType: jasper.LogDefault}}
 					testCase(tctx, t, opts, makeProc)
 				})
 			}

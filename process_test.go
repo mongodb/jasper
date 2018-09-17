@@ -159,7 +159,7 @@ func TestProcessImplementations(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
 					defer cancel()
 
-					opts := &CreateOptions{Args: []string{"ls"}}
+					opts := &CreateOptions{Args: []string{"ls"}, Output: OutputOptions{LogType: LogDefault, LogOptions: MakeIgnoreLogOptions()}}
 					testCase(tctx, t, opts, makeProc)
 				})
 			}

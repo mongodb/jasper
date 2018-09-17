@@ -16,6 +16,7 @@ func (opts *CreateOptions) Export() *jasper.CreateOptions {
 		TimeoutSecs:      int(opts.TimeoutSeconds),
 		OverrideEnviron:  opts.OverrideEnviron,
 		Tags:             opts.Tags,
+		Output:           opts.Output.Export(),
 	}
 
 	for _, opt := range opts.OnSuccess {
@@ -36,6 +37,7 @@ func ConvertCreateOptions(opts *jasper.CreateOptions) *CreateOptions {
 	if opts.TimeoutSecs == 0 && opts.Timeout != 0 {
 		opts.TimeoutSecs = int(opts.Timeout.Seconds())
 	}
+	output := ConvertOutputOptions(opts.Output)
 
 	co := &CreateOptions{
 		Args:             opts.Args,
@@ -44,6 +46,7 @@ func ConvertCreateOptions(opts *jasper.CreateOptions) *CreateOptions {
 		TimeoutSeconds:   int64(opts.TimeoutSecs),
 		OverrideEnviron:  opts.OverrideEnviron,
 		Tags:             opts.Tags,
+		Output:           &output,
 	}
 
 	for _, opt := range opts.OnSuccess {
@@ -129,4 +132,54 @@ func ConvertFilter(f jasper.Filter) *Filter {
 	default:
 		return nil
 	}
+}
+
+func ConvertLogType(lt jasper.LogType) LogType {
+	switch lt {
+	case jasper.LogBuildloggerV2:
+		return LogType_LOGBUILDLOGGERV2
+	case jasper.LogBuildloggerV3:
+		return LogType_LOGBUILDLOGGERV3
+	case jasper.LogDefault:
+		return LogType_LOGDEFAULT
+	case jasper.LogFile:
+		return LogType_LOGFILE
+	case jasper.LogInherit:
+		return LogType_LOGINHERIT
+	case jasper.LogSplunk:
+		return LogType_LOGSPLUNK
+	case jasper.LogSumologic:
+		return LogType_LOGSUMOLOGIC
+	default:
+		return LogType_LOGUNKNOWN
+	}
+}
+
+func (lt LogType) Export() jasper.LogType {
+	switch lt {
+	case LogType_LOGBUILDLOGGERV2:
+		return jasper.LogBuildloggerV2
+	case LogType_LOGBUILDLOGGERV3:
+		return jasper.LogBuildloggerV3
+	case LogType_LOGDEFAULT:
+		return jasper.LogDefault
+	case LogType_LOGFILE:
+		return jasper.LogFile
+	case LogType_LOGINHERIT:
+		return jasper.LogInherit
+	case LogType_LOGSPLUNK:
+		return jasper.LogSplunk
+	case LogType_LOGSUMOLOGIC:
+		return jasper.LogSumologic
+	default:
+		return jasper.LogType("")
+	}
+}
+
+func ConvertOutputOptions(o jasper.OutputOptions) OutputOptions {
+	return OutputOptions{LogType: ConvertLogType(o.LogType)}
+}
+
+func (o OutputOptions) Export() jasper.OutputOptions {
+	return jasper.OutputOptions{LogType: o.LogType.Export()}
 }

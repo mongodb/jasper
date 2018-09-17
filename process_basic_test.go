@@ -38,6 +38,7 @@ func TestBasicProcess(t *testing.T) {
 		},
 		"RunningProcessAppearsRunning": func(ctx context.Context, t *testing.T, proc *basicProcess) {
 			proc.opts.Args = []string{"sleep", "100"}
+			proc.opts.Output.LogType = LogDefault
 			cmd, err := proc.opts.Resolve(ctx)
 			assert.NoError(t, err)
 			proc.cmd = cmd
@@ -104,7 +105,8 @@ func TestBasicProcess(t *testing.T) {
 			defer cancel()
 
 			testCase(ctx, t, &basicProcess{
-				id: uuid.Must(uuid.NewV4()).String(),
+				id:   uuid.Must(uuid.NewV4()).String(),
+				opts: CreateOptions{Output: OutputOptions{LogType: LogDefault, LogOptions: MakeIgnoreLogOptions()}},
 			})
 		})
 	}

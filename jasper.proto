@@ -5,6 +5,21 @@ option go_package = "internal";
 
 import "google/protobuf/empty.proto";
 
+message OutputOptions {
+  LogType log_type = 1;
+}
+
+enum LogType {
+    LOGBUILDLOGGERV2 = 0;
+    LOGBUILDLOGGERV3 = 1;
+    LOGDEFAULT = 2;
+    LOGFILE = 3;
+    LOGINHERIT = 4;
+    LOGSPLUNK = 5;
+    LOGSUMOLOGIC = 6;
+    LOGUNKNOWN = 7;
+}
+
 message CreateOptions {
   repeated string args = 1; 
   string working_directory = 2; 
@@ -15,6 +30,7 @@ message CreateOptions {
   repeated CreateOptions on_success = 7; 
   repeated CreateOptions on_failure = 8; 
   repeated CreateOptions on_timeout = 9; 
+  OutputOptions output = 10;
 }
 
 message ProcessInfo {

@@ -3,6 +3,7 @@ package jasper
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -45,8 +46,10 @@ func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 	return &CreateOptions{
 		Args: args,
 		Output: OutputOptions{
-			Output: send.MakeWriterSender(grip.GetSender(), level.Info),
-			Error:  send.MakeWriterSender(grip.GetSender(), level.Error),
+			Output:     send.MakeWriterSender(grip.GetSender(), level.Info),
+			Error:      send.MakeWriterSender(grip.GetSender(), level.Error),
+			LogType:    LogDefault,
+			LogOptions: MakeIgnoreLogOptions(),
 		},
 	}, nil
 }
@@ -127,11 +130,26 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 		opts.closers = append(opts.closers, cancel)
 	}
 
+	err = opts.Output.LogType.Configure(&opts.Output)
+	if err != nil {
+		return nil, err
+	}
+
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
 	cmd.Dir = opts.WorkingDirectory
-	cmd.Stderr = opts.Output.GetError()
-	cmd.Stdout = opts.Output.GetOutput()
+	cmd.Stdout = io.MultiWriter(opts.Output.GetOutput(), opts.Output.OutputLogger)
+	cmd.Stderr = io.MultiWriter(opts.Output.GetError(), opts.Output.ErrorLogger)
 	cmd.Env = env
+
+	// WriterSender requires Close() or else command output is not guaranteed to log.
+	opts.closers = append(opts.closers, func() {
+		if !opts.Output.LogOptions.IgnoreOutput {
+			opts.Output.OutputLogger.Close()
+		}
+		if !opts.Output.LogOptions.IgnoreError {
+			opts.Output.ErrorLogger.Close()
+		}
+	})
 
 	return cmd, nil
 }

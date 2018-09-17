@@ -36,19 +36,22 @@ func getPortNumber() int {
 
 func trueCreateOpts() *jasper.CreateOptions {
 	return &jasper.CreateOptions{
-		Args: []string{"true"},
+		Args:   []string{"true"},
+		Output: jasper.OutputOptions{LogType: jasper.LogDefault},
 	}
 }
 
 func falseCreateOpts() *jasper.CreateOptions {
 	return &jasper.CreateOptions{
-		Args: []string{"false"},
+		Args:   []string{"false"},
+		Output: jasper.OutputOptions{LogType: jasper.LogDefault},
 	}
 }
 
 func sleepCreateOpts(num int) *jasper.CreateOptions {
 	return &jasper.CreateOptions{
-		Args: []string{"sleep", fmt.Sprint(num)},
+		Args:   []string{"sleep", fmt.Sprint(num)},
+		Output: jasper.OutputOptions{LogType: jasper.LogDefault},
 	}
 }
 

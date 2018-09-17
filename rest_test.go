@@ -53,7 +53,8 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, proc)
 		},
 		"WithOnlyTimeoutValue": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := client.Create(ctx, &CreateOptions{Args: []string{"ls"}, TimeoutSecs: 300})
+			outOpts := OutputOptions{LogType: LogDefault, LogOptions: MakeIgnoreLogOptions()}
+			proc, err := client.Create(ctx, &CreateOptions{Args: []string{"ls"}, TimeoutSecs: 300, Output: outOpts})
 			assert.NoError(t, err)
 			assert.NotNil(t, proc)
 		},
