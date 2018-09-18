@@ -14,18 +14,15 @@ import (
 // OutputOptions provides a common way to define and represent the
 // output behavior of a evergreen/subprocess.Command operation.
 type OutputOptions struct {
-	Output            io.Writer `json:"-"`
-	Error             io.Writer `json:"-"`
-	SuppressOutput    bool      `json:"suppress_output"`
-	SuppressError     bool      `json:"suppress_error"`
-	SendOutputToError bool      `json:"redirect_output_to_error"`
-	SendErrorToOutput bool      `json:"redirect_error_to_output"`
-	// Type of logging
-	LogType `json:"log_type"`
-	// Configuration settings to build logger
-	LogOptions   `json:"log_options"`
-	OutputLogger *send.WriterSender `json:"-"`
-	ErrorLogger  *send.WriterSender `json:"-"`
+	Output            io.Writer          `json:"-"`
+	Error             io.Writer          `json:"-"`
+	SuppressOutput    bool               `json:"suppress_output"`
+	SuppressError     bool               `json:"suppress_error"`
+	SendOutputToError bool               `json:"redirect_output_to_error"`
+	SendErrorToOutput bool               `json:"redirect_error_to_output"`
+	Loggers           []Logger           `json:"loggers"`
+	OutputSender      *send.WriterSender `json:"-"`
+	ErrorSender       *send.WriterSender `json:"-"`
 }
 
 type LogType string
@@ -40,6 +37,10 @@ const (
 	LogSumologic     = "sumologic"
 )
 
+const (
+	DefaultLogName = "jasper"
+)
+
 type LogOptions struct {
 	BuildloggerOptions send.BuildloggerConfig    `json:"buildlogger_options"`
 	DefaultPrefix      string                    `json:"default_prefix"`
@@ -51,9 +52,9 @@ type LogOptions struct {
 	IgnoreError  bool `json:"ignore_log_error"`
 }
 
-// Convenience function to specify that no logging should be done.
-func MakeIgnoreLogOptions() LogOptions {
-	return LogOptions{IgnoreOutput: true, IgnoreError: true}
+type Logger struct {
+	LogType
+	LogOptions
 }
 
 func (o OutputOptions) outputIsNull() bool {
@@ -89,94 +90,71 @@ func (l LogType) Validate() error {
 	}
 }
 
-func makeDevNullLogger() (send.Sender, error) {
+func makeDevNullSender() (send.Sender, error) {
 	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	return send.NewStreamLogger("", devNull, send.LevelInfo{Default: level.Debug, Threshold: level.Debug})
+	return send.NewStreamLogger("", devNull, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 }
 
-func (l LogType) Configure(opts *OutputOptions) error {
-	var logger send.Sender
+func (l LogType) Configure(opts LogOptions) (*send.Sender, error) {
+	var sender *send.Sender
 
 	switch l {
 	case LogBuildloggerV2, LogBuildloggerV3:
-		if opts.LogOptions.BuildloggerOptions.Local == nil {
-			return errors.New("Must specify buildlogger local sender")
+		if opts.BuildloggerOptions.Local == nil {
+			return nil, errors.New("must specify buildlogger local sender")
 		}
-		if opts.LogOptions.BuildloggerOptions.Local.Name() == "" {
-			return errors.New("Must call SetName() on buildlogger local sender")
+		if opts.BuildloggerOptions.Local.Name() == "" {
+			return nil, errors.New("must call SetName() on buildlogger local sender")
 		}
-		l, err := send.MakeBuildlogger("jasper", &opts.LogOptions.BuildloggerOptions)
+		s, err := send.MakeBuildlogger(DefaultLogName, &opts.BuildloggerOptions)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		logger = l
+		sender = &s
 	case LogDefault:
-		if opts.LogOptions.DefaultPrefix == "" {
-			opts.LogOptions.DefaultPrefix = "jasper"
-		}
-		l, err := send.NewNativeLogger(opts.LogOptions.DefaultPrefix, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		s, err := send.NewNativeLogger(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 		if err != nil {
-			return err
+			return nil, err
 		}
-		logger = l
+		sender = &s
 	case LogFile:
-		l, err := send.MakePlainFileLogger(opts.LogOptions.FileName)
-		l.SetName("jasper")
-		l.SetFormatter(send.MakePlainFormatter())
+		s, err := send.MakePlainFileLogger(opts.FileName)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		logger = l
+		s.SetName(DefaultLogName)
+		s.SetFormatter(send.MakePlainFormatter())
+		sender = &s
 	case LogInherit:
-		l := grip.GetSender()
-		logger = l
+		s := grip.GetSender()
+		sender = &s
 	case LogSplunk:
-		if !opts.LogOptions.SplunkOptions.Populated() {
-			return errors.New("missing connection info for output type splunk")
+		if !opts.SplunkOptions.Populated() {
+			return nil, errors.New("missing connection info for output type splunk")
 		}
-		l, err := send.NewSplunkLogger("", opts.LogOptions.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		s, err := send.NewSplunkLogger("", opts.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 		if err != nil {
-			return err
+			return nil, err
 		}
-		logger = l
+		sender = &s
 	case LogSumologic:
-		if opts.LogOptions.SumoEndpoint == "" {
-			return errors.New("missing endpoint for output type sumologic")
+		if opts.SumoEndpoint == "" {
+			return nil, errors.New("missing endpoint for output type sumologic")
 		}
-		l, err := send.NewSumo("jasper", opts.LogOptions.SumoEndpoint)
+		s, err := send.NewSumo(DefaultLogName, opts.SumoEndpoint)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		logger = l
+		sender = &s
 	default:
-		return errors.New("unknown log type")
+		return nil, errors.New("unknown log type")
 	}
 
-	if opts.LogOptions.IgnoreOutput {
-		devNullLogger, err := makeDevNullLogger()
-		if err != nil {
-			return err
-		}
-		opts.OutputLogger = send.NewWriterSender(devNullLogger)
-	} else {
-		opts.OutputLogger = send.NewWriterSender(logger)
-	}
-
-	if opts.LogOptions.IgnoreError {
-		devNullLogger, err := makeDevNullLogger()
-		if err != nil {
-			return err
-		}
-		opts.ErrorLogger = send.NewWriterSender(devNullLogger)
-	} else {
-		opts.ErrorLogger = send.NewWriterSender(logger)
-	}
-
-	return nil
+	return sender, nil
 }
 
 func (o OutputOptions) Validate() error {
@@ -214,8 +192,10 @@ func (o OutputOptions) Validate() error {
 		catcher.Add(errors.New("cannot create redirecty cycle between output and error"))
 	}
 
-	if err := o.LogType.Validate(); err != nil {
-		catcher.Add(err)
+	for _, logger := range o.Loggers {
+		if err := logger.LogType.Validate(); err != nil {
+			catcher.Add(err)
+		}
 	}
 
 	return catcher.Resolve()

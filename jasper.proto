@@ -5,8 +5,12 @@ option go_package = "internal";
 
 import "google/protobuf/empty.proto";
 
+message Logger {
+    LogType log_type = 1;
+}
+
 message OutputOptions {
-  LogType log_type = 1;
+  repeated Logger loggers = 1;
 }
 
 enum LogType {

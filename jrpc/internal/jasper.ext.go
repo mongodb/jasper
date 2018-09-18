@@ -176,10 +176,26 @@ func (lt LogType) Export() jasper.LogType {
 	}
 }
 
-func ConvertOutputOptions(o jasper.OutputOptions) OutputOptions {
-	return OutputOptions{LogType: ConvertLogType(o.LogType)}
+func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
+	loggers := []*Logger{}
+	for _, logger := range opts.Loggers {
+		loggers = append(loggers, ConvertLogger(logger))
+	}
+	return OutputOptions{Loggers: loggers}
 }
 
-func (o OutputOptions) Export() jasper.OutputOptions {
-	return jasper.OutputOptions{LogType: o.LogType.Export()}
+func ConvertLogger(logger jasper.Logger) *Logger {
+	return &Logger{LogType: ConvertLogType(logger.LogType)}
+}
+
+func (opts OutputOptions) Export() jasper.OutputOptions {
+	loggers := []jasper.Logger{}
+	for _, logger := range opts.Loggers {
+		loggers = append(loggers, logger.Export())
+	}
+	return jasper.OutputOptions{Loggers: loggers}
+}
+
+func (logger Logger) Export() jasper.Logger {
+	return jasper.Logger{LogType: logger.LogType.Export()}
 }

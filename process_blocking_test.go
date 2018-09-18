@@ -304,7 +304,7 @@ func TestBlockingProcess(t *testing.T) {
 					proc := &blockingProcess{
 						id:   uuid.Must(uuid.NewV4()).String(),
 						ops:  make(chan func(*exec.Cmd), 1),
-						opts: CreateOptions{Output: OutputOptions{LogType: LogDefault, LogOptions: MakeIgnoreLogOptions()}},
+						opts: CreateOptions{},
 					}
 
 					testCase(ctx, t, proc)

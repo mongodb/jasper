@@ -72,7 +72,7 @@ func (s *Service) rootRoute(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
-	opts := &CreateOptions{Output: OutputOptions{LogType: LogDefault, LogOptions: MakeIgnoreLogOptions()}}
+	opts := &CreateOptions{Output: OutputOptions{}}
 	if err := gimlet.GetJSON(r.Body, opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,

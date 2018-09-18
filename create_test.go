@@ -198,9 +198,15 @@ func TestCreateOptions(t *testing.T) {
 			assert.NoError(t, opts.Validate())
 			assert.Equal(t, 1, opts.TimeoutSecs)
 		},
+		"ResolveFailsWithInvalidLoggingConfiguration": func(t *testing.T, opts *CreateOptions) {
+			opts.Output.Loggers = []Logger{Logger{LogType: LogSumologic}}
+			cmd, err := opts.Resolve(ctx)
+			assert.Error(t, err)
+			assert.Nil(t, cmd)
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			opts := &CreateOptions{Args: []string{"ls"}, Output: OutputOptions{LogType: LogDefault}}
+			opts := &CreateOptions{Args: []string{"ls"}}
 			test(t, opts)
 		})
 	}
@@ -209,71 +215,116 @@ func TestCreateOptions(t *testing.T) {
 func TestFileLogging(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	for _, testParams := range []struct {
-		id              string
-		outFileName     string
-		errFileName     string
-		commandArgs     []string
-		ignoreOutput    bool
-		ignoreError     bool
+
+	type FileLoggerParams struct {
+		logOpts LogOptions
+		// True if the file is expected to be empty after the logger is finished writing
 		expectEmptyFile bool
+		file            *os.File
+	}
+
+	for _, testParams := range []struct {
+		id          string
+		params      []FileLoggerParams
+		errFileName string
+		commandArgs []string
 	}{
 		{
-			id:              "LoggerWritesOutputToFileEndpoint",
-			outFileName:     "out",
-			errFileName:     "",
-			commandArgs:     []string{"echo", "foobar"},
-			expectEmptyFile: false,
-			ignoreOutput:    false,
-			ignoreError:     false,
+			id: "LoggerWritesOutputToOneFileEndpoint",
+			params: []FileLoggerParams{
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
+					expectEmptyFile: false,
+				},
+			},
+			errFileName: "",
+			commandArgs: []string{"echo", "foobar"},
 		},
 		{
-			id:              "LoggerWritesErrorToFileEndpoint",
-			outFileName:     "out",
-			errFileName:     "nonexistent_file",
-			commandArgs:     []string{"cat", "nonexistent_file"},
-			expectEmptyFile: false,
-			ignoreOutput:    false,
-			ignoreError:     false,
+			id: "LoggerWritesOutputToMultipleFileEndpoints",
+			params: []FileLoggerParams{
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
+					expectEmptyFile: false,
+				},
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
+					expectEmptyFile: false,
+				},
+			},
+			errFileName: "",
+			commandArgs: []string{"echo", "foobar"},
 		},
 		{
-			id:              "LoggerIgnoresOutput",
-			outFileName:     "out",
-			errFileName:     "",
-			commandArgs:     []string{"echo", "foobar"},
-			expectEmptyFile: true,
-			ignoreOutput:    true,
-			ignoreError:     false,
+			id: "LoggerWritesErrorToFileEndpoint",
+			params: []FileLoggerParams{
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: true, IgnoreError: false},
+					expectEmptyFile: false,
+				},
+			},
+			errFileName: "nonexistent_file",
+			commandArgs: []string{"cat", "nonexistent_file"},
 		},
 		{
-			id:              "LoggerIgnoresError",
-			outFileName:     "out",
-			errFileName:     "nonexistent_file",
-			commandArgs:     []string{"cat", "nonexistent_file"},
-			expectEmptyFile: true,
-			ignoreOutput:    false,
-			ignoreError:     true,
+			id: "LoggerIgnoresOutput",
+			params: []FileLoggerParams{
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: true, IgnoreError: false},
+					expectEmptyFile: true,
+				},
+			},
+			errFileName: "",
+			commandArgs: []string{"echo", "foobar"},
+		},
+		{
+			id: "LoggerIgnoresError",
+			params: []FileLoggerParams{
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: true},
+					expectEmptyFile: true,
+				},
+			},
+			errFileName: "nonexistent_file",
+			commandArgs: []string{"cat", "nonexistent_file"},
+		},
+		{
+			id: "LoggerObeysDifferingIgnoreOptions",
+			params: []FileLoggerParams{
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
+					expectEmptyFile: false,
+				},
+				FileLoggerParams{
+					logOpts:         LogOptions{IgnoreOutput: true, IgnoreError: false},
+					expectEmptyFile: true,
+				},
+			},
+			errFileName: "",
+			commandArgs: []string{"echo", "foobar"},
 		},
 	} {
 		t.Run(testParams.id, func(t *testing.T) {
-			opts := CreateOptions{}
-			opts.Output.LogType = LogFile
-			opts.Output.LogOptions.IgnoreOutput = testParams.ignoreOutput
-			opts.Output.LogOptions.IgnoreError = testParams.ignoreError
-
 			// Ensure file to cat doesn't exist so that command will write error message to standard error
 			if testParams.errFileName != "" {
 				_, err := os.Stat(testParams.errFileName)
 				require.True(t, os.IsNotExist(err))
 			}
 
-			file, err := ioutil.TempFile("build", testParams.outFileName)
-			require.NoError(t, err)
-			defer os.Remove(file.Name())
-			info, err := file.Stat()
-			assert.Zero(t, info.Size())
+			for i, _ := range testParams.params {
+				file, err := ioutil.TempFile("build", "out.txt")
+				require.NoError(t, err)
+				defer os.Remove(file.Name())
+				info, err := file.Stat()
+				assert.Zero(t, info.Size())
+				testParams.params[i].logOpts.FileName = file.Name()
+				testParams.params[i].file = file
+			}
 
-			opts.Output.LogOptions.FileName = file.Name()
+			opts := CreateOptions{}
+			for _, param := range testParams.params {
+				opts.Output.Loggers = append(opts.Output.Loggers, Logger{LogType: LogFile, LogOptions: param.logOpts})
+			}
 			opts.Args = testParams.commandArgs
 
 			cmd, err := opts.Resolve(ctx)
@@ -283,12 +334,14 @@ func TestFileLogging(t *testing.T) {
 			cmd.Wait()
 			opts.Close()
 
-			info, err = file.Stat()
-			assert.NoError(t, err)
-			if testParams.expectEmptyFile {
-				assert.Zero(t, info.Size())
-			} else {
-				assert.NotZero(t, info.Size())
+			for _, param := range testParams.params {
+				info, err := param.file.Stat()
+				assert.NoError(t, err)
+				if param.expectEmptyFile {
+					assert.Zero(t, info.Size())
+				} else {
+					assert.NotZero(t, info.Size())
+				}
 			}
 		})
 	}
