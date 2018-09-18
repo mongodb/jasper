@@ -131,7 +131,18 @@ func TestDefaultTrigger(t *testing.T) {
 			assert.Error(t, err)
 			assert.Zero(t, out)
 		},
-		// "": func(ctx context.Context, t *testing.T, manager Manager) {},
+		"OptionsCloseTriggerCallsClosers": func(ctx context.Context, t *testing.T, manager Manager) {
+			count := 0
+			opts := CreateOptions{}
+			opts.closers = append(opts.closers, func() {
+				count++
+			})
+			info := ProcessInfo{Options: opts}
+
+			trigger := makeOptionsCloseTrigger()
+			trigger(info)
+			assert.Equal(t, 1, count)
+		},
 		// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 	} {
 		t.Run(name, func(t *testing.T) {

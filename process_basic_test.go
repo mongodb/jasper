@@ -97,7 +97,6 @@ func TestBasicProcess(t *testing.T) {
 			assert.Error(t, proc.Wait(ctx))
 		},
 		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
-		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())

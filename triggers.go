@@ -24,6 +24,12 @@ func (s ProcessTriggerSequence) Run(info ProcessInfo) {
 	}
 }
 
+func makeOptionsCloseTrigger() ProcessTrigger {
+	return func(info ProcessInfo) {
+		info.Options.Close()
+	}
+}
+
 func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, parentID string) ProcessTrigger {
 	deadline, hasDeadline := ctx.Deadline()
 	timeout := time.Until(deadline)

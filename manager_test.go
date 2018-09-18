@@ -288,7 +288,6 @@ func TestManagerInterface(t *testing.T) {
 					assert.Error(t, err)
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
-				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
