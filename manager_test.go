@@ -223,7 +223,8 @@ func TestManagerInterface(t *testing.T) {
 
 					assert.Equal(t, counter, 0)
 					assert.NoError(t, manager.Close(ctx))
-					assert.Equal(t, 1, counter)
+					// Closer are called twice - once by trigger registered in Create() and once in manager.Close(ctx)
+					assert.Equal(t, 2, counter)
 				},
 				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
@@ -286,6 +287,27 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, err)
 					err = manager.Register(ctx, proc)
 					assert.Error(t, err)
+				},
+				"ManagerCallsOptionsCloseByDefault": func(ctx context.Context, t *testing.T, manager Manager) {
+					if mname == "REST" {
+						t.Skip("cannot register trigger on rest interfaces")
+					}
+
+					opts := &CreateOptions{}
+					opts.Args = []string{"echo", "foobar"}
+					count := 0
+					opts.closers = append(opts.closers, func() { count++ })
+					closersDone := make(chan bool)
+					opts.closers = append(opts.closers, func() { closersDone <- true })
+					proc, err := manager.Create(ctx, opts)
+					assert.NoError(t, err)
+					assert.NoError(t, proc.Wait(ctx))
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "process took too long to run closers")
+					case <-closersDone:
+						assert.Equal(t, 1, count)
+					}
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {

@@ -41,6 +41,7 @@ func (m *localProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 	}
 
 	proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
+	proc.RegisterTrigger(ctx, makeOptionsCloseTrigger())
 
 	proc = &localProcess{proc: proc}
 	m.manager.procs[proc.ID()] = proc
