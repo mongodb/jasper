@@ -155,15 +155,28 @@ func TestProcessImplementations(t *testing.T) {
 					assert.NoError(t, err)
 					assert.NoError(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, opts, "foo")))
 				},
-				"OptionsCloseTriggerSucceeds": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"OptionsCloseTriggerRegisteredByDefault": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
 						t.Skip("remote triggers are not supported on rest processes")
 					}
+					count := 0
+					opts.closers = append(opts.closers, func() { count++ })
+					closersDone := make(chan bool)
+					opts.closers = append(opts.closers, func() { closersDone <- true })
+
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
-					assert.NoError(t, proc.RegisterTrigger(ctx, makeOptionsCloseTrigger()))
+
+					proc.Wait(ctx)
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "closers took too long to run")
+					case <-closersDone:
+						assert.Equal(t, 1, count)
+					}
 				},
-				"ProcessWritesToLogWithTrigger": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"ProcessWritesToLog": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
 						t.Skip("remote triggers are not supported on rest processes")
 					}
@@ -179,7 +192,6 @@ func TestProcessImplementations(t *testing.T) {
 
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
-					assert.NoError(t, proc.RegisterTrigger(ctx, makeOptionsCloseTrigger()))
 
 					assert.NoError(t, proc.Wait(ctx))
 

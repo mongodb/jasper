@@ -32,7 +32,6 @@ func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 	// TODO this will race because it runs later
 	if !m.skipDefaultTrigger {
 		proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
-		proc.RegisterTrigger(ctx, makeOptionsCloseTrigger())
 	}
 
 	m.procs[proc.ID()] = proc
