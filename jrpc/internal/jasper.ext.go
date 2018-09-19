@@ -181,11 +181,17 @@ func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
 	for _, logger := range opts.Loggers {
 		loggers = append(loggers, ConvertLogger(logger))
 	}
-	return OutputOptions{Loggers: loggers}
+	return OutputOptions{
+		SuppressOutput:        opts.SuppressOutput,
+		SuppressError:         opts.SuppressError,
+		RedirectOutputToError: opts.SendOutputToError,
+		RedirectErrorToOutput: opts.SendErrorToOutput,
+		Loggers:               loggers,
+	}
 }
 
 func ConvertLogger(logger jasper.Logger) *Logger {
-	return &Logger{LogType: ConvertLogType(logger.LogType)}
+	return &Logger{LogType: ConvertLogType(logger.Type)}
 }
 
 func (opts OutputOptions) Export() jasper.OutputOptions {
@@ -193,9 +199,15 @@ func (opts OutputOptions) Export() jasper.OutputOptions {
 	for _, logger := range opts.Loggers {
 		loggers = append(loggers, logger.Export())
 	}
-	return jasper.OutputOptions{Loggers: loggers}
+	return jasper.OutputOptions{
+		SuppressOutput:    opts.SuppressOutput,
+		SuppressError:     opts.SuppressError,
+		SendOutputToError: opts.RedirectOutputToError,
+		SendErrorToOutput: opts.RedirectErrorToOutput,
+		Loggers:           loggers,
+	}
 }
 
 func (logger Logger) Export() jasper.Logger {
-	return jasper.Logger{LogType: logger.LogType.Export()}
+	return jasper.Logger{Type: logger.LogType.Export()}
 }

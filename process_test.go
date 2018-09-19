@@ -187,7 +187,7 @@ func TestProcessImplementations(t *testing.T) {
 					info, err := file.Stat()
 					assert.Zero(t, info.Size())
 
-					opts.Output.Loggers = []Logger{Logger{LogType: LogFile, LogOptions: LogOptions{FileName: file.Name()}}}
+					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}}}
 					opts.Args = []string{"echo", "foobar"}
 
 					proc, err := makep(ctx, opts)

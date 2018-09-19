@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -199,7 +200,14 @@ func TestCreateOptions(t *testing.T) {
 			assert.Equal(t, 1, opts.TimeoutSecs)
 		},
 		"ResolveFailsWithInvalidLoggingConfiguration": func(t *testing.T, opts *CreateOptions) {
-			opts.Output.Loggers = []Logger{Logger{LogType: LogSumologic}}
+			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic}}
+			cmd, err := opts.Resolve(ctx)
+			assert.Error(t, err)
+			assert.Nil(t, cmd)
+		},
+		"ResolveFailsWithInvalidErrorLoggingConfiguration": func(t *testing.T, opts *CreateOptions) {
+			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic}}
+			opts.Output.SuppressOutput = true
 			cmd, err := opts.Resolve(ctx)
 			assert.Error(t, err)
 			assert.Nil(t, cmd)
@@ -216,116 +224,137 @@ func TestFileLogging(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	type FileLoggerParams struct {
-		logOpts LogOptions
-		// True if the file is expected to be empty after the logger is finished writing
-		expectEmptyFile bool
-		file            *os.File
+	badFileName := "this_does_not_exist"
+	// Ensure bad file to cat doesn't exist so that command will write error message to standard error
+	_, err := os.Stat(badFileName)
+	require.True(t, os.IsNotExist(err))
+
+	catOutputMessage := "foobar"
+	outputSize := int64(len(catOutputMessage) + 1)
+	catErrorMessage := "cat: this_does_not_exist: No such file or directory"
+	errorSize := int64(len(catErrorMessage) + 1)
+
+	// Ensure good file exists and has data
+	goodFile, err := ioutil.TempFile("build", "this_file_exists")
+	require.NoError(t, err)
+	defer os.Remove(goodFile.Name())
+
+	goodFileName := goodFile.Name()
+	numBytes, err := goodFile.Write([]byte(catOutputMessage))
+	require.NotZero(t, numBytes)
+
+	type Command struct {
+		args         []string
+		usesGoodFile bool
+		usesBadFile  bool
+	}
+	commands := map[string]Command{
+		"Output": Command{
+			args:         []string{"cat", goodFileName},
+			usesGoodFile: true,
+			usesBadFile:  false,
+		},
+		"Error": Command{
+			args:         []string{"cat", badFileName},
+			usesGoodFile: false,
+			usesBadFile:  true,
+		},
+		"OutputAndError": Command{
+			args:         []string{"cat", goodFileName, badFileName},
+			usesGoodFile: true,
+			usesBadFile:  true,
+		},
 	}
 
 	for _, testParams := range []struct {
-		id          string
-		params      []FileLoggerParams
-		errFileName string
-		commandArgs []string
+		id               string
+		command          Command
+		numBytesExpected int64
+		numLogs          int
+		outOpts          OutputOptions
 	}{
 		{
-			id: "LoggerWritesOutputToOneFileEndpoint",
-			params: []FileLoggerParams{
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
-					expectEmptyFile: false,
-				},
-			},
-			errFileName: "",
-			commandArgs: []string{"echo", "foobar"},
+			id:               "LoggerWritesOutputToOneFileEndpoint",
+			command:          commands["Output"],
+			numBytesExpected: outputSize,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: false, SuppressError: false},
 		},
 		{
-			id: "LoggerWritesOutputToMultipleFileEndpoints",
-			params: []FileLoggerParams{
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
-					expectEmptyFile: false,
-				},
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
-					expectEmptyFile: false,
-				},
-			},
-			errFileName: "",
-			commandArgs: []string{"echo", "foobar"},
+			id:               "LoggerWritesOutputToMultipleFileEndpoints",
+			command:          commands["Output"],
+			numBytesExpected: outputSize,
+			numLogs:          2,
+			outOpts:          OutputOptions{SuppressOutput: false, SuppressError: false},
 		},
 		{
-			id: "LoggerWritesErrorToFileEndpoint",
-			params: []FileLoggerParams{
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: true, IgnoreError: false},
-					expectEmptyFile: false,
-				},
-			},
-			errFileName: "nonexistent_file",
-			commandArgs: []string{"cat", "nonexistent_file"},
+			id:               "LoggerWritesErrorToFileEndpoint",
+			command:          commands["Error"],
+			numBytesExpected: errorSize,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: true, SuppressError: false},
 		},
 		{
-			id: "LoggerIgnoresOutput",
-			params: []FileLoggerParams{
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: true, IgnoreError: false},
-					expectEmptyFile: true,
-				},
-			},
-			errFileName: "",
-			commandArgs: []string{"echo", "foobar"},
+			id:               "LoggerReadsFromBothStandardOutputAndStandardError",
+			command:          commands["OutputAndError"],
+			numBytesExpected: outputSize + errorSize,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: false, SuppressError: false},
 		},
 		{
-			id: "LoggerIgnoresError",
-			params: []FileLoggerParams{
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: true},
-					expectEmptyFile: true,
-				},
-			},
-			errFileName: "nonexistent_file",
-			commandArgs: []string{"cat", "nonexistent_file"},
+			id:               "LoggerIgnoresOutputWhenSuppressed",
+			command:          commands["Output"],
+			numBytesExpected: 0,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: true, SuppressError: false},
 		},
 		{
-			id: "LoggerObeysDifferingIgnoreOptions",
-			params: []FileLoggerParams{
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: false, IgnoreError: false},
-					expectEmptyFile: false,
-				},
-				FileLoggerParams{
-					logOpts:         LogOptions{IgnoreOutput: true, IgnoreError: false},
-					expectEmptyFile: true,
-				},
-			},
-			errFileName: "",
-			commandArgs: []string{"echo", "foobar"},
+			id:               "LoggerIgnoresErrorWhenSuppressed",
+			command:          commands["Error"],
+			numBytesExpected: 0,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: false, SuppressError: true},
+		},
+		{
+			id:               "LoggerIgnoresOutputAndErrorWhenSuppressed",
+			command:          commands["OutputAndError"],
+			numBytesExpected: 0,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: true, SuppressError: true},
+		},
+		{
+			id:               "LoggerReadsFromRedirectedOutput",
+			command:          commands["Output"],
+			numBytesExpected: outputSize,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: false, SuppressError: false, SendOutputToError: true},
+		},
+		{
+			id:               "LoggerReadsFromRedirectedError",
+			command:          commands["Error"],
+			numBytesExpected: errorSize,
+			numLogs:          1,
+			outOpts:          OutputOptions{SuppressOutput: false, SuppressError: false, SendErrorToOutput: true},
 		},
 	} {
 		t.Run(testParams.id, func(t *testing.T) {
-			// Ensure file to cat doesn't exist so that command will write error message to standard error
-			if testParams.errFileName != "" {
-				_, err := os.Stat(testParams.errFileName)
-				require.True(t, os.IsNotExist(err))
-			}
 
-			for i, _ := range testParams.params {
+			files := []*os.File{}
+			for i := 0; i < testParams.numLogs; i++ {
 				file, err := ioutil.TempFile("build", "out.txt")
 				require.NoError(t, err)
 				defer os.Remove(file.Name())
+				fmt.Println("outfile name:", file.Name())
 				info, err := file.Stat()
 				assert.Zero(t, info.Size())
-				testParams.params[i].logOpts.FileName = file.Name()
-				testParams.params[i].file = file
+				files = append(files, file)
 			}
 
-			opts := CreateOptions{}
-			for _, param := range testParams.params {
-				opts.Output.Loggers = append(opts.Output.Loggers, Logger{LogType: LogFile, LogOptions: param.logOpts})
+			opts := CreateOptions{Output: testParams.outOpts}
+			for _, file := range files {
+				opts.Output.Loggers = append(opts.Output.Loggers, Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}})
 			}
-			opts.Args = testParams.commandArgs
+			opts.Args = testParams.command.args
 
 			cmd, err := opts.Resolve(ctx)
 			require.NoError(t, err)
@@ -334,14 +363,10 @@ func TestFileLogging(t *testing.T) {
 			cmd.Wait()
 			opts.Close()
 
-			for _, param := range testParams.params {
-				info, err := param.file.Stat()
+			for _, file := range files {
+				info, err := file.Stat()
 				assert.NoError(t, err)
-				if param.expectEmptyFile {
-					assert.Zero(t, info.Size())
-				} else {
-					assert.NotZero(t, info.Size())
-				}
+				assert.Equal(t, testParams.numBytesExpected, info.Size())
 			}
 		})
 	}

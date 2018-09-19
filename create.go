@@ -3,7 +3,6 @@ package jasper
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -128,58 +127,27 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 		opts.closers = append(opts.closers, cancel)
 	}
 
-	outSenders := []send.Sender{}
-	errSenders := []send.Sender{}
-	for _, logger := range opts.Output.Loggers {
-		sender, err := logger.LogType.Configure(logger.LogOptions)
-		if err != nil {
-			return nil, err
-		}
-		if !logger.LogOptions.IgnoreOutput {
-			outSenders = append(outSenders, *sender)
-		}
-		if !logger.LogOptions.IgnoreError {
-			errSenders = append(errSenders, *sender)
-		}
-	}
-
-	if len(outSenders) == 0 {
-		devNull, err := makeDevNullSender()
-		if err != nil {
-			return nil, err
-		}
-		outSenders = append(outSenders, devNull)
-	}
-	if len(errSenders) == 0 {
-		devNull, err := makeDevNullSender()
-		if err != nil {
-			return nil, err
-		}
-		errSenders = append(errSenders, devNull)
-	}
-
-	outMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Info, Threshold: level.Trace}, outSenders)
-	if err != nil {
-		return nil, err
-	}
-	errMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Error, Threshold: level.Trace}, errSenders)
-	if err != nil {
-		return nil, err
-	}
-
-	opts.Output.OutputSender = send.NewWriterSender(outMulti)
-	opts.Output.ErrorSender = send.NewWriterSender(errMulti)
-
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
 	cmd.Dir = opts.WorkingDirectory
-	cmd.Stdout = io.MultiWriter(opts.Output.GetOutput(), opts.Output.OutputSender)
-	cmd.Stderr = io.MultiWriter(opts.Output.GetError(), opts.Output.ErrorSender)
+
+	cmd.Stdout, err = opts.Output.GetOutput()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr, err = opts.Output.GetError()
+	if err != nil {
+		return nil, err
+	}
 	cmd.Env = env
 
 	// WriterSender requires Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() {
-		opts.Output.OutputSender.Close()
-		opts.Output.ErrorSender.Close()
+		if opts.Output.outputSender != nil {
+			opts.Output.outputSender.Close()
+		}
+		if opts.Output.errorSender != nil {
+			opts.Output.errorSender.Close()
+		}
 	})
 
 	return cmd, nil

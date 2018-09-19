@@ -11,17 +11,21 @@ message Logger {
 
 message OutputOptions {
   repeated Logger loggers = 1;
+  bool suppress_output = 2;
+  bool suppress_error = 3;
+  bool redirect_output_to_error = 4;
+  bool redirect_error_to_output = 5;
 }
 
 enum LogType {
-    LOGBUILDLOGGERV2 = 0;
-    LOGBUILDLOGGERV3 = 1;
-    LOGDEFAULT = 2;
-    LOGFILE = 3;
-    LOGINHERIT = 4;
-    LOGSPLUNK = 5;
-    LOGSUMOLOGIC = 6;
-    LOGUNKNOWN = 7;
+    LOGUNKNOWN = 0;
+    LOGBUILDLOGGERV2 = 1;
+    LOGBUILDLOGGERV3 = 2;
+    LOGDEFAULT = 3;
+    LOGFILE = 4;
+    LOGINHERIT = 5;
+    LOGSPLUNK = 6;
+    LOGSUMOLOGIC = 7;
 }
 
 message CreateOptions {

@@ -85,31 +85,42 @@ func TestOutputOptions(t *testing.T) {
 			assert.False(t, opts.outputIsNull())
 		},
 		"OutputGetterNilIsIoDiscard": func(t *testing.T, opts OutputOptions) {
-			assert.Equal(t, ioutil.Discard, opts.GetOutput())
+			out, err := opts.GetOutput()
+			assert.NoError(t, err)
+			assert.Equal(t, ioutil.Discard, out)
 		},
 		"OutputGetterWhenPopulatedIsCorrect": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
-			assert.Equal(t, stdout, opts.GetOutput())
+			out, err := opts.GetOutput()
+			assert.NoError(t, err)
+			assert.Equal(t, stdout, out)
 		},
 		"ErrorGetterNilIsIoDiscard": func(t *testing.T, opts OutputOptions) {
-			assert.Equal(t, ioutil.Discard, opts.GetError())
+			outErr, err := opts.GetError()
+			assert.NoError(t, err)
+			assert.Equal(t, ioutil.Discard, outErr)
 		},
 		"ErrorGetterWhenPopulatedIsCorrect": func(t *testing.T, opts OutputOptions) {
 			opts.Error = stderr
-			assert.Equal(t, stderr, opts.GetError())
+			outErr, err := opts.GetError()
+			assert.NoError(t, err)
+			assert.Equal(t, stderr, outErr)
 		},
 		"RedirectErrorHasCorrectSemantics": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
 			opts.Error = stderr
 			opts.SendErrorToOutput = true
-			assert.Equal(t, stdout, opts.GetError())
-
+			outErr, err := opts.GetError()
+			assert.NoError(t, err)
+			assert.Equal(t, stdout, outErr)
 		},
 		"RedirectOutputHasCorrectSemantics": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
 			opts.Error = stderr
 			opts.SendOutputToError = true
-			assert.Equal(t, stderr, opts.GetOutput())
+			out, err := opts.GetOutput()
+			assert.NoError(t, err)
+			assert.Equal(t, stderr, out)
 		},
 		"RedirectCannotHaveCycle": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
@@ -119,8 +130,34 @@ func TestOutputOptions(t *testing.T) {
 			assert.Error(t, opts.Validate())
 		},
 		"ValidateFailsForInvalidLogTypes": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{LogType: LogType("")}}
+			opts.Loggers = []Logger{Logger{Type: LogType("")}}
 			assert.Error(t, opts.Validate())
+		},
+		"SuppressOutputWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SuppressOutput = true
+			assert.NoError(t, opts.Validate())
+		},
+		"SuppressErrorWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SuppressError = true
+			assert.NoError(t, opts.Validate())
+		},
+		"SuppressOutputAndErrorWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SuppressOutput = true
+			opts.SuppressError = true
+			assert.NoError(t, opts.Validate())
+		},
+		"RedirectOutputWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SendOutputToError = true
+			assert.NoError(t, opts.Validate())
+		},
+		"RedirectErrorWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SendErrorToOutput = true
+			assert.NoError(t, opts.Validate())
 		},
 		// "": func(t *testing.T, opts OutputOptions) {}
 	}

@@ -14,15 +14,17 @@ import (
 // OutputOptions provides a common way to define and represent the
 // output behavior of a evergreen/subprocess.Command operation.
 type OutputOptions struct {
-	Output            io.Writer          `json:"-"`
-	Error             io.Writer          `json:"-"`
-	SuppressOutput    bool               `json:"suppress_output"`
-	SuppressError     bool               `json:"suppress_error"`
-	SendOutputToError bool               `json:"redirect_output_to_error"`
-	SendErrorToOutput bool               `json:"redirect_error_to_output"`
-	Loggers           []Logger           `json:"loggers"`
-	OutputSender      *send.WriterSender `json:"-"`
-	ErrorSender       *send.WriterSender `json:"-"`
+	Output            io.Writer `json:"-"`
+	Error             io.Writer `json:"-"`
+	SuppressOutput    bool      `json:"suppress_output"`
+	SuppressError     bool      `json:"suppress_error"`
+	SendOutputToError bool      `json:"redirect_output_to_error"`
+	SendErrorToOutput bool      `json:"redirect_error_to_output"`
+	Loggers           []Logger  `json:"loggers"`
+	outputSender      *send.WriterSender
+	errorSender       *send.WriterSender
+	outputMulti       io.Writer
+	errorMulti        io.Writer
 }
 
 type LogType string
@@ -48,13 +50,11 @@ type LogOptions struct {
 	SplunkOptions      send.SplunkConnectionInfo `json:"splunk_options"`
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
 	// By default, logger reads from both standard output and standard error.
-	IgnoreOutput bool `json:"ignore_log_output"`
-	IgnoreError  bool `json:"ignore_log_error"`
 }
 
 type Logger struct {
-	LogType
-	LogOptions
+	Type    LogType    `json:"log_type"`
+	Options LogOptions `json:"log_options"`
 }
 
 func (o OutputOptions) outputIsNull() bool {
@@ -67,6 +67,14 @@ func (o OutputOptions) outputIsNull() bool {
 	}
 
 	return false
+}
+
+func (o OutputOptions) outputLogging() bool {
+	return len(o.Loggers) > 0 && !o.SuppressOutput
+}
+
+func (o OutputOptions) errorLogging() bool {
+	return len(o.Loggers) > 0 && !o.SuppressError
 }
 
 func (o OutputOptions) errorIsNull() bool {
@@ -160,11 +168,11 @@ func (l LogType) Configure(opts LogOptions) (*send.Sender, error) {
 func (o OutputOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
-	if o.SuppressOutput && !o.outputIsNull() {
+	if o.SuppressOutput && (!o.outputIsNull() || o.outputLogging()) {
 		catcher.Add(errors.New("cannot suppress output if output is defined"))
 	}
 
-	if o.SuppressError && !o.errorIsNull() {
+	if o.SuppressError && (!o.errorIsNull() || o.errorLogging()) {
 		catcher.Add(errors.New("cannot suppress error if error is defined"))
 	}
 
@@ -177,23 +185,23 @@ func (o OutputOptions) Validate() error {
 	}
 
 	if o.SuppressError && o.SendErrorToOutput {
-		catcher.Add(errors.New("cannot suppress output and redirect it to error"))
+		catcher.Add(errors.New("cannot suppress error and redirect it to output"))
 	}
 
-	if o.SendOutputToError && o.Error == nil {
+	if o.SendOutputToError && o.Error == nil && !o.errorLogging() {
 		catcher.Add(errors.New("cannot redirect output to error without a defined error writer"))
 	}
 
-	if o.SendErrorToOutput && o.Output == nil {
+	if o.SendErrorToOutput && o.Output == nil && !o.outputLogging() {
 		catcher.Add(errors.New("cannot redirect error to output without a defined output writer"))
 	}
 
 	if o.SendOutputToError && o.SendErrorToOutput {
-		catcher.Add(errors.New("cannot create redirecty cycle between output and error"))
+		catcher.Add(errors.New("cannot create redirect cycle between output and error"))
 	}
 
 	for _, logger := range o.Loggers {
-		if err := logger.LogType.Validate(); err != nil {
+		if err := logger.Type.Validate(); err != nil {
 			catcher.Add(err)
 		}
 	}
@@ -201,26 +209,86 @@ func (o OutputOptions) Validate() error {
 	return catcher.Resolve()
 }
 
-func (o OutputOptions) GetOutput() io.Writer {
+func (o *OutputOptions) GetOutput() (io.Writer, error) {
 	if o.SendOutputToError {
 		return o.GetError()
 	}
 
-	if o.outputIsNull() {
-		return ioutil.Discard
+	if o.outputIsNull() && !o.outputLogging() {
+		return ioutil.Discard, nil
 	}
 
-	return o.Output
+	if o.outputMulti != nil {
+		return o.outputMulti, nil
+	}
+
+	if o.outputLogging() {
+		outSenders := []send.Sender{}
+
+		for _, logger := range o.Loggers {
+			sender, err := logger.Type.Configure(logger.Options)
+			if err != nil {
+				return ioutil.Discard, err
+			}
+			outSenders = append(outSenders, *sender)
+		}
+
+		outMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Info, Threshold: level.Trace}, outSenders)
+		if err != nil {
+			return ioutil.Discard, err
+		}
+		o.outputSender = send.NewWriterSender(outMulti)
+	}
+
+	if !o.outputIsNull() && o.outputLogging() {
+		o.outputMulti = io.MultiWriter(o.Output, o.outputSender)
+	} else if !o.outputIsNull() {
+		o.outputMulti = o.Output
+	} else {
+		o.outputMulti = o.outputSender
+	}
+
+	return o.outputMulti, nil
 }
 
-func (o OutputOptions) GetError() io.Writer {
+func (o *OutputOptions) GetError() (io.Writer, error) {
 	if o.SendErrorToOutput {
 		return o.GetOutput()
 	}
 
-	if o.errorIsNull() {
-		return ioutil.Discard
+	if o.errorIsNull() && !o.errorLogging() {
+		return ioutil.Discard, nil
 	}
 
-	return o.Error
+	if o.errorMulti != nil {
+		return o.errorMulti, nil
+	}
+
+	if o.errorLogging() {
+		errSenders := []send.Sender{}
+
+		for _, logger := range o.Loggers {
+			sender, err := logger.Type.Configure(logger.Options)
+			if err != nil {
+				return ioutil.Discard, err
+			}
+			errSenders = append(errSenders, *sender)
+		}
+
+		errMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Error, Threshold: level.Trace}, errSenders)
+		if err != nil {
+			return ioutil.Discard, err
+		}
+		o.errorSender = send.NewWriterSender(errMulti)
+	}
+
+	if !o.errorIsNull() && o.errorLogging() {
+		o.errorMulti = io.MultiWriter(o.Error, o.errorSender)
+	} else if !o.errorIsNull() {
+		o.errorMulti = o.Error
+	} else {
+		o.errorMulti = o.errorSender
+	}
+
+	return o.errorMulti, nil
 }
