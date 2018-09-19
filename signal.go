@@ -27,8 +27,6 @@ func TerminateAll(ctx context.Context, procs []Process) error {
 
 	for _, proc := range procs {
 		_ = proc.Wait(ctx)
-		opts := proc.Info(ctx).Options
-		opts.Close()
 	}
 
 	return catcher.Resolve()
@@ -45,8 +43,6 @@ func KillAll(ctx context.Context, procs []Process) error {
 
 	for _, proc := range procs {
 		_ = proc.Wait(ctx)
-		opts := proc.Info(ctx).Options
-		opts.Close()
 	}
 
 	return catcher.Resolve()

@@ -218,13 +218,20 @@ func TestManagerInterface(t *testing.T) {
 					opts.closers = append(opts.closers, func() {
 						counter++
 					})
+					closersDone := make(chan bool)
+					opts.closers = append(opts.closers, func() { closersDone <- true })
+
 					_, err := manager.Create(ctx, opts)
 					assert.NoError(t, err)
 
 					assert.Equal(t, counter, 0)
 					assert.NoError(t, manager.Close(ctx))
-					// Closer are called twice - once by trigger registered in Create() and once in manager.Close(ctx)
-					assert.Equal(t, 2, counter)
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "process took too long to run closers")
+					case <-closersDone:
+						assert.Equal(t, 1, counter)
+					}
 				},
 				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
