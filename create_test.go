@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -344,7 +343,6 @@ func TestFileLogging(t *testing.T) {
 				file, err := ioutil.TempFile("build", "out.txt")
 				require.NoError(t, err)
 				defer os.Remove(file.Name())
-				fmt.Println("outfile name:", file.Name())
 				info, err := file.Stat()
 				assert.Zero(t, info.Size())
 				files = append(files, file)
