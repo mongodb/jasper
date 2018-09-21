@@ -39,22 +39,19 @@ const taskTimeout = 5 * time.Second
 
 func trueCreateOpts() *CreateOptions {
 	return &CreateOptions{
-		Args:   []string{"true"},
-		Output: OutputOptions{},
+		Args: []string{"true"},
 	}
 }
 
 func falseCreateOpts() *CreateOptions {
 	return &CreateOptions{
-		Args:   []string{"false"},
-		Output: OutputOptions{},
+		Args: []string{"false"},
 	}
 }
 
 func sleepCreateOpts(num int) *CreateOptions {
 	return &CreateOptions{
-		Args:   []string{"sleep", fmt.Sprint(num)},
-		Output: OutputOptions{},
+		Args: []string{"sleep", fmt.Sprint(num)},
 	}
 }
 
