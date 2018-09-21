@@ -129,9 +129,26 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
 	cmd.Dir = opts.WorkingDirectory
-	cmd.Stderr = opts.Output.GetError()
-	cmd.Stdout = opts.Output.GetOutput()
+
+	cmd.Stdout, err = opts.Output.GetOutput()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr, err = opts.Output.GetError()
+	if err != nil {
+		return nil, err
+	}
 	cmd.Env = env
+
+	// WriterSender requires Close() or else command output is not guaranteed to log.
+	opts.closers = append(opts.closers, func() {
+		if opts.Output.outputSender != nil {
+			opts.Output.outputSender.Close()
+		}
+		if opts.Output.errorSender != nil {
+			opts.Output.errorSender.Close()
+		}
+	})
 
 	return cmd, nil
 }

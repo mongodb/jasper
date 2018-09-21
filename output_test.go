@@ -3,9 +3,12 @@ package jasper
 import (
 	"bytes"
 	"io/ioutil"
+	"os"
 	"testing"
 
+	"github.com/mongodb/grip/send"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOutputOptions(t *testing.T) {
@@ -82,32 +85,81 @@ func TestOutputOptions(t *testing.T) {
 			assert.False(t, opts.outputIsNull())
 		},
 		"OutputGetterNilIsIoDiscard": func(t *testing.T, opts OutputOptions) {
-			assert.Equal(t, ioutil.Discard, opts.GetOutput())
+			out, err := opts.GetOutput()
+			assert.NoError(t, err)
+			assert.Equal(t, ioutil.Discard, out)
 		},
 		"OutputGetterWhenPopulatedIsCorrect": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
-			assert.Equal(t, stdout, opts.GetOutput())
+			out, err := opts.GetOutput()
+			assert.NoError(t, err)
+			assert.Equal(t, stdout, out)
 		},
 		"ErrorGetterNilIsIoDiscard": func(t *testing.T, opts OutputOptions) {
-			assert.Equal(t, ioutil.Discard, opts.GetError())
+			outErr, err := opts.GetError()
+			assert.NoError(t, err)
+			assert.Equal(t, ioutil.Discard, outErr)
 		},
 		"ErrorGetterWhenPopulatedIsCorrect": func(t *testing.T, opts OutputOptions) {
 			opts.Error = stderr
-			assert.Equal(t, stderr, opts.GetError())
+			outErr, err := opts.GetError()
+			assert.NoError(t, err)
+			assert.Equal(t, stderr, outErr)
 		},
 		"RedirectErrorHasCorrectSemantics": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
 			opts.Error = stderr
 			opts.SendErrorToOutput = true
-			assert.Equal(t, stdout, opts.GetError())
-
+			outErr, err := opts.GetError()
+			assert.NoError(t, err)
+			assert.Equal(t, stdout, outErr)
 		},
 		"RedirectOutputHasCorrectSemantics": func(t *testing.T, opts OutputOptions) {
 			opts.Output = stdout
 			opts.Error = stderr
 			opts.SendOutputToError = true
-			assert.Equal(t, stderr, opts.GetOutput())
+			out, err := opts.GetOutput()
+			assert.NoError(t, err)
+			assert.Equal(t, stderr, out)
 		},
+		"RedirectCannotHaveCycle": func(t *testing.T, opts OutputOptions) {
+			opts.Output = stdout
+			opts.Error = stderr
+			opts.SendOutputToError = true
+			opts.SendErrorToOutput = true
+			assert.Error(t, opts.Validate())
+		},
+		"ValidateFailsForInvalidLogTypes": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogType("")}}
+			assert.Error(t, opts.Validate())
+		},
+		"SuppressOutputWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SuppressOutput = true
+			assert.NoError(t, opts.Validate())
+		},
+		"SuppressErrorWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SuppressError = true
+			assert.NoError(t, opts.Validate())
+		},
+		"SuppressOutputAndErrorWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SuppressOutput = true
+			opts.SuppressError = true
+			assert.NoError(t, opts.Validate())
+		},
+		"RedirectOutputWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SendOutputToError = true
+			assert.NoError(t, opts.Validate())
+		},
+		"RedirectErrorWithLogger": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.SendErrorToOutput = true
+			assert.NoError(t, opts.Validate())
+		},
+		// "": func(t *testing.T, opts OutputOptions) {}
 	}
 
 	for name, test := range cases {
@@ -137,4 +189,83 @@ func TestOutputOptionsIntegrationTableTest(t *testing.T) {
 		assert.NoError(t, opt.Validate(), "%d: %+v", idx, opt)
 	}
 
+}
+
+func TestLogTypes(t *testing.T) {
+	type testCase func(*testing.T, LogType, LogOptions)
+	cases := map[string]testCase{
+		"NonexistentLogTypeIsInvalid": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogType("")
+			assert.Error(t, l.Validate())
+		},
+		"ValidLogTypePasses": func(t *testing.T, l LogType, opts LogOptions) {
+			assert.NoError(t, l.Validate())
+		},
+		"ConfigureFailsForInvalidLogType": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogType("foo")
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigurePassesWithLogDefault": func(t *testing.T, l LogType, opts LogOptions) {
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		"ConfigurePassesWithLogInherit": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogInherit
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		"ConfigureFailsWithoutPopulatedSplunkOptions": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogSplunk
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigurePassesWithPopulatedSplunkOptions": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogSplunk
+			opts.SplunkOptions = send.SplunkConnectionInfo{ServerURL: "foo", Token: "bar"}
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		"ConfigureFailsWithoutLocalInBuildloggerOptions": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogBuildloggerV2
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigureFailsWithoutSetNameInBuildloggerOptions": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogBuildloggerV2
+			opts.BuildloggerOptions = send.BuildloggerConfig{Local: send.MakeNative()}
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigureFailsWithoutPopulatedSumologicOptions": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogSumologic
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigureLogFilePasses": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogFile
+			file, err := ioutil.TempFile("build", "foo.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			opts.FileName = file.Name()
+
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		// "": func(t *testing.T, l LogType, opts LogOptions) {},
+	}
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			test(t, LogDefault, LogOptions{})
+		})
+	}
 }

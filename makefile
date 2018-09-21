@@ -24,7 +24,7 @@ race:
 	@grep -s -q -e "^PASS" $(buildDir)/race.sink.out && ! grep -s -q "^WARNING: DATA RACE" $(buildDir)/race.sink.out
 test:
 	@mkdir -p $(buildDir)
-	go test $(testArgs) -cover $(_testPackages) | tee $(buildDir)/test.sink.out
+	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) $(_testPackages) | tee $(buildDir)/test.sink.out
 	@grep -s -q -e "^PASS" $(buildDir)/test.sink.out
 coverage:$(buildDir)/cover.out
 	@go tool cover -func=$< | sed -E 's%github.com/.*/jasper/%%' | column -t
@@ -33,7 +33,7 @@ coverage-html:$(buildDir)/cover.html
 $(buildDir):$(srcFiles) compile
 	@mkdir -p $@
 $(buildDir)/cover.out:$(buildDir) $(testFiles) .FORCE
-	go test $(testArgs)-coverprofile $@ -cover $(_testPackages)
+	go test $(testArgs) -coverprofile $@ -cover $(_testPackages)
 $(buildDir)/cover.html:$(buildDir)/cover.out
 	go tool cover -html=$< -o $@
 .FORCE:

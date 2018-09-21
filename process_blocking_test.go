@@ -302,8 +302,9 @@ func TestBlockingProcess(t *testing.T) {
 					defer cancel()
 
 					proc := &blockingProcess{
-						id:  uuid.Must(uuid.NewV4()).String(),
-						ops: make(chan func(*exec.Cmd), 1),
+						id:   uuid.Must(uuid.NewV4()).String(),
+						ops:  make(chan func(*exec.Cmd), 1),
+						opts: CreateOptions{},
 					}
 
 					testCase(ctx, t, proc)

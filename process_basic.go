@@ -28,23 +28,27 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
 
-	// don't check the error here, if this fails, and we're
-	// interested in the outcome, we'll see that later.
-	_ = cmd.Start()
-
-	opts.started = true
-
 	p := &basicProcess{
-		id:   id,
-		opts: *opts,
-		cmd:  cmd,
-		tags: make(map[string]struct{}),
+		id:       id,
+		opts:     *opts,
+		cmd:      cmd,
+		tags:     make(map[string]struct{}),
+		triggers: ProcessTriggerSequence{},
 	}
 	p.hostname, _ = os.Hostname()
 
 	for _, t := range opts.Tags {
 		p.Tag(t)
 	}
+
+	p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
+
+	// don't check the error here, if this fails, and we're
+	// interested in the outcome, we'll see that later.
+	_ = cmd.Start()
+
+	p.opts.started = true
+	opts.started = true
 
 	return p, nil
 }
@@ -82,6 +86,10 @@ func (p *basicProcess) Complete(ctx context.Context) bool {
 
 	if p.cmd.ProcessState != nil && p.cmd.ProcessState.Exited() {
 		return true
+	}
+
+	if p.cmd.Process == nil {
+		return false
 	}
 
 	return p.cmd.Process.Pid == -1

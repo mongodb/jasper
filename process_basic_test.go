@@ -97,14 +97,14 @@ func TestBasicProcess(t *testing.T) {
 			assert.Error(t, proc.Wait(ctx))
 		},
 		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
-		// "": func(ctx context.Context, t *testing.T, proc *basicProcess) {},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			testCase(ctx, t, &basicProcess{
-				id: uuid.Must(uuid.NewV4()).String(),
+				id:   uuid.Must(uuid.NewV4()).String(),
+				opts: CreateOptions{},
 			})
 		})
 	}

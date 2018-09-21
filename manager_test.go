@@ -218,12 +218,20 @@ func TestManagerInterface(t *testing.T) {
 					opts.closers = append(opts.closers, func() {
 						counter++
 					})
+					closersDone := make(chan bool)
+					opts.closers = append(opts.closers, func() { closersDone <- true })
+
 					_, err := manager.Create(ctx, opts)
 					assert.NoError(t, err)
 
 					assert.Equal(t, counter, 0)
 					assert.NoError(t, manager.Close(ctx))
-					assert.Equal(t, 1, counter)
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "process took too long to run closers")
+					case <-closersDone:
+						assert.Equal(t, 1, counter)
+					}
 				},
 				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
@@ -287,7 +295,27 @@ func TestManagerInterface(t *testing.T) {
 					err = manager.Register(ctx, proc)
 					assert.Error(t, err)
 				},
-				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
+				"ManagerCallsOptionsCloseByDefault": func(ctx context.Context, t *testing.T, manager Manager) {
+					if mname == "REST" {
+						t.Skip("cannot register trigger on rest interfaces")
+					}
+
+					opts := &CreateOptions{}
+					opts.Args = []string{"echo", "foobar"}
+					count := 0
+					opts.closers = append(opts.closers, func() { count++ })
+					closersDone := make(chan bool)
+					opts.closers = append(opts.closers, func() { closersDone <- true })
+					proc, err := manager.Create(ctx, opts)
+					assert.NoError(t, err)
+					assert.NoError(t, proc.Wait(ctx))
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "process took too long to run closers")
+					case <-closersDone:
+						assert.Equal(t, 1, count)
+					}
+				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {

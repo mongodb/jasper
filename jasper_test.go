@@ -59,7 +59,9 @@ func createProcs(ctx context.Context, opts *CreateOptions, manager Manager, num 
 	catcher := grip.NewBasicCatcher()
 	out := []Process{}
 	for i := 0; i < num; i++ {
-		proc, err := manager.Create(ctx, opts)
+		optsCopy := *opts
+
+		proc, err := manager.Create(ctx, &optsCopy)
 		catcher.Add(err)
 		if proc != nil {
 			out = append(out, proc)

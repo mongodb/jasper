@@ -37,13 +37,6 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
 
-	// don't check the error here, becaues we need to call Start to
-	// populate the process state, and we'll race to calls to
-	// methods with the reactor starting up if we skip it here.
-	_ = cmd.Start()
-
-	opts.started = true
-
 	p := &blockingProcess{
 		id:   id,
 		opts: *opts,
@@ -56,6 +49,16 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 	}
 
 	p.host, _ = os.Hostname()
+
+	p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
+
+	// don't check the error here, becaues we need to call Start to
+	// populate the process state, and we'll race to calls to
+	// methods with the reactor starting up if we skip it here.
+	_ = cmd.Start()
+
+	p.opts.started = true
+	opts.started = true
 
 	go p.reactor(ctx, cmd)
 	return p, nil

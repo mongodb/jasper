@@ -3,7 +3,9 @@ package jasper
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -152,6 +154,69 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
 					assert.NoError(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, opts, "foo")))
+				},
+				"OptionsCloseTriggerRegisteredByDefault": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote triggers are not supported on rest processes")
+					}
+					count := 0
+					opts.closers = append(opts.closers, func() { count++ })
+					closersDone := make(chan bool)
+					opts.closers = append(opts.closers, func() { closersDone <- true })
+
+					proc, err := makep(ctx, opts)
+					assert.NoError(t, err)
+
+					proc.Wait(ctx)
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "closers took too long to run")
+					case <-closersDone:
+						assert.Equal(t, 1, count)
+					}
+				},
+				"ProcessWritesToLog": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote triggers are not supported on rest processes")
+					}
+
+					file, err := ioutil.TempFile("build", "out.txt")
+					require.NoError(t, err)
+					defer os.Remove(file.Name())
+					info, err := file.Stat()
+					assert.Zero(t, info.Size())
+
+					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}}}
+					opts.Args = []string{"echo", "foobar"}
+
+					proc, err := makep(ctx, opts)
+					assert.NoError(t, err)
+
+					assert.NoError(t, proc.Wait(ctx))
+
+					// File is not guaranteed to be written once Wait() returns and closers begin executing,
+					// so wait for file to be non-empty.
+					fileWrite := make(chan bool)
+					go func() {
+						done := false
+						for !done {
+							info, err = file.Stat()
+							if info.Size() > 0 {
+								done = true
+								fileWrite <- done
+							}
+						}
+					}()
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "file write took too long to complete")
+					case <-fileWrite:
+						info, err = file.Stat()
+						assert.NoError(t, err)
+						assert.NotZero(t, info.Size())
+					}
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {
