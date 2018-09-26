@@ -15,6 +15,10 @@ ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
 
+benchPattern := ./
+ifneq (,$(RUN_BENCH))
+benchPattern = $(RUN_BENCH)
+endif
 
 compile:
 	go build $(_testPackages)
@@ -24,8 +28,12 @@ race:
 	@grep -s -q -e "^PASS" $(buildDir)/race.sink.out && ! grep -s -q "^WARNING: DATA RACE" $(buildDir)/race.sink.out
 test:
 	@mkdir -p $(buildDir)
-	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) $(_testPackages) | tee $(buildDir)/test.sink.out
+	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) | tee $(buildDir)/test.sink.out
 	@grep -s -q -e "^PASS" $(buildDir)/test.sink.out
+.PHONY: benchmark
+benchmark:
+	@mkdir -p $(buildDir)
+	go test $(testArgs) -bench=$(benchPattern) $(if $(RUN_TEST),,-run=^^$$) | tee $(buildDir)/bench.sink.out
 coverage:$(buildDir)/cover.out
 	@go tool cover -func=$< | sed -E 's%github.com/.*/jasper/%%' | column -t
 coverage-html:$(buildDir)/cover.html
@@ -54,3 +62,4 @@ vendor-clean:
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/stretchr/testify
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/pkg/errors
+	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mholt/archiver/tarbz2.go

@@ -5,3 +5,4 @@ import:
   - package: github.com/stretchr/testify
   - package: github.com/mongodb/grip
   - package: github.com/evergreen-ci/gimlet
+  - package: github.com/tychoish/bond
