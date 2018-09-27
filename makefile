@@ -16,9 +16,6 @@ testArgs += -short
 endif
 
 benchPattern := ./
-ifneq (,$(RUN_BENCH))
-benchPattern = $(RUN_BENCH)
-endif
 
 compile:
 	go build $(_testPackages)
@@ -33,7 +30,7 @@ test:
 .PHONY: benchmark
 benchmark:
 	@mkdir -p $(buildDir)
-	go test $(testArgs) -bench=$(benchPattern) $(if $(RUN_TEST),,-run=^^$$) | tee $(buildDir)/bench.sink.out
+	go test $(testArgs) -bench=$(benchPattern) $(if $(RUN_TEST),, -run=^^$$) | tee $(buildDir)/bench.sink.out
 coverage:$(buildDir)/cover.out
 	@go tool cover -func=$< | sed -E 's%github.com/.*/jasper/%%' | column -t
 coverage-html:$(buildDir)/cover.html
