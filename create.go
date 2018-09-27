@@ -64,7 +64,6 @@ func (opts *CreateOptions) Validate() error {
 		if time.Duration(opts.TimeoutSecs)*time.Second != opts.Timeout {
 			return errors.Errorf("cannot specify timeout (nanos) [%s] and timeout_secs [%d]",
 				opts.Timeout, opts.Timeout)
-
 		}
 	}
 

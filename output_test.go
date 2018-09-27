@@ -261,6 +261,19 @@ func TestLogTypes(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, sender)
 		},
+		"ConfigureFailsWithoutCapacity": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogInMemory
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigurePassesWithCapacity": func(t *testing.T, l LogType, opts LogOptions) {
+			l = LogInMemory
+			opts.InMemoryCap = 10
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
 		// "": func(t *testing.T, l LogType, opts LogOptions) {},
 	}
 	for name, test := range cases {

@@ -26,6 +26,7 @@ enum LogType {
     LOGINHERIT = 5;
     LOGSPLUNK = 6;
     LOGSUMOLOGIC = 7;
+    LOGINMEMORY = 8;
 }
 
 message CreateOptions {

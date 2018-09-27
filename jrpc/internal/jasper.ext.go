@@ -150,6 +150,8 @@ func ConvertLogType(lt jasper.LogType) LogType {
 		return LogType_LOGSPLUNK
 	case jasper.LogSumologic:
 		return LogType_LOGSUMOLOGIC
+	case jasper.LogInMemory:
+		return LogType_LOGINMEMORY
 	default:
 		return LogType_LOGUNKNOWN
 	}
@@ -171,6 +173,8 @@ func (lt LogType) Export() jasper.LogType {
 		return jasper.LogSplunk
 	case LogType_LOGSUMOLOGIC:
 		return jasper.LogSumologic
+	case LogType_LOGINMEMORY:
+		return jasper.LogInMemory
 	default:
 		return jasper.LogType("")
 	}

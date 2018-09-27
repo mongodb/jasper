@@ -37,19 +37,21 @@ const (
 	LogInherit       = "inherit"
 	LogSplunk        = "splunk"
 	LogSumologic     = "sumologic"
+	LogInMemory      = "inmemory"
 )
 
 const (
 	DefaultLogName = "jasper"
 )
 
+// By default, logger reads from both standard output and standard error.
 type LogOptions struct {
 	BuildloggerOptions send.BuildloggerConfig    `json:"buildlogger_options"`
 	DefaultPrefix      string                    `json:"default_prefix"`
 	FileName           string                    `json:"file_name"`
 	SplunkOptions      send.SplunkConnectionInfo `json:"splunk_options"`
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
-	// By default, logger reads from both standard output and standard error.
+	InMemoryCap        int                       `json:"inmemory_cap"`
 }
 
 type Logger struct {
@@ -91,7 +93,7 @@ func (o OutputOptions) errorIsNull() bool {
 
 func (l LogType) Validate() error {
 	switch l {
-	case LogBuildloggerV2, LogBuildloggerV3, LogDefault, LogFile, LogInherit, LogSplunk, LogSumologic:
+	case LogBuildloggerV2, LogBuildloggerV3, LogDefault, LogFile, LogInherit, LogSplunk, LogSumologic, LogInMemory:
 		return nil
 	default:
 		return errors.New("unknown log type")
@@ -154,6 +156,15 @@ func (l LogType) Configure(opts LogOptions) (*send.Sender, error) {
 			return nil, errors.New("missing endpoint for output type sumologic")
 		}
 		s, err := send.NewSumo(DefaultLogName, opts.SumoEndpoint)
+		if err != nil {
+			return nil, err
+		}
+		sender = &s
+	case LogInMemory:
+		if opts.InMemoryCap <= 0 {
+			return nil, errors.New("invalid inmemory capacity")
+		}
+		s, err := send.NewInMemorySender("jasper", send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, opts.InMemoryCap)
 		if err != nil {
 			return nil, err
 		}
@@ -233,9 +244,15 @@ func (o *OutputOptions) GetOutput() (io.Writer, error) {
 			outSenders = append(outSenders, *sender)
 		}
 
-		outMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Info, Threshold: level.Trace}, outSenders)
-		if err != nil {
-			return ioutil.Discard, err
+		var outMulti send.Sender
+		if len(outSenders) == 1 {
+			outMulti = outSenders[0]
+		} else {
+			var err error
+			outMulti, err = send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Info, Threshold: level.Trace}, outSenders)
+			if err != nil {
+				return ioutil.Discard, err
+			}
 		}
 		o.outputSender = send.NewWriterSender(outMulti)
 	}

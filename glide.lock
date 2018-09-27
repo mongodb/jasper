@@ -8,9 +8,13 @@ imports:
   - name: github.com/stretchr/testify
     version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   - name: github.com/mongodb/grip
-    version: 5d6dffc047e01c5553d48459d68a2d4f6c11a6ff
+    version: 0d6ab660a262936a64394ca8a3e46ea6d943c83f
   - name: github.com/evergreen-ci/gimlet
     version: 713b8d22b5e93a0c25a9f71ca944c86d7ecefe84
+  - name: github.com/tychoish/bond
+    version: e11d1b1098c8423f8ce0140bf597b58c5fc77709
+  - name: github.com/montanaflynn/stats
+    version: db72e6cae808b936b0c01fd330ff1fcd2c86c95e
 
   - name: google.golang.org/grpc
     version: e00d24941bcee35dd163f4377d5371349f14baaf
