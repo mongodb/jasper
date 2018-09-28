@@ -223,6 +223,7 @@ func (c *restClient) getLogs(id string) ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
 
 	if err = handleError(resp); err != nil {
 		return nil, errors.Wrap(err, "request returned error")
