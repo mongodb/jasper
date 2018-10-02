@@ -1,7 +1,10 @@
 package internal
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
@@ -104,20 +107,20 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 	if err != nil {
 		err = errors.Wrapf(err, "couldn't find process with id '%s'", sig.ProcessID)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
 	if err = proc.Signal(ctx, sig.Signal.Export()); err != nil {
 		err = errors.Wrapf(err, "problem sending '%s' to '%s'", sig.Signal, sig.ProcessID)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
-	out := &OperationOutcome{Succuess: true, Text: fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID)}
+	out := &OperationOutcome{Success: true, Text: fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID)}
 	return out, nil
 }
 
@@ -126,32 +129,32 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
 	if err = proc.Wait(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered while waiting")
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
-	return &OperationOutcome{Succuess: true, Text: fmt.Sprintf("'%s' operation complete", id.Value)}, nil
+	return &OperationOutcome{Success: true, Text: fmt.Sprintf("'%s' operation complete", id.Value)}, nil
 }
 
 func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered closing service")
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
-	return &OperationOutcome{Succuess: true, Text: "service closed"}, nil
+	return &OperationOutcome{Success: true, Text: "service closed"}, nil
 }
 
 func (s *jasperService) GetTags(ctx context.Context, id *JasperProcessID) (*ProcessTags, error) {
@@ -168,8 +171,8 @@ func (s *jasperService) TagProcess(ctx context.Context, tags *ProcessTags) (*Ope
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", tags.ProcessID)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
@@ -178,8 +181,8 @@ func (s *jasperService) TagProcess(ctx context.Context, tags *ProcessTags) (*Ope
 	}
 
 	return &OperationOutcome{
-		Succuess: true,
-		Text:     "added tags",
+		Success: true,
+		Text:    "added tags",
 	}, nil
 }
 
@@ -188,10 +191,32 @@ func (s *jasperService) ResetTags(ctx context.Context, id *JasperProcessID) (*Op
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 	proc.ResetTags()
-	return &OperationOutcome{Succuess: true, Text: "set tags"}, nil
+	return &OperationOutcome{Success: true, Text: "set tags"}, nil
+}
+
+func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
+	resp, err := http.Get(info.Url)
+	if err != nil {
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem reading response body")
+	} else if resp.StatusCode != http.StatusOK {
+		err := errors.New(bytes.NewBuffer(body).String())
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
+	}
+
+	if err = jasper.WriteFile(body, info.Path); err != nil {
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem writing file")
+	}
+
+	return &OperationOutcome{Success: true, Text: fmt.Sprintf("downloaded file '%s' to path '%s'", info.Url, info.Path)}, nil
 }

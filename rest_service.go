@@ -1,8 +1,10 @@
 package jasper
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -51,6 +53,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/wait").Version(1).Get().Handler(s.waitForProcess)
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
+	app.AddRoute("/download").Version(1).Post().Handler(s.downloadFile)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
 	return app
@@ -330,6 +333,57 @@ func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
 	if err := s.manager.Close(r.Context()); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
+	var downloadInfo struct {
+		URL  string
+		Path string
+	}
+	if err := gimlet.GetJSON(r.Body, &downloadInfo); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrap(err, "problem reading request").Error(),
+		})
+		return
+	}
+	url := downloadInfo.URL
+	path := downloadInfo.Path
+
+	resp, err := http.Get(url)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
+			Message:    err.Error(),
+		})
+		return
+	} else if resp.StatusCode != http.StatusOK {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: resp.StatusCode,
+			Message:    bytes.NewBuffer(body).String(),
+		})
+		return
+	}
+
+	if err = WriteFile(body, path); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),
 		})
 		return
