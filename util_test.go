@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"bytes"
 	"os"
 	"runtime"
 	"testing"
@@ -85,7 +86,7 @@ func TestWriteFile(t *testing.T) {
 			} else if runtime.GOOS == "windows" {
 				t.Skip("cannot run file write tests on windows")
 			}
-			err := WriteFile([]byte(testCase.content), testCase.path)
+			err := WriteFile(bytes.NewBufferString(testCase.content), testCase.path)
 			if testCase.shouldPass {
 				assert.NoError(t, err)
 			} else {

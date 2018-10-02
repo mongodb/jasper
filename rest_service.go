@@ -1,10 +1,8 @@
 package jasper
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -353,35 +351,25 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	url := downloadInfo.URL
-	path := downloadInfo.Path
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(downloadInfo.URL)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
+			Message:    errors.Wrap(err, "problem downloading file").Error(),
 		})
 		return
 	}
 	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
-			Message:    err.Error(),
-		})
-		return
-	} else if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode >= 300 {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: resp.StatusCode,
-			Message:    bytes.NewBuffer(body).String(),
+			Message:    errors.Errorf("could not download '%s' to path '%s'", downloadInfo.URL, downloadInfo.Path).Error(),
 		})
 		return
 	}
 
-	if err = WriteFile(body, path); err != nil {
+	if err = WriteFile(resp.Body, downloadInfo.Path); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),

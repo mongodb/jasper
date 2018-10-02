@@ -340,7 +340,7 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, client.DownloadFile(ctx, "https://google.com", file.Name()))
 
 			info, err := os.Stat(file.Name())
-			assert.True(t, !os.IsNotExist(err))
+			assert.NoError(t, err)
 			assert.NotEqual(t, 0, info.Size())
 		},
 		"DownloadFileFailsWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {

@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -16,7 +17,7 @@ func sliceContains(group []string, name string) bool {
 }
 
 // WriteFile writes the buffer to the file.
-func WriteFile(buf []byte, path string) error {
+func WriteFile(reader io.Reader, path string) error {
 	dirPath := filepath.Dir(path)
 	if err := os.MkdirAll(dirPath, os.ModeDir|os.ModePerm); err != nil {
 		return err
@@ -27,7 +28,7 @@ func WriteFile(buf []byte, path string) error {
 		return err
 	}
 
-	if _, err = file.Write(buf); err != nil {
+	if _, err := io.Copy(file, reader); err != nil {
 		return err
 	}
 	return nil

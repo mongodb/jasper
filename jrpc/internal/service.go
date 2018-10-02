@@ -1,9 +1,7 @@
 package internal
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -205,16 +203,12 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
 	}
 	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem reading response body")
-	} else if resp.StatusCode != http.StatusOK {
-		err := errors.New(bytes.NewBuffer(body).String())
+	if resp.StatusCode >= 300 {
+		err = errors.Errorf("could not download '%s' to path '%s'", info.Url, info.Path)
 		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
 	}
 
-	if err = jasper.WriteFile(body, info.Path); err != nil {
+	if err = jasper.WriteFile(resp.Body, info.Path); err != nil {
 		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem writing file")
 	}
 
