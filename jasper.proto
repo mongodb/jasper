@@ -101,8 +101,13 @@ message JasperProcessID {
 }
 
 message OperationOutcome {
-  bool succuess = 1;
+  bool success = 1;
   string text = 2;
+}
+
+message DownloadInfo {
+  string url = 1;
+  string path = 2;
 }
 
 service JasperProcessManager {
@@ -117,4 +122,5 @@ service JasperProcessManager {
   rpc TagProcess(ProcessTags) returns (OperationOutcome);
   rpc ResetTags(JasperProcessID) returns (OperationOutcome);
   rpc GetTags(JasperProcessID) returns (ProcessTags);
+  rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
 }
