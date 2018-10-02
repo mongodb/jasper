@@ -1,9 +1,11 @@
 package jasper
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStringMembership(t *testing.T) {
@@ -48,4 +50,18 @@ func TestStringMembership(t *testing.T) {
 			assert.Equal(t, testCase.outcome, sliceContains(testCase.group, testCase.name))
 		})
 	}
+}
+
+func TestMakeEnclosingDirectories(t *testing.T) {
+	path := "foo"
+	_, err := os.Stat(path)
+	require.True(t, os.IsNotExist(err))
+	assert.NoError(t, MakeEnclosingDirectories(path))
+	defer os.RemoveAll(path)
+
+	path = "util_test.go"
+	info, err := os.Stat(path)
+	require.False(t, os.IsNotExist(err))
+	require.False(t, info.IsDir())
+	assert.Error(t, MakeEnclosingDirectories(path))
 }

@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
+	"github.com/tychoish/lru"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 )
@@ -21,16 +24,43 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 	srv := &jasperService{
 		hostID:  hn,
 		manager: manager,
+		cache:   lru.NewCache(),
+		cacheOpts: jasper.CacheOptions{
+			Disabled:   false,
+			PruneDelay: jasper.DefaultCachePruneDelay,
+			MaxSize:    jasper.DefaultMaxCacheSize,
+		},
 	}
 
 	RegisterJasperProcessManagerServer(s, srv)
 
+	go srv.backgroundPrune()
+
 	return nil
 }
 
+func (s *jasperService) backgroundPrune() {
+	s.cacheMutex.RLock()
+	timer := time.NewTimer(s.cacheOpts.PruneDelay)
+	s.cacheMutex.RUnlock()
+
+	for {
+		<-timer.C
+		s.cacheMutex.RLock()
+		if !s.cacheOpts.Disabled {
+			s.cache.Prune(s.cacheOpts.MaxSize, nil, false)
+		}
+		timer.Reset(s.cacheOpts.PruneDelay)
+		s.cacheMutex.RUnlock()
+	}
+}
+
 type jasperService struct {
-	hostID  string
-	manager jasper.Manager
+	hostID     string
+	manager    jasper.Manager
+	cache      *lru.Cache
+	cacheOpts  jasper.CacheOptions
+	cacheMutex sync.RWMutex
 }
 
 func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResponse, error) {
@@ -104,20 +134,20 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 	if err != nil {
 		err = errors.Wrapf(err, "couldn't find process with id '%s'", sig.ProcessID)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
 	if err = proc.Signal(ctx, sig.Signal.Export()); err != nil {
 		err = errors.Wrapf(err, "problem sending '%s' to '%s'", sig.Signal, sig.ProcessID)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
-	out := &OperationOutcome{Succuess: true, Text: fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID)}
+	out := &OperationOutcome{Success: true, Text: fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID)}
 	return out, nil
 }
 
@@ -126,32 +156,32 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
 	if err = proc.Wait(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered while waiting")
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
-	return &OperationOutcome{Succuess: true, Text: fmt.Sprintf("'%s' operation complete", id.Value)}, nil
+	return &OperationOutcome{Success: true, Text: fmt.Sprintf("'%s' operation complete", id.Value)}, nil
 }
 
 func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered closing service")
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
-	return &OperationOutcome{Succuess: true, Text: "service closed"}, nil
+	return &OperationOutcome{Success: true, Text: "service closed"}, nil
 }
 
 func (s *jasperService) GetTags(ctx context.Context, id *JasperProcessID) (*ProcessTags, error) {
@@ -168,8 +198,8 @@ func (s *jasperService) TagProcess(ctx context.Context, tags *ProcessTags) (*Ope
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", tags.ProcessID)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 
@@ -178,8 +208,8 @@ func (s *jasperService) TagProcess(ctx context.Context, tags *ProcessTags) (*Ope
 	}
 
 	return &OperationOutcome{
-		Succuess: true,
-		Text:     "added tags",
+		Success: true,
+		Text:    "added tags",
 	}, nil
 }
 
@@ -188,10 +218,42 @@ func (s *jasperService) ResetTags(ctx context.Context, id *JasperProcessID) (*Op
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
 		return &OperationOutcome{
-			Succuess: false,
-			Text:     err.Error(),
+			Success: false,
+			Text:    err.Error(),
 		}, err
 	}
 	proc.ResetTags()
-	return &OperationOutcome{Succuess: true, Text: "set tags"}, nil
+	return &OperationOutcome{Success: true, Text: "set tags"}, nil
+}
+
+func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownloadOptions) (*OperationOutcome, error) {
+	jopts := opts.Export()
+	if err := jopts.BuildOpts.Validate(); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "invalid build options").Error()}, err
+	}
+
+	if err := jasper.SetupDownloadMongoDBReleases(ctx, s.cache, jopts); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem in download setup").Error()}, err
+	}
+
+	return &OperationOutcome{Success: true, Text: "download jobs started"}, nil
+}
+
+func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) (*OperationOutcome, error) {
+	jopts := opts.Export()
+	if err := jopts.Validate(); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem with validating cache options").Error()}, err
+	}
+
+	s.cacheMutex.Lock()
+	if jopts.MaxSize > 0 {
+		s.cacheOpts.MaxSize = jopts.MaxSize
+	}
+	if jopts.PruneDelay > time.Duration(0) {
+		s.cacheOpts.PruneDelay = jopts.PruneDelay
+	}
+	s.cacheOpts.Disabled = jopts.Disabled
+	s.cacheMutex.Unlock()
+
+	return &OperationOutcome{Success: true, Text: "cache configured"}, nil
 }

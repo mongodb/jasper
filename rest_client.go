@@ -237,6 +237,54 @@ func (c *restClient) getLogs(id string) ([]string, error) {
 	return logs, nil
 }
 
+// DownloadMongoDB downloads the desired version of MongoDB.
+func (c *restClient) DownloadMongoDB(ctx context.Context, opts MongoDBDownloadOptions) error {
+	body, err := makeBody(opts)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, c.getURL("/download-mongodb"), body)
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "problem making request")
+	}
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+// ConfigureCache changes the cache configurations.
+func (c *restClient) ConfigureCache(ctx context.Context, opts CacheOptions) error {
+	body, err := makeBody(opts)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, c.getURL("/configure-cache"), body)
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "problem making request")
+	}
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 type restProcess struct {
 	id     string
 	client *restClient

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mongodb/jasper"
+	"github.com/tychoish/bond"
 )
 
 func (opts *CreateOptions) Export() *jasper.CreateOptions {
@@ -214,4 +215,34 @@ func (opts OutputOptions) Export() jasper.OutputOptions {
 
 func (logger Logger) Export() jasper.Logger {
 	return jasper.Logger{Type: logger.LogType.Export()}
+}
+
+func (opts *BuildOptions) Export() bond.BuildOptions {
+	return bond.BuildOptions{
+		Target:  opts.Target,
+		Arch:    bond.MongoDBArch(opts.Arch),
+		Edition: bond.MongoDBEdition(opts.Edition),
+		Debug:   opts.Debug,
+	}
+}
+
+func (opts *MongoDBDownloadOptions) Export() jasper.MongoDBDownloadOptions {
+	jopts := jasper.MongoDBDownloadOptions{
+		BuildOpts: opts.BuildOptions.Export(),
+		Path:      opts.Path,
+	}
+
+	jopts.Releases = make([]string, 0, len(opts.Releases))
+	for _, release := range opts.Releases {
+		jopts.Releases = append(jopts.Releases, release)
+	}
+	return jopts
+}
+
+func (opts *CacheOptions) Export() jasper.CacheOptions {
+	return jasper.CacheOptions{
+		Disabled:   opts.Disabled,
+		PruneDelay: time.Duration(opts.PruneDelay),
+		MaxSize:    int(opts.MaxSize),
+	}
 }
