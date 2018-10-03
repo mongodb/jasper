@@ -102,6 +102,10 @@ func TestRestService(t *testing.T) {
 			err = client.DownloadFile(ctx, "foo", "bar")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
+
+			_, err = client.getLogs("foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
 		},
 		"ClientRequestsFailWithMalformedURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "http;//", 1)
@@ -131,6 +135,10 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, err.Error(), "problem making request")
 
 			err = client.DownloadFile(ctx, "foo", "bar")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			_, err = client.getLogs("foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 		},
@@ -372,6 +380,58 @@ func TestRestService(t *testing.T) {
 				t.Skip("cannot test download permissions on windows")
 			}
 			assert.Error(t, client.DownloadFile(ctx, "https://google.com", "/foo/bar"))
+		},
+		"ProcessWithInvalidLoggerErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := &CreateOptions{
+				Args: []string{"ls"},
+				Output: OutputOptions{
+					Loggers: []Logger{
+						Logger{
+							Type: LogDefault,
+						},
+					},
+				},
+			}
+			proc, err := client.Create(ctx, opts)
+			assert.Error(t, err)
+			assert.Nil(t, proc)
+		},
+		"ProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := &CreateOptions{
+				Args: []string{"echo", "foo"},
+				Output: OutputOptions{
+					Loggers: []Logger{
+						Logger{
+							Type:    LogInMemory,
+							Options: LogOptions{InMemoryCap: 100},
+						},
+					},
+				},
+			}
+
+			proc, err := client.Create(ctx, opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, proc)
+			assert.NoError(t, proc.Wait(ctx))
+			logs, err := client.getLogs(proc.ID())
+			assert.NoError(t, err)
+			assert.NotEmpty(t, logs)
+		},
+		"GetLogsFromNonexistentProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			logs, err := client.getLogs("foo")
+			assert.Error(t, err)
+			assert.Empty(t, logs)
+		},
+		"GetLogsFailsForProcessWithoutLogs": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := &CreateOptions{Args: []string{"echo", "foo"}}
+
+			proc, err := client.Create(ctx, opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, proc)
+			assert.NoError(t, proc.Wait(ctx))
+			logs, err := client.getLogs(proc.ID())
+			assert.Error(t, err)
+			assert.Empty(t, logs)
 		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {

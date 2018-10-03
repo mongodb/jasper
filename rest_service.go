@@ -10,6 +10,7 @@ import (
 
 	"github.com/evergreen-ci/gimlet"
 	"github.com/mongodb/grip/message"
+	"github.com/mongodb/grip/send"
 	"github.com/pkg/errors"
 )
 
@@ -52,6 +53,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/download").Version(1).Post().Handler(s.downloadFile)
+	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
 	return app
@@ -86,6 +88,21 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrap(err, "invalid creation options").Error(),
+		})
+		return
+	}
+
+	// If a logger is attached, it should be in-memory.
+	if len(opts.Output.Loggers) > 1 {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.New("logger output only allows 1 logger").Error(),
+		})
+		return
+	} else if len(opts.Output.Loggers) == 1 && opts.Output.Loggers[0].Type != LogInMemory {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.New("logger must be in-memory").Error(),
 		})
 		return
 	}
@@ -327,18 +344,6 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 	gimlet.WriteJSON(rw, struct{}{})
 }
 
-func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
-	if err := s.manager.Close(r.Context()); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
-	gimlet.WriteJSON(rw, struct{}{})
-}
-
 func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	var downloadInfo struct {
 		URL  string `json:"url"`
@@ -372,6 +377,58 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	if err = WriteFile(resp.Body, downloadInfo.Path); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
+	vars := gimlet.GetVars(r)
+	id := vars["id"]
+	ctx := r.Context()
+
+	proc, err := s.manager.Get(ctx, id)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
+		})
+		return
+	}
+
+	if proc.Info(ctx).Options.Output.outputSender == nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    errors.Errorf("process '%s' is not being logged", id).Error(),
+		})
+		return
+	}
+	logger, ok := proc.Info(ctx).Options.Output.outputSender.Sender.(*send.InMemorySender)
+	if !ok {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    errors.Errorf("cannot get log from process '%s'", id).Error(),
+		})
+		return
+	}
+	logs, err := logger.GetString()
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    err.Error(),
+		})
+		return
+	}
+	gimlet.WriteJSON(rw, logs)
+}
+
+func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
+	if err := s.manager.Close(r.Context()); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
 		})
 		return
