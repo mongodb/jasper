@@ -213,6 +213,30 @@ func (c *restClient) Close(ctx context.Context) error {
 	return nil
 }
 
+func (c *restClient) getLogs(id string) ([]string, error) {
+	req, err := http.NewRequest(http.MethodGet, c.getURL("/process/%s/logs", id), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem building request")
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem making request")
+	}
+	defer resp.Body.Close()
+
+	if err = handleError(resp); err != nil {
+		return nil, errors.Wrap(err, "request returned error")
+	}
+
+	logs := []string{}
+	if err = gimlet.GetJSON(resp.Body, &logs); err != nil {
+		return nil, errors.Wrap(err, "problem reading logs from response")
+	}
+
+	return logs, nil
+}
+
 type restProcess struct {
 	id     string
 	client *restClient
