@@ -23,7 +23,7 @@ func WriteFile(reader io.Reader, path string) error {
 		return err
 	}
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}

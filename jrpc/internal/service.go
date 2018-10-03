@@ -32,6 +32,7 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 type jasperService struct {
 	hostID  string
 	manager jasper.Manager
+	client  http.Client
 }
 
 func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResponse, error) {
@@ -198,12 +199,12 @@ func (s *jasperService) ResetTags(ctx context.Context, id *JasperProcessID) (*Op
 }
 
 func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
-	resp, err := http.Get(info.Url)
+	resp, err := s.client.Get(info.Url)
 	if err != nil {
 		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
+	if resp.StatusCode != http.StatusOK {
 		err = errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, info.Url, info.Path)
 		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
 	}

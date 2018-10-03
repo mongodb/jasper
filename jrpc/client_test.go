@@ -2,9 +2,6 @@ package jrpc
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -213,49 +210,6 @@ func TestJRPCManager(t *testing.T) {
 					assert.NoError(t, err)
 					assert.NotNil(t, fetched)
 					assert.Equal(t, proc.ID(), fetched.ID())
-				},
-				"DownloadFileCreatesResource": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					jrpcManager, ok := manager.(*jrpcManager)
-					require.True(t, ok)
-
-					cwd, err := os.Getwd()
-					require.NoError(t, err)
-					file, err := ioutil.TempFile(filepath.Join(filepath.Dir(cwd), "build"), "out.txt")
-					require.NoError(t, err)
-					defer os.Remove(file.Name())
-
-					err = jrpcManager.DownloadFile(ctx, "https://google.com", file.Name())
-					assert.NoError(t, err)
-					info, err := os.Stat(file.Name())
-					require.NoError(t, err)
-					assert.NotEqual(t, 0, info.Size())
-				},
-				"DownloadFileFailsWithBadURL": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					jrpcManager, ok := manager.(*jrpcManager)
-					require.True(t, ok)
-
-					err := jrpcManager.DownloadFile(ctx, "", "")
-					assert.Error(t, err)
-				},
-				"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					jrpcManager, ok := manager.(*jrpcManager)
-					require.True(t, ok)
-
-					err := jrpcManager.DownloadFile(ctx, "https://google.com/foo", "out.txt")
-					assert.Error(t, err)
-				},
-				"DownloadFileFailsForInvalidPath": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					if os.Geteuid() == 0 {
-						t.Skip("cannot test download permissions as root")
-					} else if runtime.GOOS == "windows" {
-						t.Skip("cannot test download permissions on windows")
-					}
-
-					jrpcManager, ok := manager.(*jrpcManager)
-					require.True(t, ok)
-
-					err := jrpcManager.DownloadFile(ctx, "https://google.com", "/foo/bar")
-					assert.Error(t, err)
 				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 			} {

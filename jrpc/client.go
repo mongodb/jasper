@@ -106,17 +106,6 @@ func (m *jrpcManager) Close(ctx context.Context) error {
 	return errors.New(resp.Text)
 }
 
-func (m *jrpcManager) DownloadFile(ctx context.Context, url string, path string) error {
-	resp, err := m.client.DownloadFile(ctx, &internal.DownloadInfo{Url: url, Path: path})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	if resp.Success {
-		return nil
-	}
-	return errors.New(resp.Text)
-}
-
 type jrpcProcess struct {
 	client internal.JasperProcessManagerClient
 	info   *internal.ProcessInfo
