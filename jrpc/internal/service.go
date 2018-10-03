@@ -204,7 +204,7 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		err = errors.Errorf("could not download '%s' to path '%s'", info.Url, info.Path)
+		err = errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, info.Url, info.Path)
 		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
 	}
 

@@ -48,8 +48,7 @@ proto:
 	@mkdir -p jrpc/internal
 	protoc --go_out=plugins=grpc:jrpc/internal *.proto
 clean:
-	rm -rf *.pb.go $(buildDir)/bench_out* $(buildDir)/mongodb* $(buildDir)/this_file_exists \
-		$(buildDir)/out.txt* $(buildDir)/perf.json
+	rm -rf *.pb.go
 
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/

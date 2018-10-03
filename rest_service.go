@@ -341,8 +341,8 @@ func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	var downloadInfo struct {
-		URL  string
-		Path string
+		URL  string `json:"url"`
+		Path string `json:"path"`
 	}
 	if err := gimlet.GetJSON(r.Body, &downloadInfo); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
