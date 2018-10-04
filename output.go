@@ -3,8 +3,6 @@ package jasper
 import (
 	"io"
 	"io/ioutil"
-	"os"
-	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -108,14 +106,6 @@ func (l LogType) Validate() error {
 	}
 }
 
-func makeDevNullSender() (send.Sender, error) {
-	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	return send.NewStreamLogger("", devNull, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
-}
 
 func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 	var sender send.Sender
