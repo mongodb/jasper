@@ -345,7 +345,7 @@ func TestRestService(t *testing.T) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
-			assert.NoError(t, client.DownloadFile(ctx, "https://google.com", file.Name()))
+			assert.NoError(t, client.DownloadFile(ctx, "https://example.com", file.Name()))
 
 			info, err := os.Stat(file.Name())
 			assert.NoError(t, err)
@@ -371,7 +371,7 @@ func TestRestService(t *testing.T) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
-			assert.Error(t, client.DownloadFile(ctx, "https://google.com/foo", file.Name()))
+			assert.Error(t, client.DownloadFile(ctx, "https://example.com/foo", file.Name()))
 		},
 		"DownloadFileFailsForInsufficientPermissions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			if os.Geteuid() == 0 {
@@ -379,7 +379,7 @@ func TestRestService(t *testing.T) {
 			} else if runtime.GOOS == "windows" {
 				t.Skip("cannot test download permissions on windows")
 			}
-			assert.Error(t, client.DownloadFile(ctx, "https://google.com", "/foo/bar"))
+			assert.Error(t, client.DownloadFile(ctx, "https://example.com", "/foo/bar"))
 		},
 		"ProcessWithInvalidLoggerErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{
