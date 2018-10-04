@@ -366,10 +366,10 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
+	if resp.StatusCode != http.StatusOK {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: resp.StatusCode,
-			Message:    errors.Errorf("could not download '%s' to path '%s'", downloadInfo.URL, downloadInfo.Path).Error(),
+			Message:    errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, downloadInfo.URL, downloadInfo.Path).Error(),
 		})
 		return
 	}

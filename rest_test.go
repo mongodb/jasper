@@ -361,7 +361,7 @@ func TestRestService(t *testing.T) {
 			}{URL: 0})
 			require.NoError(t, err)
 
-			req, err := http.NewRequest(http.MethodPost, client.getURL("/Download"), body)
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/download"), body)
 			require.NoError(t, err)
 			rw := httptest.NewRecorder()
 			srv.downloadFile(rw, req)
