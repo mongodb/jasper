@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -58,6 +59,7 @@ func (s *jasperService) backgroundPrune() {
 type jasperService struct {
 	hostID     string
 	manager    jasper.Manager
+	client     http.Client
 	cache      *lru.Cache
 	cacheOpts  jasper.CacheOptions
 	cacheMutex sync.RWMutex
@@ -256,4 +258,22 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 	s.cacheMutex.Unlock()
 
 	return &OperationOutcome{Success: true, Text: "cache configured"}, nil
+}
+
+func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
+	resp, err := s.client.Get(info.Url)
+	if err != nil {
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		err = errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, info.Url, info.Path)
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
+	}
+
+	if err = jasper.WriteFile(resp.Body, info.Path); err != nil {
+		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem writing file")
+	}
+
+	return &OperationOutcome{Success: true, Text: fmt.Sprintf("downloaded file '%s' to path '%s'", info.Url, info.Path)}, nil
 }

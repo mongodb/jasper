@@ -124,6 +124,11 @@ message CacheOptions {
     int64 max_size = 3;
 }
 
+message DownloadInfo {
+  string url = 1;
+  string path = 2;
+}
+
 service JasperProcessManager {
   rpc Status(google.protobuf.Empty) returns  (StatusResponse); 
   rpc Create(CreateOptions) returns (ProcessInfo); 
@@ -136,6 +141,7 @@ service JasperProcessManager {
   rpc TagProcess(ProcessTags) returns (OperationOutcome);
   rpc ResetTags(JasperProcessID) returns (OperationOutcome);
   rpc GetTags(JasperProcessID) returns (ProcessTags);
+  rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
   rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
 }

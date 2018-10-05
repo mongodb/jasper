@@ -25,7 +25,7 @@ race:
 	@grep -s -q -e "^PASS" $(buildDir)/race.sink.out && ! grep -s -q "^WARNING: DATA RACE" $(buildDir)/race.sink.out
 test:
 	@mkdir -p $(buildDir)
-	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) | tee $(buildDir)/test.sink.out
+	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) $(_testPackages) | tee $(buildDir)/test.sink.out
 	@grep -s -q -e "^PASS" $(buildDir)/test.sink.out
 .PHONY: benchmark
 benchmark:
@@ -48,7 +48,7 @@ proto:
 	@mkdir -p jrpc/internal
 	protoc --go_out=plugins=grpc:jrpc/internal *.proto
 clean:
-	rm *.pb.go
+	rm -rf *.pb.go
 
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/

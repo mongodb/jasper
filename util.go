@@ -1,7 +1,9 @@
 package jasper
 
 import (
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 )
@@ -26,5 +28,23 @@ func MakeEnclosingDirectories(path string) error {
 	} else if !info.IsDir() {
 		return errors.Errorf("'%s' already exists and is not a directory", path)
 	}
+	return nil
+}
+
+// WriteFile writes the buffer to the file.
+func WriteFile(reader io.Reader, path string) error {
+	if err := MakeEnclosingDirectories(filepath.Dir(path)); err != nil {
+		return errors.Wrap(err, "problem making enclosing directories")
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(file, reader); err != nil {
+		return err
+	}
+
 	return nil
 }

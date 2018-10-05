@@ -212,7 +212,6 @@ func TestJRPCManager(t *testing.T) {
 					assert.Equal(t, proc.ID(), fetched.ID())
 				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
-				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, taskTimeout)

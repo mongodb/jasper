@@ -1,7 +1,9 @@
 package jasper
 
 import (
+	"bytes"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,4 +66,47 @@ func TestMakeEnclosingDirectories(t *testing.T) {
 	require.False(t, os.IsNotExist(err))
 	require.False(t, info.IsDir())
 	assert.Error(t, MakeEnclosingDirectories(path))
+}
+
+func TestWriteFile(t *testing.T) {
+	for testName, testCase := range map[string]struct {
+		content    string
+		path       string
+		shouldPass bool
+	}{
+		"FailsForInsufficientMkdirPermissions": {
+			content:    "foo",
+			path:       "/bar",
+			shouldPass: false,
+		},
+		"FailsForInsufficientFileWritePermissions": {
+			content:    "foo",
+			path:       "/etc/hosts",
+			shouldPass: false,
+		},
+		"FailsForInsufficientFileOpenPermissions": {
+			content:    "foo",
+			path:       "/etc/whatever",
+			shouldPass: false,
+		},
+		"WriteToFileSucceeds": {
+			content:    "foo",
+			path:       "/dev/null",
+			shouldPass: true,
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			if os.Geteuid() == 0 {
+				t.Skip("cannot test download permissions as root")
+			} else if runtime.GOOS == "windows" {
+				t.Skip("cannot run file write tests on windows")
+			}
+			err := WriteFile(bytes.NewBufferString(testCase.content), testCase.path)
+			if testCase.shouldPass {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
 }
