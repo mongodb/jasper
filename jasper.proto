@@ -105,6 +105,25 @@ message OperationOutcome {
   string text = 2;
 }
 
+message BuildOptions {
+    string target = 1;
+    string arch = 2;
+    string edition = 3;
+    bool debug = 4;
+}
+
+message MongoDBDownloadOptions {
+    BuildOptions build_options = 1;
+    string path = 2;
+    repeated string releases = 3;
+}
+
+message CacheOptions {
+    bool disabled = 1;
+    int64 prune_delay = 2;
+    int64 max_size = 3;
+}
+
 message DownloadInfo {
   string url = 1;
   string path = 2;
@@ -123,4 +142,6 @@ service JasperProcessManager {
   rpc ResetTags(JasperProcessID) returns (OperationOutcome);
   rpc GetTags(JasperProcessID) returns (ProcessTags);
   rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
+  rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
+  rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
 }

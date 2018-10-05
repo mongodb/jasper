@@ -5,10 +5,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
+	"github.com/tychoish/lru"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 )
@@ -22,17 +25,43 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 	srv := &jasperService{
 		hostID:  hn,
 		manager: manager,
+		cache:   lru.NewCache(),
+		cacheOpts: jasper.CacheOptions{
+			PruneDelay: jasper.DefaultCachePruneDelay,
+			MaxSize:    jasper.DefaultMaxCacheSize,
+		},
 	}
 
 	RegisterJasperProcessManagerServer(s, srv)
 
+	go srv.backgroundPrune()
+
 	return nil
 }
 
+func (s *jasperService) backgroundPrune() {
+	s.cacheMutex.RLock()
+	timer := time.NewTimer(s.cacheOpts.PruneDelay)
+	s.cacheMutex.RUnlock()
+
+	for {
+		<-timer.C
+		s.cacheMutex.RLock()
+		if !s.cacheOpts.Disabled {
+			s.cache.Prune(s.cacheOpts.MaxSize, nil, false)
+		}
+		timer.Reset(s.cacheOpts.PruneDelay)
+		s.cacheMutex.RUnlock()
+	}
+}
+
 type jasperService struct {
-	hostID  string
-	manager jasper.Manager
-	client  http.Client
+	hostID     string
+	manager    jasper.Manager
+	client     http.Client
+	cache      *lru.Cache
+	cacheOpts  jasper.CacheOptions
+	cacheMutex sync.RWMutex
 }
 
 func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResponse, error) {
@@ -196,6 +225,38 @@ func (s *jasperService) ResetTags(ctx context.Context, id *JasperProcessID) (*Op
 	}
 	proc.ResetTags()
 	return &OperationOutcome{Success: true, Text: "set tags"}, nil
+}
+
+func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownloadOptions) (*OperationOutcome, error) {
+	jopts := opts.Export()
+	if err := jopts.BuildOpts.Validate(); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "invalid build options").Error()}, err
+	}
+
+	if err := jasper.SetupDownloadMongoDBReleases(ctx, s.cache, jopts); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem in download setup").Error()}, err
+	}
+
+	return &OperationOutcome{Success: true, Text: "download jobs started"}, nil
+}
+
+func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) (*OperationOutcome, error) {
+	jopts := opts.Export()
+	if err := jopts.Validate(); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem with validating cache options").Error()}, err
+	}
+
+	s.cacheMutex.Lock()
+	if jopts.MaxSize > 0 {
+		s.cacheOpts.MaxSize = jopts.MaxSize
+	}
+	if jopts.PruneDelay > time.Duration(0) {
+		s.cacheOpts.PruneDelay = jopts.PruneDelay
+	}
+	s.cacheOpts.Disabled = jopts.Disabled
+	s.cacheMutex.Unlock()
+
+	return &OperationOutcome{Success: true, Text: "cache configured"}, nil
 }
 
 func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -106,6 +107,14 @@ func TestRestService(t *testing.T) {
 			_, err = client.getLogs("foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
+
+			err = client.DownloadMongoDB(ctx, MongoDBDownloadOptions{})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
+
+			err = client.ConfigureCache(ctx, CacheOptions{})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
 		},
 		"ClientRequestsFailWithMalformedURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "http;//", 1)
@@ -139,6 +148,14 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, err.Error(), "problem making request")
 
 			_, err = client.getLogs("foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			err = client.DownloadMongoDB(ctx, MongoDBDownloadOptions{})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			err = client.ConfigureCache(ctx, CacheOptions{})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 		},
@@ -432,6 +449,71 @@ func TestRestService(t *testing.T) {
 			logs, err := client.getLogs(proc.ID())
 			assert.Error(t, err)
 			assert.Empty(t, logs)
+		},
+		"InitialCacheOptionsMatchDefault": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			assert.Equal(t, DefaultMaxCacheSize, srv.cacheOpts.MaxSize)
+			assert.Equal(t, DefaultCachePruneDelay, srv.cacheOpts.PruneDelay)
+			assert.Equal(t, false, srv.cacheOpts.Disabled)
+		},
+		"ConfigureCacheFailsWithInvalidOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := CacheOptions{PruneDelay: -1}
+			assert.Error(t, client.ConfigureCache(ctx, opts))
+			assert.Equal(t, DefaultMaxCacheSize, srv.cacheOpts.MaxSize)
+			assert.Equal(t, DefaultCachePruneDelay, srv.cacheOpts.PruneDelay)
+
+			opts = CacheOptions{MaxSize: -1}
+			assert.Error(t, client.ConfigureCache(ctx, opts))
+			assert.Equal(t, DefaultMaxCacheSize, srv.cacheOpts.MaxSize)
+			assert.Equal(t, DefaultCachePruneDelay, srv.cacheOpts.PruneDelay)
+		},
+		"ConfigureCachePassesWithZeroOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := CacheOptions{}
+			assert.NoError(t, client.ConfigureCache(ctx, opts))
+		},
+		"ConfigureCachePassesWithValidOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := CacheOptions{PruneDelay: 5 * time.Second, MaxSize: 1024}
+			assert.NoError(t, client.ConfigureCache(ctx, opts))
+		},
+		"ConfigureCacheFailsWithBadRequest": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			var opts struct {
+				MaxSize string `json:"max_size"`
+			}
+			body, err := makeBody(opts)
+			require.NoError(t, err)
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/configure-cache"), body)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+
+			srv.configureCache(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
+		"DownloadMongoDBFailsWithBadRequest": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			var opts struct {
+				BuildOpts string
+			}
+			body, err := makeBody(opts)
+			require.NoError(t, err)
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/download-mongodb"), body)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+
+			srv.downloadMongoDB(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
+		"DownloadMongoDBFailsWithZeroOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			err := client.DownloadMongoDB(ctx, MongoDBDownloadOptions{})
+			assert.Error(t, err)
+		},
+		"DownloadMongoDBPassesWithGoodOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			dir, err := ioutil.TempDir("build", "mongodb")
+			require.NoError(t, err)
+			defer os.RemoveAll(dir)
+
+			opts := validMongoDBDownloadOptions()
+			opts.Path = dir
+
+			err = client.DownloadMongoDB(ctx, opts)
+			assert.NoError(t, err)
 		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
