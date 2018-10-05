@@ -99,7 +99,7 @@ func (m *jrpcManager) Close(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Succuess {
+	if resp.Success {
 		return nil
 	}
 
@@ -163,7 +163,7 @@ func (p *jrpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Succuess {
+	if resp.Success {
 		return nil
 	}
 
@@ -176,7 +176,7 @@ func (p *jrpcProcess) Wait(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Succuess {
+	if resp.Success {
 		return nil
 	}
 

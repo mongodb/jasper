@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -98,6 +99,10 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
+			err = client.DownloadFile(ctx, "foo", "bar")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
+
 			_, err = client.getLogs("foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
@@ -126,6 +131,10 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, err.Error(), "problem making request")
 
 			_, err = client.getProcessInfo(ctx, "foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			err = client.DownloadFile(ctx, "foo", "bar")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
@@ -331,6 +340,46 @@ func TestRestService(t *testing.T) {
 
 			srv.signalProcess(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
+		"DownloadFileCreatesResource": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("build", "out.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			assert.NoError(t, client.DownloadFile(ctx, "https://example.com", file.Name()))
+
+			info, err := os.Stat(file.Name())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, info.Size())
+		},
+		"DownloadFileFailsWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			err := client.DownloadFile(ctx, "", "")
+			assert.Error(t, err)
+		},
+		"ServiceDownloadFileFailsWithBadInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			body, err := makeBody(struct {
+				URL int `json:"url"`
+			}{URL: 0})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/download"), body)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+			srv.downloadFile(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
+		"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("build", "out.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			assert.Error(t, client.DownloadFile(ctx, "https://example.com/foo", file.Name()))
+		},
+		"DownloadFileFailsForInsufficientPermissions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			if os.Geteuid() == 0 {
+				t.Skip("cannot test download permissions as root")
+			} else if runtime.GOOS == "windows" {
+				t.Skip("cannot test download permissions on windows")
+			}
+			assert.Error(t, client.DownloadFile(ctx, "https://example.com", "/foo/bar"))
 		},
 		"ProcessWithInvalidLoggerErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{

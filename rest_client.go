@@ -213,6 +213,33 @@ func (c *restClient) Close(ctx context.Context) error {
 	return nil
 }
 
+func (c *restClient) DownloadFile(ctx context.Context, url string, path string) error {
+	body, err := makeBody(struct {
+		URL  string `json:"url"`
+		Path string `json:"path"`
+	}{URL: url, Path: path})
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+
+	req, err := http.NewRequest(http.MethodPost, c.getURL("/download"), body)
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+	req.WithContext(ctx)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "problem making request")
+	}
+	defer resp.Body.Close()
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func (c *restClient) getLogs(id string) ([]string, error) {
 	req, err := http.NewRequest(http.MethodGet, c.getURL("/process/%s/logs", id), nil)
 	if err != nil {

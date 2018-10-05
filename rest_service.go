@@ -52,8 +52,9 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/wait").Version(1).Get().Handler(s.waitForProcess)
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
-	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
+	app.AddRoute("/download").Version(1).Post().Handler(s.downloadFile)
 	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
+	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
 	return app
 }
@@ -335,6 +336,47 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 	if err := proc.Signal(ctx, syscall.Signal(sig)); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
+	var downloadInfo struct {
+		URL  string `json:"url"`
+		Path string `json:"path"`
+	}
+	if err := gimlet.GetJSON(r.Body, &downloadInfo); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrap(err, "problem reading request").Error(),
+		})
+		return
+	}
+
+	resp, err := http.Get(downloadInfo.URL)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrap(err, "problem downloading file").Error(),
+		})
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: resp.StatusCode,
+			Message:    errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, downloadInfo.URL, downloadInfo.Path).Error(),
+		})
+		return
+	}
+
+	if err = WriteFile(resp.Body, downloadInfo.Path); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),
 		})
 		return
