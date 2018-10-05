@@ -274,6 +274,26 @@ func TestLogTypes(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, sender)
 		},
+		"ConfigurePassesWithBuffering": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.BufferOptions.Buffered = true
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		"ConfigureFailsWithNegativeBufferDuration": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.BufferOptions.Buffered = true
+			opts.BufferOptions.Duration = -1
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigureFailsWithNegativeBufferSize": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.BufferOptions.Buffered = true
+			opts.BufferOptions.MaxSize = -1
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
 		// "": func(t *testing.T, l LogType, opts LogOptions) {},
 	}
 	for name, test := range cases {

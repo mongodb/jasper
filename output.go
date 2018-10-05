@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -52,11 +53,18 @@ type LogOptions struct {
 	SplunkOptions      send.SplunkConnectionInfo `json:"splunk_options"`
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
 	InMemoryCap        int                       `json:"inmemory_cap"`
+	BufferOptions      BufferOptions             `json:"buffer_options"`
 }
 
 type Logger struct {
 	Type    LogType    `json:"log_type"`
 	Options LogOptions `json:"log_options"`
+}
+
+type BufferOptions struct {
+	Buffered bool          `json:"buffered"`
+	Duration time.Duration `json:"duration"`
+	MaxSize  int           `json:"max_size"`
 }
 
 func (o OutputOptions) outputIsNull() bool {
@@ -109,8 +117,9 @@ func makeDevNullSender() (send.Sender, error) {
 	return send.NewStreamLogger("", devNull, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 }
 
-func (l LogType) Configure(opts LogOptions) (*send.Sender, error) {
-	var sender *send.Sender
+func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
+	var sender send.Sender
+	var err error
 
 	switch l {
 	case LogBuildloggerV2, LogBuildloggerV3:
@@ -120,57 +129,59 @@ func (l LogType) Configure(opts LogOptions) (*send.Sender, error) {
 		if opts.BuildloggerOptions.Local.Name() == "" {
 			return nil, errors.New("must call SetName() on buildlogger local sender")
 		}
-		s, err := send.MakeBuildlogger(DefaultLogName, &opts.BuildloggerOptions)
+		sender, err = send.MakeBuildlogger(DefaultLogName, &opts.BuildloggerOptions)
 		if err != nil {
 			return nil, err
 		}
-		sender = &s
 	case LogDefault:
-		s, err := send.NewNativeLogger(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		sender, err = send.NewNativeLogger(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 		if err != nil {
 			return nil, err
 		}
-		sender = &s
 	case LogFile:
-		s, err := send.MakePlainFileLogger(opts.FileName)
+		sender, err = send.MakePlainFileLogger(opts.FileName)
 		if err != nil {
 			return nil, err
 		}
-		s.SetName(DefaultLogName)
-		s.SetFormatter(send.MakePlainFormatter())
-		sender = &s
+		sender.SetName(DefaultLogName)
+		if err = sender.SetFormatter(send.MakePlainFormatter()); err != nil {
+			return nil, err
+		}
 	case LogInherit:
-		s := grip.GetSender()
-		sender = &s
+		sender = grip.GetSender()
 	case LogSplunk:
 		if !opts.SplunkOptions.Populated() {
 			return nil, errors.New("missing connection info for output type splunk")
 		}
-		s, err := send.NewSplunkLogger("", opts.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		sender, err = send.NewSplunkLogger("", opts.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 		if err != nil {
 			return nil, err
 		}
-		sender = &s
 	case LogSumologic:
 		if opts.SumoEndpoint == "" {
 			return nil, errors.New("missing endpoint for output type sumologic")
 		}
-		s, err := send.NewSumo(DefaultLogName, opts.SumoEndpoint)
+		sender, err = send.NewSumo(DefaultLogName, opts.SumoEndpoint)
 		if err != nil {
 			return nil, err
 		}
-		sender = &s
 	case LogInMemory:
 		if opts.InMemoryCap <= 0 {
 			return nil, errors.New("invalid inmemory capacity")
 		}
-		s, err := send.NewInMemorySender("jasper", send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, opts.InMemoryCap)
+		sender, err = send.NewInMemorySender("jasper", send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, opts.InMemoryCap)
 		if err != nil {
 			return nil, err
 		}
-		sender = &s
 	default:
 		return nil, errors.New("unknown log type")
+	}
+
+	if opts.BufferOptions.Buffered {
+		if opts.BufferOptions.Duration < 0 || opts.BufferOptions.MaxSize < 0 {
+			return nil, errors.New("buffer options cannot be negative")
+		}
+		sender = send.NewBufferedSender(sender, opts.BufferOptions.Duration, opts.BufferOptions.MaxSize)
 	}
 
 	return sender, nil
@@ -241,7 +252,7 @@ func (o *OutputOptions) GetOutput() (io.Writer, error) {
 			if err != nil {
 				return ioutil.Discard, err
 			}
-			outSenders = append(outSenders, *sender)
+			outSenders = append(outSenders, sender)
 		}
 
 		var outMulti send.Sender
@@ -289,7 +300,7 @@ func (o *OutputOptions) GetError() (io.Writer, error) {
 			if err != nil {
 				return ioutil.Discard, err
 			}
-			errSenders = append(errSenders, *sender)
+			errSenders = append(errSenders, sender)
 		}
 
 		errMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Error, Threshold: level.Trace}, errSenders)
