@@ -74,6 +74,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/create").Version(1).Post().Handler(s.createProcess)
 	app.AddRoute("/download-mongodb").Version(1).Post().Handler(s.downloadMongoDB)
 	app.AddRoute("/download").Version(1).Post().Handler(s.downloadFile)
+	app.AddRoute("/download-async").Version(1).Post().Handler(s.downloadFileAsync)
 	app.AddRoute("/list/{filter}").Version(1).Get().Handler(s.listProcesses)
 	app.AddRoute("/list/group/{name}").Version(1).Get().Handler(s.listGroupMembers)
 	app.AddRoute("/process/{id}").Version(1).Get().Handler(s.getProcess)
@@ -394,12 +395,15 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 	gimlet.WriteJSON(rw, struct{}{})
 }
 
+// DownloadInfo represents the URL to download and the file path where it should be downloaded.
+type DownloadInfo struct {
+	URL  string `json:"url"`
+	Path string `json:"path"`
+}
+
 func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
-	var downloadInfo struct {
-		URL  string `json:"url"`
-		Path string `json:"path"`
-	}
-	if err := gimlet.GetJSON(r.Body, &downloadInfo); err != nil {
+	var info DownloadInfo
+	if err := gimlet.GetJSON(r.Body, &info); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrap(err, "problem reading request").Error(),
@@ -407,30 +411,65 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := http.Get(downloadInfo.URL)
+	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem downloading file").Error(),
+			Message:    errors.Wrapf(err, "problem creating request for URL %s", info.URL).Error(),
 		})
 		return
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if err := DoDownload(req, info, http.Client{}); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: resp.StatusCode,
-			Message:    errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, downloadInfo.URL, downloadInfo.Path).Error(),
+			StatusCode: http.StatusInternalServerError,
+			Message:    errors.Wrapf(err, "problem occurred during file download for URL %s", info.URL).Error(),
 		})
 		return
 	}
 
-	if err = WriteFile(resp.Body, downloadInfo.Path); err != nil {
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
+// DoDownload downloads the file given by the URL to the file path.
+func DoDownload(req *http.Request, info DownloadInfo, client http.Client) error {
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("problem downloading file for url %s", info.URL))
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("%s: could not download %s to path %s", resp.Status, info.URL, info.Path)
+	}
+
+	if err = WriteFile(resp.Body, info.Path); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) downloadFileAsync(rw http.ResponseWriter, r *http.Request) {
+	var info DownloadInfo
+	if err := gimlet.GetJSON(r.Body, &info); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
-			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrap(err, "problem reading request").Error(),
 		})
 		return
 	}
+
+	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "problem creating request for URL %s", info.URL).Error(),
+		})
+		return
+	}
+	go func() {
+		if err := DoDownload(req, info, http.Client{}); err != nil {
+			grip.Error(errors.Wrapf(err, "problem occurred during file download for URL %s", info.URL))
+		}
+	}()
 
 	gimlet.WriteJSON(rw, struct{}{})
 }

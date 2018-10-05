@@ -3,6 +3,7 @@ package jasper
 import (
 	"context"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -169,4 +170,34 @@ func TestAddMongoDBFilesToCacheWithBadPath(t *testing.T) {
 	absPath, err := filepath.Abs("build")
 	require.NoError(t, err)
 	assert.Error(t, addMongoDBFilesToCache(lru.NewCache(), absPath)("foo.txt"))
+}
+
+func TestDoDownloadWithValidInfo(t *testing.T) {
+	file, err := ioutil.TempFile("build", "out.txt")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	info := DownloadInfo{
+		URL:  "https://example.com",
+		Path: file.Name(),
+	}
+	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
+	require.NoError(t, err)
+
+	assert.NoError(t, DoDownload(req, info, http.Client{}))
+}
+
+func TestDoDownloadWithNonexistentURL(t *testing.T) {
+	file, err := ioutil.TempFile("build", "out.txt")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	info := DownloadInfo{
+		URL:  "https://example.com/foo",
+		Path: file.Name(),
+	}
+	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
+	require.NoError(t, err)
+
+	assert.Error(t, DoDownload(req, info, http.Client{}))
 }

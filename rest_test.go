@@ -104,7 +104,11 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
-			_, err = client.getLogs("foo")
+			err = client.DownloadFileAsync(ctx, "foo", "bar")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
+
+			_, err = client.GetLogs(ctx, "foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
@@ -147,7 +151,11 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
-			_, err = client.getLogs("foo")
+			err = client.DownloadFileAsync(ctx, "foo", "bar")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			_, err = client.GetLogs(ctx, "foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
@@ -398,6 +406,18 @@ func TestRestService(t *testing.T) {
 			}
 			assert.Error(t, client.DownloadFile(ctx, "https://example.com", "/foo/bar"))
 		},
+		"ServiceDownloadFileAsyncFailsWithBadInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			body, err := makeBody(struct {
+				URL int `json:"url"`
+			}{URL: 0})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/download-async"), body)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+			srv.downloadFile(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
 		"ProcessWithInvalidLoggerErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{
 				Args: []string{"ls"},
@@ -413,7 +433,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Nil(t, proc)
 		},
-		"ProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"GetLogsFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{
 				Args: []string{"echo", "foo"},
 				Output: OutputOptions{
@@ -430,12 +450,12 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, proc)
 			assert.NoError(t, proc.Wait(ctx))
-			logs, err := client.getLogs(proc.ID())
+			logs, err := client.GetLogs(ctx, proc.ID())
 			assert.NoError(t, err)
 			assert.NotEmpty(t, logs)
 		},
 		"GetLogsFromNonexistentProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			logs, err := client.getLogs("foo")
+			logs, err := client.GetLogs(ctx, "foo")
 			assert.Error(t, err)
 			assert.Empty(t, logs)
 		},
@@ -446,7 +466,7 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, proc)
 			assert.NoError(t, proc.Wait(ctx))
-			logs, err := client.getLogs(proc.ID())
+			logs, err := client.GetLogs(ctx, proc.ID())
 			assert.Error(t, err)
 			assert.Empty(t, logs)
 		},

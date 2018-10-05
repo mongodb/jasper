@@ -142,6 +142,7 @@ service JasperProcessManager {
   rpc ResetTags(JasperProcessID) returns (OperationOutcome);
   rpc GetTags(JasperProcessID) returns (ProcessTags);
   rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
+  rpc DownloadFileAsync(DownloadInfo) returns (OperationOutcome);
   rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
 }
