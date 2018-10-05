@@ -32,9 +32,7 @@ func getPortNumber() int {
 
 }
 
-// const taskTimeout = 5 * time.Second
-// kim: remove when DownloadMongoDB test works
-const taskTimeout = 40 * time.Second
+const taskTimeout = 5 * time.Second
 
 // this file contains tools and constants used throughout the test
 // suite.

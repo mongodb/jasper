@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -61,10 +62,10 @@ func (s *Service) App() *gimlet.APIApp {
 	s.hostID, _ = os.Hostname()
 	s.cache = lru.NewCache()
 	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
 	s.cacheOpts.PruneDelay = DefaultCachePruneDelay
 	s.cacheOpts.MaxSize = DefaultMaxCacheSize
 	s.cacheOpts.Disabled = false
-	s.cacheMutex.Unlock()
 
 	app := gimlet.NewApp()
 
@@ -588,7 +589,7 @@ func addMongoDBFilesToCache(cache *lru.Cache, absRootPath string) func(string) e
 
 		baseName := filepath.Base(fileName)
 		ext := filepath.Ext(baseName)
-		dirPath := filepath.Join(absRootPath, string(baseName[:len(baseName)-len(ext)]))
+		dirPath := filepath.Join(absRootPath, strings.TrimSuffix(baseName, ext))
 
 		err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -604,9 +605,8 @@ func addMongoDBFilesToCache(cache *lru.Cache, absRootPath string) func(string) e
 
 			return nil
 		})
-		if err != nil {
-			catcher.Add(errors.Wrap(err, "problem walking download files"))
-		}
+		catcher.Add(errors.Wrap(err, "problem walking download files"))
+
 		return catcher.Resolve()
 	}
 }
@@ -710,6 +710,7 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
 	if opts.MaxSize > 0 {
 		s.cacheOpts.MaxSize = opts.MaxSize
 	}
@@ -717,7 +718,6 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 		s.cacheOpts.PruneDelay = opts.PruneDelay
 	}
 	s.cacheOpts.Disabled = opts.Disabled
-	s.cacheMutex.Unlock()
 
 	gimlet.WriteJSON(rw, struct{}{})
 }

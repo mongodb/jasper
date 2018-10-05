@@ -281,6 +281,8 @@ func (c *restClient) DownloadMongoDB(ctx context.Context, opts MongoDBDownloadOp
 	if err != nil {
 		return errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
+
 	if err = handleError(resp); err != nil {
 		return errors.WithStack(err)
 	}
@@ -305,6 +307,8 @@ func (c *restClient) ConfigureCache(ctx context.Context, opts CacheOptions) erro
 	if err != nil {
 		return errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
+
 	if err = handleError(resp); err != nil {
 		return errors.WithStack(err)
 	}

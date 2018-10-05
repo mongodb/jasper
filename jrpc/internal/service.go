@@ -27,7 +27,6 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 		manager: manager,
 		cache:   lru.NewCache(),
 		cacheOpts: jasper.CacheOptions{
-			Disabled:   false,
 			PruneDelay: jasper.DefaultCachePruneDelay,
 			MaxSize:    jasper.DefaultMaxCacheSize,
 		},
