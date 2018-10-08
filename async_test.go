@@ -185,6 +185,9 @@ func TestDoDownloadWithValidInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NoError(t, DoDownload(req, info, http.Client{}))
+	fileInfo, err := file.Stat()
+	require.NoError(t, err)
+	assert.NotZero(t, fileInfo.Size())
 }
 
 func TestDoDownloadWithNonexistentURL(t *testing.T) {
