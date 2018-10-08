@@ -38,7 +38,6 @@ func TestProcessImplementations(t *testing.T) {
 		"BasicNoLock":      newBasicProcess,
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
-
 			srv, port := makeAndStartService(ctx, httpClient)
 			if port < 100 || srv == nil {
 				return nil, errors.New("fixture creation failure")
@@ -185,6 +184,7 @@ func TestProcessImplementations(t *testing.T) {
 					require.NoError(t, err)
 					defer os.Remove(file.Name())
 					info, err := file.Stat()
+					assert.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}}}
@@ -216,6 +216,47 @@ func TestProcessImplementations(t *testing.T) {
 						info, err = file.Stat()
 						assert.NoError(t, err)
 						assert.NotZero(t, info.Size())
+					}
+				},
+				"ProcessWritesToBufferedLog": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote triggers are not supported on rest processes")
+					}
+					file, err := ioutil.TempFile("build", "out.txt")
+					require.NoError(t, err)
+					defer os.Remove(file.Name())
+					info, err := file.Stat()
+					assert.NoError(t, err)
+					assert.Zero(t, info.Size())
+
+					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{
+						FileName: file.Name(),
+						BufferOptions: BufferOptions{
+							Buffered: true,
+						},
+					}}}
+					opts.Args = []string{"echo", "foobar"}
+
+					proc, err := makep(ctx, opts)
+					assert.NoError(t, err)
+					assert.NoError(t, proc.Wait(ctx))
+
+					fileWrite := make(chan int64)
+					go func() {
+						for {
+							info, err = file.Stat()
+							if info.Size() > 0 {
+								fileWrite <- info.Size()
+								break
+							}
+						}
+					}()
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "file write took too long to complete")
+					case size := <-fileWrite:
+						assert.NotZero(t, size)
 					}
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},

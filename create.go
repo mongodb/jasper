@@ -143,9 +143,11 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	opts.closers = append(opts.closers, func() {
 		if opts.Output.outputSender != nil {
 			opts.Output.outputSender.Close()
+			opts.Output.outputSender.Sender.Close()
 		}
 		if opts.Output.errorSender != nil {
 			opts.Output.errorSender.Close()
+			opts.Output.errorSender.Sender.Close()
 		}
 	})
 
