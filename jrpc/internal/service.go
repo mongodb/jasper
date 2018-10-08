@@ -271,7 +271,7 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 	}
 
 	if err := jasper.DoDownload(req, jinfo, s.client); err != nil {
-		err = errors.Wrapf(err, "problem occurred during file download for URL %s", jinfo.URL)
+		err = errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path)
 		return &OperationOutcome{Success: false, Text: err.Error()}, err
 	}
 
@@ -288,7 +288,7 @@ func (s *jasperService) DownloadFileAsync(ctx context.Context, info *DownloadInf
 
 	go func() {
 		if err := jasper.DoDownload(req, jinfo, s.client); err != nil {
-			grip.Error(errors.Wrapf(err, "problem occurred during file download for URL %s", jinfo.URL))
+			grip.Error(errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path))
 		}
 	}()
 
