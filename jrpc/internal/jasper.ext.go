@@ -246,3 +246,10 @@ func (opts *CacheOptions) Export() jasper.CacheOptions {
 		MaxSize:    int(opts.MaxSize),
 	}
 }
+
+func (info *DownloadInfo) Export() jasper.DownloadInfo {
+	return jasper.DownloadInfo{
+		Path: info.Path,
+		URL:  info.Url,
+	}
+}

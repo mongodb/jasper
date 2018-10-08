@@ -9,6 +9,7 @@ import (
 	"time"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
@@ -48,7 +49,9 @@ func (s *jasperService) backgroundPrune() {
 		<-timer.C
 		s.cacheMutex.RLock()
 		if !s.cacheOpts.Disabled {
-			s.cache.Prune(s.cacheOpts.MaxSize, nil, false)
+			if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
+				grip.Error(errors.Wrap(err, "error during cache pruning"))
+			}
 		}
 		timer.Reset(s.cacheOpts.PruneDelay)
 		s.cacheMutex.RUnlock()
@@ -260,19 +263,34 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 }
 
 func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
-	resp, err := s.client.Get(info.Url)
+	jinfo := info.Export()
+	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
 	if err != nil {
-		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		err = errors.Errorf("%s: could not download '%s' to path '%s'", resp.Status, info.Url, info.Path)
-		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem downloading file")
+		err = errors.Wrapf(err, "problem creating request for URL %s", jinfo.URL)
+		return &OperationOutcome{Success: false, Text: err.Error()}, err
 	}
 
-	if err = jasper.WriteFile(resp.Body, info.Path); err != nil {
-		return &OperationOutcome{Success: false, Text: err.Error()}, errors.Wrap(err, "problem writing file")
+	if err := jasper.DoDownload(req, jinfo, s.client); err != nil {
+		err = errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path)
+		return &OperationOutcome{Success: false, Text: err.Error()}, err
 	}
 
-	return &OperationOutcome{Success: true, Text: fmt.Sprintf("downloaded file '%s' to path '%s'", info.Url, info.Path)}, nil
+	return &OperationOutcome{Success: true, Text: fmt.Sprintf("downloaded file %s to path %s", jinfo.URL, jinfo.Path)}, nil
+}
+
+func (s *jasperService) DownloadFileAsync(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
+	jinfo := info.Export()
+	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
+	if err != nil {
+		err = errors.Wrapf(err, "problem creating request for URL %s", jinfo.URL)
+		return &OperationOutcome{Success: false, Text: err.Error()}, err
+	}
+
+	go func() {
+		if err := jasper.DoDownload(req, jinfo, s.client); err != nil {
+			grip.Error(errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path))
+		}
+	}()
+
+	return &OperationOutcome{Success: true, Text: fmt.Sprintf("started downloading file %s to path %s", jinfo.URL, jinfo.Path)}, nil
 }

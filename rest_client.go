@@ -55,6 +55,25 @@ func handleError(resp *http.Response) error {
 	return errors.WithStack(gimerr)
 }
 
+func (c *restClient) doRequest(ctx context.Context, method string, url string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem building request")
+	}
+
+	req = req.WithContext(ctx)
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem making request")
+	}
+	if err = handleError(resp); err != nil {
+		defer resp.Body.Close()
+		return nil, errors.WithStack(err)
+	}
+
+	return resp, nil
+}
+
 func (c *restClient) Create(ctx context.Context, opts *CreateOptions) (Process, error) {
 	body, err := makeBody(opts)
 	if err != nil {
@@ -214,47 +233,40 @@ func (c *restClient) Close(ctx context.Context) error {
 }
 
 func (c *restClient) DownloadFile(ctx context.Context, url string, path string) error {
-	body, err := makeBody(struct {
-		URL  string `json:"url"`
-		Path string `json:"path"`
-	}{URL: url, Path: path})
+	body, err := makeBody(DownloadInfo{URL: url, Path: path})
 	if err != nil {
 		return errors.Wrap(err, "problem building request")
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.getURL("/download"), body)
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/download"), body)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
-	}
-	req.WithContext(ctx)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "problem making request")
+		return err
 	}
 	defer resp.Body.Close()
-	if err = handleError(resp); err != nil {
-		return errors.WithStack(err)
+	return nil
+}
+
+func (c *restClient) DownloadFileAsync(ctx context.Context, url string, path string) error {
+	body, err := makeBody(DownloadInfo{URL: url, Path: path})
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
 	}
+
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/download-async"), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
 	return nil
 }
 
-func (c *restClient) getLogs(id string) ([]string, error) {
-	req, err := http.NewRequest(http.MethodGet, c.getURL("/process/%s/logs", id), nil)
+func (c *restClient) GetLogs(ctx context.Context, id string) ([]string, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/process/%s/logs", id), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building request")
-	}
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem making request")
+		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		return nil, errors.Wrap(err, "request returned error")
-	}
 
 	logs := []string{}
 	if err = gimlet.GetJSON(resp.Body, &logs); err != nil {
@@ -271,22 +283,11 @@ func (c *restClient) DownloadMongoDB(ctx context.Context, opts MongoDBDownloadOp
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.getURL("/download-mongodb"), body)
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/download-mongodb"), body)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
-	}
-	req = req.WithContext(ctx)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "problem making request")
+		return err
 	}
 	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		return errors.WithStack(err)
-	}
-
 	return nil
 }
 
@@ -297,22 +298,11 @@ func (c *restClient) ConfigureCache(ctx context.Context, opts CacheOptions) erro
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.getURL("/configure-cache"), body)
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/configure-cache"), body)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
-	}
-	req = req.WithContext(ctx)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "problem making request")
+		return err
 	}
 	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		return errors.WithStack(err)
-	}
-
 	return nil
 }
 
