@@ -3,6 +3,7 @@ package jasper
 import (
 	"io"
 	"io/ioutil"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -105,7 +106,6 @@ func (l LogType) Validate() error {
 		return errors.New("unknown log type")
 	}
 }
-
 
 func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 	var sender send.Sender
