@@ -15,6 +15,8 @@ imports:
     version: e11d1b1098c8423f8ce0140bf597b58c5fc77709
   - name: github.com/tychoish/lru
     version: dd72368210970b1ae1a1922245f67d7f5c4f8440
+  - name: github.com/mholt/archiver
+    version: de0d89e255e17c8d75a40122055763e743ab0593
   - name: github.com/montanaflynn/stats
     version: db72e6cae808b936b0c01fd330ff1fcd2c86c95e
   - name: github.com/mongodb/amboy

@@ -63,8 +63,13 @@ vendor-clean:
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/stretchr/testify
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/pkg/errors
-	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mholt/archiver/tarbz2.go
+	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mholt/archiver
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mongodb/amboy
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/satori/go.uuid
 	rm -rf vendor/github.com/tychoish/lru/vendor/github.com/mongodb/grip
 	rm -rf vendor/github.com/tychoish/lru/vendor/github.com/pkg/errors
+	rm -rf vendor/github.com/mholt/archiver/rar.go
+	rm -rf vendor/github.com/mholt/archiver/tarbz2.go
+	rm -rf vendor/github.com/mholt/archiver/tarlz4.go
+	rm -rf vendor/github.com/mholt/archiver/tarsz.go
+	rm -rf vendor/github.com/mholt/archiver/tarxz.go

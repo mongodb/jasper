@@ -253,3 +253,24 @@ func (info *DownloadInfo) Export() jasper.DownloadInfo {
 		URL:  info.Url,
 	}
 }
+
+func (format ArchiveFormat) Export() jasper.ArchiveFormat {
+	switch format {
+	case ArchiveFormat_ARCHIVEAUTO:
+		return jasper.ArchiveAuto
+	case ArchiveFormat_ARCHIVETARBALL:
+		return jasper.ArchiveTarball
+	case ArchiveFormat_ARCHIVEZIP:
+		return jasper.ArchiveZip
+	default:
+		return jasper.ArchiveFormat("")
+	}
+}
+
+func (opts *ArchiveOptions) Export() jasper.ArchiveOptions {
+	return jasper.ArchiveOptions{
+		ShouldExtract: opts.ShouldExtract,
+		Format:        opts.Format.Export(),
+		TargetPath:    opts.TargetPath,
+	}
+}

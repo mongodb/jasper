@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -16,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tychoish/bond"
 )
 
 type neverJSON struct{}
@@ -100,11 +102,11 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
-			err = client.DownloadFile(ctx, "foo", "bar")
+			err = client.DownloadFile(ctx, DownloadInfo{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
-			err = client.DownloadFileAsync(ctx, "foo", "bar")
+			err = client.DownloadFileAsync(ctx, DownloadInfo{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
@@ -147,11 +149,11 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
-			err = client.DownloadFile(ctx, "foo", "bar")
+			err = client.DownloadFile(ctx, DownloadInfo{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
-			err = client.DownloadFileAsync(ctx, "foo", "bar")
+			err = client.DownloadFileAsync(ctx, DownloadInfo{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
@@ -370,15 +372,118 @@ func TestRestService(t *testing.T) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
-			assert.NoError(t, client.DownloadFile(ctx, "https://example.com", file.Name()))
+			assert.NoError(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com", Path: file.Name()}))
 
 			info, err := os.Stat(file.Name())
 			assert.NoError(t, err)
 			assert.NotEqual(t, 0, info.Size())
 		},
+		"DownloadFileCreatesResourceAndExtracts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			t.Skip("test currently takes too long to run")
+			tempDir, err := ioutil.TempDir("build", "out")
+			require.NoError(t, err)
+			defer os.RemoveAll(tempDir)
+			file, err := ioutil.TempFile(tempDir, "mongodb.tar.gz")
+			require.NoError(t, err)
+			extractDir, err := ioutil.TempDir(tempDir, "mongodb")
+			require.NoError(t, err)
+
+			feed, err := bond.GetArtifactsFeed(tempDir)
+			require.NoError(t, err)
+
+			opts := validMongoDBDownloadOptions()
+			urls, errs := feed.GetArchives(opts.Releases, opts.BuildOpts)
+
+			numUrls := 0
+			for url := range urls {
+				numUrls++
+				info := DownloadInfo{
+					URL:  url,
+					Path: file.Name(),
+					ArchiveOpts: ArchiveOptions{
+						ShouldExtract: true,
+						Format:        ArchiveAuto,
+						TargetPath:    extractDir,
+					},
+				}
+
+				assert.NoError(t, client.DownloadFile(ctx, info))
+
+				fileInfo, err := os.Stat(file.Name())
+				assert.NoError(t, err)
+				assert.NotEqual(t, 0, fileInfo.Size())
+
+				dirContents, err := ioutil.ReadDir(extractDir)
+				require.NoError(t, err)
+				assert.NotEqual(t, 0, len(dirContents))
+			}
+			assert.NotZero(t, numUrls)
+
+			for err := range errs {
+				assert.Fail(t, err.Error())
+			}
+		},
+		"DownloadFileFailsExtractionWithInvalidArchiveFormat": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			fileName := filepath.Join("build", "out.txt")
+			_, err := os.Stat(fileName)
+			require.True(t, os.IsNotExist(err))
+
+			info := DownloadInfo{
+				URL:  "https://example.com",
+				Path: fileName,
+				ArchiveOpts: ArchiveOptions{
+					ShouldExtract: true,
+					Format:        ArchiveFormat("foo"),
+				},
+			}
+			assert.Error(t, client.DownloadFile(ctx, info))
+
+			_, err = os.Stat(fileName)
+			assert.True(t, os.IsNotExist(err))
+		},
+		"DownloadFileFailsForUnarchivedFile": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("build", "out.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			extractDir, err := ioutil.TempDir("build", "out")
+			require.NoError(t, err)
+			defer os.RemoveAll(extractDir)
+
+			info := DownloadInfo{
+				URL:  "https://example.com",
+				Path: file.Name(),
+				ArchiveOpts: ArchiveOptions{
+					ShouldExtract: true,
+					Format:        ArchiveAuto,
+				},
+			}
+			assert.Error(t, client.DownloadFile(ctx, info))
+
+			fileInfo, err := os.Stat(file.Name())
+			require.NoError(t, err)
+			assert.NotZero(t, fileInfo.Size())
+
+			dirContents, err := ioutil.ReadDir(extractDir)
+			require.NoError(t, err)
+			assert.Zero(t, len(dirContents))
+		},
 		"DownloadFileFailsWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			err := client.DownloadFile(ctx, "", "")
+			err := client.DownloadFile(ctx, DownloadInfo{URL: "", Path: ""})
 			assert.Error(t, err)
+		},
+		"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("build", "out.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			assert.Error(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com/foo", Path: file.Name()}))
+		},
+		"DownloadFileFailsForInsufficientPermissions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			if os.Geteuid() == 0 {
+				t.Skip("cannot test download permissions as root")
+			} else if runtime.GOOS == "windows" {
+				t.Skip("cannot test download permissions on windows")
+			}
+			assert.Error(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com", Path: "/foo/bar"}))
 		},
 		"ServiceDownloadFileFailsWithBadInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			body, err := makeBody(struct {
@@ -392,19 +497,23 @@ func TestRestService(t *testing.T) {
 			srv.downloadFile(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
-		"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			file, err := ioutil.TempFile("build", "out.txt")
-			require.NoError(t, err)
-			defer os.Remove(file.Name())
-			assert.Error(t, client.DownloadFile(ctx, "https://example.com/foo", file.Name()))
-		},
-		"DownloadFileFailsForInsufficientPermissions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			if os.Geteuid() == 0 {
-				t.Skip("cannot test download permissions as root")
-			} else if runtime.GOOS == "windows" {
-				t.Skip("cannot test download permissions on windows")
+		"DownloadFileAsyncFailsExtractionWithInvalidArchiveFormat": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			fileName := filepath.Join("build", "out.txt")
+			_, err := os.Stat(fileName)
+			require.True(t, os.IsNotExist(err))
+
+			info := DownloadInfo{
+				URL:  "https://example.com",
+				Path: fileName,
+				ArchiveOpts: ArchiveOptions{
+					ShouldExtract: true,
+					Format:        ArchiveFormat("foo"),
+				},
 			}
-			assert.Error(t, client.DownloadFile(ctx, "https://example.com", "/foo/bar"))
+			assert.Error(t, client.DownloadFileAsync(ctx, info))
+
+			_, err = os.Stat(fileName)
+			assert.True(t, os.IsNotExist(err))
 		},
 		"ServiceDownloadFileAsyncFailsWithBadInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			body, err := makeBody(struct {
