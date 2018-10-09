@@ -124,9 +124,23 @@ message CacheOptions {
     int64 max_size = 3;
 }
 
+enum ArchiveFormat {
+    ARCHIVEUNKNOWN = 0;
+    ARCHIVEAUTO = 1;
+    ARCHIVETARBALL = 2;
+    ARCHIVEZIP = 3;
+}
+
+message ArchiveOptions {
+    bool should_extract = 1;
+    ArchiveFormat format = 2;
+    string target_path = 3;
+}
+
 message DownloadInfo {
   string url = 1;
   string path = 2;
+  ArchiveOptions archive_opts = 3;
 }
 
 service JasperProcessManager {

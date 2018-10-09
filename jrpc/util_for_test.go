@@ -28,7 +28,10 @@ func init() {
 	}()
 }
 
-const taskTimeout = 5 * time.Second
+const (
+	taskTimeout     = 5 * time.Second
+	longTaskTimeout = 30 * time.Second
+)
 
 func getPortNumber() int {
 	return <-intSource
