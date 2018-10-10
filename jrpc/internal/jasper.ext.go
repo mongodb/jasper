@@ -4,6 +4,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper"
 	"github.com/tychoish/bond"
 )
@@ -196,7 +197,50 @@ func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
 }
 
 func ConvertLogger(logger jasper.Logger) *Logger {
-	return &Logger{LogType: ConvertLogType(logger.Type)}
+	return &Logger{
+		LogType:    ConvertLogType(logger.Type),
+		LogOptions: ConvertLogOptions(logger.Options),
+	}
+}
+
+func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
+	return &LogOptions{
+		BufferOptions:      ConvertBufferOptions(opts.BufferOptions),
+		BuildloggerOptions: ConvertBuildloggerOptions(opts.BuildloggerOptions),
+		DefaultPrefix:      opts.DefaultPrefix,
+		FileName:           opts.FileName,
+		InMemoryCap:        int64(opts.InMemoryCap),
+		SplunkOptions:      ConvertSplunkOptions(opts.SplunkOptions),
+		SumoEndpoint:       opts.SumoEndpoint,
+	}
+}
+
+func ConvertBufferOptions(opts jasper.BufferOptions) *BufferOptions {
+	return &BufferOptions{
+		Buffered: opts.Buffered,
+		Duration: int64(opts.Duration),
+		MaxSize:  int64(opts.MaxSize),
+	}
+}
+
+func ConvertBuildloggerOptions(opts send.BuildloggerConfig) *BuildloggerOptions {
+	return &BuildloggerOptions{
+		CreateTest: opts.CreateTest,
+		Url:        opts.URL,
+		Number:     int64(opts.Number),
+		Phase:      opts.Phase,
+		Builder:    opts.Builder,
+		Test:       opts.Test,
+		Command:    opts.Command,
+	}
+}
+
+func ConvertSplunkOptions(opts send.SplunkConnectionInfo) *SplunkOptions {
+	return &SplunkOptions{
+		Url:     opts.ServerURL,
+		Token:   opts.Token,
+		Channel: opts.Channel,
+	}
 }
 
 func (opts OutputOptions) Export() jasper.OutputOptions {
@@ -214,7 +258,41 @@ func (opts OutputOptions) Export() jasper.OutputOptions {
 }
 
 func (logger Logger) Export() jasper.Logger {
-	return jasper.Logger{Type: logger.LogType.Export()}
+	return jasper.Logger{
+		Type:    logger.LogType.Export(),
+		Options: logger.LogOptions.Export(),
+	}
+}
+
+func (opts LogOptions) Export() jasper.LogOptions {
+	return jasper.LogOptions{
+		BuildloggerOptions: opts.BuildloggerOptions.Export(),
+		DefaultPrefix:      opts.DefaultPrefix,
+		FileName:           opts.FileName,
+		InMemoryCap:        int(opts.InMemoryCap),
+		SplunkOptions:      opts.SplunkOptions.Export(),
+		SumoEndpoint:       opts.SumoEndpoint,
+	}
+}
+
+func (opts BuildloggerOptions) Export() send.BuildloggerConfig {
+	return send.BuildloggerConfig{
+		CreateTest: opts.CreateTest,
+		URL:        opts.Url,
+		Number:     int(opts.Number),
+		Phase:      opts.Phase,
+		Builder:    opts.Builder,
+		Test:       opts.Test,
+		Command:    opts.Command,
+	}
+}
+
+func (opts SplunkOptions) Export() send.SplunkConnectionInfo {
+	return send.SplunkConnectionInfo{
+		ServerURL: opts.Url,
+		Token:     opts.Token,
+		Channel:   opts.Channel,
+	}
 }
 
 func (opts *BuildOptions) Export() bond.BuildOptions {
