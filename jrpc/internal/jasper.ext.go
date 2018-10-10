@@ -209,6 +209,7 @@ func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
 		BuildloggerOptions: ConvertBuildloggerOptions(opts.BuildloggerOptions),
 		DefaultPrefix:      opts.DefaultPrefix,
 		FileName:           opts.FileName,
+		Format:             string(opts.Format),
 		InMemoryCap:        int64(opts.InMemoryCap),
 		SplunkOptions:      ConvertSplunkOptions(opts.SplunkOptions),
 		SumoEndpoint:       opts.SumoEndpoint,
@@ -243,6 +244,32 @@ func ConvertSplunkOptions(opts send.SplunkConnectionInfo) *SplunkOptions {
 	}
 }
 
+func ConvertLogFormat(f jasper.LogFormat) LogFormat {
+	switch f {
+	case jasper.LogFormatDefault:
+		return LogFormat_LOGFORMATDEFAULT
+	case jasper.LogFormatJSON:
+		return LogFormat_LOGFORMATJSON
+	case jasper.LogFormatPlain:
+		return LogFormat_LOGFORMATPLAIN
+	default:
+		return LogFormat_LOGFORMATUNKNOWN
+	}
+}
+
+func (f LogFormat) Export() jasper.LogFormat {
+	switch f {
+	case LogFormat_LOGFORMATDEFAULT:
+		return jasper.LogFormatDefault
+	case LogFormat_LOGFORMATJSON:
+		return jasper.LogFormatJSON
+	case LogFormat_LOGFORMATPLAIN:
+		return jasper.LogFormatPlain
+	default:
+		return jasper.LogFormatInvalid
+	}
+}
+
 func (opts OutputOptions) Export() jasper.OutputOptions {
 	loggers := []jasper.Logger{}
 	for _, logger := range opts.Loggers {
@@ -270,6 +297,7 @@ func (opts LogOptions) Export() jasper.LogOptions {
 		BuildloggerOptions: opts.BuildloggerOptions.Export(),
 		DefaultPrefix:      opts.DefaultPrefix,
 		FileName:           opts.FileName,
+		Format:             jasper.LogFormat(opts.Format),
 		InMemoryCap:        int(opts.InMemoryCap),
 		SplunkOptions:      opts.SplunkOptions.Export(),
 		SumoEndpoint:       opts.SumoEndpoint,

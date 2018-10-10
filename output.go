@@ -44,12 +44,22 @@ const (
 	DefaultLogName = "jasper"
 )
 
+type LogFormat string
+
+const (
+	LogFormatPlain   = ""
+	LogFormatDefault = "default"
+	LogFormatJSON    = "json"
+	LogFormatInvalid = "invalid"
+)
+
 // By default, logger reads from both standard output and standard error.
 type LogOptions struct {
 	BufferOptions      BufferOptions             `json:"buffer_options"`
 	BuildloggerOptions send.BuildloggerConfig    `json:"buildlogger_options"`
 	DefaultPrefix      string                    `json:"default_prefix"`
 	FileName           string                    `json:"file_name"`
+	Format             LogFormat                 `json:"format"`
 	InMemoryCap        int                       `json:"in_memory_cap"`
 	SplunkOptions      send.SplunkConnectionInfo `json:"splunk_options"`
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
@@ -107,6 +117,15 @@ func (l LogType) Validate() error {
 	}
 }
 
+func (f LogFormat) Validate() error {
+	switch f {
+	case LogFormatDefault, LogFormatJSON, LogFormatPlain:
+		return nil
+	default:
+		return errors.New("unknown log format")
+	}
+}
+
 func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 	var sender send.Sender
 	var err error
@@ -124,7 +143,10 @@ func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 			return nil, err
 		}
 	case LogDefault:
-		sender, err = send.NewNativeLogger(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		if opts.DefaultPrefix == "" {
+			opts.DefaultPrefix = DefaultLogName
+		}
+		sender, err = send.NewNativeLogger(opts.DefaultPrefix, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 		if err != nil {
 			return nil, err
 		}
@@ -134,16 +156,13 @@ func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 			return nil, err
 		}
 		sender.SetName(DefaultLogName)
-		if err = sender.SetFormatter(send.MakePlainFormatter()); err != nil {
-			return nil, err
-		}
 	case LogInherit:
 		sender = grip.GetSender()
 	case LogSplunk:
 		if !opts.SplunkOptions.Populated() {
 			return nil, errors.New("missing connection info for output type splunk")
 		}
-		sender, err = send.NewSplunkLogger("", opts.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		sender, err = send.NewSplunkLogger(DefaultLogName, opts.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
 		if err != nil {
 			return nil, err
 		}
@@ -159,12 +178,27 @@ func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 		if opts.InMemoryCap <= 0 {
 			return nil, errors.New("invalid inmemory capacity")
 		}
-		sender, err = send.NewInMemorySender("jasper", send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, opts.InMemoryCap)
+		sender, err = send.NewInMemorySender(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, opts.InMemoryCap)
 		if err != nil {
 			return nil, err
 		}
 	default:
 		return nil, errors.New("unknown log type")
+	}
+
+	var formatter send.MessageFormatter
+	switch opts.Format {
+	case LogFormatDefault:
+		formatter = send.MakeDefaultFormatter()
+	case LogFormatPlain:
+		formatter = send.MakePlainFormatter()
+	case LogFormatJSON:
+		formatter = send.MakeJSONFormatter()
+	default:
+		return nil, errors.New("unknown log format")
+	}
+	if err := sender.SetFormatter(formatter); err != nil {
+		return nil, errors.New("failed to set log format")
 	}
 
 	if opts.BufferOptions.Buffered {
@@ -214,6 +248,9 @@ func (o OutputOptions) Validate() error {
 
 	for _, logger := range o.Loggers {
 		if err := logger.Type.Validate(); err != nil {
+			catcher.Add(err)
+		}
+		if err := logger.Options.Format.Validate(); err != nil {
 			catcher.Add(err)
 		}
 	}
