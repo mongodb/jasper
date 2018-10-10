@@ -61,9 +61,6 @@ func TestSetupDownloadMongoDBReleasesWithBadArtifactsFeed(t *testing.T) {
 }
 
 func TestCreateValidDownloadJobs(t *testing.T) {
-	_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
 	dir, err := ioutil.TempDir("build", "out")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
@@ -85,9 +82,6 @@ func TestCreateValidDownloadJobs(t *testing.T) {
 }
 
 func TestCreateInvalidDownloadJobs(t *testing.T) {
-	_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
 	dir := "async_test.go"
 	urls := make(chan string)
 
@@ -274,9 +268,6 @@ func TestDoExtract(t *testing.T) {
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-			defer cancel()
-
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
