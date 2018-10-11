@@ -13,22 +13,25 @@ import (
 	"github.com/mholt/archiver"
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/amboy/queue"
-	"github.com/pkg/errors"
+	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tychoish/bond"
 	"github.com/tychoish/lru"
 )
 
+// Caller is responsible for giving a valid path.
 func validMongoDBDownloadOptions() MongoDBDownloadOptions {
 	target := runtime.GOOS
 	if target == "darwin" {
 		target = "osx"
 	}
+
 	edition := "enterprise"
 	if target == "linux" {
 		edition = "base"
 	}
+
 	return MongoDBDownloadOptions{
 		BuildOpts: bond.BuildOptions{
 			Target:  target,
@@ -36,93 +39,11 @@ func validMongoDBDownloadOptions() MongoDBDownloadOptions {
 			Edition: bond.MongoDBEdition(edition),
 			Debug:   false,
 		},
-		Path:     "build",
 		Releases: []string{"4.0-current"},
 	}
 }
 
-func TestSetupDownloadMongoDBReleasesWithBadPath(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
-	opts := validMongoDBDownloadOptions()
-	opts.Path = "async_test.go"
-	assert.Error(t, SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts))
-}
-
-func TestSetupDownloadMongoDBReleasesWithBadArtifactsFeed(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
-	opts := validMongoDBDownloadOptions()
-	opts.Path = filepath.Join("build", "full.json")
-	err := SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
-	assert.Error(t, err)
-}
-
-func TestCreateValidDownloadJobs(t *testing.T) {
-	dir, err := ioutil.TempDir("build", "out")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-	urls := make(chan string)
-
-	go func() {
-		urls <- "https://example.com/foo"
-		close(urls)
-	}()
-	jobs, errs := createDownloadJobs(dir, urls)
-
-	count := 0
-	for job := range jobs {
-		count++
-		assert.Equal(t, 1, count)
-		assert.NotNil(t, job)
-	}
-	assert.NoError(t, aggregateErrors(errs))
-}
-
-func TestCreateInvalidDownloadJobs(t *testing.T) {
-	dir := "async_test.go"
-	urls := make(chan string)
-
-	go func() {
-		urls <- "https://example.com"
-		close(urls)
-	}()
-	jobs, errs := createDownloadJobs(dir, urls)
-
-	for range jobs {
-		assert.Fail(t, "should not create job for bad url")
-	}
-	assert.Error(t, aggregateErrors(errs))
-}
-
-func TestSetupDownloadJobsAsync(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	dir, err := ioutil.TempDir("build", "out")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	urls := make(chan string)
-	go func() {
-		urls <- "https://example.com"
-		close(urls)
-	}()
-	jobs, errs := createDownloadJobs(dir, urls)
-	checkFileName := func(fileName string) error {
-		if fileName != "example.com" {
-			return errors.New("file name did not match expected")
-		}
-		return nil
-	}
-
-	assert.NoError(t, setupDownloadJobsAsync(ctx, jobs, processDownloadJobs(ctx, checkFileName)))
-	assert.NoError(t, aggregateErrors(errs))
-}
-
-func TestSetupDownloadReleasesFailsForInvalidOptions(t *testing.T) {
+func TestSetupDownloadMongoDBReleasesFailsWithInvalidOptions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
 	defer cancel()
 
@@ -132,8 +53,138 @@ func TestSetupDownloadReleasesFailsForInvalidOptions(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid build options")
 }
 
+func TestSetupDownloadMongoDBReleasesWithInvalidPath(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
+	defer cancel()
+
+	opts := validMongoDBDownloadOptions()
+	absPath, err := filepath.Abs("download_test.go")
+	require.NoError(t, err)
+	opts.Path = absPath
+
+	err = SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "problem creating enclosing directories")
+}
+
+func TestSetupDownloadMongoDBReleasesWithInvalidArtifactsFeed(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
+	defer cancel()
+
+	dir, err := ioutil.TempDir("build", "out")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	opts := validMongoDBDownloadOptions()
+	absDir, err := filepath.Abs(dir)
+	require.NoError(t, err)
+	opts.Path = filepath.Join(absDir, "full.json")
+
+	err = SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "problem making artifacts feed")
+}
+
+func TestCreateValidDownloadJobs(t *testing.T) {
+	dir, err := ioutil.TempDir("build", "out")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	urls := make(chan string)
+	go func() {
+		urls <- "https://example.com"
+		close(urls)
+	}()
+
+	jobs, errs := createDownloadJobs(dir, urls)
+
+	count := 0
+	for job := range jobs {
+		count++
+		assert.Equal(t, 1, count)
+		assert.NotNil(t, job)
+	}
+
+	assert.NoError(t, aggregateErrors(errs))
+}
+
+func TestCreateDownloadJobsWithInvalidPath(t *testing.T) {
+	dir := "download_test.go"
+	urls := make(chan string)
+	testURL := "https://example.com"
+
+	go func() {
+		urls <- testURL
+		close(urls)
+	}()
+	jobs, errs := createDownloadJobs(dir, urls)
+
+	for range jobs {
+		assert.Fail(t, "should not create job for bad url")
+	}
+	err := aggregateErrors(errs)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "problem creating download job for "+testURL)
+}
+
+func TestSetupDownloadJobsAsync(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skip testing setup download jobs async in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
+	defer cancel()
+
+	dir, err := ioutil.TempDir("build", "mongodb")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	downloadOpts := validMongoDBDownloadOptions()
+	opts := downloadOpts.BuildOpts
+	releases := downloadOpts.Releases
+
+	feed, err := bond.GetArtifactsFeed(dir)
+	require.NoError(t, err)
+
+	urls, errs1 := feed.GetArchives(releases, opts)
+	jobs, errs2 := createDownloadJobs(dir, urls)
+
+	downloadValidationComplete := make(chan bool)
+	validateFileName := func(q amboy.Queue) error {
+		catcher := grip.NewBasicCatcher()
+		_ = amboy.WaitCtxInterval(ctx, q, 1000*time.Millisecond)
+		err := amboy.ResolveErrors(ctx, q)
+		assert.NoError(t, err)
+		catcher.Add(err)
+
+		infos, err := ioutil.ReadDir(dir)
+		catcher.Add(err)
+		assert.NoError(t, err)
+
+		assert.NotZero(t, len(infos))
+
+		downloadValidationComplete <- true
+
+		return catcher.Resolve()
+	}
+
+	assert.NoError(t, setupDownloadJobsAsync(ctx, jobs, validateFileName))
+	assert.NoError(t, aggregateErrors(errs1, errs2))
+
+	select {
+	case <-ctx.Done():
+		assert.Fail(t, "asynchronous jobs did not complete before context deadline exceeded")
+	case <-downloadValidationComplete:
+		// Test can exit once asynchronous job is done.
+	}
+}
+
 func TestProcessDownloadJobs(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	if testing.Short() {
+		t.Skip("skip download job test in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
 	defer cancel()
 
 	dir, err := ioutil.TempDir("build", "mongodb")
@@ -141,7 +192,9 @@ func TestProcessDownloadJobs(t *testing.T) {
 	defer os.RemoveAll(dir)
 	absDir, err := filepath.Abs(dir)
 	require.NoError(t, err)
+
 	cache := lru.NewCache()
+
 	downloadOpts := validMongoDBDownloadOptions()
 	opts := downloadOpts.BuildOpts
 	releases := downloadOpts.Releases
@@ -181,21 +234,31 @@ func TestProcessDownloadJobs(t *testing.T) {
 	}
 }
 
-func TestAddMongoDBFilesToCacheWithBadPath(t *testing.T) {
+func TestAddMongoDBFilesToCacheWithInvalidPath(t *testing.T) {
+	fileName := "foo.txt"
+	_, err := os.Stat(fileName)
+	require.True(t, os.IsNotExist(err))
+
 	absPath, err := filepath.Abs("build")
 	require.NoError(t, err)
-	assert.Error(t, addMongoDBFilesToCache(lru.NewCache(), absPath)("foo.txt"))
+
+	err = addMongoDBFilesToCache(lru.NewCache(), absPath)(fileName)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "problem adding file "+filepath.Join(absPath, fileName)+" to cache")
 }
 
 func TestDoDownloadWithValidInfo(t *testing.T) {
 	file, err := ioutil.TempFile("build", "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
+	absPath, err := filepath.Abs(file.Name())
+	require.NoError(t, err)
 
 	info := DownloadInfo{
 		URL:  "https://example.com",
-		Path: file.Name(),
+		Path: absPath,
 	}
+
 	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
 	require.NoError(t, err)
 
@@ -209,11 +272,14 @@ func TestDoDownloadWithNonexistentURL(t *testing.T) {
 	file, err := ioutil.TempFile("build", "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
+	absPath, err := filepath.Abs(file.Name())
+	require.NoError(t, err)
 
 	info := DownloadInfo{
 		URL:  "https://example.com/foo",
-		Path: file.Name(),
+		Path: absPath,
 	}
+
 	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
 	require.NoError(t, err)
 
@@ -230,31 +296,31 @@ func TestDoExtract(t *testing.T) {
 		"Auto": {
 			archiveMaker:  archiver.TarGz,
 			expectSuccess: true,
-			fileExtension: "tar.gz",
+			fileExtension: ".tar.gz",
 			format:        ArchiveAuto,
 		},
 		"TarGz": {
 			archiveMaker:  archiver.TarGz,
 			expectSuccess: true,
-			fileExtension: "tar.gz",
+			fileExtension: ".tar.gz",
 			format:        ArchiveTarGz,
 		},
 		"Zip": {
 			archiveMaker:  archiver.Zip,
 			expectSuccess: true,
-			fileExtension: "zip",
+			fileExtension: ".zip",
 			format:        ArchiveZip,
 		},
 		"InvalidArchiveFormat": {
 			archiveMaker:  archiver.TarGz,
 			expectSuccess: false,
-			fileExtension: "foo",
+			fileExtension: ".foo",
 			format:        ArchiveFormat("foo"),
 		},
 		"MismatchedArchiveFileAndFormat": {
 			archiveMaker:  archiver.TarGz,
 			expectSuccess: false,
-			fileExtension: "tar.gz",
+			fileExtension: ".tar.gz",
 			format:        ArchiveZip,
 		},
 	} {
@@ -262,7 +328,7 @@ func TestDoExtract(t *testing.T) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
-			archiveFile, err := ioutil.TempFile("build", "out"+"."+testCase.fileExtension)
+			archiveFile, err := ioutil.TempFile("build", "out"+testCase.fileExtension)
 			require.NoError(t, err)
 			defer os.Remove(archiveFile.Name())
 			extractDir, err := ioutil.TempDir("build", "out")
@@ -297,9 +363,6 @@ func TestDoExtract(t *testing.T) {
 }
 
 func TestDoExtractUnarchivedFile(t *testing.T) {
-	_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
 	file, err := ioutil.TempFile("build", "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -313,5 +376,7 @@ func TestDoExtractUnarchivedFile(t *testing.T) {
 			TargetPath:    "build",
 		},
 	}
-	assert.Error(t, doExtract(info))
+	err = doExtract(info)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "could not detect archive format")
 }

@@ -372,14 +372,22 @@ func TestRestService(t *testing.T) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
-			assert.NoError(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com", Path: file.Name()}))
+			absPath, err := filepath.Abs(file.Name())
+			require.NoError(t, err)
+
+			assert.NoError(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com", Path: absPath}))
 
 			info, err := os.Stat(file.Name())
 			assert.NoError(t, err)
 			assert.NotEqual(t, 0, info.Size())
 		},
 		"DownloadFileCreatesResourceAndExtracts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			t.Skip("test currently takes too long to run")
+			if testing.Short() {
+				t.Skip("skipping download and extract test in short mode")
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
+			defer cancel()
+
 			tempDir, err := ioutil.TempDir("build", "out")
 			require.NoError(t, err)
 			defer os.RemoveAll(tempDir)
@@ -387,38 +395,36 @@ func TestRestService(t *testing.T) {
 			require.NoError(t, err)
 			extractDir, err := ioutil.TempDir(tempDir, "mongodb")
 			require.NoError(t, err)
+			absFilePath, err := filepath.Abs(file.Name())
+			require.NoError(t, err)
+			absExtractDir, err := filepath.Abs(extractDir)
 
 			feed, err := bond.GetArtifactsFeed(tempDir)
 			require.NoError(t, err)
 
 			opts := validMongoDBDownloadOptions()
 			urls, errs := feed.GetArchives(opts.Releases, opts.BuildOpts)
-
 			numUrls := 0
 			for url := range urls {
 				numUrls++
 				info := DownloadInfo{
 					URL:  url,
-					Path: file.Name(),
+					Path: absFilePath,
 					ArchiveOpts: ArchiveOptions{
 						ShouldExtract: true,
 						Format:        ArchiveAuto,
-						TargetPath:    extractDir,
+						TargetPath:    absExtractDir,
 					},
 				}
-
 				assert.NoError(t, client.DownloadFile(ctx, info))
-
 				fileInfo, err := os.Stat(file.Name())
 				assert.NoError(t, err)
 				assert.NotEqual(t, 0, fileInfo.Size())
-
 				dirContents, err := ioutil.ReadDir(extractDir)
 				require.NoError(t, err)
 				assert.NotEqual(t, 0, len(dirContents))
 			}
 			assert.NotZero(t, numUrls)
-
 			for err := range errs {
 				assert.Fail(t, err.Error())
 			}
@@ -459,15 +465,11 @@ func TestRestService(t *testing.T) {
 			}
 			assert.Error(t, client.DownloadFile(ctx, info))
 
-			fileInfo, err := os.Stat(file.Name())
-			require.NoError(t, err)
-			assert.NotZero(t, fileInfo.Size())
-
 			dirContents, err := ioutil.ReadDir(extractDir)
 			require.NoError(t, err)
 			assert.Zero(t, len(dirContents))
 		},
-		"DownloadFileFailsWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"DownloadFileFailsWithInvalidURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			err := client.DownloadFile(ctx, DownloadInfo{URL: "", Path: ""})
 			assert.Error(t, err)
 		},
@@ -485,7 +487,7 @@ func TestRestService(t *testing.T) {
 			}
 			assert.Error(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com", Path: "/foo/bar"}))
 		},
-		"ServiceDownloadFileFailsWithBadInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"ServiceDownloadFileFailsWithInvalidInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			body, err := makeBody(struct {
 				URL int `json:"url"`
 			}{URL: 0})
@@ -515,7 +517,7 @@ func TestRestService(t *testing.T) {
 			_, err = os.Stat(fileName)
 			assert.True(t, os.IsNotExist(err))
 		},
-		"ServiceDownloadFileAsyncFailsWithBadInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"ServiceDownloadFileAsyncFailsWithInvalidInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			body, err := makeBody(struct {
 				URL int `json:"url"`
 			}{URL: 0})
@@ -525,6 +527,20 @@ func TestRestService(t *testing.T) {
 			require.NoError(t, err)
 			rw := httptest.NewRecorder()
 			srv.downloadFile(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
+		"ServiceDownloadFileAsyncFailsWithInvalidURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("build", "out.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+			body, err := makeBody(DownloadInfo{URL: "foo", Path: file.Name()})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/download-async"), body)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+			srv.downloadFile(rw, req)
+
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
 		"ProcessWithInvalidLoggerErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
@@ -633,13 +649,15 @@ func TestRestService(t *testing.T) {
 			err := client.DownloadMongoDB(ctx, MongoDBDownloadOptions{})
 			assert.Error(t, err)
 		},
-		"DownloadMongoDBPassesWithGoodOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"DownloadMongoDBPassesWithValidOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			dir, err := ioutil.TempDir("build", "mongodb")
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
+			absDir, err := filepath.Abs(dir)
+			require.NoError(t, err)
 
 			opts := validMongoDBDownloadOptions()
-			opts.Path = dir
+			opts.Path = absDir
 
 			err = client.DownloadMongoDB(ctx, opts)
 			assert.NoError(t, err)
@@ -647,7 +665,7 @@ func TestRestService(t *testing.T) {
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
 			defer cancel()
 
 			srv, port := makeAndStartService(ctx, httpClient)
