@@ -46,13 +46,13 @@ const (
 
 // By default, logger reads from both standard output and standard error.
 type LogOptions struct {
+	BufferOptions      BufferOptions             `json:"buffer_options"`
 	BuildloggerOptions send.BuildloggerConfig    `json:"buildlogger_options"`
 	DefaultPrefix      string                    `json:"default_prefix"`
 	FileName           string                    `json:"file_name"`
+	InMemoryCap        int                       `json:"in_memory_cap"`
 	SplunkOptions      send.SplunkConnectionInfo `json:"splunk_options"`
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
-	InMemoryCap        int                       `json:"inmemory_cap"`
-	BufferOptions      BufferOptions             `json:"buffer_options"`
 }
 
 type Logger struct {
