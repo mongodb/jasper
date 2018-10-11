@@ -184,6 +184,10 @@ message DownloadInfo {
   ArchiveOptions archive_opts = 3;
 }
 
+message BuildloggerURLs {
+    repeated string urls = 1;
+}
+
 service JasperProcessManager {
   rpc Status(google.protobuf.Empty) returns  (StatusResponse); 
   rpc Create(CreateOptions) returns (ProcessInfo); 
@@ -200,4 +204,5 @@ service JasperProcessManager {
   rpc DownloadFileAsync(DownloadInfo) returns (OperationOutcome);
   rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
+  rpc GetBuildloggerURLs(JasperProcessID) returns (BuildloggerURLs);
 }

@@ -236,6 +236,22 @@ func ConvertBuildloggerOptions(opts send.BuildloggerConfig) *BuildloggerOptions 
 	}
 }
 
+func ConvertBuildloggerURLs(urls []string) *BuildloggerURLs {
+	u := &BuildloggerURLs{Urls: []string{}}
+	for _, url := range urls {
+		u.Urls = append(u.Urls, url)
+	}
+	return u
+}
+
+func (u *BuildloggerURLs) Export() []string {
+	urls := []string{}
+	for _, url := range u.Urls {
+		urls = append(urls, url)
+	}
+	return urls
+}
+
 func ConvertSplunkOptions(opts send.SplunkConnectionInfo) *SplunkOptions {
 	return &SplunkOptions{
 		Url:     opts.ServerURL,
@@ -362,10 +378,32 @@ func (opts *CacheOptions) Export() jasper.CacheOptions {
 	}
 }
 
+func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
+	return &DownloadInfo{
+		Path:        info.Path,
+		Url:         info.URL,
+		ArchiveOpts: ConvertArchiveOptions(info.ArchiveOpts),
+	}
+}
+
 func (info *DownloadInfo) Export() jasper.DownloadInfo {
 	return jasper.DownloadInfo{
-		Path: info.Path,
-		URL:  info.Url,
+		Path:        info.Path,
+		URL:         info.Url,
+		ArchiveOpts: info.ArchiveOpts.Export(),
+	}
+}
+
+func ConvertArchiveFormat(format jasper.ArchiveFormat) ArchiveFormat {
+	switch format {
+	case jasper.ArchiveAuto:
+		return ArchiveFormat_ARCHIVEAUTO
+	case jasper.ArchiveTarGz:
+		return ArchiveFormat_ARCHIVETARGZ
+	case jasper.ArchiveZip:
+		return ArchiveFormat_ARCHIVEZIP
+	default:
+		return ArchiveFormat_ARCHIVEUNKNOWN
 	}
 }
 
@@ -382,7 +420,15 @@ func (format ArchiveFormat) Export() jasper.ArchiveFormat {
 	}
 }
 
-func (opts *ArchiveOptions) Export() jasper.ArchiveOptions {
+func ConvertArchiveOptions(opts jasper.ArchiveOptions) *ArchiveOptions {
+	return &ArchiveOptions{
+		ShouldExtract: opts.ShouldExtract,
+		Format:        ConvertArchiveFormat(opts.Format),
+		TargetPath:    opts.TargetPath,
+	}
+}
+
+func (opts ArchiveOptions) Export() jasper.ArchiveOptions {
 	return jasper.ArchiveOptions{
 		ShouldExtract: opts.ShouldExtract,
 		Format:        opts.Format.Export(),
