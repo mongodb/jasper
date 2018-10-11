@@ -266,12 +266,21 @@ func (logger Logger) Export() jasper.Logger {
 
 func (opts LogOptions) Export() jasper.LogOptions {
 	return jasper.LogOptions{
+		BufferOptions:      opts.BufferOptions.Export(),
 		BuildloggerOptions: opts.BuildloggerOptions.Export(),
 		DefaultPrefix:      opts.DefaultPrefix,
 		FileName:           opts.FileName,
 		InMemoryCap:        int(opts.InMemoryCap),
 		SplunkOptions:      opts.SplunkOptions.Export(),
 		SumoEndpoint:       opts.SumoEndpoint,
+	}
+}
+
+func (opts *BufferOptions) Export() jasper.BufferOptions {
+	return jasper.BufferOptions{
+		Buffered: opts.Buffered,
+		Duration: time.Duration(opts.Duration),
+		MaxSize:  int(opts.MaxSize),
 	}
 }
 
