@@ -182,18 +182,12 @@ func TestProcessDownloadJobs(t *testing.T) {
 }
 
 func TestAddMongoDBFilesToCacheWithBadPath(t *testing.T) {
-	_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
 	absPath, err := filepath.Abs("build")
 	require.NoError(t, err)
 	assert.Error(t, addMongoDBFilesToCache(lru.NewCache(), absPath)("foo.txt"))
 }
 
 func TestDoDownloadWithValidInfo(t *testing.T) {
-	_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
 	file, err := ioutil.TempFile("build", "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -212,9 +206,6 @@ func TestDoDownloadWithValidInfo(t *testing.T) {
 }
 
 func TestDoDownloadWithNonexistentURL(t *testing.T) {
-	_, cancel := context.WithTimeout(context.Background(), taskTimeout)
-	defer cancel()
-
 	file, err := ioutil.TempFile("build", "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -242,11 +233,11 @@ func TestDoExtract(t *testing.T) {
 			fileExtension: "tar.gz",
 			format:        ArchiveAuto,
 		},
-		"Tarball": {
+		"TarGz": {
 			archiveMaker:  archiver.TarGz,
 			expectSuccess: true,
 			fileExtension: "tar.gz",
-			format:        ArchiveTarball,
+			format:        ArchiveTarGz,
 		},
 		"Zip": {
 			archiveMaker:  archiver.Zip,

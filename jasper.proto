@@ -127,7 +127,7 @@ message CacheOptions {
 enum ArchiveFormat {
     ARCHIVEUNKNOWN = 0;
     ARCHIVEAUTO = 1;
-    ARCHIVETARBALL = 2;
+    ARCHIVETARGZ = 2;
     ARCHIVEZIP = 3;
 }
 

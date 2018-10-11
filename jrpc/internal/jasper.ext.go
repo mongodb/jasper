@@ -258,8 +258,8 @@ func (format ArchiveFormat) Export() jasper.ArchiveFormat {
 	switch format {
 	case ArchiveFormat_ARCHIVEAUTO:
 		return jasper.ArchiveAuto
-	case ArchiveFormat_ARCHIVETARBALL:
-		return jasper.ArchiveTarball
+	case ArchiveFormat_ARCHIVETARGZ:
+		return jasper.ArchiveTarGz
 	case ArchiveFormat_ARCHIVEZIP:
 		return jasper.ArchiveZip
 	default:

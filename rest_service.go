@@ -407,14 +407,14 @@ type DownloadInfo struct {
 type ArchiveFormat string
 
 const (
-	ArchiveAuto                  = "auto"
-	ArchiveTarball ArchiveFormat = "tarball"
-	ArchiveZip                   = "zip"
+	ArchiveAuto                = "auto"
+	ArchiveTarGz ArchiveFormat = "targz"
+	ArchiveZip                 = "zip"
 )
 
 func (f ArchiveFormat) Validate() error {
 	switch f {
-	case ArchiveTarball, ArchiveZip, ArchiveAuto:
+	case ArchiveTarGz, ArchiveZip, ArchiveAuto:
 		return nil
 	default:
 		return errors.Errorf("unknown archive format %s", f)
@@ -504,7 +504,7 @@ func doExtract(info DownloadInfo) error {
 			return errors.Errorf("could not detect archive format for %s", info.Path)
 		}
 		archiveHandler = unzipper
-	case ArchiveTarball:
+	case ArchiveTarGz:
 		archiveHandler = archiver.TarGz
 	case ArchiveZip:
 		archiveHandler = archiver.Zip
