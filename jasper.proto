@@ -7,6 +7,7 @@ import "google/protobuf/empty.proto";
 
 message Logger {
     LogType log_type = 1;
+    LogOptions log_options = 2;
 }
 
 message OutputOptions {
@@ -27,6 +28,38 @@ enum LogType {
     LOGSPLUNK = 6;
     LOGSUMOLOGIC = 7;
     LOGINMEMORY = 8;
+}
+
+message LogOptions {
+    BufferOptions buffer_options = 1;
+    BuildloggerOptions buildlogger_options = 2;
+    string default_prefix = 3;
+    string file_name = 4;
+    int64 in_memory_cap = 5;
+    SplunkOptions splunk_options = 6;
+    string sumo_endpoint = 7;
+}
+
+message BufferOptions {
+    bool buffered = 1;
+    int64 duration = 2;
+    int64 max_size = 3;
+}
+
+message BuildloggerOptions {
+    bool create_test = 1;
+    string url = 2;
+    int64 number = 3;
+    string phase = 4;
+    string builder = 5;
+    string test = 6;
+    string command = 7;
+}
+
+message SplunkOptions {
+    string url = 1;
+    string token = 2;
+    string channel = 3;
 }
 
 message CreateOptions {
