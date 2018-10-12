@@ -175,6 +175,26 @@ func TestProcessImplementations(t *testing.T) {
 						assert.Equal(t, 1, count)
 					}
 				},
+				"ProcessLogDefault": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote triggers are not supported on rest processes")
+					}
+
+					file, err := ioutil.TempFile("build", "out.txt")
+					require.NoError(t, err)
+					defer os.Remove(file.Name())
+					info, err := file.Stat()
+					assert.NoError(t, err)
+					assert.Zero(t, info.Size())
+
+					opts.Output.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
+					opts.Args = []string{"echo", "foobar"}
+
+					proc, err := makep(ctx, opts)
+					assert.NoError(t, err)
+
+					assert.NoError(t, proc.Wait(ctx))
+				},
 				"ProcessWritesToLog": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
 						t.Skip("remote triggers are not supported on rest processes")
@@ -187,7 +207,7 @@ func TestProcessImplementations(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Zero(t, info.Size())
 
-					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}}}
+					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name(), Format: LogFormatPlain}}}
 					opts.Args = []string{"echo", "foobar"}
 
 					proc, err := makep(ctx, opts)
@@ -234,6 +254,7 @@ func TestProcessImplementations(t *testing.T) {
 						BufferOptions: BufferOptions{
 							Buffered: true,
 						},
+						Format: LogFormatPlain,
 					}}}
 					opts.Args = []string{"echo", "foobar"}
 

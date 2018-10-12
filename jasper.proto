@@ -30,14 +30,22 @@ enum LogType {
     LOGINMEMORY = 8;
 }
 
+enum LogFormat {
+    LOGFORMATUNKNOWN = 0;
+    LOGFORMATDEFAULT = 1;
+    LOGFORMATJSON = 2;
+    LOGFORMATPLAIN = 3;
+}
+
 message LogOptions {
     BufferOptions buffer_options = 1;
     BuildloggerOptions buildlogger_options = 2;
     string default_prefix = 3;
     string file_name = 4;
-    int64 in_memory_cap = 5;
-    SplunkOptions splunk_options = 6;
-    string sumo_endpoint = 7;
+    string format = 5;
+    int64 in_memory_cap = 6;
+    SplunkOptions splunk_options = 7;
+    string sumo_endpoint = 8;
 }
 
 message BufferOptions {

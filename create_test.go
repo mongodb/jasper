@@ -199,13 +199,13 @@ func TestCreateOptions(t *testing.T) {
 			assert.Equal(t, 1, opts.TimeoutSecs)
 		},
 		"ResolveFailsWithInvalidLoggingConfiguration": func(t *testing.T, opts *CreateOptions) {
-			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic}}
+			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic, Options: LogOptions{Format: LogFormatPlain}}}
 			cmd, err := opts.Resolve(ctx)
 			assert.Error(t, err)
 			assert.Nil(t, cmd)
 		},
 		"ResolveFailsWithInvalidErrorLoggingConfiguration": func(t *testing.T, opts *CreateOptions) {
-			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic}}
+			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.Output.SuppressOutput = true
 			cmd, err := opts.Resolve(ctx)
 			assert.Error(t, err)
@@ -350,7 +350,14 @@ func TestFileLogging(t *testing.T) {
 
 			opts := CreateOptions{Output: testParams.outOpts}
 			for _, file := range files {
-				opts.Output.Loggers = append(opts.Output.Loggers, Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}})
+				logger := Logger{
+					Type: LogFile,
+					Options: LogOptions{
+						FileName: file.Name(),
+						Format:   LogFormatPlain,
+					},
+				}
+				opts.Output.Loggers = append(opts.Output.Loggers, logger)
 			}
 			opts.Args = testParams.command.args
 

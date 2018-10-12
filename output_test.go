@@ -129,33 +129,37 @@ func TestOutputOptions(t *testing.T) {
 			opts.SendErrorToOutput = true
 			assert.Error(t, opts.Validate())
 		},
+		"ValidateFailsForInvalidLogFormat": func(t *testing.T, opts OutputOptions) {
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormat("foo")}}}
+			assert.Error(t, opts.Validate())
+		},
 		"ValidateFailsForInvalidLogTypes": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogType("")}}
+			opts.Loggers = []Logger{Logger{Type: LogType(""), Options: LogOptions{Format: LogFormatPlain}}}
 			assert.Error(t, opts.Validate())
 		},
 		"SuppressOutputWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SuppressOutput = true
 			assert.NoError(t, opts.Validate())
 		},
 		"SuppressErrorWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SuppressError = true
 			assert.NoError(t, opts.Validate())
 		},
 		"SuppressOutputAndErrorWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SuppressOutput = true
 			opts.SuppressError = true
 			assert.NoError(t, opts.Validate())
 		},
 		"RedirectOutputWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SendOutputToError = true
 			assert.NoError(t, opts.Validate())
 		},
 		"RedirectErrorWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SendErrorToOutput = true
 			assert.NoError(t, opts.Validate())
 		},
@@ -191,7 +195,7 @@ func TestOutputOptionsIntegrationTableTest(t *testing.T) {
 
 }
 
-func TestLogTypes(t *testing.T) {
+func TestLoggers(t *testing.T) {
 	type testCase func(*testing.T, LogType, LogOptions)
 	cases := map[string]testCase{
 		"NonexistentLogTypeIsInvalid": func(t *testing.T, l LogType, opts LogOptions) {
@@ -200,6 +204,14 @@ func TestLogTypes(t *testing.T) {
 		},
 		"ValidLogTypePasses": func(t *testing.T, l LogType, opts LogOptions) {
 			assert.NoError(t, l.Validate())
+		},
+		"InvalidLogFormatFailsValidation": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.Format = LogFormat("foo")
+			assert.Error(t, opts.Format.Validate())
+		},
+		"ValidLogFormatPassesValidation": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.Format = LogFormatPlain
+			assert.NoError(t, opts.Format.Validate())
 		},
 		"ConfigureFailsForInvalidLogType": func(t *testing.T, l LogType, opts LogOptions) {
 			l = LogType("foo")
@@ -294,11 +306,35 @@ func TestLogTypes(t *testing.T) {
 			assert.Error(t, err)
 			assert.Nil(t, sender)
 		},
+		"ConfigureFailsWithInvalidLogFormat": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.Format = LogFormat("foo")
+			sender, err := l.Configure(opts)
+			assert.Error(t, err)
+			assert.Nil(t, sender)
+		},
+		"ConfigurePassesWithLogFormatDefault": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.Format = LogFormatDefault
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		"ConfigurePassesWithLogFormatJSON": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.Format = LogFormatJSON
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
+		"ConfigurePassesWithLogFormatPlain": func(t *testing.T, l LogType, opts LogOptions) {
+			opts.Format = LogFormatPlain
+			sender, err := l.Configure(opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, sender)
+		},
 		// "": func(t *testing.T, l LogType, opts LogOptions) {},
 	}
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			test(t, LogDefault, LogOptions{})
+			test(t, LogDefault, LogOptions{Format: LogFormatPlain})
 		})
 	}
 }

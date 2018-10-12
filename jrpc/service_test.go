@@ -32,6 +32,7 @@ func TestJRPCService(t *testing.T) {
 						Type: jasper.LogFile,
 						Options: jasper.LogOptions{
 							FileName: file.Name(),
+							Format:   jasper.LogFormatPlain,
 						},
 					}
 					opts.Output.Loggers = []jasper.Logger{logger}
