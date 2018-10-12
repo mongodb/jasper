@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/gimlet"
+	"github.com/mholt/archiver"
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/amboy/queue"
 	"github.com/mongodb/grip"
@@ -397,8 +398,34 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 
 // DownloadInfo represents the URL to download and the file path where it should be downloaded.
 type DownloadInfo struct {
-	URL  string `json:"url"`
-	Path string `json:"path"`
+	URL         string         `json:"url"`
+	Path        string         `json:"path"`
+	ArchiveOpts ArchiveOptions `json:"archive_opts"`
+}
+
+// ArchiveFormat represents an archive file type.
+type ArchiveFormat string
+
+const (
+	ArchiveAuto                = "auto"
+	ArchiveTarGz ArchiveFormat = "targz"
+	ArchiveZip                 = "zip"
+)
+
+func (f ArchiveFormat) Validate() error {
+	switch f {
+	case ArchiveTarGz, ArchiveZip, ArchiveAuto:
+		return nil
+	default:
+		return errors.Errorf("unknown archive format %s", f)
+	}
+}
+
+// ArchiveOptions encapsulates options related to management of archive files.
+type ArchiveOptions struct {
+	ShouldExtract bool
+	Format        ArchiveFormat
+	TargetPath    string
 }
 
 func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
@@ -409,6 +436,16 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 			Message:    errors.Wrap(err, "problem reading request").Error(),
 		})
 		return
+	}
+
+	if info.ArchiveOpts.ShouldExtract {
+		if err := info.ArchiveOpts.Format.Validate(); err != nil {
+			writeError(rw, gimlet.ErrorResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    errors.Wrap(err, "problem validating archive format").Error(),
+			})
+			return
+		}
 	}
 
 	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
@@ -444,6 +481,41 @@ func DoDownload(req *http.Request, info DownloadInfo, client http.Client) error 
 	if err = WriteFile(resp.Body, info.Path); err != nil {
 		return err
 	}
+
+	if info.ArchiveOpts.ShouldExtract {
+		if err = doExtract(info); err != nil {
+			return errors.Wrapf(err, "problem extracting file %s to path %s", info.Path, info.ArchiveOpts.TargetPath)
+		}
+	}
+
+	return nil
+}
+
+func doExtract(info DownloadInfo) error {
+	if _, err := os.Stat(info.Path); os.IsNotExist(err) {
+		return errors.Wrapf(err, "problem finding archive file %s", info.Path)
+	}
+
+	var archiveHandler archiver.Archiver
+	switch info.ArchiveOpts.Format {
+	case ArchiveAuto:
+		unzipper := archiver.MatchingFormat(info.Path)
+		if unzipper == nil {
+			return errors.Errorf("could not detect archive format for %s", info.Path)
+		}
+		archiveHandler = unzipper
+	case ArchiveTarGz:
+		archiveHandler = archiver.TarGz
+	case ArchiveZip:
+		archiveHandler = archiver.Zip
+	default:
+		return errors.Errorf("unrecognized archive format %s", info.ArchiveOpts.Format)
+	}
+
+	if err := archiveHandler.Open(info.Path, info.ArchiveOpts.TargetPath); err != nil {
+		return errors.Wrapf(err, "problem extracting archive %s to %s", info.Path, info.ArchiveOpts.TargetPath)
+	}
+
 	return nil
 }
 
@@ -455,6 +527,16 @@ func (s *Service) downloadFileAsync(rw http.ResponseWriter, r *http.Request) {
 			Message:    errors.Wrap(err, "problem reading request").Error(),
 		})
 		return
+	}
+
+	if info.ArchiveOpts.ShouldExtract {
+		if err := info.ArchiveOpts.Format.Validate(); err != nil {
+			writeError(rw, gimlet.ErrorResponse{
+				StatusCode: http.StatusBadRequest,
+				Message:    errors.Wrap(err, "problem validating archive format").Error(),
+			})
+			return
+		}
 	}
 
 	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
