@@ -232,12 +232,13 @@ func (s *jasperService) ResetTags(ctx context.Context, id *JasperProcessID) (*Op
 
 func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownloadOptions) (*OperationOutcome, error) {
 	jopts := opts.Export()
-	if err := jopts.BuildOpts.Validate(); err != nil {
-		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "invalid build options").Error()}, err
+	if err := jopts.Validate(); err != nil {
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem validating MongoDB download options").Error()}, errors.Wrap(err, "problem validating MongoDB download options")
 	}
 
 	if err := jasper.SetupDownloadMongoDBReleases(ctx, s.cache, jopts); err != nil {
-		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem in download setup").Error()}, err
+		err = errors.Wrap(err, "problem in download setup")
+		return &OperationOutcome{Success: false, Text: err.Error()}, err
 	}
 
 	return &OperationOutcome{Success: true, Text: "download jobs started"}, nil
@@ -246,7 +247,8 @@ func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownlo
 func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) (*OperationOutcome, error) {
 	jopts := opts.Export()
 	if err := jopts.Validate(); err != nil {
-		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem with validating cache options").Error()}, err
+		err = errors.Wrap(err, "problem validating cache options")
+		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem validating cache options").Error()}, errors.Wrap(err, "problem validating cache options")
 	}
 
 	s.cacheMutex.Lock()
@@ -265,11 +267,9 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
 	jinfo := info.Export()
 
-	if jinfo.ArchiveOpts.ShouldExtract {
-		if err := jinfo.ArchiveOpts.Format.Validate(); err != nil {
-			err = errors.Wrap(err, "problem validating archive format")
-			return &OperationOutcome{Success: false, Text: err.Error()}, err
-		}
+	if err := jinfo.Validate(); err != nil {
+		err = errors.Wrap(err, "problem validating download info")
+		return &OperationOutcome{Success: false, Text: err.Error()}, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
@@ -289,11 +289,9 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 func (s *jasperService) DownloadFileAsync(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
 	jinfo := info.Export()
 
-	if jinfo.ArchiveOpts.ShouldExtract {
-		if err := jinfo.ArchiveOpts.Format.Validate(); err != nil {
-			err = errors.Wrap(err, "problem validating archive format")
-			return &OperationOutcome{Success: false, Text: err.Error()}, err
-		}
+	if err := jinfo.Validate(); err != nil {
+		err = errors.Wrap(err, "problem validating download info")
+		return &OperationOutcome{Success: false, Text: err.Error()}, err
 	}
 
 	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
