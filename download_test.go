@@ -50,7 +50,7 @@ func TestSetupDownloadMongoDBReleasesFailsWithInvalidOptions(t *testing.T) {
 	opts := MongoDBDownloadOptions{}
 	err := SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid build options")
+	assert.Contains(t, err.Error(), "problem creating enclosing directories")
 }
 
 func TestSetupDownloadMongoDBReleasesWithInvalidPath(t *testing.T) {
