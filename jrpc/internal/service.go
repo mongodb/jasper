@@ -264,6 +264,14 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 
 func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
 	jinfo := info.Export()
+
+	if jinfo.ArchiveOpts.ShouldExtract {
+		if err := jinfo.ArchiveOpts.Format.Validate(); err != nil {
+			err = errors.Wrap(err, "problem validating archive format")
+			return &OperationOutcome{Success: false, Text: err.Error()}, err
+		}
+	}
+
 	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
 	if err != nil {
 		err = errors.Wrapf(err, "problem creating request for URL %s", jinfo.URL)
@@ -280,6 +288,14 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 
 func (s *jasperService) DownloadFileAsync(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
 	jinfo := info.Export()
+
+	if jinfo.ArchiveOpts.ShouldExtract {
+		if err := jinfo.ArchiveOpts.Format.Validate(); err != nil {
+			err = errors.Wrap(err, "problem validating archive format")
+			return &OperationOutcome{Success: false, Text: err.Error()}, err
+		}
+	}
+
 	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
 	if err != nil {
 		err = errors.Wrapf(err, "problem creating request for URL %s", jinfo.URL)

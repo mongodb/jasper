@@ -232,8 +232,8 @@ func (c *restClient) Close(ctx context.Context) error {
 	return nil
 }
 
-func (c *restClient) DownloadFile(ctx context.Context, url string, path string) error {
-	body, err := makeBody(DownloadInfo{URL: url, Path: path})
+func (c *restClient) DownloadFile(ctx context.Context, info DownloadInfo) error {
+	body, err := makeBody(info)
 	if err != nil {
 		return errors.Wrap(err, "problem building request")
 	}
@@ -246,8 +246,8 @@ func (c *restClient) DownloadFile(ctx context.Context, url string, path string) 
 	return nil
 }
 
-func (c *restClient) DownloadFileAsync(ctx context.Context, url string, path string) error {
-	body, err := makeBody(DownloadInfo{URL: url, Path: path})
+func (c *restClient) DownloadFileAsync(ctx context.Context, info DownloadInfo) error {
+	body, err := makeBody(info)
 	if err != nil {
 		return errors.Wrap(err, "problem building request")
 	}
