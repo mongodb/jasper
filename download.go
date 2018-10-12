@@ -185,26 +185,24 @@ func SetupDownloadMongoDBReleases(ctx context.Context, cache *lru.Cache, opts Mo
 	}
 
 	catcher := grip.NewBasicCatcher()
-	urls, errs1 := feed.GetArchives(opts.Releases, opts.BuildOpts)
-	jobs, errs2 := createDownloadJobs(opts.Path, urls)
+	urls, errs := feed.GetArchives(opts.Releases, opts.BuildOpts)
+	jobs := createDownloadJobs(opts.Path, urls, catcher)
 
 	if err := setupDownloadJobsAsync(ctx, jobs, processDownloadJobs(ctx, addMongoDBFilesToCache(cache, opts.Path))); err != nil {
 		catcher.Add(errors.Wrap(err, "problem starting download jobs"))
 	}
 
-	if err := aggregateErrors(errs1, errs2); err != nil {
+	for err = range errs {
 		catcher.Add(errors.Wrap(err, "problem initializing download jobs"))
 	}
 
 	return catcher.Resolve()
 }
 
-func createDownloadJobs(path string, urls <-chan string) (<-chan amboy.Job, <-chan error) {
+func createDownloadJobs(path string, urls <-chan string, catcher grip.Catcher) <-chan amboy.Job {
 	output := make(chan amboy.Job)
-	errOut := make(chan error)
 
 	go func() {
-		catcher := grip.NewCatcher()
 		for url := range urls {
 			j, err := recall.NewDownloadJob(url, path, true)
 			if err != nil {
@@ -215,25 +213,9 @@ func createDownloadJobs(path string, urls <-chan string) (<-chan amboy.Job, <-ch
 			output <- j
 		}
 		close(output)
-		if catcher.HasErrors() {
-			errOut <- catcher.Resolve()
-		}
-		close(errOut)
 	}()
 
-	return output, errOut
-}
-
-func aggregateErrors(groups ...<-chan error) error {
-	catcher := grip.NewCatcher()
-
-	for _, g := range groups {
-		for err := range g {
-			catcher.Add(err)
-		}
-	}
-
-	return catcher.Resolve()
+	return output
 }
 
 func processDownloadJobs(ctx context.Context, processFile func(string) error) func(amboy.Queue) error {
@@ -282,11 +264,9 @@ func setupDownloadJobsAsync(ctx context.Context, jobs <-chan amboy.Job, processJ
 
 func addMongoDBFilesToCache(cache *lru.Cache, absRootPath string) func(string) error {
 	return func(fileName string) error {
-		catcher := grip.NewBasicCatcher()
-
 		filePath := filepath.Join(absRootPath, fileName)
 		if err := cache.AddFile(filePath); err != nil {
-			catcher.Add(errors.Wrapf(err, "problem adding file %s to cache", filePath))
+			return errors.Wrapf(err, "problem adding file %s to cache", filePath)
 		}
 
 		baseName := filepath.Base(fileName)
@@ -301,14 +281,12 @@ func addMongoDBFilesToCache(cache *lru.Cache, absRootPath string) func(string) e
 			// Cache only handles individual files, not directories.
 			if !info.IsDir() {
 				if err := cache.AddStat(path, info); err != nil {
-					catcher.Add(errors.Wrapf(err, "problem adding file %s to cache", path))
+					return errors.Wrapf(err, "problem adding file %s to cache", path)
 				}
 			}
 
 			return nil
 		})
-		catcher.Add(errors.Wrap(err, "problem walking download files"))
-
-		return catcher.Resolve()
+		return err
 	}
 }

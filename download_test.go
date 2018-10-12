@@ -96,7 +96,8 @@ func TestCreateValidDownloadJobs(t *testing.T) {
 		close(urls)
 	}()
 
-	jobs, errs := createDownloadJobs(dir, urls)
+	catcher := grip.NewBasicCatcher()
+	jobs := createDownloadJobs(dir, urls, catcher)
 
 	count := 0
 	for job := range jobs {
@@ -105,7 +106,7 @@ func TestCreateValidDownloadJobs(t *testing.T) {
 		assert.NotNil(t, job)
 	}
 
-	assert.NoError(t, aggregateErrors(errs))
+	assert.NoError(t, catcher.Resolve())
 }
 
 func TestCreateDownloadJobsWithInvalidPath(t *testing.T) {
@@ -113,16 +114,17 @@ func TestCreateDownloadJobsWithInvalidPath(t *testing.T) {
 	urls := make(chan string)
 	testURL := "https://example.com"
 
+	catcher := grip.NewBasicCatcher()
 	go func() {
 		urls <- testURL
 		close(urls)
 	}()
-	jobs, errs := createDownloadJobs(dir, urls)
+	jobs := createDownloadJobs(dir, urls, catcher)
 
 	for range jobs {
 		assert.Fail(t, "should not create job for bad url")
 	}
-	err := aggregateErrors(errs)
+	err := catcher.Resolve()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "problem creating download job for "+testURL)
 }
@@ -146,8 +148,9 @@ func TestSetupDownloadJobsAsync(t *testing.T) {
 	feed, err := bond.GetArtifactsFeed(dir)
 	require.NoError(t, err)
 
-	urls, errs1 := feed.GetArchives(releases, opts)
-	jobs, errs2 := createDownloadJobs(dir, urls)
+	catcher := grip.NewBasicCatcher()
+	urls, errs := feed.GetArchives(releases, opts)
+	jobs := createDownloadJobs(dir, urls, catcher)
 
 	downloadValidationComplete := make(chan bool)
 	validateFileName := func(q amboy.Queue) error {
@@ -168,8 +171,11 @@ func TestSetupDownloadJobsAsync(t *testing.T) {
 		return catcher.Resolve()
 	}
 
+	for err := range errs {
+		catcher.Add(err)
+	}
 	assert.NoError(t, setupDownloadJobsAsync(ctx, jobs, validateFileName))
-	assert.NoError(t, aggregateErrors(errs1, errs2))
+	assert.NoError(t, catcher.Resolve())
 
 	select {
 	case <-ctx.Done():
@@ -202,13 +208,17 @@ func TestProcessDownloadJobs(t *testing.T) {
 	feed, err := bond.GetArtifactsFeed(dir)
 	require.NoError(t, err)
 
-	urls, errs1 := feed.GetArchives(releases, opts)
-	jobs, errs2 := createDownloadJobs(dir, urls)
+	catcher := grip.NewBasicCatcher()
+	urls, errs := feed.GetArchives(releases, opts)
+	jobs := createDownloadJobs(dir, urls, catcher)
 
 	q := queue.NewLocalUnordered(runtime.NumCPU())
 	require.NoError(t, q.Start(ctx))
 	require.NoError(t, amboy.PopulateQueue(ctx, q, jobs))
-	require.NoError(t, aggregateErrors(errs1, errs2))
+	for err := range errs {
+		catcher.Add(err)
+	}
+	assert.NoError(t, catcher.Resolve())
 
 	_ = amboy.WaitCtxInterval(ctx, q, 100*time.Millisecond)
 	require.NoError(t, amboy.ResolveErrors(ctx, q))
