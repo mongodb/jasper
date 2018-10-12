@@ -134,32 +134,32 @@ func TestOutputOptions(t *testing.T) {
 			assert.Error(t, opts.Validate())
 		},
 		"ValidateFailsForInvalidLogTypes": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogType("")}}
+			opts.Loggers = []Logger{Logger{Type: LogType(""), Options: LogOptions{Format: LogFormatPlain}}}
 			assert.Error(t, opts.Validate())
 		},
 		"SuppressOutputWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SuppressOutput = true
 			assert.NoError(t, opts.Validate())
 		},
 		"SuppressErrorWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SuppressError = true
 			assert.NoError(t, opts.Validate())
 		},
 		"SuppressOutputAndErrorWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SuppressOutput = true
 			opts.SuppressError = true
 			assert.NoError(t, opts.Validate())
 		},
 		"RedirectOutputWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SendOutputToError = true
 			assert.NoError(t, opts.Validate())
 		},
 		"RedirectErrorWithLogger": func(t *testing.T, opts OutputOptions) {
-			opts.Loggers = []Logger{Logger{Type: LogDefault}}
+			opts.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 			opts.SendErrorToOutput = true
 			assert.NoError(t, opts.Validate())
 		},
@@ -334,7 +334,7 @@ func TestLoggers(t *testing.T) {
 	}
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			test(t, LogDefault, LogOptions{})
+			test(t, LogDefault, LogOptions{Format: LogFormatPlain})
 		})
 	}
 }

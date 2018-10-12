@@ -47,7 +47,7 @@ const (
 type LogFormat string
 
 const (
-	LogFormatPlain   = ""
+	LogFormatPlain   = "plain"
 	LogFormatDefault = "default"
 	LogFormatJSON    = "json"
 	LogFormatInvalid = "invalid"
@@ -126,6 +126,19 @@ func (f LogFormat) Validate() error {
 	}
 }
 
+func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
+	switch f {
+	case LogFormatDefault:
+		return send.MakeDefaultFormatter(), nil
+	case LogFormatPlain:
+		return send.MakePlainFormatter(), nil
+	case LogFormatJSON:
+		return send.MakeJSONFormatter(), nil
+	default:
+		return nil, errors.New("unknown log format")
+	}
+}
+
 func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 	var sender send.Sender
 	var err error
@@ -186,16 +199,9 @@ func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
 		return nil, errors.New("unknown log type")
 	}
 
-	var formatter send.MessageFormatter
-	switch opts.Format {
-	case LogFormatDefault:
-		formatter = send.MakeDefaultFormatter()
-	case LogFormatPlain:
-		formatter = send.MakePlainFormatter()
-	case LogFormatJSON:
-		formatter = send.MakeJSONFormatter()
-	default:
-		return nil, errors.New("unknown log format")
+	formatter, err := opts.Format.MakeFormatter()
+	if err != nil {
+		return nil, err
 	}
 	if err := sender.SetFormatter(formatter); err != nil {
 		return nil, errors.New("failed to set log format")

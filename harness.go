@@ -81,7 +81,7 @@ func fileLoggerCase(ctx context.Context, c *caseDefinition) result {
 		return result{err: err}
 	}
 	defer os.Remove(file.Name())
-	logOptions := LogOptions{FileName: file.Name()}
+	logOptions := LogOptions{FileName: file.Name(), Format: LogFormatPlain}
 
 	opts := makeCreateOpts(c.timeout, Logger{Type: logType, Options: logOptions})
 

@@ -187,7 +187,7 @@ func TestProcessImplementations(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Zero(t, info.Size())
 
-					opts.Output.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{}}}
+					opts.Output.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
 					opts.Args = []string{"echo", "foobar"}
 
 					proc, err := makep(ctx, opts)
@@ -207,7 +207,7 @@ func TestProcessImplementations(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Zero(t, info.Size())
 
-					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name()}}}
+					opts.Output.Loggers = []Logger{Logger{Type: LogFile, Options: LogOptions{FileName: file.Name(), Format: LogFormatPlain}}}
 					opts.Args = []string{"echo", "foobar"}
 
 					proc, err := makep(ctx, opts)
@@ -254,6 +254,7 @@ func TestProcessImplementations(t *testing.T) {
 						BufferOptions: BufferOptions{
 							Buffered: true,
 						},
+						Format: LogFormatPlain,
 					}}}
 					opts.Args = []string{"echo", "foobar"}
 

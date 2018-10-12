@@ -424,7 +424,8 @@ func TestRestService(t *testing.T) {
 				Output: OutputOptions{
 					Loggers: []Logger{
 						Logger{
-							Type: LogDefault,
+							Type:    LogDefault,
+							Options: LogOptions{Format: LogFormatPlain},
 						},
 					},
 				},
@@ -440,7 +441,7 @@ func TestRestService(t *testing.T) {
 					Loggers: []Logger{
 						Logger{
 							Type:    LogInMemory,
-							Options: LogOptions{InMemoryCap: 100},
+							Options: LogOptions{InMemoryCap: 100, Format: LogFormatPlain},
 						},
 					},
 				},
