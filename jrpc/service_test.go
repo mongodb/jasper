@@ -170,21 +170,21 @@ func TestJRPCService(t *testing.T) {
 				//"": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					tctx, tcancel := context.WithTimeout(context.Background(), taskTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
 					defer tcancel()
 					output := "foobar"
 					opts := jasper.CreateOptions{Args: []string{"echo", output}}
 
 					manager := makeManager()
-					addr, err := startJRPC(tctx, manager)
+					addr, err := startJRPC(ctx, manager)
 					require.NoError(t, err)
 
-					conn, err := grpc.DialContext(tctx, addr, grpc.WithInsecure(), grpc.WithBlock())
+					conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
 					require.NoError(t, err)
 					client := internal.NewJasperProcessManagerClient(conn)
 
 					go func() {
-						<-tctx.Done()
+						<-ctx.Done()
 						conn.Close()
 					}()
 
@@ -194,7 +194,7 @@ func TestJRPCService(t *testing.T) {
 					absBuildDir, err := filepath.Abs(buildDir)
 					require.NoError(t, err)
 
-					testCase(tctx, t, opts, client, output, absBuildDir)
+					testCase(ctx, t, opts, client, output, absBuildDir)
 				})
 			}
 		})
