@@ -171,7 +171,7 @@ func TestJRPCService(t *testing.T) {
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
-					defer tcancel()
+					defer cancel()
 					output := "foobar"
 					opts := jasper.CreateOptions{Args: []string{"echo", output}}
 
