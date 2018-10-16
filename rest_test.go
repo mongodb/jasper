@@ -102,15 +102,19 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
+			_, err = client.GetLogs(ctx, "foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
+
+			_, err = client.GetBuildloggerURLs(ctx, "foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
+
 			err = client.DownloadFile(ctx, DownloadInfo{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
 			err = client.DownloadFileAsync(ctx, DownloadInfo{URL: "foo", Path: "bar"})
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
-
-			_, err = client.GetLogs(ctx, "foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
@@ -149,15 +153,19 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
+			_, err = client.GetLogs(ctx, "foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
+			_, err = client.GetBuildloggerURLs(ctx, "foo")
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
+
 			err = client.DownloadFile(ctx, DownloadInfo{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
 			err = client.DownloadFileAsync(ctx, DownloadInfo{URL: "foo", Path: "bar"})
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
-
-			_, err = client.GetLogs(ctx, "foo")
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
@@ -499,6 +507,48 @@ func TestRestService(t *testing.T) {
 			srv.downloadFile(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
+		"ServiceDownloadFileFailsWithInvalidURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			fileName := filepath.Join("build", "out.txt")
+			absPath, err := filepath.Abs(fileName)
+			require.NoError(t, err)
+
+			body, err := makeBody(DownloadInfo{
+				URL:  "://example.com",
+				Path: absPath,
+			})
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/download"), body)
+			require.NoError(t, err)
+			rw := httptest.NewRecorder()
+
+			srv.downloadFile(rw, req)
+			assert.Equal(t, http.StatusBadRequest, rw.Code)
+		},
+		"DownloadFileAsyncPassesWithValidInfo": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("", "out.txt")
+			require.NoError(t, err)
+
+			info := DownloadInfo{
+				URL:  "https://example.com",
+				Path: file.Name(),
+			}
+			assert.NoError(t, client.DownloadFileAsync(ctx, info))
+
+		waitAsyncDownload:
+			for {
+				select {
+				case <-ctx.Done():
+					assert.Fail(t, "asynchronous download did not complete before context deadline exceeded")
+				default:
+					fileInfo, err := os.Stat(file.Name())
+					require.NoError(t, err)
+					if fileInfo.Size() != 0 {
+						break waitAsyncDownload
+					}
+				}
+			}
+		},
 		"DownloadFileAsyncFailsExtractionWithInvalidArchiveFormat": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			fileName := filepath.Join("build", "out.txt")
 			_, err := os.Stat(fileName)
@@ -526,7 +576,7 @@ func TestRestService(t *testing.T) {
 			req, err := http.NewRequest(http.MethodPost, client.getURL("/download-async"), body)
 			require.NoError(t, err)
 			rw := httptest.NewRecorder()
-			srv.downloadFile(rw, req)
+			srv.downloadFileAsync(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
 		"ServiceDownloadFileAsyncFailsWithInvalidURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
@@ -542,22 +592,6 @@ func TestRestService(t *testing.T) {
 			srv.downloadFile(rw, req)
 
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
-		},
-		"ProcessWithInvalidLoggerErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := &CreateOptions{
-				Args: []string{"ls"},
-				Output: OutputOptions{
-					Loggers: []Logger{
-						Logger{
-							Type:    LogDefault,
-							Options: LogOptions{Format: LogFormatPlain},
-						},
-					},
-				},
-			}
-			proc, err := client.Create(ctx, opts)
-			assert.Error(t, err)
-			assert.Nil(t, proc)
 		},
 		"GetLogsFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{
@@ -575,7 +609,9 @@ func TestRestService(t *testing.T) {
 			proc, err := client.Create(ctx, opts)
 			assert.NoError(t, err)
 			assert.NotNil(t, proc)
+
 			assert.NoError(t, proc.Wait(ctx))
+
 			logs, err := client.GetLogs(ctx, proc.ID())
 			assert.NoError(t, err)
 			assert.NotEmpty(t, logs)
@@ -662,6 +698,59 @@ func TestRestService(t *testing.T) {
 
 			err = client.DownloadMongoDB(ctx, opts)
 			assert.NoError(t, err)
+		},
+		"GetBuildloggerURLsFailsWithNonexistentProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			urls, err := client.GetBuildloggerURLs(ctx, "foo")
+			assert.Error(t, err)
+			assert.Nil(t, urls)
+		},
+		"GetBuildloggerURLsFailsWithoutBuildlogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := &CreateOptions{Args: []string{"echo", "foo"}}
+			opts.Output.Loggers = []Logger{Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}}}
+
+			proc, err := client.Create(ctx, opts)
+			assert.NoError(t, err)
+			assert.NotNil(t, proc)
+
+			urls, err := client.GetBuildloggerURLs(ctx, proc.ID())
+			assert.Error(t, err)
+			assert.Nil(t, urls)
+		},
+		"CreateWithMultipleLoggers": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			file, err := ioutil.TempFile("build", "out.txt")
+			require.NoError(t, err)
+			defer os.Remove(file.Name())
+
+			fileLogger := Logger{
+				Type: LogFile,
+				Options: LogOptions{
+					FileName: file.Name(),
+					Format:   LogFormatPlain,
+				},
+			}
+
+			inMemoryLogger := Logger{
+				Type: LogInMemory,
+				Options: LogOptions{
+					Format:      LogFormatPlain,
+					InMemoryCap: 100,
+				},
+			}
+
+			opts := &CreateOptions{Output: OutputOptions{Loggers: []Logger{inMemoryLogger, fileLogger}}}
+			opts.Args = []string{"echo", "foobar"}
+			proc, err := client.Create(ctx, opts)
+			require.NoError(t, err)
+			require.NoError(t, proc.Wait(ctx))
+
+			logs, err := client.GetLogs(ctx, proc.ID())
+			require.NoError(t, err)
+			assert.NotEmpty(t, logs)
+
+			info, err := os.Stat(file.Name())
+			require.NoError(t, err)
+			assert.NotZero(t, info.Size())
+
 		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {

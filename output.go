@@ -65,9 +65,143 @@ type LogOptions struct {
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
 }
 
+func (opts BufferOptions) Validate() error {
+	if opts.Buffered && opts.Duration < 0 || opts.MaxSize < 0 {
+		return errors.New("cannot have negative buffer duration or size")
+	}
+	return nil
+}
+
+func (opts LogOptions) Validate() error {
+	return opts.BufferOptions.Validate()
+}
+
 type Logger struct {
 	Type    LogType    `json:"log_type"`
 	Options LogOptions `json:"log_options"`
+	sender  send.Sender
+}
+
+func (l Logger) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.Add(l.Type.Validate())
+	catcher.Add(l.Options.Validate())
+	return catcher.Resolve()
+}
+
+func (l LogType) Validate() error {
+	switch l {
+	case LogBuildloggerV2, LogBuildloggerV3, LogDefault, LogFile, LogInherit, LogSplunk, LogSumologic, LogInMemory:
+		return nil
+	default:
+		return errors.New("unknown log type")
+	}
+}
+
+func (f LogFormat) Validate() error {
+	switch f {
+	case LogFormatDefault, LogFormatJSON, LogFormatPlain:
+		return nil
+	default:
+		return errors.New("unknown log format")
+	}
+}
+
+func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
+	switch f {
+	case LogFormatDefault:
+		return send.MakeDefaultFormatter(), nil
+	case LogFormatPlain:
+		return send.MakePlainFormatter(), nil
+	case LogFormatJSON:
+		return send.MakeJSONFormatter(), nil
+	default:
+		return nil, errors.New("unknown log format")
+	}
+}
+
+func (l *Logger) Configure() (send.Sender, error) {
+	if l.sender != nil {
+		return l.sender, nil
+	}
+
+	var sender send.Sender
+	var err error
+
+	switch l.Type {
+	case LogBuildloggerV2, LogBuildloggerV3:
+		if l.Options.BuildloggerOptions.Local == nil {
+			l.Options.BuildloggerOptions.Local = send.MakeNative()
+		}
+		if l.Options.BuildloggerOptions.Local.Name() == "" {
+			l.Options.BuildloggerOptions.Local.SetName(DefaultLogName)
+		}
+		sender, err = send.MakeBuildlogger(DefaultLogName, &l.Options.BuildloggerOptions)
+		if err != nil {
+			return nil, err
+		}
+	case LogDefault:
+		if l.Options.DefaultPrefix == "" {
+			l.Options.DefaultPrefix = DefaultLogName
+		}
+		sender, err = send.NewNativeLogger(l.Options.DefaultPrefix, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		if err != nil {
+			return nil, err
+		}
+	case LogFile:
+		sender, err = send.MakePlainFileLogger(l.Options.FileName)
+		if err != nil {
+			return nil, err
+		}
+		sender.SetName(DefaultLogName)
+	case LogInherit:
+		sender = grip.GetSender()
+	case LogSplunk:
+		if !l.Options.SplunkOptions.Populated() {
+			return nil, errors.New("missing connection info for output type splunk")
+		}
+		sender, err = send.NewSplunkLogger(DefaultLogName, l.Options.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
+		if err != nil {
+			return nil, err
+		}
+	case LogSumologic:
+		if l.Options.SumoEndpoint == "" {
+			return nil, errors.New("missing endpoint for output type sumologic")
+		}
+		sender, err = send.NewSumo(DefaultLogName, l.Options.SumoEndpoint)
+		if err != nil {
+			return nil, err
+		}
+	case LogInMemory:
+		if l.Options.InMemoryCap <= 0 {
+			return nil, errors.New("invalid inmemory capacity")
+		}
+		sender, err = send.NewInMemorySender(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, l.Options.InMemoryCap)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("unknown log type")
+	}
+
+	formatter, err := l.Options.Format.MakeFormatter()
+	if err != nil {
+		return nil, err
+	}
+	if err := sender.SetFormatter(formatter); err != nil {
+		return nil, errors.New("failed to set log format")
+	}
+
+	if l.Options.BufferOptions.Buffered {
+		if l.Options.BufferOptions.Duration < 0 || l.Options.BufferOptions.MaxSize < 0 {
+			return nil, errors.New("buffer options cannot be negative")
+		}
+		sender = send.NewBufferedSender(sender, l.Options.BufferOptions.Duration, l.Options.BufferOptions.MaxSize)
+	}
+
+	l.sender = sender
+
+	return l.sender, nil
 }
 
 type BufferOptions struct {
@@ -108,115 +242,6 @@ func (o OutputOptions) errorIsNull() bool {
 	return false
 }
 
-func (l LogType) Validate() error {
-	switch l {
-	case LogBuildloggerV2, LogBuildloggerV3, LogDefault, LogFile, LogInherit, LogSplunk, LogSumologic, LogInMemory:
-		return nil
-	default:
-		return errors.New("unknown log type")
-	}
-}
-
-func (f LogFormat) Validate() error {
-	switch f {
-	case LogFormatDefault, LogFormatJSON, LogFormatPlain:
-		return nil
-	default:
-		return errors.New("unknown log format")
-	}
-}
-
-func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
-	switch f {
-	case LogFormatDefault:
-		return send.MakeDefaultFormatter(), nil
-	case LogFormatPlain:
-		return send.MakePlainFormatter(), nil
-	case LogFormatJSON:
-		return send.MakeJSONFormatter(), nil
-	default:
-		return nil, errors.New("unknown log format")
-	}
-}
-
-func (l LogType) Configure(opts LogOptions) (send.Sender, error) {
-	var sender send.Sender
-	var err error
-
-	switch l {
-	case LogBuildloggerV2, LogBuildloggerV3:
-		if opts.BuildloggerOptions.Local == nil {
-			return nil, errors.New("must specify buildlogger local sender")
-		}
-		if opts.BuildloggerOptions.Local.Name() == "" {
-			return nil, errors.New("must call SetName() on buildlogger local sender")
-		}
-		sender, err = send.MakeBuildlogger(DefaultLogName, &opts.BuildloggerOptions)
-		if err != nil {
-			return nil, err
-		}
-	case LogDefault:
-		if opts.DefaultPrefix == "" {
-			opts.DefaultPrefix = DefaultLogName
-		}
-		sender, err = send.NewNativeLogger(opts.DefaultPrefix, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
-		if err != nil {
-			return nil, err
-		}
-	case LogFile:
-		sender, err = send.MakePlainFileLogger(opts.FileName)
-		if err != nil {
-			return nil, err
-		}
-		sender.SetName(DefaultLogName)
-	case LogInherit:
-		sender = grip.GetSender()
-	case LogSplunk:
-		if !opts.SplunkOptions.Populated() {
-			return nil, errors.New("missing connection info for output type splunk")
-		}
-		sender, err = send.NewSplunkLogger(DefaultLogName, opts.SplunkOptions, send.LevelInfo{Default: level.Trace, Threshold: level.Trace})
-		if err != nil {
-			return nil, err
-		}
-	case LogSumologic:
-		if opts.SumoEndpoint == "" {
-			return nil, errors.New("missing endpoint for output type sumologic")
-		}
-		sender, err = send.NewSumo(DefaultLogName, opts.SumoEndpoint)
-		if err != nil {
-			return nil, err
-		}
-	case LogInMemory:
-		if opts.InMemoryCap <= 0 {
-			return nil, errors.New("invalid inmemory capacity")
-		}
-		sender, err = send.NewInMemorySender(DefaultLogName, send.LevelInfo{Default: level.Trace, Threshold: level.Trace}, opts.InMemoryCap)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("unknown log type")
-	}
-
-	formatter, err := opts.Format.MakeFormatter()
-	if err != nil {
-		return nil, err
-	}
-	if err := sender.SetFormatter(formatter); err != nil {
-		return nil, errors.New("failed to set log format")
-	}
-
-	if opts.BufferOptions.Buffered {
-		if opts.BufferOptions.Duration < 0 || opts.BufferOptions.MaxSize < 0 {
-			return nil, errors.New("buffer options cannot be negative")
-		}
-		sender = send.NewBufferedSender(sender, opts.BufferOptions.Duration, opts.BufferOptions.MaxSize)
-	}
-
-	return sender, nil
-}
-
 func (o OutputOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
@@ -253,7 +278,7 @@ func (o OutputOptions) Validate() error {
 	}
 
 	for _, logger := range o.Loggers {
-		if err := logger.Type.Validate(); err != nil {
+		if err := logger.Validate(); err != nil {
 			catcher.Add(err)
 		}
 		if err := logger.Options.Format.Validate(); err != nil {
@@ -280,8 +305,8 @@ func (o *OutputOptions) GetOutput() (io.Writer, error) {
 	if o.outputLogging() {
 		outSenders := []send.Sender{}
 
-		for _, logger := range o.Loggers {
-			sender, err := logger.Type.Configure(logger.Options)
+		for i := range o.Loggers {
+			sender, err := o.Loggers[i].Configure()
 			if err != nil {
 				return ioutil.Discard, err
 			}
@@ -328,8 +353,8 @@ func (o *OutputOptions) GetError() (io.Writer, error) {
 	if o.errorLogging() {
 		errSenders := []send.Sender{}
 
-		for _, logger := range o.Loggers {
-			sender, err := logger.Type.Configure(logger.Options)
+		for i := range o.Loggers {
+			sender, err := o.Loggers[i].Configure()
 			if err != nil {
 				return ioutil.Discard, err
 			}

@@ -94,7 +94,7 @@ func (c *restClient) Create(ctx context.Context, opts *CreateOptions) (Process, 
 		return nil, errors.WithStack(err)
 	}
 
-	info := ProcessInfo{}
+	var info ProcessInfo
 	if err := gimlet.GetJSON(resp.Body, &info); err != nil {
 		return nil, errors.Wrap(err, "problem reading process info from response")
 	}
@@ -232,6 +232,36 @@ func (c *restClient) Close(ctx context.Context) error {
 	return nil
 }
 
+func (c *restClient) GetBuildloggerURLs(ctx context.Context, id string) ([]string, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/process/%s/buildlogger-urls", id), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	urls := []string{}
+	if err = gimlet.GetJSON(resp.Body, &urls); err != nil {
+		return nil, errors.Wrap(err, "problem reading urls from response")
+	}
+
+	return urls, nil
+}
+
+func (c *restClient) GetLogs(ctx context.Context, id string) ([]string, error) {
+	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/process/%s/logs", id), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	logs := []string{}
+	if err = gimlet.GetJSON(resp.Body, &logs); err != nil {
+		return nil, errors.Wrap(err, "problem reading logs from response")
+	}
+
+	return logs, nil
+}
+
 func (c *restClient) DownloadFile(ctx context.Context, info DownloadInfo) error {
 	body, err := makeBody(info)
 	if err != nil {
@@ -259,21 +289,6 @@ func (c *restClient) DownloadFileAsync(ctx context.Context, info DownloadInfo) e
 	defer resp.Body.Close()
 
 	return nil
-}
-
-func (c *restClient) GetLogs(ctx context.Context, id string) ([]string, error) {
-	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/process/%s/logs", id), nil)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	logs := []string{}
-	if err = gimlet.GetJSON(resp.Body, &logs); err != nil {
-		return nil, errors.Wrap(err, "problem reading logs from response")
-	}
-
-	return logs, nil
 }
 
 // DownloadMongoDB downloads the desired version of MongoDB.
@@ -307,8 +322,9 @@ func (c *restClient) ConfigureCache(ctx context.Context, opts CacheOptions) erro
 }
 
 type restProcess struct {
-	id     string
-	client *restClient
+	id              string
+	client          *restClient
+	buildloggerURLs []string
 }
 
 func (p *restProcess) ID() string { return p.id }

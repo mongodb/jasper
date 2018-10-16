@@ -308,3 +308,24 @@ func (s *jasperService) DownloadFileAsync(ctx context.Context, info *DownloadInf
 
 	return &OperationOutcome{Success: true, Text: fmt.Sprintf("started downloading file %s to path %s", jinfo.URL, jinfo.Path)}, nil
 }
+
+func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProcessID) (*BuildloggerURLs, error) {
+	proc, err := s.manager.Get(ctx, id.Value)
+	if err != nil {
+		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
+		return nil, err
+	}
+
+	urls := []string{}
+	for _, logger := range proc.Info(ctx).Options.Output.Loggers {
+		if logger.Type == jasper.LogBuildloggerV2 || logger.Type == jasper.LogBuildloggerV3 {
+			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
+		}
+	}
+
+	if len(urls) == 0 {
+		return nil, errors.Errorf("process '%s' does not use buildlogger", id.Value)
+	}
+
+	return &BuildloggerURLs{Urls: urls}, nil
+}

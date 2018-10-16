@@ -71,6 +71,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/list/{filter}").Version(1).Get().Handler(s.listProcesses)
 	app.AddRoute("/list/group/{name}").Version(1).Get().Handler(s.listGroupMembers)
 	app.AddRoute("/process/{id}").Version(1).Get().Handler(s.getProcess)
+	app.AddRoute("/process/{id}/buildlogger-urls").Version(1).Get().Handler(s.getBuildloggerURLs)
 	app.AddRoute("/process/{id}/tags").Version(1).Get().Handler(s.getProcessTags)
 	app.AddRoute("/process/{id}/tags").Version(1).Delete().Handler(s.deleteProcessTags)
 	app.AddRoute("/process/{id}/tags").Version(1).Post().Handler(s.addProcessTag)
@@ -136,21 +137,6 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a logger is attached, it should be in-memory.
-	if len(opts.Output.Loggers) > 1 {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    errors.New("logger output only allows 1 logger").Error(),
-		})
-		return
-	} else if len(opts.Output.Loggers) == 1 && opts.Output.Loggers[0].Type != LogInMemory {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    errors.New("logger must be in-memory").Error(),
-		})
-		return
-	}
-
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if opts.Timeout > 0 {
@@ -180,6 +166,38 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, proc.Info(r.Context()))
+}
+
+func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
+	id := gimlet.GetVars(r)["id"]
+	ctx := r.Context()
+
+	proc, err := s.manager.Get(ctx, id)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
+		})
+		return
+	}
+
+	info := proc.Info(ctx)
+	urls := []string{}
+	for _, logger := range info.Options.Output.Loggers {
+		if logger.Type == LogBuildloggerV2 || logger.Type == LogBuildloggerV3 {
+			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
+		}
+	}
+
+	if len(urls) == 0 {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Errorf("process '%s' does not use buildlogger", id).Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, urls)
 }
 
 func (s *Service) listProcesses(rw http.ResponseWriter, r *http.Request) {
@@ -414,6 +432,7 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
 	if err := DoDownload(req, info, http.Client{}); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
@@ -474,22 +493,26 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if proc.Info(ctx).Options.Output.outputSender == nil {
+	info := proc.Info(ctx)
+	// Implicitly assumes that there's at most 1 in-memory logger.
+	var inMemorySender *send.InMemorySender
+	for _, logger := range info.Options.Output.Loggers {
+		sender, ok := logger.sender.(*send.InMemorySender)
+		if ok {
+			inMemorySender = sender
+			break
+		}
+	}
+
+	if inMemorySender == nil {
 		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    errors.Errorf("process '%s' is not being logged", id).Error(),
+			StatusCode: http.StatusInternalServerError,
+			Message:    errors.Errorf("no in-memory logger found for process '%s'", id).Error(),
 		})
 		return
 	}
-	logger, ok := proc.Info(ctx).Options.Output.outputSender.Sender.(*send.InMemorySender)
-	if !ok {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    errors.Errorf("cannot get log from process '%s'", id).Error(),
-		})
-		return
-	}
-	logs, err := logger.GetString()
+
+	logs, err := inMemorySender.GetString()
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -497,6 +520,7 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
 	gimlet.WriteJSON(rw, logs)
 }
 

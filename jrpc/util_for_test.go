@@ -29,7 +29,7 @@ func init() {
 }
 
 const (
-	taskTimeout = 10 * time.Second
+	taskTimeout = 20 * time.Second
 )
 
 func getPortNumber() int {

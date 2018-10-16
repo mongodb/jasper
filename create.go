@@ -139,14 +139,19 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	}
 	cmd.Env = env
 
-	// WriterSender requires Close() or else command output is not guaranteed to log.
+	// Senders require Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() {
 		if opts.Output.outputSender != nil {
 			opts.Output.outputSender.Close()
-			opts.Output.outputSender.Sender.Close()
 		}
 		if opts.Output.errorSender != nil {
 			opts.Output.errorSender.Close()
+		}
+		if opts.Output.outputSender != nil {
+			opts.Output.outputSender.Sender.Close()
+		}
+		// Since senders are shared, only close error's senders if output hasn't already closed them.
+		if opts.Output.errorSender != nil && (opts.Output.SuppressOutput || opts.Output.SendOutputToError) {
 			opts.Output.errorSender.Sender.Close()
 		}
 	})

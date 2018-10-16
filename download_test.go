@@ -278,6 +278,22 @@ func TestDoDownloadWithValidInfo(t *testing.T) {
 	assert.NotZero(t, fileInfo.Size())
 }
 
+func TestDoDownloadWithInvalidURL(t *testing.T) {
+	fileName := filepath.Join("build", "out.txt")
+	absPath, err := filepath.Abs(fileName)
+	require.NoError(t, err)
+
+	info := DownloadInfo{
+		URL:  "http;//example.com",
+		Path: absPath,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
+	require.NoError(t, err)
+
+	assert.Error(t, DoDownload(req, info, http.Client{}))
+}
+
 func TestDoDownloadWithNonexistentURL(t *testing.T) {
 	file, err := ioutil.TempFile("build", "out.txt")
 	require.NoError(t, err)
