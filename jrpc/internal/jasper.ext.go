@@ -91,13 +91,13 @@ func ConvertProcessInfo(info jasper.ProcessInfo) *ProcessInfo {
 
 func (s Signals) Export() syscall.Signal {
 	switch s {
-	case Signals_SIGHUP:
+	case Signals_HANGUP:
 		return syscall.SIGHUP
-	case Signals_SIGINT:
+	case Signals_INIT:
 		return syscall.SIGINT
-	case Signals_SIGTERM:
+	case Signals_TERMINATE:
 		return syscall.SIGTERM
-	case Signals_SIGKILL:
+	case Signals_KILL:
 		return syscall.SIGKILL
 	default:
 		return syscall.Signal(0)
@@ -107,13 +107,13 @@ func (s Signals) Export() syscall.Signal {
 func ConvertSignal(s syscall.Signal) Signals {
 	switch s {
 	case syscall.SIGHUP:
-		return Signals_SIGHUP
+		return Signals_HANGUP
 	case syscall.SIGINT:
-		return Signals_SIGINT
+		return Signals_INIT
 	case syscall.SIGTERM:
-		return Signals_SIGTERM
+		return Signals_TERMINATE
 	case syscall.SIGKILL:
-		return Signals_SIGKILL
+		return Signals_KILL
 	default:
 		return Signals_UNKNOWN
 	}
