@@ -18,13 +18,15 @@ func (opts *CreateOptions) Export() *jasper.CreateOptions {
 		TimeoutSecs:      int(opts.TimeoutSeconds),
 		OverrideEnviron:  opts.OverrideEnviron,
 		Tags:             opts.Tags,
-		Output:           opts.Output.Export(),
+	}
+
+	if opts.Output != nil {
+		out.Output = opts.Output.Export()
 	}
 
 	for _, opt := range opts.OnSuccess {
 		out.OnSuccess = append(out.OnSuccess, opt.Export())
 	}
-
 	for _, opt := range opts.OnFailure {
 		out.OnFailure = append(out.OnFailure, opt.Export())
 	}
@@ -54,7 +56,6 @@ func ConvertCreateOptions(opts *jasper.CreateOptions) *CreateOptions {
 	for _, opt := range opts.OnSuccess {
 		co.OnSuccess = append(co.OnSuccess, ConvertCreateOptions(opt))
 	}
-
 	for _, opt := range opts.OnFailure {
 		co.OnFailure = append(co.OnFailure, ConvertCreateOptions(opt))
 	}
@@ -308,16 +309,23 @@ func (logger Logger) Export() jasper.Logger {
 }
 
 func (opts LogOptions) Export() jasper.LogOptions {
-	return jasper.LogOptions{
-		BufferOptions:      opts.BufferOptions.Export(),
-		BuildloggerOptions: opts.BuildloggerOptions.Export(),
-		DefaultPrefix:      opts.DefaultPrefix,
-		FileName:           opts.FileName,
-		Format:             jasper.LogFormat(opts.Format),
-		InMemoryCap:        int(opts.InMemoryCap),
-		SplunkOptions:      opts.SplunkOptions.Export(),
-		SumoEndpoint:       opts.SumoEndpoint,
+	out := jasper.LogOptions{
+		DefaultPrefix: opts.DefaultPrefix,
+		FileName:      opts.FileName,
+		Format:        jasper.LogFormat(opts.Format),
+		InMemoryCap:   int(opts.InMemoryCap),
+		SplunkOptions: opts.SplunkOptions.Export(),
+		SumoEndpoint:  opts.SumoEndpoint,
 	}
+
+	if opts.BufferOptions != nil {
+		out.BufferOptions = opts.BufferOptions.Export()
+	}
+	if opts.BuildloggerOptions != nil {
+		out.BuildloggerOptions = opts.BuildloggerOptions.Export()
+	}
+
+	return out
 }
 
 func (opts *BufferOptions) Export() jasper.BufferOptions {
