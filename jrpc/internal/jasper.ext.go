@@ -312,7 +312,7 @@ func (opts LogOptions) Export() jasper.LogOptions {
 	out := jasper.LogOptions{
 		DefaultPrefix: opts.DefaultPrefix,
 		FileName:      opts.FileName,
-		Format:        jasper.LogFormat(opts.Format),
+		Format:        opts.Format.Export(),
 		InMemoryCap:   int(opts.InMemoryCap),
 		SumoEndpoint:  opts.SumoEndpoint,
 	}
