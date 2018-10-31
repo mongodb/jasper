@@ -210,7 +210,7 @@ func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
 		BuildloggerOptions: ConvertBuildloggerOptions(opts.BuildloggerOptions),
 		DefaultPrefix:      opts.DefaultPrefix,
 		FileName:           opts.FileName,
-		Format:             string(opts.Format),
+		Format:             ConvertLogFormat(opts.Format),
 		InMemoryCap:        int64(opts.InMemoryCap),
 		SplunkOptions:      ConvertSplunkOptions(opts.SplunkOptions),
 		SumoEndpoint:       opts.SumoEndpoint,
