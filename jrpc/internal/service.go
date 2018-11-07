@@ -287,13 +287,7 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -2}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, jinfo.URL, nil)
-	if err != nil {
-		err = errors.Wrapf(err, "problem creating request for URL %s", jinfo.URL)
-		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -2}, err
-	}
-
-	if err := jasper.DoDownload(req, jinfo, s.client); err != nil {
+	if err := jinfo.Download(); err != nil {
 		err = errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path)
 		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -3}, err
 	}
