@@ -272,6 +272,10 @@ func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTr
 
 func (p *blockingProcess) Wait(ctx context.Context) error {
 	if p.hasInfo() {
+		// If the process did not end successfully, then there should be an error.
+		if !p.getInfo().Successful {
+			return errors.New("operation failed")
+		}
 		return nil
 	}
 
