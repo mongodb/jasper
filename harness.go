@@ -30,13 +30,6 @@ func yesCreateOpts(timeout time.Duration) CreateOptions {
 	return CreateOptions{Args: []string{"yes"}, Timeout: timeout}
 }
 
-func procMap() map[string]func(context.Context, *CreateOptions) (Process, error) {
-	return map[string]func(context.Context, *CreateOptions) (Process, error){
-		"Blocking": newBlockingProcess,
-		"Basic":    newBasicProcess,
-	}
-}
-
 func runIteration(ctx context.Context, makeProc func(context.Context, *CreateOptions) (Process, error), opts *CreateOptions) error {
 	proc, err := makeProc(ctx, opts)
 	if err != nil {
@@ -109,32 +102,30 @@ func logCases() map[string]func(context.Context, *caseDefinition) result {
 
 func getAllCases() []*caseDefinition {
 	cases := make([]*caseDefinition, 0)
-	for procName, makeProc := range procMap() {
-		for logName, logCase := range logCases() {
-			cases = append(cases,
-				&caseDefinition{
-					name:               fmt.Sprintf("%s/%s/Send1Second", logName, procName),
-					bench:              logCase,
-					procMaker:          makeProc,
-					timeout:            one * time.Second,
-					requiredIterations: ten,
-				},
-				&caseDefinition{
-					name:               fmt.Sprintf("%s/%s/Send5Seconds", logName, procName),
-					bench:              logCase,
-					procMaker:          makeProc,
-					timeout:            five * time.Second,
-					requiredIterations: five,
-				},
-				&caseDefinition{
-					name:               fmt.Sprintf("%s/%s/Send30Seconds", logName, procName),
-					bench:              logCase,
-					procMaker:          makeProc,
-					timeout:            thirty * time.Second,
-					requiredIterations: one,
-				},
-			)
-		}
+	for logName, logCase := range logCases() {
+		cases = append(cases,
+			&caseDefinition{
+				name:               fmt.Sprintf("%s/Send1Second", logName),
+				bench:              logCase,
+				procMaker:          newBlockingProcess,
+				timeout:            one * time.Second,
+				requiredIterations: ten,
+			},
+			&caseDefinition{
+				name:               fmt.Sprintf("%s/Send5Seconds", logName),
+				bench:              logCase,
+				procMaker:          newBlockingProcess,
+				timeout:            five * time.Second,
+				requiredIterations: five,
+			},
+			&caseDefinition{
+				name:               fmt.Sprintf("%s/Send30Seconds", logName),
+				bench:              logCase,
+				procMaker:          newBlockingProcess,
+				timeout:            thirty * time.Second,
+				requiredIterations: one,
+			},
+		)
 	}
 	return cases
 }
