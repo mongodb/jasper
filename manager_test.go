@@ -318,7 +318,7 @@ func TestManagerInterface(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
+					tctx, cancel := context.WithTimeout(ctx, managerTestTimeout)
 					defer cancel()
 					test(tctx, t, factory(tctx, t))
 				})
