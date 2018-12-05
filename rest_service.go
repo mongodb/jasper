@@ -157,11 +157,16 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
 		cancel()
 	}); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrap(err, "problem managing resources").Error(),
-		})
-		return
+		// If we get an error registering a trigger, then we should make sure that
+		// the reason for it isn't just because the process has exited already,
+		// since that should not be considered an error.
+		if !proc.Info(ctx).Complete {
+			writeError(rw, gimlet.ErrorResponse{
+				StatusCode: http.StatusInternalServerError,
+				Message:    errors.Wrap(err, "problem managing resources").Error(),
+			})
+			return
+		}
 	}
 
 	gimlet.WriteJSON(rw, proc.Info(r.Context()))
