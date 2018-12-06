@@ -167,6 +167,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+		cancel()
 	}
 
 	gimlet.WriteJSON(rw, proc.Info(r.Context()))
