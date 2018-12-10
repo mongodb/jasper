@@ -317,6 +317,35 @@ func (p *blockingProcess) Wait(ctx context.Context) error {
 	}
 }
 
+func (p *blockingProcess) Restart(ctx context.Context) error {
+	if !p.Complete(ctx) {
+		if err := Terminate(ctx, p); err != nil {
+			return err
+		}
+		// This call will almost always fail, since the process was terminated with
+		// a signal and not allowed to exit successsfully. Therefore, we don't check
+		// for error here.
+		p.Wait(ctx)
+	}
+	// By now, this process should be dead.
+
+	p.info = nil
+	p.opts.closers = []func(){}
+
+	cmd, err := p.opts.Resolve(ctx)
+	if err != nil {
+		return errors.Wrap(err, "problem building command from options")
+	}
+
+	if err = cmd.Start(); err != nil {
+		return errors.Wrap(err, "problem restarting command")
+	}
+
+	go p.reactor(ctx, cmd)
+
+	return nil
+}
+
 func (p *blockingProcess) Tag(t string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

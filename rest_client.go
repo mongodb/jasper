@@ -372,6 +372,26 @@ func (p *restProcess) Wait(ctx context.Context) error {
 	return nil
 }
 
+func (p *restProcess) Restart(ctx context.Context) error {
+	req, err := http.NewRequest(http.MethodGet, p.client.getURL("/process/%s/restart", p.id), nil)
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+
+	req = req.WithContext(ctx)
+
+	resp, err := p.client.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "problem making request")
+	}
+
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func (p *restProcess) RegisterTrigger(ctx context.Context, _ ProcessTrigger) error {
 	return errors.New("cannot register triggers on remote processes")
 }

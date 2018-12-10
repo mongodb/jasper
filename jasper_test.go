@@ -204,6 +204,7 @@ type MockProcess struct {
 	IsComplete          bool
 	FailSignal          bool
 	FailWait            bool
+	FailRestart         bool
 	FailRegisterTrigger bool
 }
 
@@ -224,6 +225,14 @@ func (p *MockProcess) Signal(_ context.Context, s syscall.Signal) error {
 
 func (p *MockProcess) Wait(_ context.Context) error {
 	if p.FailWait {
+		return errors.New("always fail")
+	}
+
+	return nil
+}
+
+func (p *MockProcess) Restart(_ context.Context) error {
+	if p.FailRestart {
 		return errors.New("always fail")
 	}
 
