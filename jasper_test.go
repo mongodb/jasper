@@ -34,6 +34,7 @@ func getPortNumber() int {
 
 const (
 	taskTimeout        = 5 * time.Second
+	processTestTimeout = 15 * time.Second
 	managerTestTimeout = 5 * taskTimeout
 	longTaskTimeout    = 100 * time.Second
 )

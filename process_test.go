@@ -278,10 +278,106 @@ func TestProcessImplementations(t *testing.T) {
 						assert.NotZero(t, size)
 					}
 				},
+				"WaitOnRestartedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("Not supporting REST yet")
+					}
+
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NoError(t, proc.Wait(ctx))
+
+					err = proc.Restart(ctx)
+					require.NoError(t, err)
+					assert.NoError(t, proc.Wait(ctx))
+				},
+				"RestartedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("Not supporting REST yet")
+					}
+
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					require.NoError(t, proc.Wait(ctx))
+					procExitCode := proc.Info(ctx).ExitCode
+
+					err = proc.Restart(ctx)
+					require.NoError(t, err)
+					require.NoError(t, proc.Wait(ctx))
+					assert.Equal(t, procExitCode, proc.Info(ctx).ExitCode)
+				},
+				"RestartingFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("Not supporting REST yet")
+					}
+
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NoError(t, proc.Wait(ctx))
+
+					assert.NoError(t, proc.Restart(ctx))
+					require.NoError(t, proc.Wait(ctx))
+					assert.True(t, proc.Info(ctx).Successful)
+				},
+				"RestartingRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("Not supporting REST yet")
+					}
+
+					opts = sleepCreateOpts(2)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					assert.NoError(t, proc.Restart(ctx))
+					require.NoError(t, proc.Wait(ctx))
+					assert.True(t, proc.Info(ctx).Successful)
+				},
+				"TriggersFireOnRestartedProcessExit": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("Not supporting REST yet")
+					}
+
+					count := 0
+					opts = sleepCreateOpts(2)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					proc.RegisterTrigger(ctx, func(pInfo ProcessInfo) {
+						count = count + 1
+					})
+					time.Sleep(3 * time.Second)
+					require.Equal(t, 1, count)
+
+					proc.Restart(ctx)
+					time.Sleep(3 * time.Second)
+					assert.Equal(t, 2, count)
+				},
+				"RestartShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("Not supporting REST yet")
+					}
+
+					opts = sleepCreateOpts(2)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NoError(t, proc.Wait(ctx))
+
+					err = proc.Restart(ctx)
+					require.NoError(t, err)
+					assert.True(t, proc.Running(ctx))
+					require.NoError(t, proc.Wait(ctx))
+					assert.True(t, proc.Complete(ctx))
+				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
+					tctx, cancel := context.WithTimeout(ctx, processTestTimeout)
 					defer cancel()
 
 					opts := &CreateOptions{Args: []string{"ls"}}
