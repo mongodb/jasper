@@ -330,15 +330,30 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
+
+					countChan := make(chan bool)
 					proc.RegisterTrigger(ctx, func(pInfo ProcessInfo) {
-						count = count + 1
+						count++
+						countChan <- true
 					})
 					time.Sleep(3 * time.Second)
-					require.Equal(t, 1, count)
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "triggers took too long to run")
+					case <-countChan:
+						require.Equal(t, 1, count)
+					}
 
 					proc.Restart(ctx)
 					time.Sleep(3 * time.Second)
-					assert.Equal(t, 2, count)
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "triggers took too long to run")
+					case <-countChan:
+						assert.Equal(t, 2, count)
+					}
 				},
 				"RestartShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					opts = sleepCreateOpts(2)
