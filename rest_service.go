@@ -155,12 +155,20 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = registerCancelTrigger(ctx, proc, cancel); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    err.Error(),
-		})
-		return
+	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
+		cancel()
+	}); err != nil {
+		// If we get an error registering a trigger, then we should make sure that
+		// the reason for it isn't just because the process has exited already,
+		// since that should not be considered an error.
+		if !proc.Info(ctx).Complete {
+			writeError(rw, gimlet.ErrorResponse{
+				StatusCode: http.StatusInternalServerError,
+				Message:    errors.Wrap(err, "problem managing resources").Error(),
+			})
+			return
+		}
+		cancel()
 	}
 
 	gimlet.WriteJSON(rw, proc.Info(r.Context()))
@@ -394,12 +402,18 @@ func (s *Service) restartProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = registerCancelTrigger(ctx, proc, cancel); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    err.Error(),
-		})
-		return
+	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
+		cancel()
+	}); err != nil {
+		if !proc.Info(ctx).Complete {
+			writeError(rw, gimlet.ErrorResponse{
+				StatusCode: http.StatusInternalServerError,
+				Message: errors.Wrap(
+					err, "failed to register trigger on restart").Error(),
+			})
+			return
+		}
+		cancel()
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
@@ -551,22 +565,6 @@ func (s *Service) downloadMongoDB(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
-}
-
-func registerCancelTrigger(ctx context.Context, proc Process, cancel context.CancelFunc) error {
-	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
-		cancel()
-	}); err != nil {
-		// If we get an error registering a trigger, then we should make sure that
-		// the reason for it isn't just because the process has exited already,
-		// since that should not be considered an error.
-		if !proc.Info(ctx).Complete {
-			return errors.Wrap(err, "problem managing resources")
-		}
-		cancel()
-	}
-
-	return nil
 }
 
 func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
