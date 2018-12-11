@@ -75,6 +75,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/tags").Version(1).Delete().Handler(s.deleteProcessTags)
 	app.AddRoute("/process/{id}/tags").Version(1).Post().Handler(s.addProcessTag)
 	app.AddRoute("/process/{id}/wait").Version(1).Get().Handler(s.waitForProcess)
+	app.AddRoute("/process/{id}/restart").Version(1).Get().Handler(s.restartProcess)
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
@@ -154,20 +155,12 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
-		cancel()
-	}); err != nil {
-		// If we get an error registering a trigger, then we should make sure that
-		// the reason for it isn't just because the process has exited already,
-		// since that should not be considered an error.
-		if !proc.Info(ctx).Complete {
-			writeError(rw, gimlet.ErrorResponse{
-				StatusCode: http.StatusInternalServerError,
-				Message:    errors.Wrap(err, "problem managing resources").Error(),
-			})
-			return
-		}
-		cancel()
+	if err = registerCancelTrigger(ctx, proc, cancel); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    err.Error(),
+		})
+		return
 	}
 
 	gimlet.WriteJSON(rw, proc.Info(r.Context()))
@@ -378,6 +371,40 @@ func (s *Service) waitForProcess(rw http.ResponseWriter, r *http.Request) {
 	gimlet.WriteJSON(rw, struct{}{})
 }
 
+func (s *Service) restartProcess(rw http.ResponseWriter, r *http.Request) {
+	id := gimlet.GetVars(r)["id"]
+	ctx, cancel := context.WithCancel(context.Background())
+
+	proc, err := s.manager.Get(ctx, id)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
+		})
+		cancel()
+		return
+	}
+
+	if err := proc.Restart(ctx); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		cancel()
+		return
+	}
+
+	if err = registerCancelTrigger(ctx, proc, cancel); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
 func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 	vars := gimlet.GetVars(r)
 	id := vars["id"]
@@ -524,6 +551,22 @@ func (s *Service) downloadMongoDB(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func registerCancelTrigger(ctx context.Context, proc Process, cancel context.CancelFunc) error {
+	if err := proc.RegisterTrigger(ctx, func(_ ProcessInfo) {
+		cancel()
+	}); err != nil {
+		// If we get an error registering a trigger, then we should make sure that
+		// the reason for it isn't just because the process has exited already,
+		// since that should not be considered an error.
+		if !proc.Info(ctx).Complete {
+			return errors.Wrap(err, "problem registering trigger")
+		}
+		cancel()
+	}
+
+	return nil
 }
 
 func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {

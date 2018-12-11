@@ -279,10 +279,6 @@ func TestProcessImplementations(t *testing.T) {
 					}
 				},
 				"WaitOnRestartedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
-					if cname == "REST" {
-						t.Skip("Not supporting REST yet")
-					}
-
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -293,10 +289,6 @@ func TestProcessImplementations(t *testing.T) {
 					assert.NoError(t, proc.Wait(ctx))
 				},
 				"RestartedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
-					if cname == "REST" {
-						t.Skip("Not supporting REST yet")
-					}
-
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -310,10 +302,6 @@ func TestProcessImplementations(t *testing.T) {
 					assert.Equal(t, procExitCode, proc.Info(ctx).ExitCode)
 				},
 				"RestartingFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
-					if cname == "REST" {
-						t.Skip("Not supporting REST yet")
-					}
-
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -324,10 +312,6 @@ func TestProcessImplementations(t *testing.T) {
 					assert.True(t, proc.Info(ctx).Successful)
 				},
 				"RestartingRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
-					if cname == "REST" {
-						t.Skip("Not supporting REST yet")
-					}
-
 					opts = sleepCreateOpts(2)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
@@ -339,9 +323,8 @@ func TestProcessImplementations(t *testing.T) {
 				},
 				"TriggersFireOnRestartedProcessExit": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
-						t.Skip("Not supporting REST yet")
+						t.Skip("remote triggers are not supported on rest processes")
 					}
-
 					count := 0
 					opts = sleepCreateOpts(2)
 					proc, err := makep(ctx, opts)
@@ -358,10 +341,6 @@ func TestProcessImplementations(t *testing.T) {
 					assert.Equal(t, 2, count)
 				},
 				"RestartShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
-					if cname == "REST" {
-						t.Skip("Not supporting REST yet")
-					}
-
 					opts = sleepCreateOpts(2)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
