@@ -561,7 +561,7 @@ func registerCancelTrigger(ctx context.Context, proc Process, cancel context.Can
 		// the reason for it isn't just because the process has exited already,
 		// since that should not be considered an error.
 		if !proc.Info(ctx).Complete {
-			return errors.Wrap(err, "problem registering trigger")
+			return errors.Wrap(err, "problem managing resources")
 		}
 		cancel()
 	}
