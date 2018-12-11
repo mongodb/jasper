@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"runtime"
 	"syscall"
 
 	"github.com/mongodb/grip"
@@ -9,10 +10,18 @@ import (
 )
 
 func Terminate(ctx context.Context, p Process) error {
+	// TODO: MAKE-XXX: Update signal.go functions with Windows-specific behaviors.
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	return errors.WithStack(p.Signal(ctx, syscall.SIGTERM))
 }
 
 func Kill(ctx context.Context, p Process) error {
+	// TODO: MAKE-XXX: Update signal.go functions with Windows-specific behaviors.
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	return errors.WithStack(p.Signal(ctx, syscall.SIGKILL))
 }
 
