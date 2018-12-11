@@ -187,6 +187,33 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	}, nil
 }
 
+func (s *jasperService) Restart(ctx context.Context, id *JasperProcessID) (*OperationOutcome, error) {
+	proc, err := s.manager.Get(ctx, id.Value)
+	if err != nil {
+		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
+		return &OperationOutcome{
+			Success:  false,
+			Text:     err.Error(),
+			ExitCode: -2,
+		}, err
+	}
+
+	if err = proc.Restart(ctx); err != nil {
+		err = errors.Wrap(err, "problem encountered while restarting")
+		return &OperationOutcome{
+			Success:  false,
+			Text:     err.Error(),
+			ExitCode: -3,
+		}, err
+	}
+
+	return &OperationOutcome{
+		Success:  true,
+		Text:     fmt.Sprintf("'%s' operation complete", id.Value),
+		ExitCode: -1,
+	}, nil
+}
+
 func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered closing service")
