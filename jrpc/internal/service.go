@@ -188,9 +188,11 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 }
 
 func (s *jasperService) Restart(ctx context.Context, id *JasperProcessID) (*OperationOutcome, error) {
-	proc, err := s.manager.Get(ctx, id.Value)
+	cctx, cancel := context.WithCancel(context.Background())
+	proc, err := s.manager.Get(cctx, id.Value)
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
+		cancel()
 		return &OperationOutcome{
 			Success:  false,
 			Text:     err.Error(),
@@ -198,13 +200,28 @@ func (s *jasperService) Restart(ctx context.Context, id *JasperProcessID) (*Oper
 		}, err
 	}
 
-	if err = proc.Restart(ctx); err != nil {
+	if err = proc.Restart(cctx); err != nil {
 		err = errors.Wrap(err, "problem encountered while restarting")
+		cancel()
 		return &OperationOutcome{
 			Success:  false,
 			Text:     err.Error(),
 			ExitCode: -3,
 		}, err
+	}
+
+	if err := proc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
+		cancel()
+	}); err != nil {
+		if !proc.Info(ctx).Complete {
+			return &OperationOutcome{
+				Success: false,
+				Text: fmt.Sprintf("failed to register trigger on restarted process %s",
+					id.Value),
+				ExitCode: -3,
+			}, nil
+		}
+		cancel()
 	}
 
 	return &OperationOutcome{

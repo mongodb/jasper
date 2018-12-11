@@ -184,12 +184,16 @@ func (p *jrpcProcess) Wait(ctx context.Context) error {
 }
 
 func (p *jrpcProcess) Restart(ctx context.Context) error {
-	//resp, err := p.client.Restart(ctx, &internal.JasperProcessID{Value: p.info.Id})
-	//if err != nil {
-	//	return errors.WithStack(err)
-	//}
+	resp, err := p.client.Restart(ctx, &internal.JasperProcessID{Value: p.info.Id})
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
-	return nil
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
 }
 
 func (p *jrpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigger) error {
