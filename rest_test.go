@@ -67,7 +67,7 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, list)
 		},
 		"RegisterAlwaysErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := newBasicProcess(ctx, trueCreateOpts())
+			proc, err := newBlockingProcess(ctx, trueCreateOpts())
 			require.NoError(t, err)
 
 			assert.Error(t, client.Register(ctx, nil))

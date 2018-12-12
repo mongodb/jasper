@@ -26,8 +26,7 @@ func TestManagerInterface(t *testing.T) {
 		},
 		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
-				procs:    map[string]Process{},
-				blocking: true,
+				procs: map[string]Process{},
 			}
 		},
 		"Basic/Lock": func(ctx context.Context, t *testing.T) Manager {
@@ -249,7 +248,7 @@ func TestManagerInterface(t *testing.T) {
 
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
-					proc, err := newBasicProcess(ctx, trueCreateOpts())
+					proc, err := newBlockingProcess(ctx, trueCreateOpts())
 					assert.NoError(t, err)
 					err = manager.Register(cctx, proc)
 					assert.Error(t, err)
@@ -260,7 +259,7 @@ func TestManagerInterface(t *testing.T) {
 						t.Skip("not supported on rest interfaces")
 					}
 
-					proc := &basicProcess{}
+					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
 					err := manager.Register(ctx, proc)
 					assert.Error(t, err)
@@ -271,7 +270,7 @@ func TestManagerInterface(t *testing.T) {
 						t.Skip("not supported on rest interfaces")
 					}
 
-					proc, err := newBasicProcess(ctx, trueCreateOpts())
+					proc, err := newBlockingProcess(ctx, trueCreateOpts())
 					require.NoError(t, err)
 					err = manager.Register(ctx, proc)
 					assert.NoError(t, err)
@@ -287,7 +286,7 @@ func TestManagerInterface(t *testing.T) {
 						t.Skip("not supported on rest interfaces")
 					}
 
-					proc, err := newBasicProcess(ctx, trueCreateOpts())
+					proc, err := newBlockingProcess(ctx, trueCreateOpts())
 					assert.NoError(t, err)
 					assert.NotEmpty(t, proc)
 					err = manager.Register(ctx, proc)
@@ -319,7 +318,7 @@ func TestManagerInterface(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
+					tctx, cancel := context.WithTimeout(ctx, managerTestTimeout)
 					defer cancel()
 					test(tctx, t, factory(tctx, t))
 				})

@@ -33,8 +33,9 @@ func getPortNumber() int {
 }
 
 const (
-	taskTimeout     = 5 * time.Second
-	longTaskTimeout = 100 * time.Second
+	taskTimeout        = 5 * time.Second
+	managerTestTimeout = 5 * taskTimeout
+	longTaskTimeout    = 100 * time.Second
 )
 
 // this file contains tools and constants used throughout the test
