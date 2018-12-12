@@ -67,8 +67,8 @@ type Process interface {
 
 	// Restart forces a restart of the process. If the process is
 	// running at the time this is called, then the process is
-	// terminated.  Otherwise, the process is wiped of any
-	// execution information and started anew.
+	// potentially terminated and surely waited on. In either case,
+	// the process is restarted as if it was just ran.
 	Restart(context.Context) error
 
 	// RegisterTrigger associates triggers with a process,
