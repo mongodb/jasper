@@ -188,11 +188,9 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 }
 
 func (s *jasperService) Restart(ctx context.Context, id *JasperProcessID) (*OperationOutcome, error) {
-	cctx, cancel := context.WithCancel(context.Background())
-	proc, err := s.manager.Get(cctx, id.Value)
+	proc, err := s.manager.Get(ctx, id.Value)
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
-		cancel()
 		return &OperationOutcome{
 			Success:  false,
 			Text:     err.Error(),
@@ -200,6 +198,8 @@ func (s *jasperService) Restart(ctx context.Context, id *JasperProcessID) (*Oper
 		}, err
 	}
 
+	// See restartProcess() in rest_service.go.
+	cctx, cancel := context.WithCancel(context.Background())
 	if err = proc.Restart(cctx); err != nil {
 		err = errors.Wrap(err, "problem encountered while restarting")
 		cancel()

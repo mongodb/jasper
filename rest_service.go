@@ -381,18 +381,19 @@ func (s *Service) waitForProcess(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Service) restartProcess(rw http.ResponseWriter, r *http.Request) {
 	id := gimlet.GetVars(r)["id"]
-	ctx, cancel := context.WithCancel(context.Background())
 
-	proc, err := s.manager.Get(ctx, id)
+	proc, err := s.manager.Get(r.Context(), id)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
 			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
 		})
-		cancel()
 		return
 	}
 
+	// Spawn a new context so that the process' context is not potentially
+	// canceled by the request's. See how createProcess() does this same thing.
+	ctx, cancel := context.WithCancel(context.Background())
 	if err := proc.Restart(ctx); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
