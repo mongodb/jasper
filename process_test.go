@@ -331,17 +331,17 @@ func TestProcessImplementations(t *testing.T) {
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 
-					countChan := make(chan bool)
+					countIncremented := make(chan bool)
 					proc.RegisterTrigger(ctx, func(pInfo ProcessInfo) {
 						count++
-						countChan <- true
+						countIncremented <- true
 					})
 					time.Sleep(3 * time.Second)
 
 					select {
 					case <-ctx.Done():
 						assert.Fail(t, "triggers took too long to run")
-					case <-countChan:
+					case <-countIncremented:
 						require.Equal(t, 1, count)
 					}
 
@@ -351,7 +351,7 @@ func TestProcessImplementations(t *testing.T) {
 					select {
 					case <-ctx.Done():
 						assert.Fail(t, "triggers took too long to run")
-					case <-countChan:
+					case <-countIncremented:
 						assert.Equal(t, 2, count)
 					}
 				},
