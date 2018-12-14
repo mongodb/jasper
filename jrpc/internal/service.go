@@ -194,7 +194,9 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 		return nil, errors.WithStack(err)
 	}
 
-	// See respawnProcess() in rest_service.go.
+	// Spawn a new context so that the process' context is not potentially
+	// canceled by the request's. See how rest_service.go's createProcess() does
+	// this same thing.
 	cctx, cancel := context.WithCancel(context.Background())
 	newProc, err := proc.Respawn(cctx)
 	if err != nil {
