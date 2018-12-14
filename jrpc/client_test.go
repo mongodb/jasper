@@ -358,17 +358,17 @@ func TestJRPCProcess(t *testing.T) {
 					require.NoError(t, err)
 					assert.Error(t, proc.RegisterTrigger(ctx, nil))
 				},
-				"WaitOnRestartedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"WaitOnRespawnedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NoError(t, proc.Wait(ctx))
 
-					err = proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					assert.NoError(t, proc.Wait(ctx))
+					assert.NoError(t, newProc.Wait(ctx))
 				},
-				"RestartedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -376,42 +376,44 @@ func TestJRPCProcess(t *testing.T) {
 					require.NoError(t, proc.Wait(ctx))
 					procExitCode := proc.Info(ctx).ExitCode
 
-					err = proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					require.NoError(t, proc.Wait(ctx))
-					assert.Equal(t, procExitCode, proc.Info(ctx).ExitCode)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.Equal(t, procExitCode, newProc.Info(ctx).ExitCode)
 				},
-				"RestartingFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NoError(t, proc.Wait(ctx))
 
-					assert.NoError(t, proc.Restart(ctx))
-					require.NoError(t, proc.Wait(ctx))
-					assert.True(t, proc.Info(ctx).Successful)
+					newProc, err := proc.Respawn(ctx)
+					assert.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Info(ctx).Successful)
 				},
-				"RestartingRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					opts = sleepCreateOpts(2)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 
-					assert.NoError(t, proc.Restart(ctx))
-					require.NoError(t, proc.Wait(ctx))
-					assert.True(t, proc.Info(ctx).Successful)
+					newProc, err := proc.Respawn(ctx)
+					assert.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Info(ctx).Successful)
 				},
-				"RestartShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					opts = sleepCreateOpts(3)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NoError(t, proc.Wait(ctx))
 
-					err = proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					assert.True(t, proc.Running(ctx))
-					require.NoError(t, proc.Wait(ctx))
+					assert.True(t, newProc.Running(ctx))
+					require.NoError(t, newProc.Wait(ctx))
 					assert.True(t, proc.Complete(ctx))
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},

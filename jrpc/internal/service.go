@@ -187,48 +187,33 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	}, nil
 }
 
-func (s *jasperService) Restart(ctx context.Context, id *JasperProcessID) (*OperationOutcome, error) {
+func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*ProcessInfo, error) {
 	proc, err := s.manager.Get(ctx, id.Value)
 	if err != nil {
 		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
-		return &OperationOutcome{
-			Success:  false,
-			Text:     err.Error(),
-			ExitCode: -2,
-		}, err
+		return nil, errors.WithStack(err)
 	}
 
-	// See restartProcess() in rest_service.go.
+	// See respawnProcess() in rest_service.go.
 	cctx, cancel := context.WithCancel(context.Background())
-	if err = proc.Restart(cctx); err != nil {
-		err = errors.Wrap(err, "problem encountered while restarting")
+	newProc, err := proc.Respawn(cctx)
+	if err != nil {
+		err = errors.Wrap(err, "problem encountered while respawning")
 		cancel()
-		return &OperationOutcome{
-			Success:  false,
-			Text:     err.Error(),
-			ExitCode: -3,
-		}, err
+		return nil, errors.WithStack(err)
 	}
+	s.manager.Register(ctx, newProc)
 
-	if err := proc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
+	if err := newProc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if !proc.Info(ctx).Complete {
-			return &OperationOutcome{
-				Success: false,
-				Text: fmt.Sprintf("failed to register trigger on restarted process %s",
-					id.Value),
-				ExitCode: -3,
-			}, nil
+		if !newProc.Info(ctx).Complete {
+			return ConvertProcessInfo(newProc.Info(ctx)), nil
 		}
 		cancel()
 	}
 
-	return &OperationOutcome{
-		Success:  true,
-		Text:     fmt.Sprintf("'%s' operation complete", id.Value),
-		ExitCode: -1,
-	}, nil
+	return ConvertProcessInfo(newProc.Info(ctx)), nil
 }
 
 func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
