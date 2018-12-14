@@ -278,17 +278,17 @@ func TestProcessImplementations(t *testing.T) {
 						assert.NotZero(t, size)
 					}
 				},
-				"WaitOnRestartedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"WaitOnRespawnedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NoError(t, proc.Wait(ctx))
 
-					err = proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					assert.NoError(t, proc.Wait(ctx))
+					assert.NoError(t, newProc.Wait(ctx))
 				},
-				"RestartedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -296,32 +296,34 @@ func TestProcessImplementations(t *testing.T) {
 					require.NoError(t, proc.Wait(ctx))
 					procExitCode := proc.Info(ctx).ExitCode
 
-					err = proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					require.NoError(t, proc.Wait(ctx))
+					require.NoError(t, newProc.Wait(ctx))
 					assert.Equal(t, procExitCode, proc.Info(ctx).ExitCode)
 				},
-				"RestartingFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NoError(t, proc.Wait(ctx))
 
-					assert.NoError(t, proc.Restart(ctx))
-					require.NoError(t, proc.Wait(ctx))
-					assert.True(t, proc.Info(ctx).Successful)
+					newProc, err := proc.Respawn(ctx)
+					assert.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Info(ctx).Successful)
 				},
-				"RestartingRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					opts = sleepCreateOpts(2)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 
-					assert.NoError(t, proc.Restart(ctx))
-					require.NoError(t, proc.Wait(ctx))
-					assert.True(t, proc.Info(ctx).Successful)
+					newProc, err := proc.Respawn(ctx)
+					assert.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Info(ctx).Successful)
 				},
-				"TriggersFireOnRestartedProcessExit": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"TriggersFireOnRespawnedProcessExit": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
 						t.Skip("remote triggers are not supported on rest processes")
 					}
@@ -345,7 +347,11 @@ func TestProcessImplementations(t *testing.T) {
 						require.Equal(t, 1, count)
 					}
 
-					proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
+					newProc.RegisterTrigger(ctx, func(pIfno ProcessInfo) {
+						count++
+						countIncremented <- true
+					})
 					time.Sleep(3 * time.Second)
 
 					select {
@@ -355,18 +361,18 @@ func TestProcessImplementations(t *testing.T) {
 						assert.Equal(t, 2, count)
 					}
 				},
-				"RestartShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					opts = sleepCreateOpts(2)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NoError(t, proc.Wait(ctx))
 
-					err = proc.Restart(ctx)
+					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					assert.True(t, proc.Running(ctx))
-					require.NoError(t, proc.Wait(ctx))
-					assert.True(t, proc.Complete(ctx))
+					assert.True(t, newProc.Running(ctx))
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Complete(ctx))
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {

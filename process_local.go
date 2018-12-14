@@ -83,9 +83,10 @@ func (p *localProcess) Wait(ctx context.Context) error {
 	return errors.WithStack(p.proc.Wait(ctx))
 }
 
-func (p *localProcess) Restart(ctx context.Context) error {
+func (p *localProcess) Respawn(ctx context.Context) (Process, error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	return errors.WithStack(p.proc.Restart(ctx))
+	newProc, err := p.proc.Respawn(ctx)
+	return newProc, errors.WithStack(err)
 }
