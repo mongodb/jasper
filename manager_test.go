@@ -27,6 +27,9 @@ func TestManagerInterface(t *testing.T) {
 		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return NewLocalManager()
 		},
+		"Basic/Lock/SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+			return NewSelfClearingProcessManager(10)
+		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
 			srv, port := makeAndStartService(ctx, httpClient)
 			require.NotNil(t, srv)
