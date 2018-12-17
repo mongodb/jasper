@@ -6,9 +6,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewSelfClearingProcessManager creates and returns a process manager that will
-// clear itself of dead processes without the need for calling Clear() from the
-// user. Clear() however can be called proactively.
+// NewSelfClearingProcessManager creates and returns a process manager that
+// places a limit on the number of concurrent processes stored by Jasper at any
+// given time, and will clear itself of dead processes when necessary without
+// the need for calling Clear() from the user. Clear() can, however, be called
+// proactively. This manager therefore gives no guarantees on the persistence
+// of a process in its memory that has already completed.
 func NewSelfClearingProcessManager(maxProcs int) Manager {
 	return &selfClearingProcessManager{
 		local:    NewLocalManager().(*localProcessManager),
