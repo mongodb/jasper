@@ -19,11 +19,6 @@ func TestManagerInterface(t *testing.T) {
 	defer cancel()
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
-		"Basic/NoLock": func(ctx context.Context, t *testing.T) Manager {
-			return &basicProcessManager{
-				procs: map[string]Process{},
-			}
-		},
 		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
 				procs: map[string]Process{},
