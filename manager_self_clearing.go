@@ -9,27 +9,24 @@ import (
 // NewSelfClearingProcessManager creates and returns a process manager that will
 // clear itself of dead processes without the need for calling Clear() from the
 // user. Clear() however can be called proactively.
-func NewSelfClearingProcessManager(numProcs int) Manager {
+func NewSelfClearingProcessManager(maxProcs int) Manager {
 	return &selfClearingProcessManager{
-		manager: &basicProcessManager{
-			procs:              map[string]Process{},
-			skipDefaultTrigger: true,
-		},
-		maxProcs: numProcs,
+		local:    NewLocalManager().(*localProcessManager),
+		maxProcs: maxProcs,
 	}
 }
 
 type selfClearingProcessManager struct {
-	manager  *basicProcessManager
+	local    *localProcessManager
 	maxProcs int
 }
 
 func (m *selfClearingProcessManager) checkProcCapacity(ctx context.Context) error {
-	// TODO: Do a num procs check here and attempt a clear?
-	if len(m.manager.procs) == m.maxProcs {
-		// We are at capacity, we can try to perform a clear
-		if err := m.Clear(ctx); err != nil && len(m.manager.procs) == m.maxProcs {
-			return errors.New("cannot create any more processes")
+	if len(m.local.manager.procs) == m.maxProcs {
+		// We are at capacity, we can try to perform a clear.
+		if err := m.Clear(ctx); err != nil &&
+			len(m.local.manager.procs) == m.maxProcs {
+			return errors.New("cannot create any more processes, reached maxProcs")
 		}
 	}
 
@@ -41,14 +38,14 @@ func (m *selfClearingProcessManager) Create(ctx context.Context, opts *CreateOpt
 		return nil, err
 	}
 
-	proc, err := m.manager.Create(ctx, opts)
+	proc, err := m.local.Create(ctx, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 
-	m.manager.procs[proc.ID()] = proc
+	m.local.manager.procs[proc.ID()] = proc
 
 	return proc, nil
 }
@@ -58,16 +55,16 @@ func (m *selfClearingProcessManager) Register(ctx context.Context, proc Process)
 		return err
 	}
 
-	return errors.WithStack(m.manager.Register(ctx, proc))
+	return errors.WithStack(m.local.Register(ctx, proc))
 }
 
 func (m *selfClearingProcessManager) List(ctx context.Context, f Filter) ([]Process, error) {
-	procs, err := m.manager.List(ctx, f)
+	procs, err := m.local.List(ctx, f)
 	return procs, errors.WithStack(err)
 }
 
 func (m *selfClearingProcessManager) Get(ctx context.Context, id string) (Process, error) {
-	proc, err := m.manager.Get(ctx, id)
+	proc, err := m.local.Get(ctx, id)
 	return proc, errors.WithStack(err)
 }
 
@@ -80,6 +77,6 @@ func (m *selfClearingProcessManager) Close(ctx context.Context) error {
 }
 
 func (m *selfClearingProcessManager) Group(ctx context.Context, name string) ([]Process, error) {
-	procs, err := m.manager.Group(ctx, name)
+	procs, err := m.local.Group(ctx, name)
 	return procs, errors.WithStack(err)
 }
