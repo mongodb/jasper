@@ -315,6 +315,47 @@ func TestManagerInterface(t *testing.T) {
 						assert.Equal(t, 1, count)
 					}
 				},
+				"ReapCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					opts := &CreateOptions{Args: []string{"ls"}}
+					proc, err := manager.Create(ctx, opts)
+					require.NoError(t, err)
+					sameProc, err := manager.Get(ctx, proc.ID())
+					require.Equal(t, proc.ID(), sameProc.ID())
+					require.NoError(t, proc.Wait(ctx))
+					assert.NoError(t, manager.Reap(ctx))
+					nilProc, err := manager.Get(ctx, proc.ID())
+					assert.Nil(t, nilProc)
+				},
+				"ReapIsANoOpForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					opts := &CreateOptions{Args: []string{"sleep", "20"}}
+					proc, err := manager.Create(ctx, opts)
+					require.NoError(t, err)
+					assert.NoError(t, manager.Reap(ctx))
+					sameProc, err := manager.Get(ctx, proc.ID())
+					assert.Equal(t, proc.ID(), sameProc.ID())
+					require.NoError(t, Terminate(ctx, proc)) // Clean up
+				},
+				"ReapSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					lsOpts := &CreateOptions{Args: []string{"ls"}}
+					lsProc, err := manager.Create(ctx, lsOpts)
+					require.NoError(t, err)
+
+					sleepOpts := &CreateOptions{Args: []string{"sleep", "20"}}
+					sleepProc, err := manager.Create(ctx, sleepOpts)
+					require.NoError(t, err)
+
+					require.NoError(t, lsProc.Wait(ctx))
+
+					assert.NoError(t, manager.Reap(ctx))
+
+					sameSleepProc, err := manager.Get(ctx, sleepProc.ID())
+					require.NoError(t, err)
+					assert.Equal(t, sleepProc.ID(), sameSleepProc.ID())
+
+					nilProc, err := manager.Get(ctx, lsProc.ID())
+					assert.Nil(t, nilProc)
+					require.NoError(t, Terminate(ctx, sleepProc)) // Clean up
+				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
