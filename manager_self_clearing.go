@@ -69,11 +69,11 @@ func (m *selfClearingProcessManager) Get(ctx context.Context, id string) (Proces
 }
 
 func (m *selfClearingProcessManager) Clear(ctx context.Context) error {
-	return errors.WithStack(m.Clear(ctx))
+	return errors.WithStack(m.local.Clear(ctx))
 }
 
 func (m *selfClearingProcessManager) Close(ctx context.Context) error {
-	return errors.WithStack(m.Close(ctx))
+	return errors.WithStack(m.local.Close(ctx))
 }
 
 func (m *selfClearingProcessManager) Group(ctx context.Context, name string) ([]Process, error) {
