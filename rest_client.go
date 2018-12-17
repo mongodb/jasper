@@ -214,7 +214,7 @@ func (c *restClient) Get(ctx context.Context, id string) (Process, error) {
 }
 
 func (c *restClient) Reap(ctx context.Context) error {
-	req, err := http.NewRequest(http.MethodDelete, c.getURL("/reap"), nil)
+	req, err := http.NewRequest(http.MethodPost, c.getURL("/reap"), nil)
 	if err != nil {
 		return errors.Wrap(err, "problem building request")
 	}
