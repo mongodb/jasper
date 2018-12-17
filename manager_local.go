@@ -15,14 +15,6 @@ func NewLocalManager() Manager {
 	}
 }
 
-func NewLocalManagerBlockingProcesses() Manager {
-	return &localProcessManager{
-		manager: &basicProcessManager{
-			procs: map[string]Process{},
-		},
-	}
-}
-
 type localProcessManager struct {
 	mu      sync.RWMutex
 	manager *basicProcessManager
