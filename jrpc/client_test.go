@@ -211,6 +211,47 @@ func TestJRPCManager(t *testing.T) {
 					assert.NotNil(t, fetched)
 					assert.Equal(t, proc.ID(), fetched.ID())
 				},
+				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					opts := trueCreateOpts()
+					proc, err := manager.Create(ctx, opts)
+					require.NoError(t, err)
+					sameProc, err := manager.Get(ctx, proc.ID())
+					require.Equal(t, proc.ID(), sameProc.ID())
+					require.NoError(t, proc.Wait(ctx))
+					assert.NoError(t, manager.Clear(ctx))
+					nilProc, err := manager.Get(ctx, proc.ID())
+					assert.Nil(t, nilProc)
+				},
+				"ClearIsANoOpForActiveProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					opts := sleepCreateOpts(20)
+					proc, err := manager.Create(ctx, opts)
+					require.NoError(t, err)
+					assert.NoError(t, manager.Clear(ctx))
+					sameProc, err := manager.Get(ctx, proc.ID())
+					assert.Equal(t, proc.ID(), sameProc.ID())
+					require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up
+				},
+				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					trueOpts := trueCreateOpts()
+					lsProc, err := manager.Create(ctx, trueOpts)
+					require.NoError(t, err)
+
+					sleepOpts := sleepCreateOpts(20)
+					sleepProc, err := manager.Create(ctx, sleepOpts)
+					require.NoError(t, err)
+
+					require.NoError(t, lsProc.Wait(ctx))
+
+					assert.NoError(t, manager.Clear(ctx))
+
+					sameSleepProc, err := manager.Get(ctx, sleepProc.ID())
+					require.NoError(t, err)
+					assert.Equal(t, sleepProc.ID(), sameSleepProc.ID())
+
+					nilProc, err := manager.Get(ctx, lsProc.ID())
+					assert.Nil(t, nilProc)
+					require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
+				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
