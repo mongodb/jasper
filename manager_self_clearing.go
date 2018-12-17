@@ -48,10 +48,6 @@ func (m *selfClearingProcessManager) Create(ctx context.Context, opts *CreateOpt
 		return nil, errors.WithStack(err)
 	}
 
-	proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
-
-	m.local.manager.procs[proc.ID()] = proc
-
 	return proc, nil
 }
 
