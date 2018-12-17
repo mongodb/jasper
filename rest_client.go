@@ -213,6 +213,25 @@ func (c *restClient) Get(ctx context.Context, id string) (Process, error) {
 	}, nil
 }
 
+func (c *restClient) Reap(ctx context.Context) error {
+	req, err := http.NewRequest(http.MethodDelete, c.getURL("/reap"), nil)
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "problem making request")
+	}
+
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func (c *restClient) Close(ctx context.Context) error {
 	req, err := http.NewRequest(http.MethodDelete, c.getURL("/close"), nil)
 	if err != nil {

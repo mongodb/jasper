@@ -79,6 +79,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
+	app.AddRoute("/reap").Version(1).Post().Handler(s.reapManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
 	go s.backgroundPrune()
@@ -536,6 +537,18 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, logs)
+}
+
+func (s *Service) reapManager(rw http.ResponseWriter, r *http.Request) {
+	if err := s.manager.Reap(r.Context()); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct{}{})
 }
 
 func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
