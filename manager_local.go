@@ -62,8 +62,8 @@ func (m *localProcessManager) Get(ctx context.Context, id string) (Process, erro
 }
 
 func (m *localProcessManager) Clear(ctx context.Context) error {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	return m.manager.Clear(ctx)
 }
