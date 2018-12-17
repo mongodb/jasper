@@ -311,7 +311,7 @@ func TestManagerInterface(t *testing.T) {
 					}
 				},
 				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := &CreateOptions{Args: []string{"ls"}}
+					opts := trueCreateOpts()
 					proc, err := manager.Create(ctx, opts)
 					require.NoError(t, err)
 					sameProc, err := manager.Get(ctx, proc.ID())
@@ -322,7 +322,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Nil(t, nilProc)
 				},
 				"ClearIsANoOpForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := &CreateOptions{Args: []string{"sleep", "20"}}
+					opts := sleepCreateOpts(20)
 					proc, err := manager.Create(ctx, opts)
 					require.NoError(t, err)
 					assert.NoError(t, manager.Clear(ctx))
@@ -331,11 +331,11 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, Terminate(ctx, proc)) // Clean up
 				},
 				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					lsOpts := &CreateOptions{Args: []string{"ls"}}
-					lsProc, err := manager.Create(ctx, lsOpts)
+					trueOpts := trueCreateOpts()
+					lsProc, err := manager.Create(ctx, trueOpts)
 					require.NoError(t, err)
 
-					sleepOpts := &CreateOptions{Args: []string{"sleep", "20"}}
+					sleepOpts := sleepCreateOpts(20)
 					sleepProc, err := manager.Create(ctx, sleepOpts)
 					require.NoError(t, err)
 
