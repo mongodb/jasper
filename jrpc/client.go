@@ -183,6 +183,15 @@ func (p *jrpcProcess) Wait(ctx context.Context) error {
 	return errors.New(resp.Text)
 }
 
+func (p *jrpcProcess) Respawn(ctx context.Context) (jasper.Process, error) {
+	newProc, err := p.client.Respawn(ctx, &internal.JasperProcessID{Value: p.info.Id})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &jrpcProcess{client: p.client, info: newProc}, nil
+}
+
 func (p *jrpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigger) error {
 	return errors.New("cannot register remote triggers")
 }

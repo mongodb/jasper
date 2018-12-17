@@ -372,6 +372,34 @@ func (p *restProcess) Wait(ctx context.Context) error {
 	return nil
 }
 
+func (p *restProcess) Respawn(ctx context.Context) (Process, error) {
+	req, err := http.NewRequest(http.MethodGet, p.client.getURL("/process/%s/respawn", p.id), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem building request")
+	}
+
+	req = req.WithContext(ctx)
+
+	resp, err := p.client.client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem making request")
+	}
+
+	if err = handleError(resp); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	info := ProcessInfo{}
+	if err = gimlet.GetJSON(resp.Body, &info); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &restProcess{
+		id:     info.ID,
+		client: p.client,
+	}, nil
+}
+
 func (p *restProcess) RegisterTrigger(ctx context.Context, _ ProcessTrigger) error {
 	return errors.New("cannot register triggers on remote processes")
 }

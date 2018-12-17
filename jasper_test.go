@@ -34,6 +34,7 @@ func getPortNumber() int {
 
 const (
 	taskTimeout        = 5 * time.Second
+	processTestTimeout = 15 * time.Second
 	managerTestTimeout = 5 * taskTimeout
 	longTaskTimeout    = 100 * time.Second
 )
@@ -204,6 +205,7 @@ type MockProcess struct {
 	IsComplete          bool
 	FailSignal          bool
 	FailWait            bool
+	FailRespawn         bool
 	FailRegisterTrigger bool
 }
 
@@ -228,6 +230,14 @@ func (p *MockProcess) Wait(_ context.Context) error {
 	}
 
 	return nil
+}
+
+func (p *MockProcess) Respawn(_ context.Context) (Process, error) {
+	if p.FailRespawn {
+		return nil, errors.New("always fail")
+	}
+
+	return nil, nil
 }
 
 func (p *MockProcess) RegisterTrigger(_ context.Context, t ProcessTrigger) error {

@@ -278,10 +278,106 @@ func TestProcessImplementations(t *testing.T) {
 						assert.NotZero(t, size)
 					}
 				},
+				"WaitOnRespawnedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NoError(t, proc.Wait(ctx))
+
+					newProc, err := proc.Respawn(ctx)
+					require.NoError(t, err)
+					assert.NoError(t, newProc.Wait(ctx))
+				},
+				"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					require.NoError(t, proc.Wait(ctx))
+					procExitCode := proc.Info(ctx).ExitCode
+
+					newProc, err := proc.Respawn(ctx)
+					require.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.Equal(t, procExitCode, proc.Info(ctx).ExitCode)
+				},
+				"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NoError(t, proc.Wait(ctx))
+
+					newProc, err := proc.Respawn(ctx)
+					assert.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Info(ctx).Successful)
+				},
+				"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(2)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					newProc, err := proc.Respawn(ctx)
+					assert.NoError(t, err)
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Info(ctx).Successful)
+				},
+				"TriggersFireOnRespawnedProcessExit": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote triggers are not supported on rest processes")
+					}
+					count := 0
+					opts = sleepCreateOpts(2)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					countIncremented := make(chan bool)
+					proc.RegisterTrigger(ctx, func(pInfo ProcessInfo) {
+						count++
+						countIncremented <- true
+					})
+					time.Sleep(3 * time.Second)
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "triggers took too long to run")
+					case <-countIncremented:
+						require.Equal(t, 1, count)
+					}
+
+					newProc, err := proc.Respawn(ctx)
+					newProc.RegisterTrigger(ctx, func(pIfno ProcessInfo) {
+						count++
+						countIncremented <- true
+					})
+					time.Sleep(3 * time.Second)
+
+					select {
+					case <-ctx.Done():
+						assert.Fail(t, "triggers took too long to run")
+					case <-countIncremented:
+						assert.Equal(t, 2, count)
+					}
+				},
+				"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(2)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NoError(t, proc.Wait(ctx))
+
+					newProc, err := proc.Respawn(ctx)
+					require.NoError(t, err)
+					assert.True(t, newProc.Running(ctx))
+					require.NoError(t, newProc.Wait(ctx))
+					assert.True(t, newProc.Complete(ctx))
+				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, taskTimeout)
+					tctx, cancel := context.WithTimeout(ctx, processTestTimeout)
 					defer cancel()
 
 					opts := &CreateOptions{Args: []string{"ls"}}

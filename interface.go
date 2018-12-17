@@ -65,6 +65,11 @@ type Process interface {
 	// process has completed.
 	Wait(context.Context) error
 
+	// Respawn respawns a near-identical version of the process on
+	// which it is called. It will spawn a new process with the same
+	// options and return the new, "respawned" process.
+	Respawn(context.Context) (Process, error)
+
 	// RegisterTrigger associates triggers with a process,
 	// erroring when the context is canceled, the process is
 	// complete.

@@ -130,7 +130,9 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			}()
 
 			p.setInfo(info)
+			p.mu.RLock()
 			p.triggers.Run(info)
+			p.mu.RUnlock()
 			return
 		case <-ctx.Done():
 			// note, the process might take a moment to
@@ -315,6 +317,15 @@ func (p *blockingProcess) Wait(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (p *blockingProcess) Respawn(ctx context.Context) (Process, error) {
+	opts := p.Info(ctx).Options
+	opts.closers = []func(){}
+
+	newProc, err := newBlockingProcess(ctx, &opts)
+
+	return newProc, err
 }
 
 func (p *blockingProcess) Tag(t string) {

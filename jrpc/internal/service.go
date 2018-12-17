@@ -187,6 +187,37 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	}, nil
 }
 
+func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*ProcessInfo, error) {
+	proc, err := s.manager.Get(ctx, id.Value)
+	if err != nil {
+		err = errors.Wrapf(err, "problem finding process '%s'", id.Value)
+		return nil, errors.WithStack(err)
+	}
+
+	// Spawn a new context so that the process' context is not potentially
+	// canceled by the request's. See how rest_service.go's createProcess() does
+	// this same thing.
+	cctx, cancel := context.WithCancel(context.Background())
+	newProc, err := proc.Respawn(cctx)
+	if err != nil {
+		err = errors.Wrap(err, "problem encountered while respawning")
+		cancel()
+		return nil, errors.WithStack(err)
+	}
+	s.manager.Register(ctx, newProc)
+
+	if err := newProc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
+		cancel()
+	}); err != nil {
+		if !newProc.Info(ctx).Complete {
+			return ConvertProcessInfo(newProc.Info(ctx)), nil
+		}
+		cancel()
+	}
+
+	return ConvertProcessInfo(newProc.Info(ctx)), nil
+}
+
 func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered closing service")
