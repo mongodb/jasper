@@ -26,7 +26,7 @@ type Manager interface {
 	List(context.Context, Filter) ([]Process, error)
 	Group(context.Context, string) ([]Process, error)
 	Get(context.Context, string) (Process, error)
-	Reap(context.Context) error
+	Clear(context.Context) error
 	Close(context.Context) error
 }
 

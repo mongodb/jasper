@@ -104,7 +104,7 @@ func (m *basicProcessManager) Get(ctx context.Context, id string) (Process, erro
 	return proc, nil
 }
 
-func (m *basicProcessManager) Reap(ctx context.Context) error {
+func (m *basicProcessManager) Clear(ctx context.Context) error {
 	for procID, proc := range m.procs {
 		if proc.Complete(ctx) {
 			delete(m.procs, procID)

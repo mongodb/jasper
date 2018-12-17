@@ -69,11 +69,11 @@ func (m *localProcessManager) Get(ctx context.Context, id string) (Process, erro
 	return proc, errors.WithStack(err)
 }
 
-func (m *localProcessManager) Reap(ctx context.Context) error {
+func (m *localProcessManager) Clear(ctx context.Context) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return m.manager.Reap(ctx)
+	return m.manager.Clear(ctx)
 }
 
 func (m *localProcessManager) Close(ctx context.Context) error {
