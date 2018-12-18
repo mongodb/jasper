@@ -70,8 +70,7 @@ type Process interface {
 	// successfully, Wait will return a non-nil error.
 	//
 	// Note that death by signal does not return the signal code
-	// and instead falls under "some other error" and is returned
-	// as -1.
+	// and instead is returned as -1.
 	Wait(context.Context) (int, error)
 
 	// Respawn respawns a near-identical version of the process on

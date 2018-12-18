@@ -276,9 +276,9 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 	if p.hasInfo() {
 		// If the process did not end successfully, then there should be an error.
 		if !p.getInfo().Successful {
-			return p.info.ExitCode, errors.New("operation failed")
+			return p.getInfo().ExitCode, errors.New("operation failed")
 		}
-		return p.info.ExitCode, nil
+		return p.getInfo().ExitCode, nil
 	}
 
 	out := make(chan error)
@@ -307,13 +307,13 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 		case <-ctx.Done():
 			return -1, errors.New("wait operation canceled")
 		case err := <-out:
-			return p.info.ExitCode, errors.WithStack(err)
+			return p.getInfo().ExitCode, errors.WithStack(err)
 		default:
 			if p.hasInfo() {
 				if !p.getInfo().Successful {
-					return p.info.ExitCode, errors.New("operation failed")
+					return p.getInfo().ExitCode, errors.New("operation failed")
 				}
-				return p.info.ExitCode, nil
+				return p.getInfo().ExitCode, nil
 			}
 		}
 	}
