@@ -174,17 +174,20 @@ func (p *jrpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	return errors.New(resp.Text)
 }
 
-func (p *jrpcProcess) Wait(ctx context.Context) error {
+func (p *jrpcProcess) Wait(ctx context.Context) (int, error) {
 	resp, err := p.client.Wait(ctx, &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
-		return errors.WithStack(err)
+		return -1, errors.WithStack(err)
 	}
 
 	if resp.Success {
-		return nil
+		if resp.ExitCode != 0 {
+			return int(resp.ExitCode), errors.New("operation failed")
+		}
+		return int(resp.ExitCode), nil
 	}
 
-	return errors.New(resp.Text)
+	return -1, errors.New(resp.Text)
 }
 
 func (p *jrpcProcess) Respawn(ctx context.Context) (jasper.Process, error) {
