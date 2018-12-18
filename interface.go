@@ -62,9 +62,13 @@ type Process interface {
 	Signal(context.Context, syscall.Signal) error
 
 	// Wait blocks until the process exits or the context is
-	// canceled or is not properly defined. Returns nil if the
-	// process has completed.
-	Wait(context.Context) error
+	// canceled or is not properly defined. Wait will return the
+	// exit code as -1 if it was unable to return a true code due
+	// to some other error, but otherwise will return the actual
+	// exit code of the process. Returns nil if the process has
+	// completed successfully. If the process has not completed
+	// successfully, Wait will return a non-nil error.
+	Wait(context.Context) (int, error)
 
 	// Respawn respawns a near-identical version of the process on
 	// which it is called. It will spawn a new process with the same

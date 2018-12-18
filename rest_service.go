@@ -369,7 +369,9 @@ func (s *Service) waitForProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := proc.Wait(ctx); err != nil {
+	// Somehow return exitCode?
+	_, err = proc.Wait(ctx)
+	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),

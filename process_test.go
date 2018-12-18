@@ -126,7 +126,8 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					time.Sleep(10 * time.Millisecond) // give the process time to start background machinery
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 				},
 				"WaitReturnsWithCancledContext": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
@@ -137,7 +138,8 @@ func TestProcessImplementations(t *testing.T) {
 					assert.True(t, proc.Running(ctx))
 					assert.NoError(t, err)
 					pcancel()
-					assert.Error(t, proc.Wait(pctx))
+					_, err = proc.Wait(pctx)
+					assert.Error(t, err)
 				},
 				"RegisterTriggerErrorsForNil": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
@@ -191,7 +193,8 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
 
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 				},
 				"ProcessWritesToLog": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
@@ -211,7 +214,8 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
 
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 
 					// File is not guaranteed to be written once Wait() returns and closers begin executing,
 					// so wait for file to be non-empty.
@@ -258,7 +262,8 @@ func TestProcessImplementations(t *testing.T) {
 
 					proc, err := makep(ctx, opts)
 					assert.NoError(t, err)
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 
 					fileWrite := make(chan int64)
 					go func() {
@@ -282,34 +287,40 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					assert.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					assert.NoError(t, err)
 				},
 				"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 					procExitCode := proc.Info(ctx).ExitCode
 
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.Equal(t, procExitCode, proc.Info(ctx).ExitCode)
 				},
 				"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					newProc, err := proc.Respawn(ctx)
 					assert.NoError(t, err)
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.True(t, newProc.Info(ctx).Successful)
 				},
 				"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
@@ -320,7 +331,8 @@ func TestProcessImplementations(t *testing.T) {
 
 					newProc, err := proc.Respawn(ctx)
 					assert.NoError(t, err)
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.True(t, newProc.Info(ctx).Successful)
 				},
 				"TriggersFireOnRespawnedProcessExit": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
@@ -366,12 +378,14 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
 					assert.True(t, newProc.Running(ctx))
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.True(t, newProc.Complete(ctx))
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},

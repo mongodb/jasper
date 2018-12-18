@@ -229,12 +229,12 @@ func (p *MockProcess) Signal(_ context.Context, s syscall.Signal) error {
 	return nil
 }
 
-func (p *MockProcess) Wait(_ context.Context) error {
+func (p *MockProcess) Wait(_ context.Context) (int, error) {
 	if p.FailWait {
-		return errors.New("always fail")
+		return -1, errors.New("always fail")
 	}
 
-	return nil
+	return 0, nil
 }
 
 func (p *MockProcess) Respawn(_ context.Context) (Process, error) {

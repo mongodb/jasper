@@ -41,7 +41,7 @@ func runIteration(ctx context.Context, makeProc func(context.Context, *CreateOpt
 	if err != nil {
 		return err
 	}
-	_ = proc.Wait(ctx)
+	_, _ = proc.Wait(ctx)
 	return nil
 }
 
