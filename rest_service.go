@@ -369,7 +369,6 @@ func (s *Service) waitForProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Somehow return exitCode?
 	exitCode, err := proc.Wait(ctx)
 	if err != nil && exitCode == -1 {
 		writeError(rw, gimlet.ErrorResponse{
@@ -379,7 +378,7 @@ func (s *Service) waitForProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gimlet.WriteJSON(rw, struct{}{})
+	gimlet.WriteJSON(rw, exitCode)
 }
 
 func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {

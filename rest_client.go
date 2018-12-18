@@ -378,12 +378,12 @@ func (p *restProcess) Wait(ctx context.Context) (int, error) {
 		return -1, errors.WithStack(err)
 	}
 
-	// TODO: We should try to just get the exit code from the resp.
-	procInfo := p.Info(ctx)
-	if !procInfo.Successful {
-		return procInfo.ExitCode, errors.New("operation failed")
+	var exitCode int
+	gimlet.GetJSON(resp.Body, &exitCode)
+	if exitCode != 0 {
+		return exitCode, errors.New("operation failed")
 	}
-	return procInfo.ExitCode, nil
+	return exitCode, nil
 }
 
 func (p *restProcess) Respawn(ctx context.Context) (Process, error) {
