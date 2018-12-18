@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -387,6 +388,53 @@ func TestProcessImplementations(t *testing.T) {
 					_, err = newProc.Wait(ctx)
 					require.NoError(t, err)
 					assert.True(t, newProc.Complete(ctx))
+				},
+				"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, trueCreateOpts())
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					exitCode, err := proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Equal(t, 0, exitCode)
+				},
+				"WaitGivesFailureExitCode": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, falseCreateOpts())
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.Equal(t, 1, exitCode)
+				},
+				"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, sleepCreateOpts(100))
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					proc.Signal(ctx, syscall.SIGTERM)
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.Equal(t, -1, exitCode)
+				},
+				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					cctx, cancel := context.WithCancel(ctx)
+					proc, err := makep(ctx, sleepCreateOpts(100))
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					var exitCode int
+					waitFinished := make(chan bool)
+					go func() {
+						exitCode, err = proc.Wait(cctx)
+						waitFinished <- true
+					}()
+					cancel()
+					select {
+					case <-waitFinished:
+						assert.Error(t, err)
+						assert.Equal(t, -1, exitCode)
+					case <-ctx.Done():
+						assert.Fail(t, "call to Wait() took too long to finish")
+					}
+					Terminate(ctx, proc) // Clean up.
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {},
 			} {

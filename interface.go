@@ -68,6 +68,10 @@ type Process interface {
 	// exit code of the process. Returns nil if the process has
 	// completed successfully. If the process has not completed
 	// successfully, Wait will return a non-nil error.
+	//
+	// Note that death by signal does not return the signal code
+	// and instead falls under "some other error" and is returned
+	// as -1.
 	Wait(context.Context) (int, error)
 
 	// Respawn respawns a near-identical version of the process on

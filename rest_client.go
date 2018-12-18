@@ -379,7 +379,11 @@ func (p *restProcess) Wait(ctx context.Context) (int, error) {
 	}
 
 	// TODO: We should try to just get the exit code from the resp.
-	return p.Info(ctx).ExitCode, nil
+	procInfo := p.Info(ctx)
+	if !procInfo.Successful {
+		return procInfo.ExitCode, errors.New("operation failed")
+	}
+	return procInfo.ExitCode, nil
 }
 
 func (p *restProcess) Respawn(ctx context.Context) (Process, error) {
