@@ -22,11 +22,11 @@ compile:
 race:
 	@mkdir -p $(buildDir)
 	go test $(testArgs) -race $(_testPackages) | tee $(buildDir)/race.sink.out
-	@grep -s -q -e "^PASS" $(buildDir)/race.sink.out && ! grep -s -q "^WARNING: DATA RACE" $(buildDir)/race.sink.out
+	@! grep -s -q -e "^FAIL" $(buildDir)/race.sink.out && ! grep -s -q "^WARNING: DATA RACE" $(buildDir)/race.sink.out
 test:
 	@mkdir -p $(buildDir)
 	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) $(_testPackages) | tee $(buildDir)/test.sink.out
-	@grep -s -q -e "^PASS" $(buildDir)/test.sink.out
+	@! grep -s -q -e "^FAIL" $(buildDir)/test.sink.out
 .PHONY: benchmark
 benchmark:
 	@mkdir -p $(buildDir)
