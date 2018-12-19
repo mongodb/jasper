@@ -26,7 +26,7 @@ race:
 test:
 	@mkdir -p $(buildDir)
 	go test $(testArgs) $(if $(DISABLE_COVERAGE),, -cover) $(_testPackages) | tee $(buildDir)/test.sink.out
-	@grep -s -q -e "^PASS" $(buildDir)/test.sink.out
+	@! grep -s -q -e "^FAIL" $(buildDir)/test.sink.out
 .PHONY: benchmark
 benchmark:
 	@mkdir -p $(buildDir)

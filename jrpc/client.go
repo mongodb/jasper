@@ -103,7 +103,7 @@ func (m *jrpcManager) Close(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Success {
+	if resp.Successful {
 		return nil
 	}
 
