@@ -218,7 +218,7 @@ func TestJRPCManager(t *testing.T) {
 					sameProc, err := manager.Get(ctx, proc.ID())
 					require.Equal(t, proc.ID(), sameProc.ID())
 					require.NoError(t, proc.Wait(ctx))
-					assert.NoError(t, manager.Clear(ctx))
+					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
 					assert.Nil(t, nilProc)
 				},
@@ -226,7 +226,7 @@ func TestJRPCManager(t *testing.T) {
 					opts := sleepCreateOpts(20)
 					proc, err := manager.Create(ctx, opts)
 					require.NoError(t, err)
-					assert.NoError(t, manager.Clear(ctx))
+					manager.Clear(ctx)
 					sameProc, err := manager.Get(ctx, proc.ID())
 					assert.Equal(t, proc.ID(), sameProc.ID())
 					require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up
@@ -242,7 +242,7 @@ func TestJRPCManager(t *testing.T) {
 
 					require.NoError(t, lsProc.Wait(ctx))
 
-					assert.NoError(t, manager.Clear(ctx))
+					manager.Clear(ctx)
 
 					sameSleepProc, err := manager.Get(ctx, sleepProc.ID())
 					require.NoError(t, err)
