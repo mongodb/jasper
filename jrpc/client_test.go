@@ -220,7 +220,8 @@ func TestJRPCManager(t *testing.T) {
 					require.NoError(t, err)
 					sameProc, err := manager.Get(ctx, proc.ID())
 					require.Equal(t, proc.ID(), sameProc.ID())
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
 					assert.Nil(t, nilProc)
@@ -243,7 +244,8 @@ func TestJRPCManager(t *testing.T) {
 					sleepProc, err := manager.Create(ctx, sleepOpts)
 					require.NoError(t, err)
 
-					require.NoError(t, lsProc.Wait(ctx))
+					_, err = lsProc.Wait(ctx)
+					require.NoError(t, err)
 
 					manager.Clear(ctx)
 
