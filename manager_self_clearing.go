@@ -27,10 +27,8 @@ type selfClearingProcessManager struct {
 func (m *selfClearingProcessManager) checkProcCapacity(ctx context.Context) error {
 	if len(m.local.manager.procs) == m.maxProcs {
 		// We are at capacity, we can try to perform a clear.
-		err := m.Clear(ctx)
-		if err != nil {
-			return errors.New("encountered an error when clearing dead processes")
-		} else if len(m.local.manager.procs) == m.maxProcs {
+		m.Clear(ctx)
+		if len(m.local.manager.procs) == m.maxProcs {
 			return errors.New("cannot create any more processes")
 		}
 	}
@@ -69,8 +67,8 @@ func (m *selfClearingProcessManager) Get(ctx context.Context, id string) (Proces
 	return proc, errors.WithStack(err)
 }
 
-func (m *selfClearingProcessManager) Clear(ctx context.Context) error {
-	return errors.WithStack(m.local.Clear(ctx))
+func (m *selfClearingProcessManager) Clear(ctx context.Context) {
+	m.local.Clear(ctx)
 }
 
 func (m *selfClearingProcessManager) Close(ctx context.Context) error {

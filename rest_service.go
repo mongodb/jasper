@@ -540,14 +540,7 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) clearManager(rw http.ResponseWriter, r *http.Request) {
-	if err := s.manager.Clear(r.Context()); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
+	s.manager.Clear(r.Context())
 	gimlet.WriteJSON(rw, struct{}{})
 }
 

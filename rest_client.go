@@ -213,23 +213,13 @@ func (c *restClient) Get(ctx context.Context, id string) (Process, error) {
 	}, nil
 }
 
-func (c *restClient) Clear(ctx context.Context) error {
-	req, err := http.NewRequest(http.MethodPost, c.getURL("/clear"), nil)
-	if err != nil {
-		return errors.Wrap(err, "problem building request")
-	}
+func (c *restClient) Clear(ctx context.Context) {
+	// Avoid errors here, because we can't return them anyways, and these errors
+	// should not really ever happen.
+	req, _ := http.NewRequest(http.MethodPost, c.getURL("/clear"), nil)
 	req = req.WithContext(ctx)
 
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "problem making request")
-	}
-
-	if err = handleError(resp); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
+	c.client.Do(req)
 }
 
 func (c *restClient) Close(ctx context.Context) error {

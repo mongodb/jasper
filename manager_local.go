@@ -61,11 +61,11 @@ func (m *localProcessManager) Get(ctx context.Context, id string) (Process, erro
 	return proc, errors.WithStack(err)
 }
 
-func (m *localProcessManager) Clear(ctx context.Context) error {
+func (m *localProcessManager) Clear(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return m.manager.Clear(ctx)
+	m.manager.Clear(ctx)
 }
 
 func (m *localProcessManager) Close(ctx context.Context) error {
