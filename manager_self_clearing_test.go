@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func (m *selfClearingProcessManager) registerBasedCreate(ctx context.Context, t *testing.T, opts *CreateOptions) (Process, error) {
+func registerBasedCreate(ctx context.Context, m *selfClearingProcessManager, t *testing.T, opts *CreateOptions) (Process, error) {
 	sleep, err := newBlockingProcess(ctx, sleepCreateOpts(10))
 	require.NoError(t, err)
 	require.NotNil(t, sleep)
@@ -21,7 +21,7 @@ func (m *selfClearingProcessManager) registerBasedCreate(ctx context.Context, t 
 	return sleep, err
 }
 
-func (m *selfClearingProcessManager) pureCreate(ctx context.Context, t *testing.T, opts *CreateOptions) (Process, error) {
+func pureCreate(ctx context.Context, m *selfClearingProcessManager, t *testing.T, opts *CreateOptions) (Process, error) {
 	return m.Create(ctx, opts)
 }
 
@@ -32,36 +32,36 @@ func fillUp(ctx context.Context, t *testing.T, manager *selfClearingProcessManag
 }
 
 func TestSelfClearingManager(t *testing.T) {
-	for mname, createFunc := range map[string]func(*selfClearingProcessManager, context.Context, *testing.T, *CreateOptions) (Process, error){
-		"Create":   (*selfClearingProcessManager).pureCreate,
-		"Register": (*selfClearingProcessManager).registerBasedCreate,
+	for mname, createFunc := range map[string]func(context.Context, *selfClearingProcessManager, *testing.T, *CreateOptions) (Process, error){
+		"Create":   pureCreate,
+		"Register": registerBasedCreate,
 	} {
 		t.Run(mname, func(t *testing.T) {
 			for name, test := range map[string]func(context.Context, *testing.T, *selfClearingProcessManager){
 				"SucceedsWhenFree": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager) {
-					proc, err := createFunc(manager, ctx, t, trueCreateOpts())
+					proc, err := createFunc(ctx, manager, t, trueCreateOpts())
 					assert.NoError(t, err)
 					assert.NotNil(t, proc)
 				},
 				"ErrorsWhenFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager) {
 					fillUp(ctx, t, manager, manager.maxProcs)
-					sleep, err := createFunc(manager, ctx, t, sleepCreateOpts(10))
+					sleep, err := createFunc(ctx, manager, t, sleepCreateOpts(10))
 					assert.Error(t, err)
 					assert.Nil(t, sleep)
 				},
 				"PartiallySucceedsWhenAlmostFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager) {
 					fillUp(ctx, t, manager, manager.maxProcs-1)
-					firstSleep, err := createFunc(manager, ctx, t, sleepCreateOpts(10))
+					firstSleep, err := createFunc(ctx, manager, t, sleepCreateOpts(10))
 					assert.NoError(t, err)
 					assert.NotNil(t, firstSleep)
-					secondSleep, err := createFunc(manager, ctx, t, sleepCreateOpts(10))
+					secondSleep, err := createFunc(ctx, manager, t, sleepCreateOpts(10))
 					assert.Error(t, err)
 					assert.Nil(t, secondSleep)
 				},
 				"InitialFailureIsResolvedByWaiting": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager) {
 					fillUp(ctx, t, manager, manager.maxProcs)
 					sleepOpts := sleepCreateOpts(100)
-					sleepProc, err := createFunc(manager, ctx, t, sleepOpts)
+					sleepProc, err := createFunc(ctx, manager, t, sleepOpts)
 					assert.Error(t, err)
 					assert.Nil(t, sleepProc)
 					otherSleepProcs, err := manager.List(ctx, All)
@@ -69,7 +69,7 @@ func TestSelfClearingManager(t *testing.T) {
 					for _, otherSleepProc := range otherSleepProcs {
 						require.NoError(t, otherSleepProc.Wait(ctx))
 					}
-					sleepProc, err = createFunc(manager, ctx, t, sleepOpts)
+					sleepProc, err = createFunc(ctx, manager, t, sleepOpts)
 					assert.NoError(t, err)
 					assert.NotNil(t, sleepProc)
 				},
