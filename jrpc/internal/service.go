@@ -218,6 +218,12 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 	return ConvertProcessInfo(newProc.Info(ctx)), nil
 }
 
+func (s *jasperService) Clear(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
+	s.manager.Clear(ctx)
+
+	return &OperationOutcome{Success: true, Text: "service cleared", ExitCode: 0}, nil
+}
+
 func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered closing service")

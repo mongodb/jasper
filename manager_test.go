@@ -19,21 +19,16 @@ func TestManagerInterface(t *testing.T) {
 	defer cancel()
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
-		"Basic/NoLock": func(ctx context.Context, t *testing.T) Manager {
-			return &basicProcessManager{
-				procs: map[string]Process{},
-			}
-		},
 		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
 				procs: map[string]Process{},
 			}
 		},
-		"Basic/Lock": func(ctx context.Context, t *testing.T) Manager {
+		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
 			return NewLocalManager()
 		},
-		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			return NewLocalManagerBlockingProcesses()
+		"Basic/Lock/SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+			return NewSelfClearingProcessManager(10)
 		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
 			srv, port := makeAndStartService(ctx, httpClient)
@@ -314,6 +309,47 @@ func TestManagerInterface(t *testing.T) {
 					case <-closersDone:
 						assert.Equal(t, 1, count)
 					}
+				},
+				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					opts := trueCreateOpts()
+					proc, err := manager.Create(ctx, opts)
+					require.NoError(t, err)
+					sameProc, err := manager.Get(ctx, proc.ID())
+					require.Equal(t, proc.ID(), sameProc.ID())
+					require.NoError(t, proc.Wait(ctx))
+					manager.Clear(ctx)
+					nilProc, err := manager.Get(ctx, proc.ID())
+					assert.Nil(t, nilProc)
+				},
+				"ClearIsANoOpForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					opts := sleepCreateOpts(20)
+					proc, err := manager.Create(ctx, opts)
+					require.NoError(t, err)
+					manager.Clear(ctx)
+					sameProc, err := manager.Get(ctx, proc.ID())
+					assert.Equal(t, proc.ID(), sameProc.ID())
+					require.NoError(t, Terminate(ctx, proc)) // Clean up
+				},
+				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					trueOpts := trueCreateOpts()
+					lsProc, err := manager.Create(ctx, trueOpts)
+					require.NoError(t, err)
+
+					sleepOpts := sleepCreateOpts(20)
+					sleepProc, err := manager.Create(ctx, sleepOpts)
+					require.NoError(t, err)
+
+					require.NoError(t, lsProc.Wait(ctx))
+
+					manager.Clear(ctx)
+
+					sameSleepProc, err := manager.Get(ctx, sleepProc.ID())
+					require.NoError(t, err)
+					assert.Equal(t, sleepProc.ID(), sameSleepProc.ID())
+
+					nilProc, err := manager.Get(ctx, lsProc.ID())
+					assert.Nil(t, nilProc)
+					require.NoError(t, Terminate(ctx, sleepProc)) // Clean up
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {

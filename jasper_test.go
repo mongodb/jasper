@@ -148,6 +148,7 @@ type MockManager struct {
 	FailList     bool
 	FailGroup    bool
 	FailGet      bool
+	FailClear    bool
 	FailClose    bool
 	Process      *MockProcess
 	Array        []Process
@@ -189,6 +190,10 @@ func (m *MockManager) Get(_ context.Context, name string) (Process, error) {
 	}
 
 	return m.Process, nil
+}
+
+func (m *MockManager) Clear(_ context.Context) {
+	return
 }
 
 func (m *MockManager) Close(_ context.Context) error {

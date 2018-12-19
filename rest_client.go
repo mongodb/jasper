@@ -213,6 +213,15 @@ func (c *restClient) Get(ctx context.Context, id string) (Process, error) {
 	}, nil
 }
 
+func (c *restClient) Clear(ctx context.Context) {
+	// Avoid errors here, because we can't return them anyways, and these errors
+	// should not really ever happen.
+	req, _ := http.NewRequest(http.MethodPost, c.getURL("/clear"), nil)
+	req = req.WithContext(ctx)
+
+	c.client.Do(req)
+}
+
 func (c *restClient) Close(ctx context.Context) error {
 	req, err := http.NewRequest(http.MethodDelete, c.getURL("/close"), nil)
 	if err != nil {

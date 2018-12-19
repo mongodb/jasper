@@ -94,6 +94,10 @@ func (m *jrpcManager) Get(ctx context.Context, name string) (jasper.Process, err
 	return &jrpcProcess{client: m.client, info: info}, nil
 }
 
+func (m *jrpcManager) Clear(ctx context.Context) {
+	m.client.Clear(ctx, &empty.Empty{})
+}
+
 func (m *jrpcManager) Close(ctx context.Context) error {
 	resp, err := m.client.Close(ctx, &empty.Empty{})
 	if err != nil {
