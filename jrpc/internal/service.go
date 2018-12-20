@@ -171,7 +171,8 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 		}, err
 	}
 
-	if err = proc.Wait(ctx); err != nil {
+	exitCode, err := proc.Wait(ctx)
+	if err != nil && exitCode == -1 {
 		err = errors.Wrap(err, "problem encountered while waiting")
 		return &OperationOutcome{
 			Success:  false,
@@ -183,7 +184,7 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	return &OperationOutcome{
 		Success:  true,
 		Text:     fmt.Sprintf("'%s' operation complete", id.Value),
-		ExitCode: int32(proc.Info(ctx).ExitCode),
+		ExitCode: int32(exitCode),
 	}, nil
 }
 

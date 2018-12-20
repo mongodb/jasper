@@ -49,7 +49,7 @@ func TerminateAll(ctx context.Context, procs []Process) error {
 	}
 
 	for _, proc := range procs {
-		_ = proc.Wait(ctx)
+		proc.Wait(ctx)
 	}
 
 	return catcher.Resolve()
@@ -71,7 +71,7 @@ func KillAll(ctx context.Context, procs []Process) error {
 	}
 
 	for _, proc := range procs {
-		_ = proc.Wait(ctx)
+		proc.Wait(ctx)
 	}
 
 	return catcher.Resolve()

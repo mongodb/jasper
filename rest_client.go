@@ -361,24 +361,29 @@ func (p *restProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	return nil
 }
 
-func (p *restProcess) Wait(ctx context.Context) error {
+func (p *restProcess) Wait(ctx context.Context) (int, error) {
 	req, err := http.NewRequest(http.MethodGet, p.client.getURL("/process/%s/wait", p.id), nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return -1, errors.Wrap(err, "problem building request")
 	}
 
 	req = req.WithContext(ctx)
 
 	resp, err := p.client.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "problem making request")
+		return -1, errors.Wrap(err, "problem making request")
 	}
 
 	if err = handleError(resp); err != nil {
-		return errors.WithStack(err)
+		return -1, errors.WithStack(err)
 	}
 
-	return nil
+	var exitCode int
+	gimlet.GetJSON(resp.Body, &exitCode)
+	if exitCode != 0 {
+		return exitCode, errors.New("operation failed")
+	}
+	return exitCode, nil
 }
 
 func (p *restProcess) Respawn(ctx context.Context) (Process, error) {

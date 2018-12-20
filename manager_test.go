@@ -104,7 +104,8 @@ func TestManagerInterface(t *testing.T) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
 					require.NoError(t, err)
 
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 
 					listOut, err := manager.List(ctx, Successful)
 					assert.NoError(t, err)
@@ -116,7 +117,8 @@ func TestManagerInterface(t *testing.T) {
 				"ListReturnsOneFailedCommand": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.Create(ctx, falseCreateOpts())
 					require.NoError(t, err)
-					assert.Error(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.Error(t, err)
 
 					listOut, err := manager.List(ctx, Failed)
 					assert.NoError(t, err)
@@ -183,7 +185,8 @@ func TestManagerInterface(t *testing.T) {
 				"CloseErrorsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
 					procs, err := createProcs(ctx, trueCreateOpts(), manager, 10)
 					for _, p := range procs {
-						assert.NoError(t, p.Wait(ctx))
+						_, err := p.Wait(ctx)
+						assert.NoError(t, err)
 					}
 
 					assert.NoError(t, err)
@@ -302,7 +305,8 @@ func TestManagerInterface(t *testing.T) {
 					opts.closers = append(opts.closers, func() { closersDone <- true })
 					proc, err := manager.Create(ctx, opts)
 					assert.NoError(t, err)
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 					select {
 					case <-ctx.Done():
 						assert.Fail(t, "process took too long to run closers")
@@ -316,7 +320,8 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, err)
 					sameProc, err := manager.Get(ctx, proc.ID())
 					require.Equal(t, proc.ID(), sameProc.ID())
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
 					assert.Nil(t, nilProc)
@@ -339,7 +344,8 @@ func TestManagerInterface(t *testing.T) {
 					sleepProc, err := manager.Create(ctx, sleepOpts)
 					require.NoError(t, err)
 
-					require.NoError(t, lsProc.Wait(ctx))
+					_, err = lsProc.Wait(ctx)
+					require.NoError(t, err)
 
 					manager.Clear(ctx)
 

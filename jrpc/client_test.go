@@ -3,6 +3,7 @@ package jrpc
 import (
 	"context"
 	"runtime"
+	"syscall"
 	"testing"
 	"time"
 
@@ -93,7 +94,8 @@ func TestJRPCManager(t *testing.T) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
 					require.NoError(t, err)
 
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 
 					listOut, err := manager.List(ctx, jasper.Successful)
 					assert.NoError(t, err)
@@ -175,7 +177,8 @@ func TestJRPCManager(t *testing.T) {
 
 					procs, err := createProcs(ctx, trueCreateOpts(), manager, 10)
 					for _, p := range procs {
-						assert.NoError(t, p.Wait(ctx))
+						_, err := p.Wait(ctx)
+						assert.NoError(t, err)
 					}
 
 					assert.NoError(t, err)
@@ -217,7 +220,8 @@ func TestJRPCManager(t *testing.T) {
 					require.NoError(t, err)
 					sameProc, err := manager.Get(ctx, proc.ID())
 					require.Equal(t, proc.ID(), sameProc.ID())
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
 					assert.Nil(t, nilProc)
@@ -240,7 +244,8 @@ func TestJRPCManager(t *testing.T) {
 					sleepProc, err := manager.Create(ctx, sleepOpts)
 					require.NoError(t, err)
 
-					require.NoError(t, lsProc.Wait(ctx))
+					_, err = lsProc.Wait(ctx)
+					require.NoError(t, err)
 
 					manager.Clear(ctx)
 
@@ -381,7 +386,8 @@ func TestJRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					time.Sleep(10 * time.Millisecond) // give the process time to start background machinery
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 				},
 				"WaitReturnsWithCancledContext": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
@@ -392,7 +398,8 @@ func TestJRPCProcess(t *testing.T) {
 					assert.True(t, proc.Running(ctx))
 					assert.NoError(t, err)
 					pcancel()
-					assert.Error(t, proc.Wait(pctx))
+					_, err = proc.Wait(pctx)
+					assert.Error(t, err)
 				},
 				"RegisterTriggerErrorsForNil": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
@@ -403,34 +410,40 @@ func TestJRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					assert.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					assert.NoError(t, err)
 				},
 				"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 					procExitCode := proc.Info(ctx).ExitCode
 
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.Equal(t, procExitCode, newProc.Info(ctx).ExitCode)
 				},
 				"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					newProc, err := proc.Respawn(ctx)
 					assert.NoError(t, err)
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.True(t, newProc.Info(ctx).Successful)
 				},
 				"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
@@ -441,7 +454,8 @@ func TestJRPCProcess(t *testing.T) {
 
 					newProc, err := proc.Respawn(ctx)
 					assert.NoError(t, err)
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.True(t, newProc.Info(ctx).Successful)
 				},
 				"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
@@ -449,14 +463,64 @@ func TestJRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					require.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
 					assert.True(t, newProc.Running(ctx))
-					require.NoError(t, newProc.Wait(ctx))
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 				},
+				"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, trueCreateOpts())
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					exitCode, err := proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Equal(t, 0, exitCode)
+				},
+				"WaitGivesFailureExitCode": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, falseCreateOpts())
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.Equal(t, 1, exitCode)
+				},
+				"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, sleepCreateOpts(100))
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					proc.Signal(ctx, syscall.SIGTERM)
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.Equal(t, -1, exitCode)
+				},
+				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					cctx, cancel := context.WithCancel(ctx)
+					proc, err := makep(ctx, sleepCreateOpts(100))
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+
+					var exitCode int
+					waitFinished := make(chan bool)
+					go func() {
+						exitCode, err = proc.Wait(cctx)
+						waitFinished <- true
+					}()
+					cancel()
+					select {
+					case <-waitFinished:
+						assert.Error(t, err)
+						assert.Equal(t, -1, exitCode)
+					case <-ctx.Done():
+						assert.Fail(t, "call to Wait() took too long to finish")
+					}
+					jasper.Terminate(ctx, proc) // Clean up.
+				},
+
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 
@@ -470,7 +534,8 @@ func TestJRPCProcess(t *testing.T) {
 					require.NoError(t, err)
 
 					firstID := proc.ID()
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 					proc.(*jrpcProcess).info.Id += "_foo"
 					proc.(*jrpcProcess).info.Complete = false
@@ -483,7 +548,8 @@ func TestJRPCProcess(t *testing.T) {
 					require.NoError(t, err)
 
 					firstID := proc.ID()
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 					proc.(*jrpcProcess).info.Id += "_foo"
 					proc.(*jrpcProcess).info.Complete = false
 					require.NotEqual(t, firstID, proc.ID())
@@ -494,7 +560,8 @@ func TestJRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 
-					assert.NoError(t, proc.Wait(ctx))
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 
 					assert.True(t, proc.Complete(ctx))
 
