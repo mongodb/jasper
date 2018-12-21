@@ -289,7 +289,7 @@ func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownlo
 		return &OperationOutcome{
 			Success: false,
 			Text:    errors.Wrap(err, "problem validating MongoDB download options").Error(),
-		}, errors.Wrap(err, "problem validating MongoDB download options")
+		}, nil
 	}
 
 	if err := jasper.SetupDownloadMongoDBReleases(ctx, s.cache, jopts); err != nil {
@@ -307,7 +307,7 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 		return &OperationOutcome{
 			Success: false,
 			Text:    errors.Wrap(err, "problem validating cache options").Error(),
-		}, errors.Wrap(err, "problem validating cache options")
+		}, nil
 	}
 
 	s.cacheMutex.Lock()
