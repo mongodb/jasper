@@ -141,7 +141,7 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 			Success:  false,
 			Text:     err.Error(),
 			ExitCode: -2,
-		}, err
+		}, nil
 	}
 
 	if err = proc.Signal(ctx, sig.Signal.Export()); err != nil {
@@ -150,7 +150,7 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 			Success:  false,
 			ExitCode: -3,
 			Text:     err.Error(),
-		}, err
+		}, nil
 	}
 
 	return &OperationOutcome{
@@ -168,7 +168,7 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 			Success:  false,
 			Text:     err.Error(),
 			ExitCode: -2,
-		}, err
+		}, nil
 	}
 
 	exitCode, err := proc.Wait(ctx)
@@ -178,7 +178,7 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 			Success:  false,
 			Text:     err.Error(),
 			ExitCode: -3,
-		}, err
+		}, nil
 	}
 
 	return &OperationOutcome{
@@ -286,7 +286,10 @@ func (s *jasperService) ResetTags(ctx context.Context, id *JasperProcessID) (*Op
 func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownloadOptions) (*OperationOutcome, error) {
 	jopts := opts.Export()
 	if err := jopts.Validate(); err != nil {
-		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem validating MongoDB download options").Error()}, errors.Wrap(err, "problem validating MongoDB download options")
+		return &OperationOutcome{
+			Success: false,
+			Text:    errors.Wrap(err, "problem validating MongoDB download options").Error(),
+		}, errors.Wrap(err, "problem validating MongoDB download options")
 	}
 
 	if err := jasper.SetupDownloadMongoDBReleases(ctx, s.cache, jopts); err != nil {
@@ -301,7 +304,10 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 	jopts := opts.Export()
 	if err := jopts.Validate(); err != nil {
 		err = errors.Wrap(err, "problem validating cache options")
-		return &OperationOutcome{Success: false, Text: errors.Wrap(err, "problem validating cache options").Error()}, errors.Wrap(err, "problem validating cache options")
+		return &OperationOutcome{
+			Success: false,
+			Text:    errors.Wrap(err, "problem validating cache options").Error(),
+		}, errors.Wrap(err, "problem validating cache options")
 	}
 
 	s.cacheMutex.Lock()

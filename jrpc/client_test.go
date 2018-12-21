@@ -3,6 +3,7 @@ package jrpc
 import (
 	"context"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -26,16 +27,6 @@ func TestJRPCManager(t *testing.T) {
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.Manager{
 		"Blocking": func(ctx context.Context, t *testing.T) jasper.Manager {
-			mngr := jasper.NewLocalManager()
-			addr, err := startJRPC(ctx, mngr)
-			require.NoError(t, err)
-
-			client, err := getClient(ctx, addr)
-			require.NoError(t, err)
-
-			return client
-		},
-		"NotBlocking": func(ctx context.Context, t *testing.T) jasper.Manager {
 			mngr := jasper.NewLocalManager()
 			addr, err := startJRPC(ctx, mngr)
 			require.NoError(t, err)
@@ -184,6 +175,18 @@ func TestJRPCManager(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Error(t, manager.Close(ctx))
 				},
+				"WaitingOnNonExistentProcessErrors": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					proc, err := manager.Create(ctx, trueCreateOpts())
+
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
+
+					manager.Clear(ctx)
+
+					_, err = proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.True(t, strings.Contains(err.Error(), "problem finding process"))
+				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 
@@ -290,19 +293,6 @@ func TestJRPCProcess(t *testing.T) {
 
 			return client.Create(ctx, opts)
 
-		},
-		"NotBlocking": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
-			mngr := jasper.NewLocalManager()
-			addr, err := startJRPC(ctx, mngr)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			client, err := getClient(ctx, addr)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			return client.Create(ctx, opts)
 		},
 	} {
 		t.Run(cname, func(t *testing.T) {
@@ -520,6 +510,17 @@ func TestJRPCProcess(t *testing.T) {
 					}
 					jasper.Terminate(ctx, proc) // Clean up.
 				},
+				"CallingSignalOnDeadProcessDoesError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
+
+					err = proc.Signal(ctx, syscall.SIGTERM)
+					require.Error(t, err)
+					assert.True(t, strings.Contains(err.Error(), "cannot signal a process that has terminated"))
+				},
 
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
@@ -564,7 +565,6 @@ func TestJRPCProcess(t *testing.T) {
 					assert.NoError(t, err)
 
 					assert.True(t, proc.Complete(ctx))
-
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 			} {
