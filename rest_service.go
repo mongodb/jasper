@@ -172,7 +172,11 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	gimlet.WriteJSON(rw, proc.Info(ctx))
+	// Make sure that we don't hang for _too_ long if the process is just very
+	// long/infinite.
+	cctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	defer cancel()
+	gimlet.WriteJSON(rw, proc.Info(cctx))
 }
 
 func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
