@@ -172,7 +172,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	gimlet.WriteJSON(rw, proc.Info(r.Context()))
+	gimlet.WriteJSON(rw, proc.Info(ctx))
 }
 
 func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
