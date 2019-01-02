@@ -348,9 +348,10 @@ func TestJRPCProcess(t *testing.T) {
 				},
 				"InfoHasMatchingID": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
-					if assert.NoError(t, err) {
-						assert.Equal(t, proc.ID(), proc.Info(ctx).ID)
-					}
+					require.NoError(t, err)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+					assert.Equal(t, proc.ID(), proc.Info(ctx).ID)
 				},
 				"ResetTags": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
