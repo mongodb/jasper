@@ -416,7 +416,7 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 	if err := newProc.RegisterTrigger(ctx, func(_ ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if !getProcInfoNoHang(proc).Complete {
+		if !getProcInfoNoHang(newProc).Complete {
 			writeError(rw, gimlet.ErrorResponse{
 				StatusCode: http.StatusInternalServerError,
 				Message: errors.Wrap(

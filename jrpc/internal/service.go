@@ -58,6 +58,12 @@ func (s *jasperService) backgroundPrune() {
 	}
 }
 
+func getProcInfoNoHang(p jasper.Process) *ProcessInfo {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	return ConvertProcessInfo(p.Info(ctx))
+}
+
 type jasperService struct {
 	hostID     string
 	manager    jasper.Manager
@@ -99,9 +105,7 @@ func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*Proce
 		cancel()
 	}
 
-	ccctx, ccancel := context.WithTimeout(ctx, 10*time.Millisecond)
-	defer ccancel()
-	return ConvertProcessInfo(proc.Info(ccctx)), nil
+	return getProcInfoNoHang(proc), nil
 }
 
 func (s *jasperService) List(f *Filter, stream JasperProcessManager_ListServer) error {
@@ -116,7 +120,7 @@ func (s *jasperService) List(f *Filter, stream JasperProcessManager_ListServer) 
 			return errors.New("operation canceled")
 		}
 
-		if err := stream.Send(ConvertProcessInfo(p.Info(ctx))); err != nil {
+		if err := stream.Send(getProcInfoNoHang(p)); err != nil {
 			return errors.Wrap(err, "problem sending process info")
 		}
 	}
@@ -136,7 +140,7 @@ func (s *jasperService) Group(t *TagName, stream JasperProcessManager_GroupServe
 			return errors.New("operation canceled")
 		}
 
-		if err := stream.Send(ConvertProcessInfo(p.Info(ctx))); err != nil {
+		if err := stream.Send(getProcInfoNoHang(p)); err != nil {
 			return errors.Wrap(err, "problem sending process info")
 		}
 	}
@@ -150,7 +154,7 @@ func (s *jasperService) Get(ctx context.Context, id *JasperProcessID) (*ProcessI
 		return nil, errors.Wrapf(err, "problem fetching process '%s'", id.Value)
 	}
 
-	return ConvertProcessInfo(proc.Info(ctx)), nil
+	return getProcInfoNoHang(proc), nil
 }
 
 func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*OperationOutcome, error) {
@@ -176,7 +180,7 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 	return &OperationOutcome{
 		Success:  true,
 		Text:     fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID),
-		ExitCode: int32(proc.Info(ctx).ExitCode),
+		ExitCode: int32(getProcInfoNoHang(proc).ExitCode),
 	}, nil
 }
 
@@ -230,13 +234,14 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 	if err := newProc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if !newProc.Info(ctx).Complete {
-			return ConvertProcessInfo(newProc.Info(ctx)), nil
+		newProcInfo := getProcInfoNoHang(newProc)
+		if !newProcInfo.Complete {
+			return newProcInfo, nil
 		}
 		cancel()
 	}
 
-	return ConvertProcessInfo(newProc.Info(ctx)), nil
+	return getProcInfoNoHang(newProc), nil
 }
 
 func (s *jasperService) Clear(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
@@ -371,7 +376,7 @@ func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProces
 	}
 
 	urls := []string{}
-	for _, logger := range proc.Info(ctx).Options.Output.Loggers {
+	for _, logger := range getProcInfoNoHang(proc).Export().Options.Output.Loggers {
 		if logger.Type == jasper.LogBuildloggerV2 || logger.Type == jasper.LogBuildloggerV3 {
 			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
 		}
