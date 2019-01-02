@@ -75,13 +75,33 @@ func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResp
 }
 
 func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*ProcessInfo, error) {
-	jopt := opts.Export()
-	proc, err := s.manager.Create(context.Background(), jopt)
+	jopts := opts.Export()
+
+	var cctx context.Context
+	var cancel context.CancelFunc
+	if jopts.Timeout > 0 {
+		cctx, cancel = context.WithTimeout(context.Background(), jopts.Timeout)
+	} else {
+		cctx, cancel = context.WithCancel(context.Background())
+	}
+
+	proc, err := s.manager.Create(cctx, jopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return ConvertProcessInfo(proc.Info(ctx)), nil
+	if err := proc.RegisterTrigger(cctx, func(_ jasper.ProcessInfo) {
+		cancel()
+	}); err != nil {
+		if !proc.Info(cctx).Complete {
+			return ConvertProcessInfo(proc.Info(cctx)), nil
+		}
+		cancel()
+	}
+
+	ccctx, ccancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	defer ccancel()
+	return ConvertProcessInfo(proc.Info(ccctx)), nil
 }
 
 func (s *jasperService) List(f *Filter, stream JasperProcessManager_ListServer) error {
