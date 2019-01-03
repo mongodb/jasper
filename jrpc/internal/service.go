@@ -59,7 +59,7 @@ func (s *jasperService) backgroundPrune() {
 }
 
 func getProcInfoNoHang(p jasper.Process) *ProcessInfo {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	return ConvertProcessInfo(p.Info(ctx))
 }

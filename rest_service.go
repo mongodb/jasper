@@ -106,7 +106,7 @@ func (s *Service) backgroundPrune() {
 }
 
 func getProcInfoNoHang(p Process) ProcessInfo {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	return p.Info(ctx)
 }

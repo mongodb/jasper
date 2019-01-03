@@ -88,7 +88,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Nil(t, output)
 				},
 				"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, manager Manager) {
-					procs, err := createProcs(ctx, sleepCreateOpts(1), manager, 10)
+					procs, err := createProcs(ctx, sleepCreateOpts(10), manager, 10)
 					assert.NoError(t, err)
 					assert.Len(t, procs, 10)
 
