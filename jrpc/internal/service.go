@@ -83,6 +83,9 @@ func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResp
 func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*ProcessInfo, error) {
 	jopts := opts.Export()
 
+	// Spawn a new context so that the process' context is not potentially
+	// canceled by the request's. See how rest_service.go's createProcess() does
+	// this same thing.
 	var cctx context.Context
 	var cancel context.CancelFunc
 	if jopts.Timeout > 0 {
