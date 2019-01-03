@@ -105,8 +105,8 @@ func (s *Service) backgroundPrune() {
 	}
 }
 
-func getProcInfoNoHang(p Process) ProcessInfo {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+func getProcInfoNoHang(ctx context.Context, p Process) ProcessInfo {
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 	return p.Info(ctx)
 }
@@ -168,7 +168,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		// If we get an error registering a trigger, then we should make sure that
 		// the reason for it isn't just because the process has exited already,
 		// since that should not be considered an error.
-		if !getProcInfoNoHang(proc).Complete {
+		if !getProcInfoNoHang(ctx, proc).Complete {
 			writeError(rw, gimlet.ErrorResponse{
 				StatusCode: http.StatusInternalServerError,
 				Message:    errors.Wrap(err, "problem managing resources").Error(),
@@ -178,7 +178,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	gimlet.WriteJSON(rw, getProcInfoNoHang(proc))
+	gimlet.WriteJSON(rw, getProcInfoNoHang(ctx, proc))
 }
 
 func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
@@ -194,7 +194,7 @@ func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := getProcInfoNoHang(proc)
+	info := getProcInfoNoHang(ctx, proc)
 	urls := []string{}
 	for _, logger := range info.Options.Output.Loggers {
 		if logger.Type == LogBuildloggerV2 || logger.Type == LogBuildloggerV3 {
@@ -236,7 +236,7 @@ func (s *Service) listProcesses(rw http.ResponseWriter, r *http.Request) {
 
 	out := []ProcessInfo{}
 	for _, proc := range procs {
-		out = append(out, getProcInfoNoHang(proc))
+		out = append(out, getProcInfoNoHang(ctx, proc))
 	}
 
 	gimlet.WriteJSON(rw, out)
@@ -258,7 +258,7 @@ func (s *Service) listGroupMembers(rw http.ResponseWriter, r *http.Request) {
 
 	out := []ProcessInfo{}
 	for _, proc := range procs {
-		out = append(out, getProcInfoNoHang(proc))
+		out = append(out, getProcInfoNoHang(ctx, proc))
 	}
 
 	gimlet.WriteJSON(rw, out)
@@ -276,7 +276,7 @@ func (s *Service) getProcess(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := getProcInfoNoHang(proc)
+	info := getProcInfoNoHang(ctx, proc)
 	if info.ID == "" {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -300,7 +300,7 @@ func (s *Service) processMetrics(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := getProcInfoNoHang(proc)
+	info := getProcInfoNoHang(ctx, proc)
 	gimlet.WriteJSON(rw, message.CollectProcessInfoWithChildren(int32(info.PID)))
 }
 
@@ -416,7 +416,7 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 	if err := newProc.RegisterTrigger(ctx, func(_ ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if !getProcInfoNoHang(newProc).Complete {
+		if !getProcInfoNoHang(ctx, newProc).Complete {
 			writeError(rw, gimlet.ErrorResponse{
 				StatusCode: http.StatusInternalServerError,
 				Message: errors.Wrap(
@@ -427,7 +427,7 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	info := getProcInfoNoHang(newProc)
+	info := getProcInfoNoHang(ctx, newProc)
 	if info.ID == "" {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -515,7 +515,7 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := getProcInfoNoHang(proc)
+	info := getProcInfoNoHang(ctx, proc)
 	// Implicitly assumes that there's at most 1 in-memory logger.
 	var inMemorySender *send.InMemorySender
 	for _, logger := range info.Options.Output.Loggers {
