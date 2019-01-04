@@ -364,6 +364,8 @@ func TestProcessImplementations(t *testing.T) {
 					}
 
 					newProc, err := proc.Respawn(ctx)
+					require.NoError(t, err)
+					require.NotNil(t, newProc)
 					newProc.RegisterTrigger(ctx, func(pIfno ProcessInfo) {
 						count++
 						countIncremented <- true

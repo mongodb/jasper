@@ -76,6 +76,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.cmd = cmd
 		p.Unlock()
 
+		// cmd.Wait() has returned if we get past this line.
 		err := <-errs
 		p.Lock()
 		p.err = err
@@ -83,6 +84,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.info.IsRunning = false
 		p.info.Complete = true
 		p.info.ExitCode = p.cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+		p.triggers.Run(p.info)
 		p.Unlock()
 	}()
 
