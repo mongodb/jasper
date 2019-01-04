@@ -36,6 +36,8 @@ func TestProcessImplementations(t *testing.T) {
 	for cname, makeProc := range map[string]processConstructor{
 		"BlockingNoLock":   newBlockingProcess,
 		"BlockingWithLock": makeLockingProcess(newBlockingProcess),
+		"BasicNoLock":      newBasicProcess,
+		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
 			srv, port := makeAndStartService(ctx, httpClient)
 			if port < 100 || srv == nil {
