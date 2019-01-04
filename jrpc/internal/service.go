@@ -58,6 +58,12 @@ func (s *jasperService) backgroundPrune() {
 	}
 }
 
+func getProcInfoNoHang(ctx context.Context, p jasper.Process) *ProcessInfo {
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	return ConvertProcessInfo(p.Info(ctx))
+}
+
 type jasperService struct {
 	hostID     string
 	manager    jasper.Manager
@@ -75,13 +81,34 @@ func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResp
 }
 
 func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*ProcessInfo, error) {
-	jopt := opts.Export()
-	proc, err := s.manager.Create(context.Background(), jopt)
+	jopts := opts.Export()
+
+	// Spawn a new context so that the process' context is not potentially
+	// canceled by the request's. See how rest_service.go's createProcess() does
+	// this same thing.
+	var cctx context.Context
+	var cancel context.CancelFunc
+	if jopts.Timeout > 0 {
+		cctx, cancel = context.WithTimeout(context.Background(), jopts.Timeout)
+	} else {
+		cctx, cancel = context.WithCancel(context.Background())
+	}
+
+	proc, err := s.manager.Create(cctx, jopts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return ConvertProcessInfo(proc.Info(ctx)), nil
+	if err := proc.RegisterTrigger(cctx, func(_ jasper.ProcessInfo) {
+		cancel()
+	}); err != nil {
+		if !proc.Info(cctx).Complete {
+			return ConvertProcessInfo(proc.Info(cctx)), nil
+		}
+		cancel()
+	}
+
+	return getProcInfoNoHang(cctx, proc), nil
 }
 
 func (s *jasperService) List(f *Filter, stream JasperProcessManager_ListServer) error {
@@ -96,7 +123,7 @@ func (s *jasperService) List(f *Filter, stream JasperProcessManager_ListServer) 
 			return errors.New("operation canceled")
 		}
 
-		if err := stream.Send(ConvertProcessInfo(p.Info(ctx))); err != nil {
+		if err := stream.Send(getProcInfoNoHang(ctx, p)); err != nil {
 			return errors.Wrap(err, "problem sending process info")
 		}
 	}
@@ -116,7 +143,7 @@ func (s *jasperService) Group(t *TagName, stream JasperProcessManager_GroupServe
 			return errors.New("operation canceled")
 		}
 
-		if err := stream.Send(ConvertProcessInfo(p.Info(ctx))); err != nil {
+		if err := stream.Send(getProcInfoNoHang(ctx, p)); err != nil {
 			return errors.Wrap(err, "problem sending process info")
 		}
 	}
@@ -130,7 +157,7 @@ func (s *jasperService) Get(ctx context.Context, id *JasperProcessID) (*ProcessI
 		return nil, errors.Wrapf(err, "problem fetching process '%s'", id.Value)
 	}
 
-	return ConvertProcessInfo(proc.Info(ctx)), nil
+	return getProcInfoNoHang(ctx, proc), nil
 }
 
 func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*OperationOutcome, error) {
@@ -156,7 +183,7 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 	return &OperationOutcome{
 		Success:  true,
 		Text:     fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID),
-		ExitCode: int32(proc.Info(ctx).ExitCode),
+		ExitCode: int32(getProcInfoNoHang(ctx, proc).ExitCode),
 	}, nil
 }
 
@@ -210,13 +237,14 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 	if err := newProc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if !newProc.Info(ctx).Complete {
-			return ConvertProcessInfo(newProc.Info(ctx)), nil
+		newProcInfo := getProcInfoNoHang(ctx, newProc)
+		if !newProcInfo.Complete {
+			return newProcInfo, nil
 		}
 		cancel()
 	}
 
-	return ConvertProcessInfo(newProc.Info(ctx)), nil
+	return getProcInfoNoHang(ctx, newProc), nil
 }
 
 func (s *jasperService) Clear(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
@@ -351,7 +379,7 @@ func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProces
 	}
 
 	urls := []string{}
-	for _, logger := range proc.Info(ctx).Options.Output.Loggers {
+	for _, logger := range getProcInfoNoHang(ctx, proc).Export().Options.Output.Loggers {
 		if logger.Type == jasper.LogBuildloggerV2 || logger.Type == jasper.LogBuildloggerV3 {
 			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
 		}
