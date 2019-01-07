@@ -117,11 +117,7 @@ func (p *basicProcess) Info(_ context.Context) ProcessInfo {
 }
 
 func (p *basicProcess) Complete(_ context.Context) bool {
-	<-p.initialized
-	p.RLock()
-	defer p.RUnlock()
-
-	return p.info.Complete
+	return !p.Running(nil)
 }
 
 func (p *basicProcess) Running(_ context.Context) bool {
