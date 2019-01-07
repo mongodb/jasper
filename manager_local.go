@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewLocalManager is a constructor for a localProcessManager.
 func NewLocalManager() Manager {
 	return &localProcessManager{
 		manager: &basicProcessManager{
