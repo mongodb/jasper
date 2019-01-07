@@ -14,6 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// CreateOptions is a struct containing options related to starting a process,
+// including, but not limited to things like its execution arguments,
+// environment variables and a timeout.
 type CreateOptions struct {
 	Args             []string          `json:"args"`
 	Environment      map[string]string `json:"env,omitempty"`
@@ -32,6 +35,9 @@ type CreateOptions struct {
 	started bool
 }
 
+// MakeCreationOptions takes a command string and returns a pointer to an
+// equivalent CreateOptions struct that would spawn a process corresponding to
+// the given command string.
 func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 	args, err := shlex.Split(cmdStr)
 	if err != nil {
@@ -51,6 +57,11 @@ func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 	}, nil
 }
 
+// Validate checks the CreateOptions' values for basic correctness. This method
+// does not guarantee that the CreateOptions struct is completely valid, as
+// some issues can only be discovered once the process starts (and
+// subsequently fails).
+// e.g. This function will ensure that there are a non-zero number of arguments.
 func (opts *CreateOptions) Validate() error {
 	if len(opts.Args) == 0 {
 		return errors.New("invalid command, must specify at least one argument")
@@ -92,6 +103,10 @@ func (opts *CreateOptions) Validate() error {
 	return nil
 }
 
+// Resolve will create a corresponding *exec.Cmd object for the given
+// CreateOptions that can then be Start()'d or Run()'d. Executing the *exec.Cmd
+// will spawn a process corresponding to the values in the CreateOptions on
+// which this method is called.
 func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	var err error
 	if ctx.Err() != nil {
@@ -159,6 +174,9 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
+// AddEnvVar adds an environment variable to the CreateOptions struct on which
+// this method is called. If the Environment map is nil, this method will
+// instantiate one.
 func (opts *CreateOptions) AddEnvVar(k, v string) {
 	if opts.Environment == nil {
 		opts.Environment = make(map[string]string)
@@ -167,6 +185,9 @@ func (opts *CreateOptions) AddEnvVar(k, v string) {
 	opts.Environment[k] = v
 }
 
+// Close will execute the closer functions assigned to the CreateOptions. This
+// function is often called as a trigger at the end of a process' lifetime in
+// Jasper.
 func (opts *CreateOptions) Close() {
 	for _, c := range opts.closers {
 		c()
