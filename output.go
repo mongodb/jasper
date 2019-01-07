@@ -27,33 +27,55 @@ type OutputOptions struct {
 	errorMulti        io.Writer
 }
 
+// LogType is a type for representing various logging options.
+// See the documentation for grip/send for more information on the various
+// LogType's.
 type LogType string
 
 const (
+	// LogBuildloggerV2 refers to the buildlogger logging option.
 	LogBuildloggerV2 = "buildloggerv2"
+	// LogBuildloggerV3 refers to the buildlogger logging option.
 	LogBuildloggerV3 = "buildloggerv3"
-	LogDefault       = "default"
-	LogFile          = "file"
-	LogInherit       = "inherit"
-	LogSplunk        = "splunk"
-	LogSumologic     = "sumologic"
-	LogInMemory      = "inmemory"
+	// LogDefault refers to the native logging option.
+	LogDefault = "default"
+	// LogFile refers to the plain file logging option.
+	LogFile = "file"
+	// LogInherit is a log option that will use the current grip/send.Journaler's
+	// sender instance.
+	LogInherit = "inherit"
+	// LogSplunk refers to the Splunk logging option.
+	LogSplunk = "splunk"
+	// LogSumologic refers to the Sumo Logic logging option.
+	LogSumologic = "sumologic"
+	// LogInMemory refers to grip/send's in-memory buffered sender logging option.
+	LogInMemory = "inmemory"
 )
 
 const (
+	// DefaultLogName is the default name for logs emitted by Jasper.
 	DefaultLogName = "jasper"
 )
 
+// LogFormat specifies a certain format for logging by Jasper.
+// See the documentation for grip/send for more information on the various
+// LogFormat's.
 type LogFormat string
 
 const (
-	LogFormatPlain   = "plain"
+	// LogFormatPlain refers to the plain logging format (no formatting).
+	LogFormatPlain = "plain"
+	// LogFormatDefault refers to the default logging format.
 	LogFormatDefault = "default"
-	LogFormatJSON    = "json"
+	// LogFormatJSON refers to the JSON logging format.
+	LogFormatJSON = "json"
+	// LogFormatInvalid refers to an invalid logging format. This should not be
+	// used.
 	LogFormatInvalid = "invalid"
 )
 
-// By default, logger reads from both standard output and standard error.
+// LogOptions contains options related to the logging done by Jasper.
+// NOTE: By default, logger reads from both standard output and standard error.
 type LogOptions struct {
 	BufferOptions      BufferOptions             `json:"buffer_options"`
 	BuildloggerOptions send.BuildloggerConfig    `json:"buildlogger_options"`
@@ -65,6 +87,8 @@ type LogOptions struct {
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
 }
 
+// Validate ensures that the BufferOptions on which it is called has
+// reasonable options.
 func (opts BufferOptions) Validate() error {
 	if opts.Buffered && opts.Duration < 0 || opts.MaxSize < 0 {
 		return errors.New("cannot have negative buffer duration or size")
@@ -72,16 +96,21 @@ func (opts BufferOptions) Validate() error {
 	return nil
 }
 
+// Validate ensures that the LogOptions on which it is called has
+// reasonable BufferOptions set.
 func (opts LogOptions) Validate() error {
 	return opts.BufferOptions.Validate()
 }
 
+// Logger is a wrapper struct around a grip/send Sender.
 type Logger struct {
 	Type    LogType    `json:"log_type"`
 	Options LogOptions `json:"log_options"`
 	sender  send.Sender
 }
 
+// Validate ensures that the Logger on which it is called refers to valid
+// LogType and LogOptions.
 func (l Logger) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.Add(l.Type.Validate())
@@ -89,6 +118,8 @@ func (l Logger) Validate() error {
 	return catcher.Resolve()
 }
 
+// Validate ensures that the LogType on which it is called is a valid,
+// supported LogType value.
 func (l LogType) Validate() error {
 	switch l {
 	case LogBuildloggerV2, LogBuildloggerV3, LogDefault, LogFile, LogInherit, LogSplunk, LogSumologic, LogInMemory:
@@ -98,6 +129,8 @@ func (l LogType) Validate() error {
 	}
 }
 
+// Validate ensures that the LogFormat on which it is called is a valid,
+// supported LogFormat value.
 func (f LogFormat) Validate() error {
 	switch f {
 	case LogFormatDefault, LogFormatJSON, LogFormatPlain:
@@ -109,6 +142,8 @@ func (f LogFormat) Validate() error {
 	}
 }
 
+// MakeFormatter creates a grip/send.MessageFormatter for the specified
+// LogFormat on which it is called.
 func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 	switch f {
 	case LogFormatDefault:
@@ -124,6 +159,8 @@ func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 	}
 }
 
+// Configure will configure the grip/send.Sender used by the Logger to use the
+// specified LogType as specified in Logger.Type.
 func (l *Logger) Configure() (send.Sender, error) {
 	if l.sender != nil {
 		return l.sender, nil
@@ -208,6 +245,9 @@ func (l *Logger) Configure() (send.Sender, error) {
 	return l.sender, nil
 }
 
+// BufferOptions packages options for whether or not a Logger should be
+// buffered and the duration and size of the respective buffer in the case that
+// it should be.
 type BufferOptions struct {
 	Buffered bool          `json:"buffered"`
 	Duration time.Duration `json:"duration"`
@@ -246,6 +286,8 @@ func (o OutputOptions) errorIsNull() bool {
 	return false
 }
 
+// Validate ensures that the OutputOptions it is called on has reasonable
+// values.
 func (o OutputOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
@@ -293,6 +335,8 @@ func (o OutputOptions) Validate() error {
 	return catcher.Resolve()
 }
 
+// GetOutput returns a Writer that has the stdout output from the process that the
+// OutputOptions that this method is called on is attached to.
 func (o *OutputOptions) GetOutput() (io.Writer, error) {
 	if o.SendOutputToError {
 		return o.GetError()
@@ -341,6 +385,8 @@ func (o *OutputOptions) GetOutput() (io.Writer, error) {
 	return o.outputMulti, nil
 }
 
+// GetError returns a Writer that has the stderr output from the process that
+// the OutputOptions that this method is called on is attached to.
 func (o *OutputOptions) GetError() (io.Writer, error) {
 	if o.SendErrorToOutput {
 		return o.GetOutput()
