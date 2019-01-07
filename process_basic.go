@@ -12,16 +12,16 @@ import (
 )
 
 type basicProcess struct {
-	info        ProcessInfo
-	cmd         *exec.Cmd
-	err         error
-	id          string
-	hostname    string
-	opts        CreateOptions
-	tags        map[string]struct{}
-	triggers    ProcessTriggerSequence
-	safety      chan struct{}
-	initialized chan struct{}
+	info          ProcessInfo
+	cmd           *exec.Cmd
+	err           error
+	id            string
+	hostname      string
+	opts          CreateOptions
+	tags          map[string]struct{}
+	triggers      ProcessTriggerSequence
+	waitProcessed chan struct{}
+	initialized   chan struct{}
 	sync.RWMutex
 }
 
@@ -35,13 +35,13 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	}
 
 	p := &basicProcess{
-		id:          id,
-		opts:        *opts,
-		cmd:         cmd,
-		tags:        make(map[string]struct{}),
-		safety:      make(chan struct{}),
-		initialized: make(chan struct{}),
-		triggers:    ProcessTriggerSequence{},
+		id:            id,
+		opts:          *opts,
+		cmd:           cmd,
+		tags:          make(map[string]struct{}),
+		waitProcessed: make(chan struct{}),
+		initialized:   make(chan struct{}),
+		triggers:      ProcessTriggerSequence{},
 	}
 	p.hostname, _ = os.Hostname()
 
@@ -80,14 +80,15 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 
 		// cmd.Wait() has returned if we get past this line.
 		err := <-errs
+
 		p.Lock()
 		p.err = err
-		close(p.safety)
 		p.info.IsRunning = false
 		p.info.Complete = true
 		p.info.ExitCode = p.cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
+		close(p.waitProcessed)
 		p.Unlock()
 	}()
 
@@ -163,7 +164,7 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	select {
 	case <-ctx.Done():
 		return -1, errors.New("operation canceled")
-	case <-p.safety:
+	case <-p.waitProcessed:
 	}
 
 	return p.info.ExitCode, p.err
