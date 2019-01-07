@@ -6,22 +6,22 @@ import (
 	"os/exec"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
 type basicProcess struct {
-	info     ProcessInfo
-	cmd      *exec.Cmd
-	err      error
-	id       string
-	hostname string
-	opts     CreateOptions
-	tags     map[string]struct{}
-	triggers ProcessTriggerSequence
-	safety   chan struct{}
+	info        ProcessInfo
+	cmd         *exec.Cmd
+	err         error
+	id          string
+	hostname    string
+	opts        CreateOptions
+	tags        map[string]struct{}
+	triggers    ProcessTriggerSequence
+	safety      chan struct{}
+	initialized chan struct{}
 	sync.RWMutex
 }
 
@@ -35,12 +35,13 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	}
 
 	p := &basicProcess{
-		id:       id,
-		opts:     *opts,
-		cmd:      cmd,
-		tags:     make(map[string]struct{}),
-		safety:   make(chan struct{}),
-		triggers: ProcessTriggerSequence{},
+		id:          id,
+		opts:        *opts,
+		cmd:         cmd,
+		tags:        make(map[string]struct{}),
+		safety:      make(chan struct{}),
+		initialized: make(chan struct{}),
+		triggers:    ProcessTriggerSequence{},
 	}
 	p.hostname, _ = os.Hostname()
 
@@ -74,6 +75,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.info.IsRunning = true
 		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
+		close(p.initialized)
 		p.Unlock()
 
 		// cmd.Wait() has returned if we get past this line.
@@ -107,6 +109,7 @@ func (p *basicProcess) Info(_ context.Context) ProcessInfo {
 }
 
 func (p *basicProcess) Complete(_ context.Context) bool {
+	<-p.initialized
 	p.RLock()
 	defer p.RUnlock()
 
@@ -114,6 +117,7 @@ func (p *basicProcess) Complete(_ context.Context) bool {
 }
 
 func (p *basicProcess) Running(_ context.Context) bool {
+	<-p.initialized
 	p.RLock()
 	defer p.RUnlock()
 
@@ -134,11 +138,15 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 	p.RLock()
 	defer p.RUnlock()
 
-	return newBasicProcess(ctx, &p.opts)
+	opts := p.Info(ctx).Options
+	opts.closers = []func(){}
+
+	return newBasicProcess(ctx, &opts)
 }
 
 func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	runningCheck := func() bool {
+		<-p.initialized
 		p.RLock()
 		defer p.RUnlock()
 		return p.info.IsRunning
@@ -151,32 +159,11 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 		return p.info.ExitCode, p.err
 	}
 
-	sig := make(chan struct{})
-	go func() {
-		defer close(sig)
-		ticker := time.NewTicker(time.Microsecond)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				if runningCheck() {
-					return
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
 		return -1, errors.New("operation canceled")
 	case <-p.safety:
 	}
-
-	p.RLock()
-	defer p.RUnlock()
 
 	return p.info.ExitCode, p.err
 }
