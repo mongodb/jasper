@@ -60,28 +60,39 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	p.info.Options = p.opts
 	p.info.Host = p.hostname
 
-	go func() {
-		errs := make(chan error)
-		sig := make(chan struct{})
-		go func() {
-			defer close(errs)
-			close(sig)
-			errs <- cmd.Wait()
-		}()
-		<-sig
+	go p.reactor(ctx, cmd)
 
+	opts.started = true
+
+	return p, nil
+}
+
+func (p *basicProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
+	errs := make(chan error)
+	sig := make(chan struct{})
+	go func() {
+		defer close(errs)
+		close(sig)
+		errs <- cmd.Wait()
+	}()
+	<-sig
+
+	func() {
 		p.Lock()
+		defer p.Unlock()
 		p.opts.started = true
 		p.info.IsRunning = true
 		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
 		close(p.initialized)
-		p.Unlock()
+	}()
 
-		// cmd.Wait() has returned if we get past this line.
-		err := <-errs
+	// cmd.Wait() has returned if we get past this line.
+	err := <-errs
 
+	func() {
 		p.Lock()
+		defer p.Unlock()
 		p.err = err
 		p.info.IsRunning = false
 		p.info.Complete = true
@@ -89,12 +100,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
 		close(p.waitProcessed)
-		p.Unlock()
 	}()
-
-	opts.started = true
-
-	return p, nil
 }
 
 func (p *basicProcess) ID() string {
@@ -122,15 +128,15 @@ func (p *basicProcess) Running(_ context.Context) bool {
 	<-p.initialized
 	p.RLock()
 	defer p.RUnlock()
-
 	return p.info.IsRunning
 }
 
 func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
+	<-p.initialized
 	p.RLock()
 	defer p.RUnlock()
 
-	if p.info.IsRunning {
+	if p.Running(nil) {
 		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 	}
 	return nil
@@ -147,14 +153,7 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 }
 
 func (p *basicProcess) Wait(ctx context.Context) (int, error) {
-	runningCheck := func() bool {
-		<-p.initialized
-		p.RLock()
-		defer p.RUnlock()
-		return p.info.IsRunning
-	}
-
-	if !runningCheck() {
+	if !p.Running(ctx) {
 		p.RLock()
 		defer p.RUnlock()
 
