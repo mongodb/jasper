@@ -86,6 +86,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.info.IsRunning = false
 		p.info.Complete = true
 		p.info.ExitCode = p.cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
 		p.Unlock()
 	}()
