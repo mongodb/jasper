@@ -60,24 +60,17 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	p.info.Options = p.opts
 	p.info.Host = p.hostname
 
-	go p.reactor(ctx, cmd)
+	go p.transition(ctx, cmd)
 
 	opts.started = true
 
 	return p, nil
 }
 
-func (p *basicProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
-	errs := make(chan error)
-	sig := make(chan struct{})
-	go func() {
-		defer close(errs)
-		close(sig)
-		errs <- cmd.Wait()
-	}()
-	<-sig
+func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
+	waitFinished := make(chan error)
 
-	func() {
+	initialize := func() {
 		p.Lock()
 		defer p.Unlock()
 		p.opts.started = true
@@ -85,12 +78,9 @@ func (p *basicProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
 		close(p.initialized)
-	}()
+	}
 
-	// cmd.Wait() has returned if we get past this line.
-	err := <-errs
-
-	func() {
+	finish := func(err error) {
 		p.Lock()
 		defer p.Unlock()
 		p.err = err
@@ -100,7 +90,16 @@ func (p *basicProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
 		close(p.waitProcessed)
+	}
+
+	go func() {
+		defer close(waitFinished)
+		waitFinished <- cmd.Wait()
 	}()
+
+	initialize()
+
+	finish(<-waitFinished)
 }
 
 func (p *basicProcess) ID() string {
