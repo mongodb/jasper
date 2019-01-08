@@ -69,6 +69,11 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 	waitFinished := make(chan error)
 
+	go func() {
+		defer close(waitFinished)
+		waitFinished <- cmd.Wait()
+	}()
+
 	initialize := func() {
 		p.Lock()
 		defer p.Unlock()
@@ -78,6 +83,7 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
 	}
+	initialize()
 
 	finish := func(err error) {
 		p.Lock()
@@ -90,14 +96,6 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
 	}
-
-	go func() {
-		defer close(waitFinished)
-		waitFinished <- cmd.Wait()
-	}()
-
-	initialize()
-
 	finish(<-waitFinished)
 }
 
