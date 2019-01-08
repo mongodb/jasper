@@ -14,6 +14,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: "is a struct" is redundant.
+
 // CreateOptions is a struct containing options related to starting a process,
 // including, but not limited to things like its execution arguments,
 // environment variables and a timeout.
@@ -56,6 +58,8 @@ func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 		},
 	}, nil
 }
+
+// TODO: Follow format for substantial Validate() impls in output.go.
 
 // Validate checks the CreateOptions' values for basic correctness. This method
 // does not guarantee that the CreateOptions struct is completely valid, as

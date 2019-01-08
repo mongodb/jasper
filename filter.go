@@ -20,6 +20,9 @@ const (
 	Successful = "successful"
 )
 
+// TODO: Comment about valid filter types being documented is probably not
+// necessary.
+
 // Validate ensures that the Filter on which it is called is a valid, supported
 // Filter value.
 // Valid filter types are all documented.
