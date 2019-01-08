@@ -210,24 +210,25 @@ func TestManagerInterface(t *testing.T) {
 						t.Skip("the sleep tests don't block correctly on windows")
 					}
 
-					opts := sleepCreateOpts(20)
-					counter := 0
+					opts := sleepCreateOpts(5)
+					count := 0
+					countIncremented := make(chan bool, 1)
 					opts.closers = append(opts.closers, func() {
-						counter++
+						count++
+						countIncremented <- true
+						close(countIncremented)
 					})
-					closersDone := make(chan bool)
-					opts.closers = append(opts.closers, func() { closersDone <- true })
 
 					_, err := manager.Create(ctx, opts)
 					assert.NoError(t, err)
 
-					assert.Equal(t, counter, 0)
+					assert.Equal(t, count, 0)
 					assert.NoError(t, manager.Close(ctx))
 					select {
 					case <-ctx.Done():
 						assert.Fail(t, "process took too long to run closers")
-					case <-closersDone:
-						assert.Equal(t, 1, counter)
+					case <-countIncremented:
+						assert.Equal(t, 1, count)
 					}
 				},
 				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager) {
@@ -300,17 +301,22 @@ func TestManagerInterface(t *testing.T) {
 					opts := &CreateOptions{}
 					opts.Args = []string{"echo", "foobar"}
 					count := 0
-					opts.closers = append(opts.closers, func() { count++ })
-					closersDone := make(chan bool)
-					opts.closers = append(opts.closers, func() { closersDone <- true })
+					countIncremented := make(chan bool, 1)
+					opts.closers = append(opts.closers, func() {
+						count++
+						countIncremented <- true
+						close(countIncremented)
+					})
+
 					proc, err := manager.Create(ctx, opts)
 					assert.NoError(t, err)
 					_, err = proc.Wait(ctx)
 					assert.NoError(t, err)
+
 					select {
 					case <-ctx.Done():
 						assert.Fail(t, "process took too long to run closers")
-					case <-closersDone:
+					case <-countIncremented:
 						assert.Equal(t, 1, count)
 					}
 				},
