@@ -72,23 +72,23 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 	initialize := func() {
 		p.Lock()
 		defer p.Unlock()
+		defer close(p.initialized)
 		p.opts.started = true
 		p.info.IsRunning = true
 		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
-		close(p.initialized)
 	}
 
 	finish := func(err error) {
 		p.Lock()
 		defer p.Unlock()
+		defer close(p.waitProcessed)
 		p.err = err
 		p.info.IsRunning = false
 		p.info.Complete = true
 		p.info.ExitCode = p.cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
-		close(p.waitProcessed)
 	}
 
 	go func() {
