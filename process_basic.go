@@ -110,6 +110,7 @@ func (p *basicProcess) ID() string {
 	return p.id
 }
 func (p *basicProcess) Info(_ context.Context) ProcessInfo {
+	<-p.initialized
 	p.RLock()
 	defer p.RUnlock()
 
@@ -139,10 +140,11 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 }
 
 func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
+	<-p.initialized
 	p.RLock()
 	defer p.RUnlock()
 
-	opts := p.Info(ctx).Options
+	opts := p.info.Options
 	opts.closers = []func(){}
 
 	return newBasicProcess(ctx, &opts)
