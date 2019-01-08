@@ -7,7 +7,7 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-// AttachService attaches the given manager to the jasper GRPC server. After
+// AttachService attaches the jasper GRPC server to the given manager. After
 // this function successfully returns, calls to Manager functions will be sent
 // over GRPC to the Jasper GRPC server.
 func AttachService(manager jasper.Manager, s *grpc.Server) error {
