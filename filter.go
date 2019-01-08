@@ -20,8 +20,7 @@ const (
 	Successful = "successful"
 )
 
-// Validate ensures that the Filter on which it is called is a valid, supported
-// Filter value.
+// Validate ensures that Filter is valid.
 func (f Filter) Validate() error {
 	switch f {
 	case Running, Terminated, All, Failed, Successful:

@@ -38,9 +38,7 @@ func (info DownloadInfo) Validate() error {
 	return catcher.Resolve()
 }
 
-// Download will execute the download operation specified in the DownloadInfo
-// struct on which it is called. This function makes a hanging network call,
-// and may not return for a substantial period of time.
+// Download executes the download operation.
 func (info DownloadInfo) Download() error {
 	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
 	if err != nil {
@@ -79,9 +77,9 @@ const (
 	// ArchiveAuto is an ArchiveFormat that does not force any particular type of
 	// archive format.
 	ArchiveAuto ArchiveFormat = "auto"
-	// ArchiveTarGz is a constant referring to the targz archive format.
+	// nolint
 	ArchiveTarGz = "targz"
-	// ArchiveZip is a constant referring to the zip archive format.
+	// nolint
 	ArchiveZip = "zip"
 )
 

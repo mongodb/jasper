@@ -14,9 +14,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CreateOptions contains options related to starting a process, including, but
-// not limited to things like its execution arguments, environment variables
-// and a timeout.
+// CreateOptions contains options related to starting a process. This includes
+// execution configuration, post-execution triggers, and output configuration.
 type CreateOptions struct {
 	Args             []string          `json:"args"`
 	Environment      map[string]string `json:"env,omitempty"`
@@ -35,9 +34,9 @@ type CreateOptions struct {
 	started bool
 }
 
-// MakeCreationOptions takes a command string and returns a pointer to an
-// equivalent CreateOptions struct that would spawn a process corresponding to
-// the given command string.
+// MakeCreationOptions takes a command string and returns an equivalent
+// CreateOptions struct that would spawn a process corresponding to the given
+// command string.
 func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 	args, err := shlex.Split(cmdStr)
 	if err != nil {
@@ -57,8 +56,7 @@ func MakeCreationOptions(cmdStr string) (*CreateOptions, error) {
 	}, nil
 }
 
-// Validate ensures that the CreateOptions on which it is called has
-// reasonable options.
+// Validate ensures that CreateOptions is valid.
 func (opts *CreateOptions) Validate() error {
 	if len(opts.Args) == 0 {
 		return errors.New("invalid command, must specify at least one argument")
@@ -100,10 +98,7 @@ func (opts *CreateOptions) Validate() error {
 	return nil
 }
 
-// Resolve will create a corresponding *exec.Cmd object for the given
-// CreateOptions that can then be Start()'d or Run()'d. Executing the *exec.Cmd
-// will spawn a process corresponding to the values in the CreateOptions on
-// which this method is called.
+// Resolve creates the command object according to the create options.
 func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	var err error
 	if ctx.Err() != nil {

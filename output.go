@@ -33,23 +33,14 @@ type OutputOptions struct {
 type LogType string
 
 const (
-	// LogBuildloggerV2 refers to the buildlogger logging option.
-	LogBuildloggerV2 = "buildloggerv2"
-	// LogBuildloggerV3 refers to the buildlogger logging option.
-	LogBuildloggerV3 = "buildloggerv3"
-	// LogDefault refers to the native logging option.
-	LogDefault = "default"
-	// LogFile refers to the plain file logging option.
-	LogFile = "file"
-	// LogInherit is a log option that will use the current grip/send.Journaler's
-	// sender instance.
-	LogInherit = "inherit"
-	// LogSplunk refers to the Splunk logging option.
-	LogSplunk = "splunk"
-	// LogSumologic refers to the Sumo Logic logging option.
-	LogSumologic = "sumologic"
-	// LogInMemory refers to grip/send's in-memory buffered sender logging option.
-	LogInMemory = "inmemory"
+	LogBuildloggerV2 = "buildloggerv2" // nolint
+	LogBuildloggerV3 = "buildloggerv3" // nolint
+	LogDefault       = "default"       // nolint
+	LogFile          = "file"          // nolint
+	LogInherit       = "inherit"       // nolint
+	LogSplunk        = "splunk"        // nolint
+	LogSumologic     = "sumologic"     // nolint
+	LogInMemory      = "inmemory"      // nolint
 )
 
 const (
@@ -75,7 +66,8 @@ const (
 )
 
 // LogOptions contains options related to the logging done by Jasper.
-// NOTE: By default, logger reads from both standard output and standard error.
+//
+// By default, logger reads from both standard output and standard error.
 type LogOptions struct {
 	BufferOptions      BufferOptions             `json:"buffer_options"`
 	BuildloggerOptions send.BuildloggerConfig    `json:"buildlogger_options"`
@@ -87,8 +79,7 @@ type LogOptions struct {
 	SumoEndpoint       string                    `json:"sumo_endpoint"`
 }
 
-// Validate ensures that the BufferOptions on which it is called has
-// reasonable options.
+// Validate ensures that BufferOptions is valid.
 func (opts BufferOptions) Validate() error {
 	if opts.Buffered && opts.Duration < 0 || opts.MaxSize < 0 {
 		return errors.New("cannot have negative buffer duration or size")
@@ -96,8 +87,7 @@ func (opts BufferOptions) Validate() error {
 	return nil
 }
 
-// Validate ensures that the LogOptions on which it is called has
-// reasonable BufferOptions set.
+// Validate ensures that LogOptions is valid.
 func (opts LogOptions) Validate() error {
 	return opts.BufferOptions.Validate()
 }
@@ -109,8 +99,7 @@ type Logger struct {
 	sender  send.Sender
 }
 
-// Validate ensures that the Logger on which it is called refers to valid
-// LogType and LogOptions.
+// Validate ensures that LogOptions is valid.
 func (l Logger) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.Add(l.Type.Validate())
@@ -118,8 +107,7 @@ func (l Logger) Validate() error {
 	return catcher.Resolve()
 }
 
-// Validate ensures that the LogType on which it is called is a valid,
-// supported LogType value.
+// Validate ensures that the LogType is valid.
 func (l LogType) Validate() error {
 	switch l {
 	case LogBuildloggerV2, LogBuildloggerV3, LogDefault, LogFile, LogInherit, LogSplunk, LogSumologic, LogInMemory:
@@ -129,8 +117,7 @@ func (l LogType) Validate() error {
 	}
 }
 
-// Validate ensures that the LogFormat on which it is called is a valid,
-// supported LogFormat value.
+// Validate ensures that the LogFormat is valid.
 func (f LogFormat) Validate() error {
 	switch f {
 	case LogFormatDefault, LogFormatJSON, LogFormatPlain:
@@ -385,8 +372,8 @@ func (o *OutputOptions) GetOutput() (io.Writer, error) {
 	return o.outputMulti, nil
 }
 
-// GetError returns a Writer that has the stderr output from the process that
-// the OutputOptions that this method is called on is attached to.
+// GetError returns an io.Writer that can be used for standard error, depending on
+// the output configuration.
 func (o *OutputOptions) GetError() (io.Writer, error) {
 	if o.SendErrorToOutput {
 		return o.GetOutput()
