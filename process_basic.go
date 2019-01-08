@@ -41,7 +41,6 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		tags:          make(map[string]struct{}),
 		waitProcessed: make(chan struct{}),
 		initialized:   make(chan struct{}),
-		triggers:      ProcessTriggerSequence{},
 	}
 	p.hostname, _ = os.Hostname()
 
