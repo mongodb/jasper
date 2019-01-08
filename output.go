@@ -43,8 +43,6 @@ const (
 	LogFile = "file"
 	// LogInherit is a log option that will use the current grip/send.Journaler's
 	// sender instance.
-	// TODO: Maybe don't use grip/send. (dot notation) and just say grip/send
-	// like in colloquial English?
 	LogInherit = "inherit"
 	// LogSplunk refers to the Splunk logging option.
 	LogSplunk = "splunk"
@@ -104,7 +102,7 @@ func (opts LogOptions) Validate() error {
 	return opts.BufferOptions.Validate()
 }
 
-// Logger is a wrapper struct around a grip/send Sender.
+// Logger is a wrapper struct around a grip/send.Sender.
 type Logger struct {
 	Type    LogType    `json:"log_type"`
 	Options LogOptions `json:"log_options"`

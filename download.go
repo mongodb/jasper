@@ -38,11 +38,9 @@ func (info DownloadInfo) Validate() error {
 	return catcher.Resolve()
 }
 
-// TODO: "on which this method" should be "on which it"
-
 // Download will execute the download operation specified in the DownloadInfo
-// struct on which this method is called. This function makes a hanging network
-// call, and may not return for a substantial period of time.
+// struct on which it is called. This function makes a hanging network call,
+// and may not return for a substantial period of time.
 func (info DownloadInfo) Download() error {
 	req, err := http.NewRequest(http.MethodGet, info.URL, nil)
 	if err != nil {
