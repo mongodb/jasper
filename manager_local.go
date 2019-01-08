@@ -10,7 +10,19 @@ import (
 func NewLocalManager() Manager {
 	return &localProcessManager{
 		manager: &basicProcessManager{
-			procs: map[string]Process{},
+			procs:    map[string]Process{},
+			blocking: false,
+		},
+	}
+}
+
+// NewLocalManagerBlockingProcesses is a constructor for localProcessManager,
+// that uses blockingProcess instead of the default basicProcess.
+func NewLocalManagerBlockingProcesses() Manager {
+	return &localProcessManager{
+		manager: &basicProcessManager{
+			procs:    map[string]Process{},
+			blocking: true,
 		},
 	}
 }

@@ -19,16 +19,29 @@ func TestManagerInterface(t *testing.T) {
 	defer cancel()
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
-		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+		"Basic/NoLock/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
 			return &basicProcessManager{
-				procs: map[string]Process{},
+				procs:    map[string]Process{},
+				blocking: false,
 			}
 		},
-		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+			return &basicProcessManager{
+				procs:    map[string]Process{},
+				blocking: true,
+			}
+		},
+		"Basic/Lock/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
 			return NewLocalManager()
 		},
-		"Basic/Lock/SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+			return NewLocalManagerBlockingProcesses()
+		},
+		"SelfClearing/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
 			return NewSelfClearingProcessManager(10)
+		},
+		"SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
+			return NewSelfClearingProcessManagerBlockingProcesses(10)
 		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
 			srv, port := makeAndStartService(ctx, httpClient)
