@@ -135,7 +135,8 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 	if p.Running(nil) {
 		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 	}
-	return nil
+
+	return errors.New("cannot signal a process that has terminated")
 }
 
 func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
