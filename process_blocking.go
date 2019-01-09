@@ -90,6 +90,21 @@ func (p *blockingProcess) getInfo() ProcessInfo {
 
 	return ret
 }
+
+func (p *blockingProcess) setErr(err error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.err = err
+}
+
+func (p *blockingProcess) getErr() error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return p.err
+}
+
 func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 	signal := make(chan error)
 	go func() {
@@ -131,7 +146,7 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			}()
 
 			p.setInfo(info)
-			p.err = err
+			p.setErr(err)
 			p.mu.RLock()
 			p.triggers.Run(info)
 			p.mu.RUnlock()
@@ -276,7 +291,7 @@ func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTr
 
 func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 	if p.hasInfo() {
-		return p.getInfo().ExitCode, p.err
+		return p.getInfo().ExitCode, p.getErr()
 	}
 
 	out := make(chan error)
@@ -286,7 +301,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 			return
 		}
 
-		out <- p.err
+		out <- p.getErr()
 	}
 
 	timer := time.NewTimer(0)
@@ -303,7 +318,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 			return p.getInfo().ExitCode, errors.WithStack(err)
 		default:
 			if p.hasInfo() {
-				return p.getInfo().ExitCode, p.err
+				return p.getInfo().ExitCode, p.getErr()
 			}
 		}
 	}
