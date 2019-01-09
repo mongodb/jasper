@@ -161,9 +161,6 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	case <-p.waitProcessed:
 	}
 
-	if !p.info.Successful {
-		return p.info.ExitCode, errors.New("operation failed")
-	}
 	return p.info.ExitCode, p.err
 }
 

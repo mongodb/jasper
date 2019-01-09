@@ -107,7 +107,7 @@ func TestMongod(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	for name, makeProc := range map[string]processConstructor{
-		"Basic": newBasicProcess,
+		"Basic":    newBasicProcess,
 		"Blocking": newBlockingProcess,
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestMongod(t *testing.T) {
 					signal:      syscall.SIGKILL,
 					sleepMillis: 0,
 					expectError: true,
-					errorString: "operation failed",
+					errorString: "signal: killed",
 				},
 				{
 					id:          "With10MongodsAndSigkill",
@@ -133,7 +133,7 @@ func TestMongod(t *testing.T) {
 					signal:      syscall.SIGKILL,
 					sleepMillis: 2000,
 					expectError: true,
-					errorString: "operation failed",
+					errorString: "signal: killed",
 				},
 				{
 					id:          "With30MongodsAndSigkill",
@@ -141,7 +141,7 @@ func TestMongod(t *testing.T) {
 					signal:      syscall.SIGKILL,
 					sleepMillis: 4000,
 					expectError: true,
-					errorString: "operation failed",
+					errorString: "signal: killed",
 				},
 			} {
 				t.Run(test.id, func(t *testing.T) {

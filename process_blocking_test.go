@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -286,6 +287,7 @@ func TestBlockingProcess(t *testing.T) {
 						for {
 							select {
 							case op := <-proc.ops:
+								proc.err = errors.New("signal: killed")
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
 									Successful: false,

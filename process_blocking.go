@@ -21,6 +21,7 @@ type blockingProcess struct {
 	host string
 	opts CreateOptions
 	ops  chan func(*exec.Cmd)
+	err  error
 
 	mu       sync.RWMutex
 	tags     map[string]struct{}
@@ -130,6 +131,7 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			}()
 
 			p.setInfo(info)
+			p.err = err
 			p.mu.RLock()
 			p.triggers.Run(info)
 			p.mu.RUnlock()
@@ -274,11 +276,7 @@ func (p *blockingProcess) RegisterTrigger(ctx context.Context, trigger ProcessTr
 
 func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 	if p.hasInfo() {
-		// If the process did not end successfully, then there should be an error.
-		if !p.getInfo().Successful {
-			return p.getInfo().ExitCode, errors.New("operation failed")
-		}
-		return p.getInfo().ExitCode, nil
+		return p.getInfo().ExitCode, p.err
 	}
 
 	out := make(chan error)
@@ -288,12 +286,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 			return
 		}
 
-		if info.Successful {
-			out <- nil
-			return
-		}
-
-		out <- errors.New("task exited with error")
+		out <- p.err
 	}
 
 	timer := time.NewTimer(0)
@@ -310,10 +303,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 			return p.getInfo().ExitCode, errors.WithStack(err)
 		default:
 			if p.hasInfo() {
-				if !p.getInfo().Successful {
-					return p.getInfo().ExitCode, errors.New("operation failed")
-				}
-				return p.getInfo().ExitCode, nil
+				return p.getInfo().ExitCode, p.err
 			}
 		}
 	}
