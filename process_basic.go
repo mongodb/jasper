@@ -162,7 +162,6 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	}
 
 	if !p.info.Successful {
-		// If the process was not successful, return an error indicating so.
 		return p.info.ExitCode, errors.New("operation failed")
 	}
 	return p.info.ExitCode, p.err
