@@ -1,4 +1,4 @@
-package jrpc
+package rpc
 
 import (
 	"context"
@@ -17,9 +17,9 @@ import (
 // Note: these tests are largely copied directly from the top level
 // package into this package to avoid an import cycle.
 
-func TestJRPCManager(t *testing.T) {
+func TestRPCManager(t *testing.T) {
 	assert.NotPanics(t, func() {
-		NewJRPCManager(nil)
+		NewRPCManager(nil)
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -28,7 +28,7 @@ func TestJRPCManager(t *testing.T) {
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.Manager{
 		"Basic": func(ctx context.Context, t *testing.T) jasper.Manager {
 			mngr := jasper.NewLocalManager()
-			addr, err := startJRPC(ctx, mngr)
+			addr, err := startRPC(ctx, mngr)
 			require.NoError(t, err)
 
 			client, err := getClient(ctx, addr)
@@ -38,7 +38,7 @@ func TestJRPCManager(t *testing.T) {
 		},
 		"Blocking": func(ctx context.Context, t *testing.T) jasper.Manager {
 			mngr := jasper.NewLocalManagerBlockingProcesses()
-			addr, err := startJRPC(ctx, mngr)
+			addr, err := startRPC(ctx, mngr)
 			require.NoError(t, err)
 
 			client, err := getClient(ctx, addr)
@@ -203,7 +203,7 @@ func TestJRPCManager(t *testing.T) {
 				///////////////////////////////////
 				//
 				// The following test cases are added
-				// specifically for the jrpc case
+				// specifically for the rpc case
 
 				"RegisterIsDisabled": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
 					err := manager.Register(ctx, nil)
@@ -286,14 +286,14 @@ func TestJRPCManager(t *testing.T) {
 
 type processConstructor func(context.Context, *jasper.CreateOptions) (jasper.Process, error)
 
-func TestJRPCProcess(t *testing.T) {
+func TestRPCProcess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	for cname, makeProc := range map[string]processConstructor{
 		"Basic": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
 			mngr := jasper.NewLocalManager()
-			addr, err := startJRPC(ctx, mngr)
+			addr, err := startRPC(ctx, mngr)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -308,7 +308,7 @@ func TestJRPCProcess(t *testing.T) {
 		},
 		"Blocking": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
 			mngr := jasper.NewLocalManagerBlockingProcesses()
-			addr, err := startJRPC(ctx, mngr)
+			addr, err := startRPC(ctx, mngr)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -556,7 +556,7 @@ func TestJRPCProcess(t *testing.T) {
 				///////////////////////////////////
 				//
 				// The following test cases are added
-				// specifically for the jrpc case
+				// specifically for the rpc case
 
 				"CompleteReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
@@ -566,8 +566,8 @@ func TestJRPCProcess(t *testing.T) {
 					_, err = proc.Wait(ctx)
 					assert.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
-					proc.(*jrpcProcess).info.Id += "_foo"
-					proc.(*jrpcProcess).info.Complete = false
+					proc.(*rpcProcess).info.Id += "_foo"
+					proc.(*rpcProcess).info.Complete = false
 					require.NotEqual(t, firstID, proc.ID())
 					assert.False(t, proc.Complete(ctx), proc.ID())
 				},
@@ -579,8 +579,8 @@ func TestJRPCProcess(t *testing.T) {
 					firstID := proc.ID()
 					_, err = proc.Wait(ctx)
 					assert.NoError(t, err)
-					proc.(*jrpcProcess).info.Id += "_foo"
-					proc.(*jrpcProcess).info.Complete = false
+					proc.(*rpcProcess).info.Id += "_foo"
+					proc.(*rpcProcess).info.Complete = false
 					require.NotEqual(t, firstID, proc.ID())
 					assert.False(t, proc.Running(ctx), proc.ID())
 				},

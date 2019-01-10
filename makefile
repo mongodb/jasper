@@ -2,7 +2,7 @@ buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
 
-_testPackages := ./ ./jrpc ./jrpc/internal
+_testPackages := ./ ./rpc ./rpc/internal
 
 testArgs := -v
 ifneq (,$(RUN_TEST))
@@ -46,8 +46,8 @@ $(buildDir)/cover.html:$(buildDir)/cover.out
 
 
 proto:
-	@mkdir -p jrpc/internal
-	protoc --go_out=plugins=grpc:jrpc/internal *.proto
+	@mkdir -p rpc/internal
+	protoc --go_out=plugins=grpc:rpc/internal *.proto
 clean:
 	rm -rf *.pb.go
 

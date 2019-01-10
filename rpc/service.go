@@ -1,8 +1,8 @@
-package jrpc
+package rpc
 
 import (
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/jrpc/internal"
+	"github.com/mongodb/jasper/rpc/internal"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 )
