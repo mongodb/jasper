@@ -107,6 +107,7 @@ func TestMongod(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	for name, makeProc := range map[string]processConstructor{
+		"Basic":    newBasicProcess,
 		"Blocking": newBlockingProcess,
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -116,7 +117,6 @@ func TestMongod(t *testing.T) {
 				signal      syscall.Signal
 				sleepMillis time.Duration
 				expectError bool
-				errorString string
 			}{
 				{
 					id:          "WithSingleMongod",
@@ -124,7 +124,6 @@ func TestMongod(t *testing.T) {
 					signal:      syscall.SIGKILL,
 					sleepMillis: 0,
 					expectError: true,
-					errorString: "operation failed",
 				},
 				{
 					id:          "With10MongodsAndSigkill",
@@ -132,7 +131,6 @@ func TestMongod(t *testing.T) {
 					signal:      syscall.SIGKILL,
 					sleepMillis: 2000,
 					expectError: true,
-					errorString: "operation failed",
 				},
 				{
 					id:          "With30MongodsAndSigkill",
@@ -140,7 +138,6 @@ func TestMongod(t *testing.T) {
 					signal:      syscall.SIGKILL,
 					sleepMillis: 4000,
 					expectError: true,
-					errorString: "operation failed",
 				},
 			} {
 				t.Run(test.id, func(t *testing.T) {
@@ -176,9 +173,16 @@ func TestMongod(t *testing.T) {
 					for i := 0; i < test.numProcs; i++ {
 						err := <-waitError
 						if test.expectError {
-							assert.EqualError(t, err, test.errorString)
+							assert.Error(t, err)
 						} else {
 							assert.NoError(t, err)
+						}
+					}
+
+					// Check that the processes have all noted an unsucessful run
+					for _, proc := range procs {
+						if test.expectError {
+							assert.False(t, proc.Info(ctx).Successful)
 						}
 					}
 				})

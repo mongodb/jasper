@@ -66,8 +66,7 @@ type Process interface {
 	// exit code as -1 if it was unable to return a true code due
 	// to some other error, but otherwise will return the actual
 	// exit code of the process. Returns nil if the process has
-	// completed successfully. If the process has not completed
-	// successfully, Wait will return a non-nil error.
+	// completed successfully.
 	//
 	// Note that death by signal does not return the signal code
 	// and instead is returned as -1.

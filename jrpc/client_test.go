@@ -26,8 +26,18 @@ func TestJRPCManager(t *testing.T) {
 	defer cancel()
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.Manager{
-		"Blocking": func(ctx context.Context, t *testing.T) jasper.Manager {
+		"Basic": func(ctx context.Context, t *testing.T) jasper.Manager {
 			mngr := jasper.NewLocalManager()
+			addr, err := startJRPC(ctx, mngr)
+			require.NoError(t, err)
+
+			client, err := getClient(ctx, addr)
+			require.NoError(t, err)
+
+			return client
+		},
+		"Blocking": func(ctx context.Context, t *testing.T) jasper.Manager {
+			mngr := jasper.NewLocalManagerBlockingProcesses()
 			addr, err := startJRPC(ctx, mngr)
 			require.NoError(t, err)
 
@@ -281,8 +291,23 @@ func TestJRPCProcess(t *testing.T) {
 	defer cancel()
 
 	for cname, makeProc := range map[string]processConstructor{
-		"Blocking": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+		"Basic": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
 			mngr := jasper.NewLocalManager()
+			addr, err := startJRPC(ctx, mngr)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			client, err := getClient(ctx, addr)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			return client.Create(ctx, opts)
+
+		},
+		"Blocking": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+			mngr := jasper.NewLocalManagerBlockingProcesses()
 			addr, err := startJRPC(ctx, mngr)
 			if err != nil {
 				return nil, errors.WithStack(err)
