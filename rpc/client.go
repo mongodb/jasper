@@ -1,4 +1,4 @@
-package jrpc
+package rpc
 
 import (
 	"context"
@@ -7,38 +7,38 @@ import (
 
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper"
-	internal "github.com/mongodb/jasper/jrpc/internal"
+	internal "github.com/mongodb/jasper/rpc/internal"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 )
 
-type jrpcManager struct {
+type rpcManager struct {
 	client internal.JasperProcessManagerClient
 }
 
 // TODO provide some better way of constructing this object
 
-// NewJRPCManager is a constructor for a jrpcManager.
-func NewJRPCManager(cc *grpc.ClientConn) jasper.Manager {
-	return &jrpcManager{
+// NewRPCManager is a constructor for a rpcManager.
+func NewRPCManager(cc *grpc.ClientConn) jasper.Manager {
+	return &rpcManager{
 		client: internal.NewJasperProcessManagerClient(cc),
 	}
 }
 
-func (m *jrpcManager) Create(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (m *rpcManager) Create(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
 	proc, err := m.client.Create(ctx, internal.ConvertCreateOptions(opts))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &jrpcProcess{client: m.client, info: proc}, nil
+	return &rpcProcess{client: m.client, info: proc}, nil
 }
 
-func (m *jrpcManager) Register(ctx context.Context, proc jasper.Process) error {
+func (m *rpcManager) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register extant processes on remote systms")
 }
 
-func (m *jrpcManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Process, error) {
+func (m *rpcManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Process, error) {
 	procs, err := m.client.List(ctx, internal.ConvertFilter(f))
 	if err != nil {
 		return nil, errors.Wrap(err, "problem getting streaming client")
@@ -53,7 +53,7 @@ func (m *jrpcManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Proce
 			return nil, errors.Wrap(err, "problem getting list")
 		}
 
-		out = append(out, &jrpcProcess{
+		out = append(out, &rpcProcess{
 			client: m.client,
 			info:   info,
 		})
@@ -62,7 +62,7 @@ func (m *jrpcManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Proce
 	return out, nil
 }
 
-func (m *jrpcManager) Group(ctx context.Context, name string) ([]jasper.Process, error) {
+func (m *rpcManager) Group(ctx context.Context, name string) ([]jasper.Process, error) {
 	procs, err := m.client.Group(ctx, &internal.TagName{Value: name})
 	if err != nil {
 		return nil, errors.Wrap(err, "problem getting streaming client")
@@ -77,7 +77,7 @@ func (m *jrpcManager) Group(ctx context.Context, name string) ([]jasper.Process,
 			return nil, errors.Wrap(err, "problem getting group")
 		}
 
-		out = append(out, &jrpcProcess{
+		out = append(out, &rpcProcess{
 			client: m.client,
 			info:   info,
 		})
@@ -86,20 +86,20 @@ func (m *jrpcManager) Group(ctx context.Context, name string) ([]jasper.Process,
 	return out, nil
 }
 
-func (m *jrpcManager) Get(ctx context.Context, name string) (jasper.Process, error) {
+func (m *rpcManager) Get(ctx context.Context, name string) (jasper.Process, error) {
 	info, err := m.client.Get(ctx, &internal.JasperProcessID{Value: name})
 	if err != nil {
 		return nil, errors.Wrap(err, "problem finding process")
 	}
 
-	return &jrpcProcess{client: m.client, info: info}, nil
+	return &rpcProcess{client: m.client, info: info}, nil
 }
 
-func (m *jrpcManager) Clear(ctx context.Context) {
+func (m *rpcManager) Clear(ctx context.Context) {
 	m.client.Clear(ctx, &empty.Empty{})
 }
 
-func (m *jrpcManager) Close(ctx context.Context) error {
+func (m *rpcManager) Close(ctx context.Context) error {
 	resp, err := m.client.Close(ctx, &empty.Empty{})
 	if err != nil {
 		return errors.WithStack(err)
@@ -111,14 +111,14 @@ func (m *jrpcManager) Close(ctx context.Context) error {
 	return errors.New(resp.Text)
 }
 
-type jrpcProcess struct {
+type rpcProcess struct {
 	client internal.JasperProcessManagerClient
 	info   *internal.ProcessInfo
 }
 
-func (p *jrpcProcess) ID() string { return p.info.Id }
+func (p *rpcProcess) ID() string { return p.info.Id }
 
-func (p *jrpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
+func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	if p.info.Complete {
 		return p.info.Export()
 	}
@@ -130,7 +130,7 @@ func (p *jrpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 
 	return info.Export()
 }
-func (p *jrpcProcess) Running(ctx context.Context) bool {
+func (p *rpcProcess) Running(ctx context.Context) bool {
 	if p.info.Complete {
 		return false
 	}
@@ -144,7 +144,7 @@ func (p *jrpcProcess) Running(ctx context.Context) bool {
 	return info.Running
 }
 
-func (p *jrpcProcess) Complete(ctx context.Context) bool {
+func (p *rpcProcess) Complete(ctx context.Context) bool {
 	if p.info.Complete {
 		return true
 	}
@@ -158,7 +158,7 @@ func (p *jrpcProcess) Complete(ctx context.Context) bool {
 	return info.Complete
 }
 
-func (p *jrpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
+func (p *rpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	resp, err := p.client.Signal(ctx, &internal.SignalProcess{
 		ProcessID: &internal.JasperProcessID{Value: p.info.Id},
 		Signal:    internal.ConvertSignal(sig),
@@ -175,7 +175,7 @@ func (p *jrpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	return errors.New(resp.Text)
 }
 
-func (p *jrpcProcess) Wait(ctx context.Context) (int, error) {
+func (p *rpcProcess) Wait(ctx context.Context) (int, error) {
 	resp, err := p.client.Wait(ctx, &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
 		return -1, errors.WithStack(err)
@@ -191,26 +191,26 @@ func (p *jrpcProcess) Wait(ctx context.Context) (int, error) {
 	return -1, errors.New(resp.Text)
 }
 
-func (p *jrpcProcess) Respawn(ctx context.Context) (jasper.Process, error) {
+func (p *rpcProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 	newProc, err := p.client.Respawn(ctx, &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &jrpcProcess{client: p.client, info: newProc}, nil
+	return &rpcProcess{client: p.client, info: newProc}, nil
 }
 
-func (p *jrpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigger) error {
+func (p *rpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigger) error {
 	return errors.New("cannot register remote triggers")
 }
 
-func (p *jrpcProcess) Tag(tag string) {
+func (p *rpcProcess) Tag(tag string) {
 	_, _ = p.client.TagProcess(context.TODO(), &internal.ProcessTags{
 		ProcessID: p.info.Id,
 		Tags:      []string{tag},
 	})
 }
-func (p *jrpcProcess) GetTags() []string {
+func (p *rpcProcess) GetTags() []string {
 	tags, err := p.client.GetTags(context.TODO(), &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
 		return nil
@@ -218,6 +218,6 @@ func (p *jrpcProcess) GetTags() []string {
 
 	return tags.Tags
 }
-func (p *jrpcProcess) ResetTags() {
+func (p *rpcProcess) ResetTags() {
 	_, _ = p.client.ResetTags(context.TODO(), &internal.JasperProcessID{Value: p.info.Id})
 }

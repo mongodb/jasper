@@ -1,4 +1,4 @@
-package jrpc
+package rpc
 
 import (
 	"context"
@@ -68,7 +68,7 @@ func createProcs(ctx context.Context, opts *jasper.CreateOptions, manager jasper
 	return out, catcher.Resolve()
 }
 
-func startJRPC(ctx context.Context, mngr jasper.Manager) (string, error) {
+func startRPC(ctx context.Context, mngr jasper.Manager) (string, error) {
 	addr := fmt.Sprintf("localhost:%d", getPortNumber())
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -99,6 +99,6 @@ func getClient(ctx context.Context, addr string) (jasper.Manager, error) {
 		conn.Close()
 	}()
 
-	return NewJRPCManager(conn), nil
+	return NewRPCManager(conn), nil
 
 }

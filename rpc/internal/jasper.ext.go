@@ -9,7 +9,7 @@ import (
 	"github.com/tychoish/bond"
 )
 
-// Export takes a protobuf JRPC CreateOptions struct and returns the analogous
+// Export takes a protobuf RPC CreateOptions struct and returns the analogous
 // Jasper CreateOptions struct.
 func (opts *CreateOptions) Export() *jasper.CreateOptions {
 	out := &jasper.CreateOptions{
@@ -40,7 +40,7 @@ func (opts *CreateOptions) Export() *jasper.CreateOptions {
 }
 
 // ConvertCreateOptions takes a Jasper CreateOptions struct and returns an
-// equivalent protobuf JRPC *CreateOptions struct. ConvertCreateOptions is the
+// equivalent protobuf RPC *CreateOptions struct. ConvertCreateOptions is the
 // inverse of (*CreateOptions) Export().
 func ConvertCreateOptions(opts *jasper.CreateOptions) *CreateOptions {
 	if opts.TimeoutSecs == 0 && opts.Timeout != 0 {
@@ -71,7 +71,7 @@ func ConvertCreateOptions(opts *jasper.CreateOptions) *CreateOptions {
 	return co
 }
 
-// Export takes a protobuf JRPC ProcessInfo struct and returns the analogous
+// Export takes a protobuf RPC ProcessInfo struct and returns the analogous
 // Jasper ProcessInfo struct.
 func (info *ProcessInfo) Export() jasper.ProcessInfo {
 	return jasper.ProcessInfo{
@@ -87,7 +87,7 @@ func (info *ProcessInfo) Export() jasper.ProcessInfo {
 }
 
 // ConvertProcessInfo takes a Jasper ProcessInfo struct and returns an
-// equivalent protobuf JRPC *ProcessInfo struct. ConvertProcessInfo is the
+// equivalent protobuf RPC *ProcessInfo struct. ConvertProcessInfo is the
 // inverse of (*ProcessInfo) Export().
 func ConvertProcessInfo(info jasper.ProcessInfo) *ProcessInfo {
 	return &ProcessInfo{
@@ -102,7 +102,7 @@ func ConvertProcessInfo(info jasper.ProcessInfo) *ProcessInfo {
 	}
 }
 
-// Export takes a protobuf JRPC Signals struct and returns the analogous
+// Export takes a protobuf RPC Signals struct and returns the analogous
 // syscall.Signal.
 func (s Signals) Export() syscall.Signal {
 	switch s {
@@ -120,7 +120,7 @@ func (s Signals) Export() syscall.Signal {
 }
 
 // ConvertSignal takes a syscall.Signal and returns an
-// equivalent protobuf JRPC Signals struct. ConvertSignals is the
+// equivalent protobuf RPC Signals struct. ConvertSignals is the
 // inverse of (Signals) Export().
 func ConvertSignal(s syscall.Signal) Signals {
 	switch s {
@@ -138,7 +138,7 @@ func ConvertSignal(s syscall.Signal) Signals {
 }
 
 // ConvertFilter takes a Jasper Filter struct and returns an
-// equivalent protobuf JRPC *Filter struct.
+// equivalent protobuf RPC *Filter struct.
 func ConvertFilter(f jasper.Filter) *Filter {
 	switch f {
 	case jasper.All:
@@ -156,7 +156,7 @@ func ConvertFilter(f jasper.Filter) *Filter {
 	}
 }
 
-// Export takes a protobuf JRPC LogType struct and returns the analogous
+// Export takes a protobuf RPC LogType struct and returns the analogous
 // Jasper LogType struct.
 func (lt LogType) Export() jasper.LogType {
 	switch lt {
@@ -182,7 +182,7 @@ func (lt LogType) Export() jasper.LogType {
 }
 
 // ConvertLogType takes a Jasper LogType struct and returns an
-// equivalent protobuf JRPC LogType struct. ConvertLogType is the
+// equivalent protobuf RPC LogType struct. ConvertLogType is the
 // inverse of (LogType) Export().
 func ConvertLogType(lt jasper.LogType) LogType {
 	switch lt {
@@ -207,7 +207,7 @@ func ConvertLogType(lt jasper.LogType) LogType {
 	}
 }
 
-// Export takes a protobuf JRPC OutputOptions struct and returns the analogous
+// Export takes a protobuf RPC OutputOptions struct and returns the analogous
 // Jasper OutputOptions struct.
 func (opts OutputOptions) Export() jasper.OutputOptions {
 	loggers := []jasper.Logger{}
@@ -224,7 +224,7 @@ func (opts OutputOptions) Export() jasper.OutputOptions {
 }
 
 // ConvertOutputOptions takes a Jasper OutputOptions struct and returns an
-// equivalent protobuf JRPC OutputOptions struct. ConvertOutputOptions is the
+// equivalent protobuf RPC OutputOptions struct. ConvertOutputOptions is the
 // inverse of (OutputOptions) Export().
 func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
 	loggers := []*Logger{}
@@ -240,7 +240,7 @@ func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
 	}
 }
 
-// Export takes a protobuf JRPC Logger struct and returns the analogous
+// Export takes a protobuf RPC Logger struct and returns the analogous
 // Jasper Logger struct.
 func (logger Logger) Export() jasper.Logger {
 	return jasper.Logger{
@@ -250,7 +250,7 @@ func (logger Logger) Export() jasper.Logger {
 }
 
 // ConvertLogger takes a Jasper Logger struct and returns an
-// equivalent protobuf JRPC Logger struct. ConvertLogger is the
+// equivalent protobuf RPC Logger struct. ConvertLogger is the
 // inverse of (Logger) Export().
 func ConvertLogger(logger jasper.Logger) *Logger {
 	return &Logger{
@@ -259,7 +259,7 @@ func ConvertLogger(logger jasper.Logger) *Logger {
 	}
 }
 
-// Export takes a protobuf JRPC LogOptions struct and returns the analogous
+// Export takes a protobuf RPC LogOptions struct and returns the analogous
 // Jasper LogOptions struct.
 func (opts LogOptions) Export() jasper.LogOptions {
 	out := jasper.LogOptions{
@@ -284,7 +284,7 @@ func (opts LogOptions) Export() jasper.LogOptions {
 }
 
 // ConvertLogOptions takes a Jasper LogOptions struct and returns an
-// equivalent protobuf JRPC LogOptions struct. ConvertLogOptions is the
+// equivalent protobuf RPC LogOptions struct. ConvertLogOptions is the
 // inverse of (LogOptions) Export().
 func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
 	return &LogOptions{
@@ -299,7 +299,7 @@ func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
 	}
 }
 
-// Export takes a protobuf JRPC BufferOptions struct and returns the analogous
+// Export takes a protobuf RPC BufferOptions struct and returns the analogous
 // Jasper BufferOptions struct.
 func (opts *BufferOptions) Export() jasper.BufferOptions {
 	return jasper.BufferOptions{
@@ -310,7 +310,7 @@ func (opts *BufferOptions) Export() jasper.BufferOptions {
 }
 
 // ConvertBufferOptions takes a Jasper BufferOptions struct and returns an
-// equivalent protobuf JRPC BufferOptions struct. ConvertBufferOptions is the
+// equivalent protobuf RPC BufferOptions struct. ConvertBufferOptions is the
 // inverse of (*BufferOptions) Export().
 func ConvertBufferOptions(opts jasper.BufferOptions) *BufferOptions {
 	return &BufferOptions{
@@ -320,7 +320,7 @@ func ConvertBufferOptions(opts jasper.BufferOptions) *BufferOptions {
 	}
 }
 
-// Export takes a protobuf JRPC BuildloggerOptions struct and returns the
+// Export takes a protobuf RPC BuildloggerOptions struct and returns the
 // analogous grip/send.BuildloggerConfig struct.
 func (opts BuildloggerOptions) Export() send.BuildloggerConfig {
 	return send.BuildloggerConfig{
@@ -335,7 +335,7 @@ func (opts BuildloggerOptions) Export() send.BuildloggerConfig {
 }
 
 // ConvertBuildloggerOptions takes a grip/send.BuildloggerConfig and returns an
-// equivalent protobuf JRPC BuildloggerOptions struct.
+// equivalent protobuf RPC BuildloggerOptions struct.
 // ConvertBuildloggerOptions is the inverse of (BuildloggerOptions) Export().
 func ConvertBuildloggerOptions(opts send.BuildloggerConfig) *BuildloggerOptions {
 	return &BuildloggerOptions{
@@ -349,7 +349,7 @@ func ConvertBuildloggerOptions(opts send.BuildloggerConfig) *BuildloggerOptions 
 	}
 }
 
-// Export takes a protobuf JRPC BuildloggerURLs struct and returns the analogous
+// Export takes a protobuf RPC BuildloggerURLs struct and returns the analogous
 // []string.
 func (u *BuildloggerURLs) Export() []string {
 	urls := []string{}
@@ -360,7 +360,7 @@ func (u *BuildloggerURLs) Export() []string {
 }
 
 // ConvertBuildloggerURLs takes a []string and returns the analogous protobuf
-// JRPC BuildloggerURLs struct. ConvertBuildloggerURLs is the
+// RPC BuildloggerURLs struct. ConvertBuildloggerURLs is the
 // inverse of (*BuildloggerURLs) Export().
 func ConvertBuildloggerURLs(urls []string) *BuildloggerURLs {
 	u := &BuildloggerURLs{Urls: []string{}}
@@ -370,7 +370,7 @@ func ConvertBuildloggerURLs(urls []string) *BuildloggerURLs {
 	return u
 }
 
-// Export takes a protobuf JRPC SplunkOptions struct and returns the
+// Export takes a protobuf RPC SplunkOptions struct and returns the
 // analogous grip/send.SplunkConnectionInfo struct.
 func (opts SplunkOptions) Export() send.SplunkConnectionInfo {
 	return send.SplunkConnectionInfo{
@@ -381,7 +381,7 @@ func (opts SplunkOptions) Export() send.SplunkConnectionInfo {
 }
 
 // ConvertSplunkOptions takes a grip/send.SplunkConnectionInfo and returns the
-// analogous protobuf JRPC SplunkOptions struct. ConvertSplunkOptions is the
+// analogous protobuf RPC SplunkOptions struct. ConvertSplunkOptions is the
 // inverse of (SplunkOptions) Export().
 func ConvertSplunkOptions(opts send.SplunkConnectionInfo) *SplunkOptions {
 	return &SplunkOptions{
@@ -391,7 +391,7 @@ func ConvertSplunkOptions(opts send.SplunkConnectionInfo) *SplunkOptions {
 	}
 }
 
-// Export takes a protobuf JRPC LogFormat struct and returns the analogous
+// Export takes a protobuf RPC LogFormat struct and returns the analogous
 // Jasper LogFormat struct.
 func (f LogFormat) Export() jasper.LogFormat {
 	switch f {
@@ -407,7 +407,7 @@ func (f LogFormat) Export() jasper.LogFormat {
 }
 
 // ConvertLogFormat takes a Jasper LogFormat struct and returns an
-// equivalent protobuf JRPC LogFormat struct. ConvertLogFormat is the
+// equivalent protobuf RPC LogFormat struct. ConvertLogFormat is the
 // inverse of (LogFormat) Export().
 func ConvertLogFormat(f jasper.LogFormat) LogFormat {
 	switch f {
@@ -422,7 +422,7 @@ func ConvertLogFormat(f jasper.LogFormat) LogFormat {
 	}
 }
 
-// Export takes a protobuf JRPC BuildOptions struct and returns the analogous
+// Export takes a protobuf RPC BuildOptions struct and returns the analogous
 // bond.BuildOptions struct.
 func (opts *BuildOptions) Export() bond.BuildOptions {
 	return bond.BuildOptions{
@@ -433,7 +433,7 @@ func (opts *BuildOptions) Export() bond.BuildOptions {
 	}
 }
 
-// Export takes a protobuf JRPC MongoDBDownloadOptions struct and returns the
+// Export takes a protobuf RPC MongoDBDownloadOptions struct and returns the
 // analogous Jasper MongoDBDownloadOptions struct.
 func (opts *MongoDBDownloadOptions) Export() jasper.MongoDBDownloadOptions {
 	jopts := jasper.MongoDBDownloadOptions{
@@ -448,7 +448,7 @@ func (opts *MongoDBDownloadOptions) Export() jasper.MongoDBDownloadOptions {
 	return jopts
 }
 
-// Export takes a protobuf JRPC CacheOptions struct and returns the analogous
+// Export takes a protobuf RPC CacheOptions struct and returns the analogous
 // Jasper CacheOptions struct.
 func (opts *CacheOptions) Export() jasper.CacheOptions {
 	return jasper.CacheOptions{
@@ -458,7 +458,7 @@ func (opts *CacheOptions) Export() jasper.CacheOptions {
 	}
 }
 
-// Export takes a protobuf JRPC DownloadInfo struct and returns the analogous
+// Export takes a protobuf RPC DownloadInfo struct and returns the analogous
 // Jasper DownloadInfo struct.
 func (info *DownloadInfo) Export() jasper.DownloadInfo {
 	return jasper.DownloadInfo{
@@ -469,7 +469,7 @@ func (info *DownloadInfo) Export() jasper.DownloadInfo {
 }
 
 // ConvertDownloadInfo takes a Jasper DownloadInfo struct and returns an
-// equivalent protobuf JRPC DownloadInfo struct. ConvertDownloadInfo is the
+// equivalent protobuf RPC DownloadInfo struct. ConvertDownloadInfo is the
 // inverse of (*DownloadInfo) Export().
 func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
 	return &DownloadInfo{
@@ -479,7 +479,7 @@ func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
 	}
 }
 
-// Export takes a protobuf JRPC ArchiveFormat struct and returns the analogous
+// Export takes a protobuf RPC ArchiveFormat struct and returns the analogous
 // Jasper ArchiveFormat struct.
 func (format ArchiveFormat) Export() jasper.ArchiveFormat {
 	switch format {
@@ -495,7 +495,7 @@ func (format ArchiveFormat) Export() jasper.ArchiveFormat {
 }
 
 // ConvertArchiveFormat takes a Jasper ArchiveFormat struct and returns an
-// equivalent protobuf JRPC ArchiveFormat struct. ConvertArchiveFormat is the
+// equivalent protobuf RPC ArchiveFormat struct. ConvertArchiveFormat is the
 // inverse of (ArchiveFormat) Export().
 func ConvertArchiveFormat(format jasper.ArchiveFormat) ArchiveFormat {
 	switch format {
@@ -510,7 +510,7 @@ func ConvertArchiveFormat(format jasper.ArchiveFormat) ArchiveFormat {
 	}
 }
 
-// Export takes a protobuf JRPC ArchiveOptions struct and returns the analogous
+// Export takes a protobuf RPC ArchiveOptions struct and returns the analogous
 // Jasper ArchiveOptions struct.
 func (opts ArchiveOptions) Export() jasper.ArchiveOptions {
 	return jasper.ArchiveOptions{
@@ -521,7 +521,7 @@ func (opts ArchiveOptions) Export() jasper.ArchiveOptions {
 }
 
 // ConvertArchiveOptions takes a Jasper ArchiveOptions struct and returns an
-// equivalent protobuf JRPC ArchiveOptions struct. ConvertArchiveOptions is the
+// equivalent protobuf RPC ArchiveOptions struct. ConvertArchiveOptions is the
 // inverse of (ArchiveOptions) Export().
 func ConvertArchiveOptions(opts jasper.ArchiveOptions) *ArchiveOptions {
 	return &ArchiveOptions{

@@ -1,4 +1,4 @@
-package jrpc
+package rpc
 
 import (
 	"context"
@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/jrpc/internal"
+	"github.com/mongodb/jasper/rpc/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
 
-func TestJRPCService(t *testing.T) {
+func TestRPCService(t *testing.T) {
 	for managerName, makeManager := range map[string]func() jasper.Manager{
 		"Basic": jasper.NewLocalManager,
 		"Blocking": jasper.NewLocalManagerBlockingProcesses,
@@ -126,7 +126,7 @@ func TestJRPCService(t *testing.T) {
 					opts := jasper.CreateOptions{Args: []string{"echo", output}}
 
 					manager := makeManager()
-					addr, err := startJRPC(ctx, manager)
+					addr, err := startRPC(ctx, manager)
 					require.NoError(t, err)
 
 					conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
