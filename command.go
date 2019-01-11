@@ -1,4 +1,4 @@
-package util
+package jasper
 
 import (
 	"context"
@@ -225,6 +225,7 @@ func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
 	c.closers = append(c.closers, writer.Close)
+	c.stdErr = writer
 	c.stdOut = writer
 	return c
 }
@@ -246,12 +247,13 @@ func (c *Command) SetOutputWriter(writer io.WriteCloser) *Command {
 // SetCombinedWriter TODO.
 func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
 	c.closers = append(c.closers, writer.Close)
+	c.stdErr = writer
 	c.stdOut = writer
 	return c
 }
 
 func (c *Command) finalizeWriters() {
-	if c.stdErr == nil && c.stdErr == nil {
+	if c.stdErr == nil && c.stdOut == nil {
 		return
 	}
 
