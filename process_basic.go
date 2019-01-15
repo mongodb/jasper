@@ -16,7 +16,6 @@ type basicProcess struct {
 	cmd           *exec.Cmd
 	err           error
 	id            string
-	hostname      string
 	opts          CreateOptions
 	tags          map[string]struct{}
 	triggers      ProcessTriggerSequence
@@ -28,6 +27,7 @@ type basicProcess struct {
 func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
+	opts.Hostname, _ = os.Hostname()
 
 	cmd, err := opts.Resolve(ctx)
 	if err != nil {
@@ -42,7 +42,6 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		waitProcessed: make(chan struct{}),
 		initialized:   make(chan struct{}),
 	}
-	p.hostname, _ = os.Hostname()
 
 	for _, t := range opts.Tags {
 		p.Tag(t)
@@ -57,7 +56,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 
 	p.info.ID = p.id
 	p.info.Options = p.opts
-	p.info.Host = p.hostname
+	p.info.Host = p.opts.Hostname
 
 	go p.transition(ctx, cmd)
 
@@ -142,7 +141,7 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 	defer p.RUnlock()
 
 	opts := p.info.Options
-	opts.closers = []func(){}
+	opts.closers = []func() error{}
 
 	return newBasicProcess(ctx, &opts)
 }

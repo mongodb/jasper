@@ -172,8 +172,15 @@ func TestCreateOptions(t *testing.T) {
 		"ClosersAreAlwaysCalled": func(t *testing.T, opts *CreateOptions) {
 			var counter int
 			opts.closers = append(opts.closers,
-				func() { counter++ },
-				func() { counter += 2 })
+				func() error {
+					counter++
+					return nil
+				},
+				func() error {
+					counter += 2
+					return nil
+				},
+			)
 			opts.Close()
 			assert.Equal(t, counter, 3)
 

@@ -137,8 +137,9 @@ func TestDefaultTrigger(t *testing.T) {
 		"OptionsCloseTriggerCallsClosers": func(ctx context.Context, t *testing.T, manager Manager) {
 			count := 0
 			opts := CreateOptions{}
-			opts.closers = append(opts.closers, func() {
+			opts.closers = append(opts.closers, func() error {
 				count++
+				return nil
 			})
 			info := ProcessInfo{Options: opts}
 

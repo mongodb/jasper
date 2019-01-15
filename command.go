@@ -1,10 +1,10 @@
 package jasper
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os/exec"
 	"strings"
 
 	"github.com/google/shlex"
@@ -15,34 +15,52 @@ import (
 	"github.com/pkg/errors"
 )
 
-func getCommand(ctx context.Context, args []string, dir string, env map[string]string) (*exec.Cmd, error) {
-	var cmd *exec.Cmd
+// Command TODO.
+type Command struct {
+	cmds     [][]string // MAY: command-unique
+	opts     CreateOptions
+	priority level.Priority // MAY: command-unique
+	id       string         // MAY: exists in process
 
+	continueOnError bool        // MAY: command-unique
+	stopOnError     bool        // MAY: command-unique
+	ignoreError     bool        // MAY: command-unique
+	check           func() bool // MAY: command-unique
+}
+
+func getCreateOpt(ctx context.Context, args []string, dir string, env map[string]string) (*CreateOptions, error) {
+	var opts *CreateOptions
 	switch len(args) {
 	case 0:
+		// MAY: case 0 is just invalid and impossible, so we error out here.
 		return nil, errors.New("args invalid")
 	case 1:
+		// MAY: case 1 is the case where we are given a single arg string (1
+		// element array), in which case it is interpreted as a whole command
+		// shlex-interpreted
 		if strings.Contains(args[0], " \"'") {
 			spl, err := shlex.Split(args[0])
 			if err != nil {
 				return nil, errors.Wrap(err, "problem splitting argstring")
 			}
-			return getCommand(ctx, spl, dir, env)
+			return getCreateOpt(ctx, spl, dir, env)
 		}
-		cmd = exec.CommandContext(ctx, args[0])
+		opts = &CreateOptions{Args: args}
 	default:
-		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		// MAY: This is the "expected" case, where the argument we wish to run is
+		// given as a detokenized command.
+		opts = &CreateOptions{Args: args}
 	}
-	cmd.Dir = dir
+	opts.WorkingDirectory = dir
 
 	for k, v := range env {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+		opts.Environment[k] = v
 	}
 
-	return cmd, nil
+	return opts, nil
 }
 
-func getRemoteCommand(ctx context.Context, host string, args []string, dir string) (*exec.Cmd, error) {
+func getRemoteCreateOpt(ctx context.Context, host string, args []string, dir string) (*CreateOptions, error) {
 	var remoteCmd string
 
 	if dir != "" {
@@ -58,7 +76,7 @@ func getRemoteCommand(ctx context.Context, host string, args []string, dir strin
 		remoteCmd += strings.Join(args, " ")
 	}
 
-	return exec.CommandContext(ctx, "ssh", []string{host, remoteCmd}...), nil
+	return &CreateOptions{Args: []string{"ssh", host, remoteCmd}}, nil
 }
 
 func getLogOutput(out []byte) string {
@@ -74,24 +92,6 @@ func splitCmdToArgs(cmd string) []string {
 	return args
 }
 
-// Command TODO.
-type Command struct {
-	cmds     [][]string
-	dir      string
-	host     string
-	env      map[string]string
-	priority level.Priority
-	id       string
-
-	continueOnError bool
-	stopOnError     bool
-	ignoreError     bool
-	stdOut          io.Writer
-	stdErr          io.Writer
-	closers         []func() error
-	check           func() bool
-}
-
 // NewCommand TODO.
 func NewCommand() *Command { return &Command{} }
 
@@ -105,10 +105,10 @@ func (c *Command) Add(args []string) *Command { c.cmds = append(c.cmds, args); r
 func (c *Command) Extend(cmds [][]string) *Command { c.cmds = append(c.cmds, cmds...); return c }
 
 // Directory TODO.
-func (c *Command) Directory(d string) *Command { c.dir = d; return c }
+func (c *Command) Directory(d string) *Command { c.opts.WorkingDirectory = d; return c }
 
 // Host TODO.
-func (c *Command) Host(h string) *Command { c.host = h; return c }
+func (c *Command) Host(h string) *Command { c.opts.Hostname = h; return c }
 
 // Priority TODO.
 func (c *Command) Priority(l level.Priority) *Command { c.priority = l; return c }
@@ -126,10 +126,10 @@ func (c *Command) SetStopOnError(stop bool) *Command { c.stopOnError = stop; ret
 func (c *Command) SetIgnoreError(ignore bool) *Command { c.ignoreError = ignore; return c }
 
 // Environment TODO.
-func (c *Command) Environment(e map[string]string) *Command { c.env = e; return c }
+func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment = e; return c }
 
 // AddEnv TODO.
-func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.env[k] = v; return c }
+func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.opts.Environment[k] = v; return c }
 
 // SetCheck TODO.
 func (c *Command) SetCheck(chk func() bool) *Command { c.check = chk; return c }
@@ -144,8 +144,8 @@ func (c *Command) Append(cmds ...string) *Command {
 
 // setupEnv TODO.
 func (c *Command) setupEnv() {
-	if c.env == nil {
-		c.env = map[string]string{}
+	if c.opts.Environment == nil {
+		c.opts.Environment = map[string]string{}
 	}
 }
 
@@ -167,20 +167,21 @@ func (c *Command) Run(ctx context.Context) (err error) {
 		err = catcher.Resolve()
 	}()
 
-	var cmds []*exec.Cmd
-	cmds, err = c.getExecCmds(ctx)
+	var opts []*CreateOptions
+	opts, err = c.getCreateOpts(ctx)
 	if err != nil {
 		catcher.Add(err)
 		return
 	}
 
-	for idx, cmd := range cmds {
+	// MAY: cmd's are run in sequence, if replace with procs we run the procs here?
+	for idx, opt := range opts {
 		if err = ctx.Err(); err != nil {
 			catcher.Add(errors.Wrap(err, "operation canceled"))
 			return
 		}
 
-		err = c.exec(cmd, idx)
+		err = c.exec(ctx, opt, idx)
 		if !c.ignoreError {
 			catcher.Add(err)
 		}
@@ -198,7 +199,7 @@ func (c *Command) Run(ctx context.Context) (err error) {
 // Close TODO.
 func (c *Command) Close() error {
 	catcher := grip.NewBasicCatcher()
-	for _, closer := range c.closers {
+	for _, closer := range c.opts.closers {
 		catcher.Add(closer())
 	}
 
@@ -208,67 +209,67 @@ func (c *Command) Close() error {
 // SetErrorSender TODO.
 func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.closers = append(c.closers, writer.Close)
-	c.stdErr = writer
+	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.Output.Error = writer
 	return c
 }
 
 // SetOutputSender TODO.
 func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.closers = append(c.closers, writer.Close)
-	c.stdOut = writer
+	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.Output.Output = writer
 	return c
 }
 
 // SetCombinedSender TODO.
 func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.closers = append(c.closers, writer.Close)
-	c.stdErr = writer
-	c.stdOut = writer
+	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.Output.Error = writer
+	c.opts.Output.Output = writer
 	return c
 }
 
 // SetErrorWriter TODO.
 func (c *Command) SetErrorWriter(writer io.WriteCloser) *Command {
-	c.closers = append(c.closers, writer.Close)
-	c.stdErr = writer
+	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.Output.Error = writer
 	return c
 }
 
 // SetOutputWriter TODO.
 func (c *Command) SetOutputWriter(writer io.WriteCloser) *Command {
-	c.closers = append(c.closers, writer.Close)
-	c.stdOut = writer
+	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.Output.Output = writer
 	return c
 }
 
 // SetCombinedWriter TODO.
 func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
-	c.closers = append(c.closers, writer.Close)
-	c.stdErr = writer
-	c.stdOut = writer
+	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.Output.Error = writer
+	c.opts.Output.Output = writer
 	return c
 }
 
 func (c *Command) finalizeWriters() {
-	if c.stdErr == nil && c.stdOut == nil {
+	if c.opts.Output.Error == nil && c.opts.Output.Output == nil {
 		return
 	}
 
-	if c.stdErr != nil && c.stdOut == nil {
-		c.stdOut = c.stdErr
+	if c.opts.Output.Error != nil && c.opts.Output.Output == nil {
+		c.opts.Output.Output = c.opts.Output.Error
 	}
 
-	if c.stdOut != nil && c.stdErr == nil {
-		c.stdErr = c.stdOut
+	if c.opts.Output.Output != nil && c.opts.Output.Error == nil {
+		c.opts.Output.Error = c.opts.Output.Output
 	}
 }
 
 func (c *Command) getEnv() []string {
 	out := []string{}
-	for k, v := range c.env {
+	for k, v := range c.opts.Environment {
 		out = append(out, fmt.Sprintf("%s=%s", k, v))
 	}
 	return out
@@ -283,13 +284,13 @@ func (c *Command) getCmd() string {
 	return strings.Join(out, "")
 }
 
-func (c *Command) getExecCmds(ctx context.Context) ([]*exec.Cmd, error) {
-	out := []*exec.Cmd{}
+func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
+	out := []*CreateOptions{}
 	// env := c.getEnv()
 	catcher := grip.NewBasicCatcher()
-	if c.host != "" {
+	if c.opts.Hostname != "" {
 		for _, args := range c.cmds {
-			cmd, err := getRemoteCommand(ctx, c.host, args, c.dir)
+			cmd, err := getRemoteCreateOpt(ctx, c.opts.Hostname, args, c.opts.WorkingDirectory)
 			if err != nil {
 				catcher.Add(err)
 				continue
@@ -299,7 +300,7 @@ func (c *Command) getExecCmds(ctx context.Context) ([]*exec.Cmd, error) {
 		}
 	} else {
 		for _, args := range c.cmds {
-			cmd, err := getCommand(ctx, args, c.dir, c.env)
+			cmd, err := getCreateOpt(ctx, args, c.opts.WorkingDirectory, c.opts.Environment)
 			if err != nil {
 				catcher.Add(err)
 				continue
@@ -315,29 +316,33 @@ func (c *Command) getExecCmds(ctx context.Context) ([]*exec.Cmd, error) {
 	return out, nil
 }
 
-func (c *Command) exec(cmd *exec.Cmd, idx int) error {
+func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error {
 	msg := message.Fields{
 		"id":  c.id,
-		"cmd": strings.Join(cmd.Args, " "),
+		"cmd": strings.Join(opts.Args, " "),
 		"idx": idx,
 		"len": len(c.cmds),
 	}
 
 	var err error
-	if c.stdOut == nil {
-		var out []byte
-		out, err = cmd.CombinedOutput()
-		msg["out"] = getLogOutput(out)
-		msg["err"] = err != nil
+	if c.opts.Output.Output == nil {
+		var out bytes.Buffer
+		opts.Output.Output = &out
+		opts.Output.Error = &out
+		msg["out"] = getLogOutput(out.Bytes())
+		msg["err"] = err
 	} else {
-		cmd.Stderr = c.stdErr
-		cmd.Stdout = c.stdOut
-
-		err = errors.Wrapf(cmd.Start(), "problem starting command")
-		if err == nil {
-			err = cmd.Wait()
+		opts.Output.Error = c.opts.Output.Error
+		opts.Output.Output = c.opts.Output.Output
+		newProc, err := newBasicProcess(ctx, opts)
+		if err != nil {
+			return errors.Wrapf(err, "problem starting command")
 		}
-		msg["err"] = err != nil
+
+		if err == nil {
+			_, err = newProc.Wait(ctx)
+		}
+		msg["err"] = err
 	}
 	grip.Log(c.priority, msg)
 	return err
