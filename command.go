@@ -25,7 +25,7 @@ type Command struct {
 	continueOnError bool        // MAY: command-unique
 	stopOnError     bool        // MAY: command-unique
 	ignoreError     bool        // MAY: command-unique
-	check           func() bool // MAY: command-unique
+	precondition    func() bool // MAY: command-unique
 }
 
 func getCreateOpt(ctx context.Context, args []string, dir string, env map[string]string) (*CreateOptions, error) {
@@ -132,7 +132,7 @@ func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment
 func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.opts.Environment[k] = v; return c }
 
 // SetCheck TODO.
-func (c *Command) SetCheck(chk func() bool) *Command { c.check = chk; return c }
+func (c *Command) SetCheck(chk func() bool) *Command { c.precondition = chk; return c }
 
 // Append TODO.
 func (c *Command) Append(cmds ...string) *Command {
@@ -151,7 +151,7 @@ func (c *Command) setupEnv() {
 
 // Run TODO.
 func (c *Command) Run(ctx context.Context) (err error) {
-	if c.check != nil && !c.check() {
+	if c.precondition != nil && !c.precondition() {
 		grip.Debug(message.Fields{
 			"op":  "noop after check returned false",
 			"id":  c.id,
@@ -286,7 +286,6 @@ func (c *Command) getCmd() string {
 
 func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
 	out := []*CreateOptions{}
-	// env := c.getEnv()
 	catcher := grip.NewBasicCatcher()
 	if c.opts.Hostname != "" {
 		for _, args := range c.cmds {
