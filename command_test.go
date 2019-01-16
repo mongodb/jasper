@@ -1,61 +1,89 @@
 package jasper
 
 import (
+	"bytes"
 	"context"
-	"io/ioutil"
-	"os"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestRunCommand(t *testing.T) {
-	assert.NoError(
-		t,
-		RunCommand(
-			context.Background(),
-			"test",
-			level.Info,
-			[]string{"echo", "hello world"},
-			"/Users/may/quick/",
-			map[string]string{},
-		),
-	)
+type BufferCloser struct {
+	*bytes.Buffer
 }
 
-func TestCommandStdOutAndStdErr(t *testing.T) {
-	myCmd := NewCommand()
-	msg1, msg2 := "lalala", "second"
-	testFile := "test.txt"
-	myCmd.Add([]string{"echo", msg1})
-	myCmd.Add([]string{"echo", msg2})
-	myCmd.Add([]string{"ls", "DNE"})
+func (b *BufferCloser) Close() error { return nil }
 
-	file, err := os.Create(testFile)
-	require.NoError(t, err)
-	myCmd.SetOutputWriter(file)
+func TestCommandImplementation(t *testing.T) {
+	for name, testCase := range map[string]func(context.Context, *testing.T){
+		"ValidRunCommandDoesNotError": func(ctx context.Context, t *testing.T) {
+			assert.NoError(
+				t,
+				RunCommand(
+					context.Background(),
+					"test",
+					level.Info,
+					[]string{"echo", "hello world"},
+					"/Users/may/quick/",
+					map[string]string{},
+				),
+			)
+		},
+		"CommandOutput": func(ctx context.Context, t *testing.T) {
+			echo, ls := "echo", "ls"
+			arg1, arg2, arg3 := "lalala", "second", "DNE"
 
-	assert.NoError(t, myCmd.Run(context.Background()))
+			verifyOutput := func(cmd *Command, t *testing.T, expectedOutputs ...string) {
+				var buf bytes.Buffer
+				bufCloser := &BufferCloser{&buf}
 
-	fileBytes, err := ioutil.ReadFile("test.txt")
-	require.NoError(t, err)
-	commandsOut := string(fileBytes)
-	assert.True(t, strings.Contains(commandsOut, "lalala"))
-	assert.True(t, strings.Contains(commandsOut, "second"))
-	assert.True(t, strings.Contains(commandsOut, "No such file or directory"))
+				cmd.SetOutputWriter(bufCloser)
+				assert.NoError(t, cmd.Run(context.Background()))
+				output := bufCloser.String()
+				grip.Debugf("Got output: %v", output)
+
+				for _, expected := range expectedOutputs {
+					assert.True(t, strings.Contains(output, expected))
+				}
+			}
+
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T){
+				"StdOutOnly": func(ctx context.Context, t *testing.T) {
+					cmd := NewCommand()
+					cmd.Add([]string{echo, arg1})
+					cmd.Add([]string{echo, arg2})
+					verifyOutput(cmd, t, arg1, arg2)
+				},
+				"StdErrOnly": func(ctx context.Context, t *testing.T) {
+					cmd := NewCommand()
+					cmd.Add([]string{ls, arg3})
+					lsOutput := fmt.Sprintf("%s: %s: No such file or directory", ls, arg3)
+					verifyOutput(cmd, t, lsOutput)
+				},
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T) {
+					cmd := NewCommand()
+					cmd.Add([]string{echo, arg1})
+					cmd.Add([]string{echo, arg2})
+					cmd.Add([]string{ls, arg3})
+					lsOutput := fmt.Sprintf("%s: %s: No such file or directory", ls, arg3)
+					verifyOutput(cmd, t, arg1, arg2, lsOutput)
+				},
+			} {
+				t.Run(subName, func(t *testing.T) {
+					subTestCase(ctx, t)
+				})
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
+			defer cancel()
+
+			testCase(ctx, t)
+		})
+	}
 }
-
-//
-//func TestRemoteCommandForProcess(t *testing.T) {
-//	opts := CreateOptions{
-//		Args:   []string{"ssh", "root@ec2-54-198-151-1.compute-1.amazonaws.com", "cd", ".composer/", "&&", "ls"},
-//		Output: OutputOptions{Output: os.Stdout},
-//	}
-//	ctx := context.Background()
-//	remoteProc, err := newBasicProcess(ctx, &opts)
-//	require.NoError(t, err)
-//	remoteProc.Wait(ctx)
-//}
