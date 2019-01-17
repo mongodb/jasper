@@ -164,11 +164,11 @@ func TestProcessImplementations(t *testing.T) {
 					}
 					count := 0
 					countIncremented := make(chan bool, 1)
-					opts.closers = append(opts.closers, func() error {
+					opts.closers = append(opts.closers, func() (_ error) {
 						count++
 						countIncremented <- true
 						close(countIncremented)
-						return nil
+						return
 					})
 
 					proc, err := makep(ctx, opts)

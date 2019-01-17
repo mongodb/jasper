@@ -226,11 +226,11 @@ func TestManagerInterface(t *testing.T) {
 					opts := sleepCreateOpts(5)
 					count := 0
 					countIncremented := make(chan bool, 1)
-					opts.closers = append(opts.closers, func() error {
+					opts.closers = append(opts.closers, func() (_ error) {
 						count++
 						countIncremented <- true
 						close(countIncremented)
-						return nil
+						return
 					})
 
 					_, err := manager.Create(ctx, opts)
@@ -316,11 +316,11 @@ func TestManagerInterface(t *testing.T) {
 					opts.Args = []string{"echo", "foobar"}
 					count := 0
 					countIncremented := make(chan bool, 1)
-					opts.closers = append(opts.closers, func() error {
+					opts.closers = append(opts.closers, func() (_ error) {
 						count++
 						countIncremented <- true
 						close(countIncremented)
-						return nil
+						return
 					})
 
 					proc, err := manager.Create(ctx, opts)
