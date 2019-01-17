@@ -95,8 +95,8 @@ func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment
 // AddEnv TODO.
 func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.opts.Environment[k] = v; return c }
 
-// SetCheck TODO.
-func (c *Command) SetCheck(chk func() bool) *Command { c.precondition = chk; return c }
+// SetPrecondition TODO.
+func (c *Command) SetPrecondition(chk func() bool) *Command { c.precondition = chk; return c }
 
 // Append TODO.
 func (c *Command) Append(cmds ...string) *Command {
@@ -117,7 +117,7 @@ func (c *Command) setupEnv() {
 func (c *Command) Run(ctx context.Context) (err error) {
 	if c.precondition != nil && !c.precondition() {
 		grip.Debug(message.Fields{
-			"op":  "noop after check returned false",
+			"op":  "noop after precondition returned false",
 			"id":  c.id,
 			"cmd": c.String(),
 		})

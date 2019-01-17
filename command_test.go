@@ -85,6 +85,24 @@ func TestCommandImplementation(t *testing.T) {
 			cmd.Add([]string{})
 			assert.EqualError(t, cmd.Run(ctx), "args invalid")
 		},
+		"PreconditionDeterminesExecution": func(ctx context.Context, t *testing.T) {
+			for _, precondition := range []func() bool{
+				func() bool {
+					return true
+				},
+				func() bool {
+					return false
+				},
+			} {
+				t.Run(fmt.Sprintf("%tPrecondition", precondition()), func(t *testing.T) {
+					cmd := NewCommand()
+					cmd.SetPrecondition(precondition)
+					cmd.Add([]string{echo, arg1})
+					output := verifyCommandAndGetOutput(cmd, t, true)
+					checkOutput(cmd, t, output, precondition(), arg1)
+				})
+			}
+		},
 		"SingleInvalidSubCommandCausesTotalError": func(ctx context.Context, t *testing.T) {
 			assert.Error(
 				t,
