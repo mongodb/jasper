@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -28,21 +29,24 @@ func lsErrorMsg(badDir string) string {
 	return fmt.Sprintf("%s: %s: No such file or directory", ls, badDir)
 }
 
-func verifyOutput(cmd *Command, t *testing.T, expectSuccess bool, expectedOutputs ...string) {
+func verifyCommandAndGetOutput(cmd *Command, t *testing.T, expectSuccess bool) string {
 	var buf bytes.Buffer
 	bufCloser := &BufferCloser{&buf}
 
 	cmd.SetCombinedWriter(bufCloser)
+
 	if expectSuccess {
 		assert.NoError(t, cmd.Run(context.Background()))
 	} else {
 		assert.Error(t, cmd.Run(context.Background()))
 	}
 
-	output := bufCloser.String()
+	return bufCloser.String()
+}
 
+func checkOutput(cmd *Command, t *testing.T, output string, exists bool, expectedOutputs ...string) {
 	for _, expected := range expectedOutputs {
-		assert.True(t, strings.Contains(output, expected))
+		assert.True(t, exists == strings.Contains(output, expected))
 	}
 }
 
@@ -93,46 +97,58 @@ func TestCommandImplementation(t *testing.T) {
 				),
 			)
 		},
-		"IgnoreErrorCausesSuccessfulReturn": func(ctx context.Context, t *testing.T) {
-			cmd := NewCommand()
-			cmd.Extend([][]string{
-				[]string{echo, arg1},
-				[]string{ls, arg3},
-				[]string{echo, arg2},
-			})
-			cmd.SetIgnoreError(true)
-			verifyOutput(cmd, t, true, arg1, lsErrorMsg(arg3), arg2)
-		},
-		"NoIgnoreErrorStopsEarly": func(ctx context.Context, t *testing.T) {
-			cmd := NewCommand()
-			cmd.Extend([][]string{
-				[]string{echo, arg1},
-				[]string{ls, arg3},
-				[]string{echo, arg2},
-			})
-			// We should only see the output from commands 1 and 2.
-			verifyOutput(cmd, t, false, arg1, lsErrorMsg(arg3))
-		},
-		"CommandOutput": func(ctx context.Context, t *testing.T) {
+		"ExecutionFlags": func(ctx context.Context, t *testing.T) {
+			numCombinations := int(math.Pow(2, 3))
+			for i := 0; i < numCombinations; i++ {
+				continueOnError, ignoreError, includeBadCmd := i&1 == 1, i&2 == 2, i&4 == 4
 
+				cmd := NewCommand()
+				cmd.Add([]string{echo, arg1})
+				if includeBadCmd {
+					cmd.Add([]string{ls, arg3})
+				}
+				cmd.Add([]string{echo, arg2})
+
+				subTestName := fmt.Sprintf(
+					"ContinueOnErrorIs%tAndIgnoreErrorIs%tAndIncludeBadCmdIs%t",
+					continueOnError,
+					ignoreError,
+					includeBadCmd,
+				)
+				t.Run(subTestName, func(t *testing.T) {
+					cmd.SetContinueOnError(continueOnError)
+					cmd.SetIgnoreError(ignoreError)
+					successful := ignoreError || !includeBadCmd
+					outputAfterLsExists := !includeBadCmd || continueOnError
+					output := verifyCommandAndGetOutput(cmd, t, successful)
+					checkOutput(cmd, t, output, true, arg1)
+					checkOutput(cmd, t, output, includeBadCmd, lsErrorMsg(arg3))
+					checkOutput(cmd, t, output, outputAfterLsExists, arg2)
+				})
+			}
+		},
+		"Output": func(ctx context.Context, t *testing.T) {
 			for subName, subTestCase := range map[string]func(context.Context, *testing.T){
 				"StdOutOnly": func(ctx context.Context, t *testing.T) {
 					cmd := NewCommand()
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
-					verifyOutput(cmd, t, true, arg1, arg2)
+					output := verifyCommandAndGetOutput(cmd, t, true)
+					checkOutput(cmd, t, output, true, arg1, arg2)
 				},
 				"StdErrOnly": func(ctx context.Context, t *testing.T) {
 					cmd := NewCommand()
 					cmd.Add([]string{ls, arg3})
-					verifyOutput(cmd, t, false, lsErrorMsg(arg3))
+					output := verifyCommandAndGetOutput(cmd, t, false)
+					checkOutput(cmd, t, output, true, lsErrorMsg(arg3))
 				},
 				"StdOutAndStdErr": func(ctx context.Context, t *testing.T) {
 					cmd := NewCommand()
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
 					cmd.Add([]string{ls, arg3})
-					verifyOutput(cmd, t, false, arg1, arg2, lsErrorMsg(arg3))
+					output := verifyCommandAndGetOutput(cmd, t, false)
+					checkOutput(cmd, t, output, true, arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {

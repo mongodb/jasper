@@ -23,7 +23,6 @@ type Command struct {
 	id       string         // MAY: exists in process
 
 	continueOnError bool        // MAY: command-unique
-	stopOnError     bool        // MAY: command-unique
 	ignoreError     bool        // MAY: command-unique
 	precondition    func() bool // MAY: command-unique
 }
@@ -116,11 +115,8 @@ func (c *Command) Priority(l level.Priority) *Command { c.priority = l; return c
 // ID TODO.
 func (c *Command) ID(id string) *Command { c.id = id; return c }
 
-// SetContinue TODO.
-func (c *Command) SetContinue(cont bool) *Command { c.continueOnError = cont; return c }
-
-// SetStopOnError TODO.
-func (c *Command) SetStopOnError(stop bool) *Command { c.stopOnError = stop; return c }
+// SetContinueOnError TODO.
+func (c *Command) SetContinueOnError(cont bool) *Command { c.continueOnError = cont; return c }
 
 // SetIgnoreError TODO.
 func (c *Command) SetIgnoreError(ignore bool) *Command { c.ignoreError = ignore; return c }
@@ -186,9 +182,7 @@ func (c *Command) Run(ctx context.Context) (err error) {
 			catcher.Add(err)
 		}
 
-		if c.continueOnError {
-			continue
-		} else if err != nil && c.stopOnError {
+		if err != nil && !c.continueOnError {
 			return
 		}
 	}
@@ -335,7 +329,6 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 		}
 
 		_, err = newProc.Wait(ctx)
-		grip.Debugf("Err?: %v", err)
 		msg["out"] = getLogOutput(out.Bytes())
 		msg["err"] = err
 	} else {
@@ -365,12 +358,12 @@ func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host s
 
 // RunCommandGroupContinueOnError TODO.
 func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).SetContinue(true).Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).SetContinueOnError(true).Run(ctx)
 }
 
 // RunRemoteCommandGroupContinueOnError TODO.
 func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).SetContinue(true).Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).SetContinueOnError(true).Run(ctx)
 }
 
 // RunCommandGroup TODO.
