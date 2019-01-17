@@ -27,38 +27,6 @@ type Command struct {
 	precondition    func() bool // MAY: command-unique
 }
 
-func getCreateOpt(ctx context.Context, args []string, dir string, env map[string]string) (*CreateOptions, error) {
-	var opts *CreateOptions
-	switch len(args) {
-	case 0:
-		// MAY: case 0 is just invalid and impossible, so we error out here.
-		return nil, errors.New("args invalid")
-	case 1:
-		// MAY: case 1 is the case where we are given a single arg string (1
-		// element array), in which case it is interpreted as a whole command
-		// shlex-interpreted
-		if strings.Contains(args[0], " \"'") {
-			spl, err := shlex.Split(args[0])
-			if err != nil {
-				return nil, errors.Wrap(err, "problem splitting argstring")
-			}
-			return getCreateOpt(ctx, spl, dir, env)
-		}
-		opts = &CreateOptions{Args: args}
-	default:
-		// MAY: This is the "expected" case, where the argument we wish to run is
-		// given as a detokenized command.
-		opts = &CreateOptions{Args: args}
-	}
-	opts.WorkingDirectory = dir
-
-	for k, v := range env {
-		opts.Environment[k] = v
-	}
-
-	return opts, nil
-}
-
 func getRemoteCreateOpt(ctx context.Context, host string, args []string, dir string) (*CreateOptions, error) {
 	var remoteCmd string
 
@@ -276,6 +244,38 @@ func (c *Command) getCmd() string {
 		out = append(out, fmt.Sprintf("%s '%s';\n", env, strings.Join(cmd, " ")))
 	}
 	return strings.Join(out, "")
+}
+
+func getCreateOpt(ctx context.Context, args []string, dir string, env map[string]string) (*CreateOptions, error) {
+	var opts *CreateOptions
+	switch len(args) {
+	case 0:
+		// MAY: case 0 is just invalid and impossible, so we error out here.
+		return nil, errors.New("args invalid")
+	case 1:
+		// MAY: case 1 is the case where we are given a single arg string (1
+		// element array), in which case it is interpreted as a whole command
+		// shlex-interpreted
+		if strings.Contains(args[0], " \"'") {
+			spl, err := shlex.Split(args[0])
+			if err != nil {
+				return nil, errors.Wrap(err, "problem splitting argstring")
+			}
+			return getCreateOpt(ctx, spl, dir, env)
+		}
+		opts = &CreateOptions{Args: args}
+	default:
+		// MAY: This is the "expected" case, where the argument we wish to run is
+		// given as a detokenized command.
+		opts = &CreateOptions{Args: args}
+	}
+	opts.WorkingDirectory = dir
+
+	for k, v := range env {
+		opts.Environment[k] = v
+	}
+
+	return opts, nil
 }
 
 func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
