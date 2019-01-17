@@ -24,11 +24,15 @@ type BufferCloser struct {
 
 func (b *BufferCloser) Close() error { return nil }
 
+func lsErrorMsg(badDir string) string {
+	return fmt.Sprintf("%s: %s: No such file or directory", ls, badDir)
+}
+
 func verifyOutput(cmd *Command, t *testing.T, expectSuccess bool, expectedOutputs ...string) {
 	var buf bytes.Buffer
 	bufCloser := &BufferCloser{&buf}
 
-	cmd.SetOutputWriter(bufCloser)
+	cmd.SetCombinedWriter(bufCloser)
 	if expectSuccess {
 		assert.NoError(t, cmd.Run(context.Background()))
 	} else {
@@ -97,7 +101,17 @@ func TestCommandImplementation(t *testing.T) {
 				[]string{echo, arg2},
 			})
 			cmd.SetIgnoreError(true)
-			verifyOutput(cmd, t, true, arg1, fmt.Sprintf("%s: %s: No such file or directory", ls, arg3), arg2)
+			verifyOutput(cmd, t, true, arg1, lsErrorMsg(arg3), arg2)
+		},
+		"NoIgnoreErrorStopsEarly": func(ctx context.Context, t *testing.T) {
+			cmd := NewCommand()
+			cmd.Extend([][]string{
+				[]string{echo, arg1},
+				[]string{ls, arg3},
+				[]string{echo, arg2},
+			})
+			// We should only see the output from commands 1 and 2.
+			verifyOutput(cmd, t, false, arg1, lsErrorMsg(arg3))
 		},
 		"CommandOutput": func(ctx context.Context, t *testing.T) {
 
@@ -111,16 +125,14 @@ func TestCommandImplementation(t *testing.T) {
 				"StdErrOnly": func(ctx context.Context, t *testing.T) {
 					cmd := NewCommand()
 					cmd.Add([]string{ls, arg3})
-					lsOutput := fmt.Sprintf("%s: %s: No such file or directory", ls, arg3)
-					verifyOutput(cmd, t, false, lsOutput)
+					verifyOutput(cmd, t, false, lsErrorMsg(arg3))
 				},
 				"StdOutAndStdErr": func(ctx context.Context, t *testing.T) {
 					cmd := NewCommand()
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
 					cmd.Add([]string{ls, arg3})
-					lsOutput := fmt.Sprintf("%s: %s: No such file or directory", ls, arg3)
-					verifyOutput(cmd, t, false, arg1, arg2, lsOutput)
+					verifyOutput(cmd, t, false, arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
