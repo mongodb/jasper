@@ -150,7 +150,7 @@ func TestCommandImplementation(t *testing.T) {
 				})
 			}
 		},
-		"Output": func(ctx context.Context, t *testing.T) {
+		"OutputIsReadable": func(ctx context.Context, t *testing.T) {
 			for subName, subTestCase := range map[string]func(context.Context, *testing.T){
 				"StdOutOnly": func(ctx context.Context, t *testing.T) {
 					cmd := NewCommand()

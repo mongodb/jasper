@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/google/shlex"
@@ -106,7 +107,6 @@ func (c *Command) Append(cmds ...string) *Command {
 	return c
 }
 
-// setupEnv TODO.
 func (c *Command) setupEnv() {
 	if c.opts.Environment == nil {
 		c.opts.Environment = map[string]string{}
@@ -216,16 +216,12 @@ func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
 }
 
 func (c *Command) finalizeWriters() {
-	if c.opts.Output.Error == nil && c.opts.Output.Output == nil {
-		return
+	if c.opts.Output.Output == nil {
+		c.opts.Output.Output = ioutil.Discard
 	}
 
-	if c.opts.Output.Error != nil && c.opts.Output.Output == nil {
-		c.opts.Output.Output = c.opts.Output.Error
-	}
-
-	if c.opts.Output.Output != nil && c.opts.Output.Error == nil {
-		c.opts.Output.Error = c.opts.Output.Output
+	if c.opts.Output.Error == nil {
+		c.opts.Output.Error = ioutil.Discard
 	}
 }
 
