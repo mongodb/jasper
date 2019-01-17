@@ -324,23 +324,29 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 	}
 
 	var err error
+	var newProc Process
 	if c.opts.Output.Output == nil {
 		var out bytes.Buffer
 		opts.Output.Output = &out
 		opts.Output.Error = &out
+		newProc, err = newBasicProcess(ctx, opts)
+		if err != nil {
+			return errors.Wrapf(err, "problem starting command")
+		}
+
+		_, err = newProc.Wait(ctx)
+		grip.Debugf("Err?: %v", err)
 		msg["out"] = getLogOutput(out.Bytes())
 		msg["err"] = err
 	} else {
 		opts.Output.Error = c.opts.Output.Error
 		opts.Output.Output = c.opts.Output.Output
-		newProc, err := newBasicProcess(ctx, opts)
+		newProc, err = newBasicProcess(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
 		}
 
-		if err == nil {
-			_, err = newProc.Wait(ctx)
-		}
+		_, err = newProc.Wait(ctx)
 		msg["err"] = err
 	}
 	grip.Log(c.priority, msg)

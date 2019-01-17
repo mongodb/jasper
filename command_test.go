@@ -24,10 +24,23 @@ func TestCommandImplementation(t *testing.T) {
 			assert.NoError(
 				t,
 				RunCommand(
-					context.Background(),
+					ctx,
 					"test",
 					level.Info,
 					[]string{"echo", "hello world"},
+					"/Users/may/quick/",
+					map[string]string{},
+				),
+			)
+		},
+		"InvalidRunCommandErrors": func(ctx context.Context, t *testing.T) {
+			assert.Error(
+				t,
+				RunCommand(
+					ctx,
+					"test",
+					level.Info,
+					[]string{"ls", "DNE"},
 					"/Users/may/quick/",
 					map[string]string{},
 				),
