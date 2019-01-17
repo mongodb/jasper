@@ -67,7 +67,7 @@ func TestCommandImplementation(t *testing.T) {
 				),
 			)
 		},
-		"InvalidRunCommandErrors": func(ctx context.Context, t *testing.T) {
+		"UnsuccessfulRunCommandErrors": func(ctx context.Context, t *testing.T) {
 			assert.Error(
 				t,
 				RunCommand(
@@ -79,6 +79,11 @@ func TestCommandImplementation(t *testing.T) {
 					map[string]string{},
 				),
 			)
+		},
+		"InvalidArgsCommandErrors": func(ctx context.Context, t *testing.T) {
+			cmd := NewCommand()
+			cmd.Add([]string{})
+			assert.EqualError(t, cmd.Run(ctx), "args invalid")
 		},
 		"SingleInvalidSubCommandCausesTotalError": func(ctx context.Context, t *testing.T) {
 			assert.Error(
