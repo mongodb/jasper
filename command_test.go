@@ -9,14 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
+	"github.com/mongodb/grip/send"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var (
 	echo, ls         = "echo", "ls"
-	arg1, arg2, arg3 = "123", "456", "789"
+	arg1, arg2, arg3 = "ZXZlcmdyZWVu", "aXM=", "c28gY29vbCE="
 )
 
 type BufferCloser struct {
@@ -29,7 +31,7 @@ func lsErrorMsg(badDir string) string {
 	return fmt.Sprintf("%s: %s: No such file or directory", ls, badDir)
 }
 
-func verifyCommandAndGetOutput(cmd *Command, t *testing.T, expectSuccess bool) string {
+func verifyCommandAndGetOutput(t *testing.T, cmd *Command, expectSuccess bool) string {
 	var buf bytes.Buffer
 	bufCloser := &BufferCloser{&buf}
 
@@ -44,8 +46,9 @@ func verifyCommandAndGetOutput(cmd *Command, t *testing.T, expectSuccess bool) s
 	return bufCloser.String()
 }
 
-func checkOutput(cmd *Command, t *testing.T, output string, exists bool, expectedOutputs ...string) {
+func checkOutput(t *testing.T, cmd *Command, exists bool, output string, expectedOutputs ...string) {
 	for _, expected := range expectedOutputs {
+		// TODO: Maybe don't try to be so cheeky with an XOR...
 		assert.True(t, exists == strings.Contains(output, expected))
 	}
 }
@@ -98,8 +101,8 @@ func TestCommandImplementation(t *testing.T) {
 					cmd := NewCommand()
 					cmd.SetPrecondition(precondition)
 					cmd.Add([]string{echo, arg1})
-					output := verifyCommandAndGetOutput(cmd, t, true)
-					checkOutput(cmd, t, output, precondition(), arg1)
+					output := verifyCommandAndGetOutput(t, cmd, true)
+					checkOutput(t, cmd, precondition(), output, arg1)
 				})
 			}
 		},
@@ -143,42 +146,121 @@ func TestCommandImplementation(t *testing.T) {
 					cmd.SetIgnoreError(ignoreError)
 					successful := ignoreError || !includeBadCmd
 					outputAfterLsExists := !includeBadCmd || continueOnError
-					output := verifyCommandAndGetOutput(cmd, t, successful)
-					checkOutput(cmd, t, output, true, arg1)
-					checkOutput(cmd, t, output, includeBadCmd, lsErrorMsg(arg3))
-					checkOutput(cmd, t, output, outputAfterLsExists, arg2)
+					output := verifyCommandAndGetOutput(t, cmd, successful)
+					checkOutput(t, cmd, true, output, arg1)
+					checkOutput(t, cmd, includeBadCmd, output, lsErrorMsg(arg3))
+					checkOutput(t, cmd, outputAfterLsExists, output, arg2)
 				})
 			}
 		},
-		"OutputIsReadable": func(ctx context.Context, t *testing.T) {
-			for subName, subTestCase := range map[string]func(context.Context, *testing.T){
-				"StdOutOnly": func(ctx context.Context, t *testing.T) {
-					cmd := NewCommand()
+		"CommandOutputAndErrorIsReadable": func(ctx context.Context, t *testing.T) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command) {
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
-					output := verifyCommandAndGetOutput(cmd, t, true)
-					checkOutput(cmd, t, output, true, arg1, arg2)
+					output := verifyCommandAndGetOutput(t, cmd, true)
+					checkOutput(t, cmd, true, output, arg1, arg2)
 				},
-				"StdErrOnly": func(ctx context.Context, t *testing.T) {
-					cmd := NewCommand()
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command) {
 					cmd.Add([]string{ls, arg3})
-					output := verifyCommandAndGetOutput(cmd, t, false)
-					checkOutput(cmd, t, output, true, lsErrorMsg(arg3))
+					output := verifyCommandAndGetOutput(t, cmd, false)
+					checkOutput(t, cmd, true, output, lsErrorMsg(arg3))
 				},
-				"StdOutAndStdErr": func(ctx context.Context, t *testing.T) {
-					cmd := NewCommand()
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command) {
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
 					cmd.Add([]string{ls, arg3})
-					output := verifyCommandAndGetOutput(cmd, t, false)
-					checkOutput(cmd, t, output, true, arg1, arg2, lsErrorMsg(arg3))
+					output := verifyCommandAndGetOutput(t, cmd, false)
+					checkOutput(t, cmd, true, output, arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
-					subTestCase(ctx, t)
+					cmd := NewCommand()
+					subTestCase(ctx, t, cmd)
 				})
 			}
 		},
+		"WriterOutputAndErrorIsSettable": func(ctx context.Context, t *testing.T) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *BufferCloser){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *BufferCloser) {
+					cmd.SetOutputWriter(buf)
+					require.NoError(t, cmd.Run(context.Background()))
+					grip.Debugf("Buf string: %v", buf.String())
+					grip.Debugf("Buf string: %v", buf.String())
+					checkOutput(t, cmd, true, buf.String(), arg1, arg2)
+					checkOutput(t, cmd, false, buf.String(), lsErrorMsg(arg3))
+				},
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *BufferCloser) {
+					cmd.SetErrorWriter(buf)
+					require.NoError(t, cmd.Run(context.Background()))
+					checkOutput(t, cmd, true, buf.String(), lsErrorMsg(arg3))
+					checkOutput(t, cmd, false, buf.String(), arg1, arg2)
+				},
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, buf *BufferCloser) {
+					cmd.SetCombinedWriter(buf)
+					require.NoError(t, cmd.Run(context.Background()))
+					checkOutput(t, cmd, true, buf.String(), arg1, arg2, lsErrorMsg(arg3))
+				},
+			} {
+				t.Run(subName, func(t *testing.T) {
+					cmd := NewCommand()
+					cmd.Add([]string{echo, arg1})
+					cmd.Add([]string{echo, arg2})
+					cmd.Add([]string{ls, arg3})
+					cmd.SetContinueOnError(true)
+					cmd.SetIgnoreError(true)
+
+					var buf bytes.Buffer
+					bufCloser := &BufferCloser{&buf}
+
+					subTestCase(ctx, t, cmd, bufCloser)
+				})
+			}
+		},
+		"SenderOutputAndErrorIsSettable": func(ctx context.Context, t *testing.T) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *send.InMemorySender){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
+					cmd.SetOutputSender(cmd.priority, sender)
+					require.NoError(t, cmd.Run(context.Background()))
+					out, err := sender.GetString()
+					require.NoError(t, err)
+					checkOutput(t, cmd, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2)
+					checkOutput(t, cmd, false, strings.Join(out, "\n"), lsErrorMsg(arg3))
+				},
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
+					cmd.SetErrorSender(cmd.priority, sender)
+					require.NoError(t, cmd.Run(context.Background()))
+					out, err := sender.GetString()
+					require.NoError(t, err)
+					checkOutput(t, cmd, true, strings.Join(out, "\n"), "[p=info]:", lsErrorMsg(arg3))
+					checkOutput(t, cmd, false, strings.Join(out, "\n"), arg1, arg2)
+				},
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
+					cmd.SetCombinedSender(cmd.priority, sender)
+					require.NoError(t, cmd.Run(context.Background()))
+					out, err := sender.GetString()
+					require.NoError(t, err)
+					checkOutput(t, cmd, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2, lsErrorMsg(arg3))
+				},
+			} {
+				t.Run(subName, func(t *testing.T) {
+					cmd := NewCommand()
+					cmd.Add([]string{echo, arg1})
+					cmd.Add([]string{echo, arg2})
+					cmd.Add([]string{ls, arg3})
+					cmd.SetContinueOnError(true)
+					cmd.SetIgnoreError(true)
+					cmd.Priority(level.Info)
+
+					levelInfo := send.LevelInfo{Default: cmd.priority, Threshold: cmd.priority}
+					sender, err := send.NewInMemorySender(t.Name(), levelInfo, 100)
+					require.NoError(t, err)
+
+					subTestCase(ctx, t, cmd, sender.(*send.InMemorySender))
+				})
+			}
+		},
+		// "": func(ctx context.Context, t *testing.T) {},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
