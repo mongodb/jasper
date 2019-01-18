@@ -84,8 +84,7 @@ func TestCommandImplementation(t *testing.T) {
 			)
 		},
 		"InvalidArgsCommandErrors": func(ctx context.Context, t *testing.T) {
-			cmd := NewCommand()
-			cmd.Add([]string{})
+			cmd := NewCommand().Add([]string{})
 			assert.EqualError(t, cmd.Run(ctx), "args invalid")
 		},
 		"PreconditionDeterminesExecution": func(ctx context.Context, t *testing.T) {
@@ -98,9 +97,7 @@ func TestCommandImplementation(t *testing.T) {
 				},
 			} {
 				t.Run(fmt.Sprintf("%tPrecondition", precondition()), func(t *testing.T) {
-					cmd := NewCommand()
-					cmd.SetPrecondition(precondition)
-					cmd.Add([]string{echo, arg1})
+					cmd := NewCommand().SetPrecondition(precondition).Add([]string{echo, arg1})
 					output := verifyCommandAndGetOutput(t, cmd, true)
 					checkOutput(t, cmd, precondition(), output, arg1)
 				})
@@ -128,8 +125,7 @@ func TestCommandImplementation(t *testing.T) {
 			for i := 0; i < numCombinations; i++ {
 				continueOnError, ignoreError, includeBadCmd := i&1 == 1, i&2 == 2, i&4 == 4
 
-				cmd := NewCommand()
-				cmd.Add([]string{echo, arg1})
+				cmd := NewCommand().Add([]string{echo, arg1})
 				if includeBadCmd {
 					cmd.Add([]string{ls, arg3})
 				}
@@ -203,12 +199,11 @@ func TestCommandImplementation(t *testing.T) {
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
-					cmd := NewCommand()
-					cmd.Add([]string{echo, arg1})
-					cmd.Add([]string{echo, arg2})
-					cmd.Add([]string{ls, arg3})
-					cmd.SetContinueOnError(true)
-					cmd.SetIgnoreError(true)
+					cmd := NewCommand().Extend([][]string{
+						[]string{echo, arg1},
+						[]string{echo, arg2},
+						[]string{ls, arg3},
+					}).SetContinueOnError(true).SetIgnoreError(true)
 
 					var buf bytes.Buffer
 					bufCloser := &BufferCloser{&buf}
@@ -244,13 +239,11 @@ func TestCommandImplementation(t *testing.T) {
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
-					cmd := NewCommand()
-					cmd.Add([]string{echo, arg1})
-					cmd.Add([]string{echo, arg2})
-					cmd.Add([]string{ls, arg3})
-					cmd.SetContinueOnError(true)
-					cmd.SetIgnoreError(true)
-					cmd.Priority(level.Info)
+					cmd := NewCommand().Extend([][]string{
+						[]string{echo, arg1},
+						[]string{echo, arg2},
+						[]string{ls, arg3},
+					}).SetContinueOnError(true).SetIgnoreError(true).Priority(level.Info)
 
 					levelInfo := send.LevelInfo{Default: cmd.priority, Threshold: cmd.priority}
 					sender, err := send.NewInMemorySender(t.Name(), levelInfo, 100)
