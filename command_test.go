@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -252,6 +253,20 @@ func TestCommandImplementation(t *testing.T) {
 					subTestCase(ctx, t, cmd, sender.(*send.InMemorySender))
 				})
 			}
+		},
+		"RunParallelRunsInParallel": func(ctx context.Context, t *testing.T) {
+			cmd := NewCommand().Extend([][]string{
+				[]string{"sleep", "3"},
+				[]string{"sleep", "3"},
+				[]string{"sleep", "3"},
+			})
+			threePointOneSeconds := time.Second*3 + time.Millisecond*100
+			maxRunTimeAllowed := threePointOneSeconds
+			cctx, cancel := context.WithTimeout(ctx, maxRunTimeAllowed)
+			defer cancel()
+			// If this does not run in parallel, the context will timeout and we will
+			// get an error.
+			assert.NoError(t, cmd.RunParallel(cctx))
 		},
 		// "": func(ctx context.Context, t *testing.T) {},
 	} {

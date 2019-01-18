@@ -158,6 +158,53 @@ func (c *Command) Run(ctx context.Context) (err error) {
 	return
 }
 
+func (c *Command) makeShallowCopy() *Command {
+	return &Command{
+		cmds:            c.cmds,
+		opts:            c.opts,
+		priority:        c.priority,
+		id:              c.id,
+		continueOnError: c.continueOnError,
+		ignoreError:     c.ignoreError,
+		precondition:    c.precondition,
+	}
+}
+
+// RunParallel TODO.
+func (c *Command) RunParallel(ctx context.Context) error {
+	// Avoid paying the copy-costs in between command structs by doing the work
+	// before executing the commands.
+	parallelCmds := make([]*Command, len(c.cmds))
+	for idx, cmd := range c.cmds {
+		splitCmd := c.makeShallowCopy()
+		splitCmd.cmds = [][]string{cmd}
+		parallelCmds[idx] = splitCmd
+	}
+
+	errs := make(chan error, len(c.cmds))
+	for _, parallelCmd := range parallelCmds {
+		go func(innerCmd *Command) {
+			errs <- innerCmd.Run(ctx)
+		}(parallelCmd)
+	}
+
+	catcher := grip.NewBasicCatcher()
+	for i := 0; i < len(c.cmds); i++ {
+		select {
+		case err := <-errs:
+			catcher.Add(err)
+		case <-ctx.Done():
+			catcherErr := catcher.Resolve()
+			if catcherErr != nil {
+				return errors.Wrapf(ctx.Err(), catcherErr.Error())
+			}
+			return ctx.Err()
+		}
+	}
+
+	return catcher.Resolve()
+}
+
 // Close TODO.
 func (c *Command) Close() error {
 	catcher := grip.NewBasicCatcher()
@@ -343,31 +390,125 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 }
 
 // RunCommand TODO.
-func RunCommand(ctx context.Context, id string, pri level.Priority, args []string, dir string, env map[string]string) error {
-	return NewCommand().ID(id).Priority(pri).Add(args).Directory(dir).Environment(env).Run(ctx)
+func RunCommand(ctx context.Context, id string, pri level.Priority,
+	args []string, dir string, env map[string]string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Add(args).
+		Directory(dir).
+		Environment(env).
+		Run(ctx)
 }
 
 // RunRemoteCommand TODO.
-func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host string, args []string, dir string) error {
-	return NewCommand().ID(id).Priority(pri).Host(host).Add(args).Directory(dir).Run(ctx)
+func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host string,
+	args []string, dir string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Host(host).
+		Add(args).
+		Directory(dir).
+		Run(ctx)
 }
 
 // RunCommandGroupContinueOnError TODO.
-func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).SetContinueOnError(true).Run(ctx)
+func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority,
+	cmds [][]string, dir string, env map[string]string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Extend(cmds).
+		Directory(dir).
+		Environment(env).
+		SetContinueOnError(true).
+		Run(ctx)
 }
 
 // RunRemoteCommandGroupContinueOnError TODO.
-func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).SetContinueOnError(true).Run(ctx)
+func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string,
+	cmds [][]string, dir string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Host(host).
+		Extend(cmds).
+		Directory(dir).
+		SetContinueOnError(true).
+		Run(ctx)
 }
 
 // RunCommandGroup TODO.
-func RunCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).Run(ctx)
+func RunCommandGroup(ctx context.Context, id string, pri level.Priority,
+	cmds [][]string, dir string, env map[string]string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Extend(cmds).
+		Directory(dir).
+		Environment(env).
+		Run(ctx)
 }
 
 // RunRemoteCommandGroup TODO.
-func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).Run(ctx)
+func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string,
+	cmds [][]string, dir string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Host(host).
+		Extend(cmds).
+		Directory(dir).
+		Run(ctx)
+}
+
+// RunParallelCommandGroup TODO.
+func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority,
+	cmds [][]string, dir string, env map[string]string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Extend(cmds).
+		Directory(dir).
+		Environment(env).
+		Run(ctx)
+}
+
+// RunParallelRemoteCommandGroup TODO.
+func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string,
+	cmds [][]string, dir string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Host(host).
+		Extend(cmds).
+		Directory(dir).
+		Run(ctx)
+}
+
+// RunParallelCommandGroupContinueOnError TODO.
+func RunParallelCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority,
+	cmds [][]string, dir string, env map[string]string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Extend(cmds).
+		Directory(dir).
+		Environment(env).
+		SetContinueOnError(true).
+		RunParallel(ctx)
+}
+
+// RunParallelRemoteCommandGroupContinueOnError TODO.
+func RunParallelRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string,
+	cmds [][]string, dir string) error {
+	return NewCommand().
+		ID(id).
+		Priority(pri).
+		Host(host).
+		Extend(cmds).
+		Directory(dir).
+		SetContinueOnError(true).
+		RunParallel(ctx)
 }
