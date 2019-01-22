@@ -176,8 +176,16 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	// before executing the commands.
 	parallelCmds := make([]*Command, len(c.cmds))
 
+	// Closing should only really happen after our entire command finishes.
+	defer func() {
+		for _, closer := range c.opts.closers {
+			closer()
+		}
+	}()
+
 	for idx, cmd := range c.cmds {
 		splitCmd := c.makeShallowCopy()
+		splitCmd.opts.closers = []func() error{}
 		splitCmd.cmds = [][]string{cmd}
 		parallelCmds[idx] = splitCmd
 	}
