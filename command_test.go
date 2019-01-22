@@ -71,7 +71,7 @@ func checkOutput(t *testing.T, exists bool, output string, expectedOutputs ...st
 	}
 }
 
-type cmdRunFunc = func(*Command, context.Context) error
+type cmdRunFunc func(*Command, context.Context) error
 
 func TestCommandImplementation(t *testing.T) {
 	cwd, err := os.Getwd()
