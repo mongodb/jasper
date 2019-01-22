@@ -18,14 +18,14 @@ import (
 
 // Command TODO.
 type Command struct {
-	cmds     [][]string // MAY: command-unique
+	cmds     [][]string
 	opts     CreateOptions
-	priority level.Priority // MAY: command-unique
-	id       string         // MAY: exists in process
+	priority level.Priority
+	id       string
 
-	continueOnError bool        // MAY: command-unique
-	ignoreError     bool        // MAY: command-unique
-	precondition    func() bool // MAY: command-unique
+	continueOnError bool
+	ignoreError     bool
+	precondition    func() bool
 }
 
 func getRemoteCreateOpt(ctx context.Context, host string, args []string, dir string) (*CreateOptions, error) {
@@ -135,7 +135,6 @@ func (c *Command) Run(ctx context.Context) error {
 		return catcher.Resolve()
 	}
 
-	// MAY: cmd's are run in sequence, if replace with procs we run the procs here?
 	for idx, opt := range opts {
 		if err := ctx.Err(); err != nil {
 			catcher.Add(errors.Wrap(err, "operation canceled"))
@@ -299,12 +298,8 @@ func getCreateOpt(ctx context.Context, args []string, dir string, env map[string
 	var opts *CreateOptions
 	switch len(args) {
 	case 0:
-		// MAY: case 0 is just invalid and impossible, so we error out here.
 		return nil, errors.New("args invalid")
 	case 1:
-		// MAY: case 1 is the case where we are given a single arg string (1
-		// element array), in which case it is interpreted as a whole command
-		// shlex-interpreted
 		if strings.Contains(args[0], " \"'") {
 			spl, err := shlex.Split(args[0])
 			if err != nil {
@@ -314,8 +309,6 @@ func getCreateOpt(ctx context.Context, args []string, dir string, env map[string
 		}
 		opts = &CreateOptions{Args: args}
 	default:
-		// MAY: This is the "expected" case, where the argument we wish to run is
-		// given as a detokenized command.
 		opts = &CreateOptions{Args: args}
 	}
 	opts.WorkingDirectory = dir
