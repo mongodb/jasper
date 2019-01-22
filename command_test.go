@@ -91,7 +91,9 @@ func TestCommandImplementation(t *testing.T) {
 				cmd := NewCommand().ID(t.Name()).Priority(level.Info).Add(
 					[]string{ls, arg2},
 				).Directory(cwd)
-				assert.EqualError(t, runFunc(cmd, ctx), "exit status 1")
+				err := runFunc(cmd, ctx)
+				assert.Error(t, err)
+				assert.True(t, strings.Contains(err.Error(), "exit status"))
 			},
 			"InvalidArgsCommandErrors": func(ctx context.Context, t *testing.T) {
 				cmd := NewCommand().Add([]string{})
