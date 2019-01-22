@@ -84,11 +84,11 @@ func (c *Command) Priority(l level.Priority) *Command { c.priority = l; return c
 // ID TODO.
 func (c *Command) ID(id string) *Command { c.id = id; return c }
 
-// SetContinueOnError TODO.
-func (c *Command) SetContinueOnError(cont bool) *Command { c.continueOnError = cont; return c }
+// ContinueOnError TODO.
+func (c *Command) ContinueOnError(cont bool) *Command { c.continueOnError = cont; return c }
 
-// SetIgnoreError TODO.
-func (c *Command) SetIgnoreError(ignore bool) *Command { c.ignoreError = ignore; return c }
+// IgnoreError TODO.
+func (c *Command) IgnoreError(ignore bool) *Command { c.ignoreError = ignore; return c }
 
 // Environment TODO.
 func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment = e; return c }
@@ -96,8 +96,8 @@ func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment
 // AddEnv TODO.
 func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.opts.Environment[k] = v; return c }
 
-// SetPrecondition TODO.
-func (c *Command) SetPrecondition(chk func() bool) *Command { c.precondition = chk; return c }
+// Precondition TODO.
+func (c *Command) Precondition(chk func() bool) *Command { c.precondition = chk; return c }
 
 // Append TODO.
 func (c *Command) Append(cmds ...string) *Command {
@@ -430,7 +430,7 @@ func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Pr
 		Extend(cmds).
 		Directory(dir).
 		Environment(env).
-		SetContinueOnError(true).
+		ContinueOnError(true).
 		Run(ctx)
 }
 
@@ -443,7 +443,7 @@ func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri le
 		Host(host).
 		Extend(cmds).
 		Directory(dir).
-		SetContinueOnError(true).
+		ContinueOnError(true).
 		Run(ctx)
 }
 
@@ -504,7 +504,7 @@ func RunParallelCommandGroupContinueOnError(ctx context.Context, id string, pri 
 		Extend(cmds).
 		Directory(dir).
 		Environment(env).
-		SetContinueOnError(true).
+		ContinueOnError(true).
 		RunParallel(ctx)
 }
 
@@ -517,6 +517,6 @@ func RunParallelRemoteCommandGroupContinueOnError(ctx context.Context, id string
 		Host(host).
 		Extend(cmds).
 		Directory(dir).
-		SetContinueOnError(true).
+		ContinueOnError(true).
 		RunParallel(ctx)
 }

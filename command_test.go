@@ -107,7 +107,7 @@ func TestCommandImplementation(t *testing.T) {
 					},
 				} {
 					t.Run(fmt.Sprintf("%tPrecondition", precondition()), func(t *testing.T) {
-						cmd := NewCommand().SetPrecondition(precondition).Add([]string{echo, arg1})
+						cmd := NewCommand().Precondition(precondition).Add([]string{echo, arg1})
 						output := verifyCommandAndGetOutput(ctx, t, cmd, runFunc, true)
 						checkOutput(t, precondition(), output, arg1)
 					})
@@ -144,8 +144,8 @@ func TestCommandImplementation(t *testing.T) {
 						if runFuncType == "Parallel" && !continueOnError {
 							t.Skip("Continue on error only applies to non parallel executions")
 						}
-						cmd.SetContinueOnError(continueOnError)
-						cmd.SetIgnoreError(ignoreError)
+						cmd.ContinueOnError(continueOnError)
+						cmd.IgnoreError(ignoreError)
 						successful := ignoreError || !includeBadCmd
 						outputAfterLsExists := !includeBadCmd || continueOnError
 						output := verifyCommandAndGetOutput(ctx, t, cmd, runFunc, successful)
@@ -207,7 +207,7 @@ func TestCommandImplementation(t *testing.T) {
 							[]string{echo, arg1},
 							[]string{echo, arg2},
 							[]string{ls, arg3},
-						}).SetContinueOnError(true).SetIgnoreError(true)
+						}).ContinueOnError(true).IgnoreError(true)
 
 						var buf bytes.Buffer
 						bufCloser := &Buffer{b: buf}
@@ -247,7 +247,7 @@ func TestCommandImplementation(t *testing.T) {
 							[]string{echo, arg1},
 							[]string{echo, arg2},
 							[]string{ls, arg3},
-						}).SetContinueOnError(true).SetIgnoreError(true).Priority(level.Info)
+						}).ContinueOnError(true).IgnoreError(true).Priority(level.Info)
 
 						levelInfo := send.LevelInfo{Default: cmd.priority, Threshold: cmd.priority}
 						sender, err := send.NewInMemorySender(t.Name(), levelInfo, 100)
