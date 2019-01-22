@@ -193,7 +193,9 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	for i := 0; i < len(c.cmds); i++ {
 		select {
 		case err := <-errs:
-			catcher.Add(err)
+			if !c.ignoreError {
+				catcher.Add(err)
+			}
 		case <-ctx.Done():
 			catcherErr := catcher.Resolve()
 			if catcherErr != nil {
@@ -473,7 +475,7 @@ func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority,
 		Extend(cmds).
 		Directory(dir).
 		Environment(env).
-		Run(ctx)
+		RunParallel(ctx)
 }
 
 // RunParallelRemoteCommandGroup TODO.
@@ -485,7 +487,7 @@ func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Pri
 		Host(host).
 		Extend(cmds).
 		Directory(dir).
-		Run(ctx)
+		RunParallel(ctx)
 }
 
 // RunParallelCommandGroupContinueOnError TODO.

@@ -49,16 +49,16 @@ func lsErrorMsg(badDir string) string {
 	return fmt.Sprintf("%s: %s: No such file or directory", ls, badDir)
 }
 
-func verifyCommandAndGetOutput(t *testing.T, cmd *Command, expectSuccess bool) string {
+func verifyCommandAndGetOutput(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc, success bool) string {
 	var buf bytes.Buffer
 	bufCloser := &Buffer{b: buf}
 
 	cmd.SetCombinedWriter(bufCloser)
 
-	if expectSuccess {
-		assert.NoError(t, cmd.Run(context.Background()))
+	if success {
+		assert.NoError(t, run(cmd, ctx))
 	} else {
-		assert.Error(t, cmd.Run(context.Background()))
+		assert.Error(t, run(cmd, ctx))
 	}
 
 	return bufCloser.String()
@@ -70,6 +70,8 @@ func checkOutput(t *testing.T, exists bool, output string, expectedOutputs ...st
 		assert.True(t, exists == strings.Contains(output, expected))
 	}
 }
+
+type cmdRunFunc = func(*Command, context.Context) error
 
 func TestCommandImplementation(t *testing.T) {
 	cwd, err := os.Getwd()
@@ -114,11 +116,16 @@ func TestCommandImplementation(t *testing.T) {
 					return false
 				},
 			} {
-				t.Run(fmt.Sprintf("%tPrecondition", precondition()), func(t *testing.T) {
-					cmd := NewCommand().SetPrecondition(precondition).Add([]string{echo, arg1})
-					output := verifyCommandAndGetOutput(t, cmd, true)
-					checkOutput(t, precondition(), output, arg1)
-				})
+				for runFuncType, runFunc := range map[string]cmdRunFunc{
+					"NonParallel": (*Command).Run,
+					"Parallel":    (*Command).RunParallel,
+				} {
+					t.Run(fmt.Sprintf("%tPrecondition%v", precondition(), runFuncType), func(t *testing.T) {
+						cmd := NewCommand().SetPrecondition(precondition).Add([]string{echo, arg1})
+						output := verifyCommandAndGetOutput(ctx, t, cmd, runFunc, true)
+						checkOutput(t, precondition(), output, arg1)
+					})
+				}
 			}
 		},
 		"SingleInvalidSubCommandCausesTotalError": func(ctx context.Context, t *testing.T) {
@@ -155,118 +162,141 @@ func TestCommandImplementation(t *testing.T) {
 					ignoreError,
 					includeBadCmd,
 				)
-				t.Run(subTestName, func(t *testing.T) {
-					cmd.SetContinueOnError(continueOnError)
-					cmd.SetIgnoreError(ignoreError)
-					successful := ignoreError || !includeBadCmd
-					outputAfterLsExists := !includeBadCmd || continueOnError
-					output := verifyCommandAndGetOutput(t, cmd, successful)
-					checkOutput(t, true, output, arg1)
-					checkOutput(t, includeBadCmd, output, lsErrorMsg(arg3))
-					checkOutput(t, outputAfterLsExists, output, arg2)
-				})
+				for runFuncType, runFunc := range map[string]cmdRunFunc{
+					"NonParallel": (*Command).Run,
+					"Parallel":    (*Command).RunParallel,
+				} {
+					t.Run(fmt.Sprintf("%v%v", subTestName, runFuncType), func(t *testing.T) {
+						if runFuncType == "Parallel" && !continueOnError {
+							t.Skip("Continue on error only applies to non parallel executions")
+						}
+						cmd.SetContinueOnError(continueOnError)
+						cmd.SetIgnoreError(ignoreError)
+						successful := ignoreError || !includeBadCmd
+						outputAfterLsExists := !includeBadCmd || continueOnError
+						output := verifyCommandAndGetOutput(ctx, t, cmd, runFunc, successful)
+						checkOutput(t, true, output, arg1)
+						checkOutput(t, includeBadCmd, output, lsErrorMsg(arg3))
+						checkOutput(t, outputAfterLsExists, output, arg2)
+					})
+				}
 			}
 		},
 		"CommandOutputAndErrorIsReadable": func(ctx context.Context, t *testing.T) {
-			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command){
-				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, cmdRunFunc){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc) {
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
-					output := verifyCommandAndGetOutput(t, cmd, true)
+					output := verifyCommandAndGetOutput(ctx, t, cmd, run, true)
 					checkOutput(t, true, output, arg1, arg2)
 				},
-				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command) {
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc) {
 					cmd.Add([]string{ls, arg3})
-					output := verifyCommandAndGetOutput(t, cmd, false)
+					output := verifyCommandAndGetOutput(ctx, t, cmd, run, false)
 					checkOutput(t, true, output, lsErrorMsg(arg3))
 				},
-				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command) {
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc) {
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
 					cmd.Add([]string{ls, arg3})
-					output := verifyCommandAndGetOutput(t, cmd, false)
+					output := verifyCommandAndGetOutput(ctx, t, cmd, run, false)
 					checkOutput(t, true, output, arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
-				t.Run(subName, func(t *testing.T) {
-					cmd := NewCommand()
-					subTestCase(ctx, t, cmd)
-				})
+				for runFuncType, runFunc := range map[string]cmdRunFunc{
+					"NonParallel": (*Command).Run,
+					"Parallel":    (*Command).RunParallel,
+				} {
+					t.Run(fmt.Sprintf("%v%v", subName, runFuncType), func(t *testing.T) {
+						cmd := NewCommand()
+						subTestCase(ctx, t, cmd, runFunc)
+					})
+				}
 			}
 		},
 		"WriterOutputAndErrorIsSettable": func(ctx context.Context, t *testing.T) {
-			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *Buffer){
-				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *Buffer, cmdRunFunc){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer, run cmdRunFunc) {
 					cmd.SetOutputWriter(buf)
-					require.NoError(t, cmd.Run(context.Background()))
+					require.NoError(t, run(cmd, ctx))
 					checkOutput(t, true, buf.String(), arg1, arg2)
 					checkOutput(t, false, buf.String(), lsErrorMsg(arg3))
 				},
-				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer) {
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer, run cmdRunFunc) {
 					cmd.SetErrorWriter(buf)
-					require.NoError(t, cmd.Run(context.Background()))
+					require.NoError(t, run(cmd, ctx))
 					checkOutput(t, true, buf.String(), lsErrorMsg(arg3))
 					checkOutput(t, false, buf.String(), arg1, arg2)
 				},
-				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer) {
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer, run cmdRunFunc) {
 					cmd.SetCombinedWriter(buf)
-					require.NoError(t, cmd.Run(context.Background()))
+					require.NoError(t, run(cmd, ctx))
 					checkOutput(t, true, buf.String(), arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
-				t.Run(subName, func(t *testing.T) {
-					cmd := NewCommand().Extend([][]string{
-						[]string{echo, arg1},
-						[]string{echo, arg2},
-						[]string{ls, arg3},
-					}).SetContinueOnError(true).SetIgnoreError(true)
+				for runFuncType, runFunc := range map[string]cmdRunFunc{
+					"NonParallel": (*Command).Run,
+					"Parallel":    (*Command).RunParallel,
+				} {
+					t.Run(fmt.Sprintf("%v%v", subName, runFuncType), func(t *testing.T) {
+						cmd := NewCommand().Extend([][]string{
+							[]string{echo, arg1},
+							[]string{echo, arg2},
+							[]string{ls, arg3},
+						}).SetContinueOnError(true).SetIgnoreError(true)
 
-					var buf bytes.Buffer
-					bufCloser := &Buffer{b: buf}
+						var buf bytes.Buffer
+						bufCloser := &Buffer{b: buf}
 
-					subTestCase(ctx, t, cmd, bufCloser)
-				})
+						subTestCase(ctx, t, cmd, bufCloser, runFunc)
+					})
+				}
 			}
 		},
 		"SenderOutputAndErrorIsSettable": func(ctx context.Context, t *testing.T) {
-			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *send.InMemorySender){
-				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *send.InMemorySender, cmdRunFunc){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender, run cmdRunFunc) {
 					cmd.SetOutputSender(cmd.priority, sender)
-					require.NoError(t, cmd.Run(context.Background()))
+					require.NoError(t, run(cmd, ctx))
 					out, err := sender.GetString()
 					require.NoError(t, err)
 					checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2)
 					checkOutput(t, false, strings.Join(out, "\n"), lsErrorMsg(arg3))
 				},
-				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender, run cmdRunFunc) {
 					cmd.SetErrorSender(cmd.priority, sender)
-					require.NoError(t, cmd.Run(context.Background()))
+					require.NoError(t, run(cmd, ctx))
 					out, err := sender.GetString()
 					require.NoError(t, err)
 					checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", lsErrorMsg(arg3))
 					checkOutput(t, false, strings.Join(out, "\n"), arg1, arg2)
 				},
-				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender, run cmdRunFunc) {
 					cmd.SetCombinedSender(cmd.priority, sender)
-					require.NoError(t, cmd.Run(context.Background()))
+					require.NoError(t, run(cmd, ctx))
 					out, err := sender.GetString()
 					require.NoError(t, err)
 					checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
-				t.Run(subName, func(t *testing.T) {
-					cmd := NewCommand().Extend([][]string{
-						[]string{echo, arg1},
-						[]string{echo, arg2},
-						[]string{ls, arg3},
-					}).SetContinueOnError(true).SetIgnoreError(true).Priority(level.Info)
+				for runFuncType, runFunc := range map[string]cmdRunFunc{
+					"NonParallel": (*Command).Run,
+					"Parallel":    (*Command).RunParallel,
+				} {
+					t.Run(fmt.Sprintf("%v%v", subName, runFuncType), func(t *testing.T) {
+						cmd := NewCommand().Extend([][]string{
+							[]string{echo, arg1},
+							[]string{echo, arg2},
+							[]string{ls, arg3},
+						}).SetContinueOnError(true).SetIgnoreError(true).Priority(level.Info)
 
-					levelInfo := send.LevelInfo{Default: cmd.priority, Threshold: cmd.priority}
-					sender, err := send.NewInMemorySender(t.Name(), levelInfo, 100)
-					require.NoError(t, err)
+						levelInfo := send.LevelInfo{Default: cmd.priority, Threshold: cmd.priority}
+						sender, err := send.NewInMemorySender(t.Name(), levelInfo, 100)
+						require.NoError(t, err)
 
-					subTestCase(ctx, t, cmd, sender.(*send.InMemorySender))
-				})
+						subTestCase(ctx, t, cmd, sender.(*send.InMemorySender), runFunc)
+					})
+				}
 			}
 		},
 		"RunParallelRunsInParallel": func(ctx context.Context, t *testing.T) {
