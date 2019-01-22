@@ -7,10 +7,10 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +22,28 @@ var (
 	arg1, arg2, arg3 = "ZXZlcmdyZWVu", "aXM=", "c28gY29vbCE="
 )
 
-type BufferCloser struct {
-	*bytes.Buffer
+type Buffer struct {
+	b bytes.Buffer
+	sync.RWMutex
 }
 
-func (b *BufferCloser) Close() error { return nil }
+func (b *Buffer) Read(p []byte) (n int, err error) {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.Read(p)
+}
+func (b *Buffer) Write(p []byte) (n int, err error) {
+	b.Lock()
+	defer b.Unlock()
+	return b.b.Write(p)
+}
+func (b *Buffer) String() string {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.String()
+}
+
+func (b *Buffer) Close() error { return nil }
 
 func lsErrorMsg(badDir string) string {
 	return fmt.Sprintf("%s: %s: No such file or directory", ls, badDir)
@@ -34,7 +51,7 @@ func lsErrorMsg(badDir string) string {
 
 func verifyCommandAndGetOutput(t *testing.T, cmd *Command, expectSuccess bool) string {
 	var buf bytes.Buffer
-	bufCloser := &BufferCloser{&buf}
+	bufCloser := &Buffer{b: buf}
 
 	cmd.SetCombinedWriter(bufCloser)
 
@@ -47,7 +64,7 @@ func verifyCommandAndGetOutput(t *testing.T, cmd *Command, expectSuccess bool) s
 	return bufCloser.String()
 }
 
-func checkOutput(t *testing.T, cmd *Command, exists bool, output string, expectedOutputs ...string) {
+func checkOutput(t *testing.T, exists bool, output string, expectedOutputs ...string) {
 	for _, expected := range expectedOutputs {
 		// TODO: Maybe don't try to be so cheeky with an XOR...
 		assert.True(t, exists == strings.Contains(output, expected))
@@ -100,7 +117,7 @@ func TestCommandImplementation(t *testing.T) {
 				t.Run(fmt.Sprintf("%tPrecondition", precondition()), func(t *testing.T) {
 					cmd := NewCommand().SetPrecondition(precondition).Add([]string{echo, arg1})
 					output := verifyCommandAndGetOutput(t, cmd, true)
-					checkOutput(t, cmd, precondition(), output, arg1)
+					checkOutput(t, precondition(), output, arg1)
 				})
 			}
 		},
@@ -144,9 +161,9 @@ func TestCommandImplementation(t *testing.T) {
 					successful := ignoreError || !includeBadCmd
 					outputAfterLsExists := !includeBadCmd || continueOnError
 					output := verifyCommandAndGetOutput(t, cmd, successful)
-					checkOutput(t, cmd, true, output, arg1)
-					checkOutput(t, cmd, includeBadCmd, output, lsErrorMsg(arg3))
-					checkOutput(t, cmd, outputAfterLsExists, output, arg2)
+					checkOutput(t, true, output, arg1)
+					checkOutput(t, includeBadCmd, output, lsErrorMsg(arg3))
+					checkOutput(t, outputAfterLsExists, output, arg2)
 				})
 			}
 		},
@@ -156,19 +173,19 @@ func TestCommandImplementation(t *testing.T) {
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
 					output := verifyCommandAndGetOutput(t, cmd, true)
-					checkOutput(t, cmd, true, output, arg1, arg2)
+					checkOutput(t, true, output, arg1, arg2)
 				},
 				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command) {
 					cmd.Add([]string{ls, arg3})
 					output := verifyCommandAndGetOutput(t, cmd, false)
-					checkOutput(t, cmd, true, output, lsErrorMsg(arg3))
+					checkOutput(t, true, output, lsErrorMsg(arg3))
 				},
 				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command) {
 					cmd.Add([]string{echo, arg1})
 					cmd.Add([]string{echo, arg2})
 					cmd.Add([]string{ls, arg3})
 					output := verifyCommandAndGetOutput(t, cmd, false)
-					checkOutput(t, cmd, true, output, arg1, arg2, lsErrorMsg(arg3))
+					checkOutput(t, true, output, arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
@@ -178,25 +195,23 @@ func TestCommandImplementation(t *testing.T) {
 			}
 		},
 		"WriterOutputAndErrorIsSettable": func(ctx context.Context, t *testing.T) {
-			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *BufferCloser){
-				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *BufferCloser) {
+			for subName, subTestCase := range map[string]func(context.Context, *testing.T, *Command, *Buffer){
+				"StdOutOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer) {
 					cmd.SetOutputWriter(buf)
 					require.NoError(t, cmd.Run(context.Background()))
-					grip.Debugf("Buf string: %v", buf.String())
-					grip.Debugf("Buf string: %v", buf.String())
-					checkOutput(t, cmd, true, buf.String(), arg1, arg2)
-					checkOutput(t, cmd, false, buf.String(), lsErrorMsg(arg3))
+					checkOutput(t, true, buf.String(), arg1, arg2)
+					checkOutput(t, false, buf.String(), lsErrorMsg(arg3))
 				},
-				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *BufferCloser) {
+				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer) {
 					cmd.SetErrorWriter(buf)
 					require.NoError(t, cmd.Run(context.Background()))
-					checkOutput(t, cmd, true, buf.String(), lsErrorMsg(arg3))
-					checkOutput(t, cmd, false, buf.String(), arg1, arg2)
+					checkOutput(t, true, buf.String(), lsErrorMsg(arg3))
+					checkOutput(t, false, buf.String(), arg1, arg2)
 				},
-				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, buf *BufferCloser) {
+				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer) {
 					cmd.SetCombinedWriter(buf)
 					require.NoError(t, cmd.Run(context.Background()))
-					checkOutput(t, cmd, true, buf.String(), arg1, arg2, lsErrorMsg(arg3))
+					checkOutput(t, true, buf.String(), arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
@@ -207,7 +222,7 @@ func TestCommandImplementation(t *testing.T) {
 					}).SetContinueOnError(true).SetIgnoreError(true)
 
 					var buf bytes.Buffer
-					bufCloser := &BufferCloser{&buf}
+					bufCloser := &Buffer{b: buf}
 
 					subTestCase(ctx, t, cmd, bufCloser)
 				})
@@ -220,23 +235,23 @@ func TestCommandImplementation(t *testing.T) {
 					require.NoError(t, cmd.Run(context.Background()))
 					out, err := sender.GetString()
 					require.NoError(t, err)
-					checkOutput(t, cmd, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2)
-					checkOutput(t, cmd, false, strings.Join(out, "\n"), lsErrorMsg(arg3))
+					checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2)
+					checkOutput(t, false, strings.Join(out, "\n"), lsErrorMsg(arg3))
 				},
 				"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
 					cmd.SetErrorSender(cmd.priority, sender)
 					require.NoError(t, cmd.Run(context.Background()))
 					out, err := sender.GetString()
 					require.NoError(t, err)
-					checkOutput(t, cmd, true, strings.Join(out, "\n"), "[p=info]:", lsErrorMsg(arg3))
-					checkOutput(t, cmd, false, strings.Join(out, "\n"), arg1, arg2)
+					checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", lsErrorMsg(arg3))
+					checkOutput(t, false, strings.Join(out, "\n"), arg1, arg2)
 				},
 				"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender) {
 					cmd.SetCombinedSender(cmd.priority, sender)
 					require.NoError(t, cmd.Run(context.Background()))
 					out, err := sender.GetString()
 					require.NoError(t, err)
-					checkOutput(t, cmd, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2, lsErrorMsg(arg3))
+					checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2, lsErrorMsg(arg3))
 				},
 			} {
 				t.Run(subName, func(t *testing.T) {
@@ -267,6 +282,18 @@ func TestCommandImplementation(t *testing.T) {
 			// If this does not run in parallel, the context will timeout and we will
 			// get an error.
 			assert.NoError(t, cmd.RunParallel(cctx))
+		},
+		"RunParallelOutputAndErrorIsReadable": func(ctx context.Context, t *testing.T) {
+			var buf bytes.Buffer
+			bufCloser := &Buffer{b: buf}
+
+			NewCommand().Extend([][]string{
+				[]string{echo, arg1},
+				[]string{ls, arg2},
+				[]string{echo, arg3},
+			}).SetIgnoreError(true).SetCombinedWriter(bufCloser).RunParallel(ctx)
+			output := bufCloser.String()
+			checkOutput(t, true, output, arg1, lsErrorMsg(arg2), arg3)
 		},
 		// "": func(ctx context.Context, t *testing.T) {},
 	} {

@@ -175,6 +175,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	// Avoid paying the copy-costs in between command structs by doing the work
 	// before executing the commands.
 	parallelCmds := make([]*Command, len(c.cmds))
+
 	for idx, cmd := range c.cmds {
 		splitCmd := c.makeShallowCopy()
 		splitCmd.cmds = [][]string{cmd}
