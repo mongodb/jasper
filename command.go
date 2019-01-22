@@ -114,49 +114,48 @@ func (c *Command) setupEnv() {
 }
 
 // Run TODO.
-func (c *Command) Run(ctx context.Context) (err error) {
+func (c *Command) Run(ctx context.Context) error {
 	if c.precondition != nil && !c.precondition() {
 		grip.Debug(message.Fields{
 			"op":  "noop after precondition returned false",
 			"id":  c.id,
 			"cmd": c.String(),
 		})
-		return
+		return nil
 	}
 
 	c.finalizeWriters()
 	catcher := grip.NewBasicCatcher()
-	// TODO: This is wrong, this will only run _after_ the function returns.
-	defer func() {
-		catcher.Add(c.Close())
-		err = catcher.Resolve()
-	}()
 
 	var opts []*CreateOptions
-	opts, err = c.getCreateOpts(ctx)
+	opts, err := c.getCreateOpts(ctx)
 	if err != nil {
 		catcher.Add(err)
-		return
+		catcher.Add(c.Close())
+		return catcher.Resolve()
 	}
 
 	// MAY: cmd's are run in sequence, if replace with procs we run the procs here?
 	for idx, opt := range opts {
-		if err = ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			catcher.Add(errors.Wrap(err, "operation canceled"))
-			return
+			catcher.Add(c.Close())
+			return catcher.Resolve()
 		}
 
-		err = c.exec(ctx, opt, idx)
+		err := c.exec(ctx, opt, idx)
 		if !c.ignoreError {
 			catcher.Add(err)
 		}
 
 		if err != nil && !c.continueOnError {
-			return
+			catcher.Add(c.Close())
+			return catcher.Resolve()
 		}
 	}
 
-	return
+	catcher.Add(c.Close())
+	return catcher.Resolve()
 }
 
 func (c *Command) makeShallowCopy() *Command {
@@ -176,9 +175,6 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	// Avoid paying the copy-costs in between command structs by doing the work
 	// before executing the commands.
 	parallelCmds := make([]*Command, len(c.cmds))
-
-	// Closing should only really happen after our entire command finishes.
-	defer c.Close()
 
 	for idx, cmd := range c.cmds {
 		splitCmd := c.makeShallowCopy()
@@ -202,6 +198,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 				catcher.Add(err)
 			}
 		case <-ctx.Done():
+			catcher.Add(c.Close())
 			catcherErr := catcher.Resolve()
 			if catcherErr != nil {
 				return errors.Wrapf(ctx.Err(), catcherErr.Error())
@@ -210,6 +207,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		}
 	}
 
+	catcher.Add(c.Close())
 	return catcher.Resolve()
 }
 
