@@ -107,7 +107,7 @@ func TestCommandImplementation(t *testing.T) {
 						},
 					} {
 						t.Run(fmt.Sprintf("%tPrecondition", precondition()), func(t *testing.T) {
-							cmd := NewCommand().Precondition(precondition).Add([]string{echo, arg1})
+							cmd := NewCommand().Prerequisite(precondition).Add([]string{echo, arg1})
 							output := verifyCommandAndGetOutput(ctx, t, cmd, runFunc, true)
 							checkOutput(t, precondition(), output, arg1)
 						})

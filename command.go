@@ -25,7 +25,7 @@ type Command struct {
 
 	continueOnError bool
 	ignoreError     bool
-	precondition    func() bool
+	prerequisite    func() bool
 }
 
 func getRemoteCreateOpt(ctx context.Context, host string, args []string, dir string) (*CreateOptions, error) {
@@ -96,8 +96,8 @@ func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment
 // AddEnv TODO.
 func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.opts.Environment[k] = v; return c }
 
-// Precondition TODO.
-func (c *Command) Precondition(chk func() bool) *Command { c.precondition = chk; return c }
+// Prerequisite TODO.
+func (c *Command) Prerequisite(chk func() bool) *Command { c.prerequisite = chk; return c }
 
 // Append TODO.
 func (c *Command) Append(cmds ...string) *Command {
@@ -115,9 +115,9 @@ func (c *Command) setupEnv() {
 
 // Run TODO.
 func (c *Command) Run(ctx context.Context) error {
-	if c.precondition != nil && !c.precondition() {
+	if c.prerequisite != nil && !c.prerequisite() {
 		grip.Debug(message.Fields{
-			"op":  "noop after precondition returned false",
+			"op":  "noop after prerequisite returned false",
 			"id":  c.id,
 			"cmd": c.String(),
 		})
@@ -165,7 +165,7 @@ func (c *Command) makeShallowCopy() *Command {
 		id:              c.id,
 		continueOnError: c.continueOnError,
 		ignoreError:     c.ignoreError,
-		precondition:    c.precondition,
+		prerequisite:    c.prerequisite,
 	}
 }
 
