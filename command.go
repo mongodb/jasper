@@ -157,8 +157,8 @@ func (c *Command) Run(ctx context.Context) error {
 	return catcher.Resolve()
 }
 
-func (c *Command) makeShallowCopy() *Command {
-	return &Command{
+func (c *Command) makeShallowCopy() Command {
+	return Command{
 		cmds:            c.cmds,
 		opts:            c.opts,
 		priority:        c.priority,
@@ -173,7 +173,7 @@ func (c *Command) makeShallowCopy() *Command {
 func (c *Command) RunParallel(ctx context.Context) error {
 	// Avoid paying the copy-costs in between command structs by doing the work
 	// before executing the commands.
-	parallelCmds := make([]*Command, len(c.cmds))
+	parallelCmds := make([]Command, len(c.cmds))
 
 	for idx, cmd := range c.cmds {
 		splitCmd := c.makeShallowCopy()
@@ -184,7 +184,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 
 	errs := make(chan error, len(c.cmds))
 	for _, parallelCmd := range parallelCmds {
-		go func(innerCmd *Command) {
+		go func(innerCmd Command) {
 			errs <- innerCmd.Run(ctx)
 		}(parallelCmd)
 	}
