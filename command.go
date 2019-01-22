@@ -126,6 +126,7 @@ func (c *Command) Run(ctx context.Context) (err error) {
 
 	c.finalizeWriters()
 	catcher := grip.NewBasicCatcher()
+	// TODO: This is wrong, this will only run _after_ the function returns.
 	defer func() {
 		catcher.Add(c.Close())
 		err = catcher.Resolve()
@@ -177,11 +178,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	parallelCmds := make([]*Command, len(c.cmds))
 
 	// Closing should only really happen after our entire command finishes.
-	defer func() {
-		for _, closer := range c.opts.closers {
-			closer()
-		}
-	}()
+	defer c.Close()
 
 	for idx, cmd := range c.cmds {
 		splitCmd := c.makeShallowCopy()
