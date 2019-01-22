@@ -20,6 +20,7 @@ import (
 var (
 	echo, ls         = "echo", "ls"
 	arg1, arg2, arg3 = "ZXZlcmdyZWVu", "aXM=", "c28gY29vbCE="
+	lsErrorMsg       = "No such file or directory"
 )
 
 type Buffer struct {
@@ -44,10 +45,6 @@ func (b *Buffer) String() string {
 }
 
 func (b *Buffer) Close() error { return nil }
-
-func lsErrorMsg(badDir string) string {
-	return fmt.Sprintf("%s: %s: No such file or directory", ls, badDir)
-}
 
 func verifyCommandAndGetOutput(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc, success bool) string {
 	var buf bytes.Buffer
@@ -152,7 +149,7 @@ func TestCommandImplementation(t *testing.T) {
 						outputAfterLsExists := !includeBadCmd || continueOnError
 						output := verifyCommandAndGetOutput(ctx, t, cmd, runFunc, successful)
 						checkOutput(t, true, output, arg1)
-						checkOutput(t, includeBadCmd, output, lsErrorMsg(arg3))
+						checkOutput(t, includeBadCmd, output, lsErrorMsg)
 						checkOutput(t, outputAfterLsExists, output, arg2)
 					})
 				}
@@ -168,14 +165,14 @@ func TestCommandImplementation(t *testing.T) {
 					"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc) {
 						cmd.Add([]string{ls, arg3})
 						output := verifyCommandAndGetOutput(ctx, t, cmd, run, false)
-						checkOutput(t, true, output, lsErrorMsg(arg3))
+						checkOutput(t, true, output, lsErrorMsg)
 					},
 					"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, run cmdRunFunc) {
 						cmd.Add([]string{echo, arg1})
 						cmd.Add([]string{echo, arg2})
 						cmd.Add([]string{ls, arg3})
 						output := verifyCommandAndGetOutput(ctx, t, cmd, run, false)
-						checkOutput(t, true, output, arg1, arg2, lsErrorMsg(arg3))
+						checkOutput(t, true, output, arg1, arg2, lsErrorMsg)
 					},
 				} {
 					t.Run(subName, func(t *testing.T) {
@@ -190,18 +187,18 @@ func TestCommandImplementation(t *testing.T) {
 						cmd.SetOutputWriter(buf)
 						require.NoError(t, run(cmd, ctx))
 						checkOutput(t, true, buf.String(), arg1, arg2)
-						checkOutput(t, false, buf.String(), lsErrorMsg(arg3))
+						checkOutput(t, false, buf.String(), lsErrorMsg)
 					},
 					"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer, run cmdRunFunc) {
 						cmd.SetErrorWriter(buf)
 						require.NoError(t, run(cmd, ctx))
-						checkOutput(t, true, buf.String(), lsErrorMsg(arg3))
+						checkOutput(t, true, buf.String(), lsErrorMsg)
 						checkOutput(t, false, buf.String(), arg1, arg2)
 					},
 					"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, buf *Buffer, run cmdRunFunc) {
 						cmd.SetCombinedWriter(buf)
 						require.NoError(t, run(cmd, ctx))
-						checkOutput(t, true, buf.String(), arg1, arg2, lsErrorMsg(arg3))
+						checkOutput(t, true, buf.String(), arg1, arg2, lsErrorMsg)
 					},
 				} {
 					t.Run(subName, func(t *testing.T) {
@@ -226,14 +223,14 @@ func TestCommandImplementation(t *testing.T) {
 						out, err := sender.GetString()
 						require.NoError(t, err)
 						checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2)
-						checkOutput(t, false, strings.Join(out, "\n"), lsErrorMsg(arg3))
+						checkOutput(t, false, strings.Join(out, "\n"), lsErrorMsg)
 					},
 					"StdErrOnly": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender, run cmdRunFunc) {
 						cmd.SetErrorSender(cmd.priority, sender)
 						require.NoError(t, run(cmd, ctx))
 						out, err := sender.GetString()
 						require.NoError(t, err)
-						checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", lsErrorMsg(arg3))
+						checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", lsErrorMsg)
 						checkOutput(t, false, strings.Join(out, "\n"), arg1, arg2)
 					},
 					"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd *Command, sender *send.InMemorySender, run cmdRunFunc) {
@@ -241,7 +238,7 @@ func TestCommandImplementation(t *testing.T) {
 						require.NoError(t, run(cmd, ctx))
 						out, err := sender.GetString()
 						require.NoError(t, err)
-						checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2, lsErrorMsg(arg3))
+						checkOutput(t, true, strings.Join(out, "\n"), "[p=info]:", arg1, arg2, lsErrorMsg)
 					},
 				} {
 					t.Run(subName, func(t *testing.T) {
