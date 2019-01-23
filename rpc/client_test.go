@@ -282,7 +282,11 @@ func TestRPCManager(t *testing.T) {
 
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
-					assert.Equal(t, 9, exitCode)
+					if runtime.GOOS == "windows" {
+						assert.Equal(t, 1, exitCode)
+					} else {
+						assert.Equal(t, 9, exitCode)
+					}
 				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 			} {
@@ -526,7 +530,11 @@ func TestRPCProcess(t *testing.T) {
 					proc.Signal(ctx, syscall.SIGTERM)
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
-					assert.Equal(t, 15, exitCode)
+					if runtime.GOOS == "windows" {
+						assert.Equal(t, -1, exitCode)
+					} else {
+						assert.Equal(t, 15, exitCode)
+					}
 				},
 				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					cctx, cancel := context.WithCancel(ctx)
