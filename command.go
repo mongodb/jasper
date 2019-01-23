@@ -377,8 +377,7 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 }
 
 // RunCommand TODO.
-func RunCommand(ctx context.Context, id string, pri level.Priority,
-	args []string, dir string, env map[string]string) error {
+func RunCommand(ctx context.Context, id string, pri level.Priority, args []string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -389,8 +388,7 @@ func RunCommand(ctx context.Context, id string, pri level.Priority,
 }
 
 // RunRemoteCommand TODO.
-func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host string,
-	args []string, dir string) error {
+func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host string, args []string, dir string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -401,8 +399,7 @@ func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host s
 }
 
 // RunCommandGroupContinueOnError TODO.
-func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority,
-	cmds [][]string, dir string, env map[string]string) error {
+func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -414,8 +411,7 @@ func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Pr
 }
 
 // RunRemoteCommandGroupContinueOnError TODO.
-func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string,
-	cmds [][]string, dir string) error {
+func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -427,8 +423,7 @@ func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri le
 }
 
 // RunCommandGroup TODO.
-func RunCommandGroup(ctx context.Context, id string, pri level.Priority,
-	cmds [][]string, dir string, env map[string]string) error {
+func RunCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -439,8 +434,7 @@ func RunCommandGroup(ctx context.Context, id string, pri level.Priority,
 }
 
 // RunRemoteCommandGroup TODO.
-func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string,
-	cmds [][]string, dir string) error {
+func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -451,8 +445,7 @@ func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, h
 }
 
 // RunParallelCommandGroup TODO.
-func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority,
-	cmds [][]string, dir string, env map[string]string) error {
+func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -463,8 +456,7 @@ func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority,
 }
 
 // RunParallelRemoteCommandGroup TODO.
-func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string,
-	cmds [][]string, dir string) error {
+func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -475,8 +467,7 @@ func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Pri
 }
 
 // RunParallelCommandGroupContinueOnError TODO.
-func RunParallelCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority,
-	cmds [][]string, dir string, env map[string]string) error {
+func RunParallelCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
@@ -488,8 +479,7 @@ func RunParallelCommandGroupContinueOnError(ctx context.Context, id string, pri 
 }
 
 // RunParallelRemoteCommandGroupContinueOnError TODO.
-func RunParallelRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string,
-	cmds [][]string, dir string) error {
+func RunParallelRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
 		Priority(pri).
