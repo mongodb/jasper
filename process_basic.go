@@ -92,7 +92,12 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.err = err
 		p.info.IsRunning = false
 		p.info.Complete = true
-		p.info.ExitCode = p.cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+		procWaitStatus := p.cmd.ProcessState.Sys().(syscall.WaitStatus)
+		if procWaitStatus.Signaled() {
+			p.info.ExitCode = int(procWaitStatus.Signal())
+		} else {
+			p.info.ExitCode = procWaitStatus.ExitStatus()
+		}
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
 	}

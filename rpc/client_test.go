@@ -197,36 +197,6 @@ func TestRPCManager(t *testing.T) {
 					assert.Error(t, err)
 					assert.True(t, strings.Contains(err.Error(), "problem finding process"))
 				},
-				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
-				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
-
-				///////////////////////////////////
-				//
-				// The following test cases are added
-				// specifically for the rpc case
-
-				"RegisterIsDisabled": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					err := manager.Register(ctx, nil)
-					assert.Error(t, err)
-					assert.Contains(t, err.Error(), "cannot register")
-				},
-				"ListErrorsWithEmpty": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					procs, err := manager.List(ctx, jasper.All)
-					assert.Error(t, err)
-					assert.Contains(t, err.Error(), "no processes")
-					assert.Len(t, procs, 0)
-				},
-				"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
-					proc, err := manager.Create(ctx, trueCreateOpts())
-					assert.NoError(t, err)
-					assert.NotNil(t, proc)
-					assert.NotZero(t, proc.ID())
-
-					fetched, err := manager.Get(ctx, proc.ID())
-					assert.NoError(t, err)
-					assert.NotNil(t, fetched)
-					assert.Equal(t, proc.ID(), fetched.ID())
-				},
 				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
 					opts := trueCreateOpts()
 					proc, err := manager.Create(ctx, opts)
@@ -271,6 +241,48 @@ func TestRPCManager(t *testing.T) {
 					nilProc, err := manager.Get(ctx, lsProc.ID())
 					assert.Nil(t, nilProc)
 					require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
+				},
+				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
+				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
+
+				///////////////////////////////////
+				//
+				// The following test cases are added
+				// specifically for the rpc case
+
+				"RegisterIsDisabled": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					err := manager.Register(ctx, nil)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "cannot register")
+				},
+				"ListErrorsWithEmpty": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					procs, err := manager.List(ctx, jasper.All)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "no processes")
+					assert.Len(t, procs, 0)
+				},
+				"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					proc, err := manager.Create(ctx, trueCreateOpts())
+					assert.NoError(t, err)
+					assert.NotNil(t, proc)
+					assert.NotZero(t, proc.ID())
+
+					fetched, err := manager.Get(ctx, proc.ID())
+					assert.NoError(t, err)
+					assert.NotNil(t, fetched)
+					assert.Equal(t, proc.ID(), fetched.ID())
+				},
+				"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+					proc, err := manager.Create(ctx, sleepCreateOpts(100))
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					require.NotZero(t, proc.ID())
+
+					require.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
+
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.Equal(t, 9, exitCode)
 				},
 				// "": func(ctx context.Context, t *testing.T, manager jasper.Manager) {},
 			} {
@@ -514,7 +526,7 @@ func TestRPCProcess(t *testing.T) {
 					proc.Signal(ctx, syscall.SIGTERM)
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
-					assert.Equal(t, -1, exitCode)
+					assert.Equal(t, 15, exitCode)
 				},
 				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					cctx, cancel := context.WithCancel(ctx)

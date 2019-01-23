@@ -420,7 +420,7 @@ func TestProcessImplementations(t *testing.T) {
 					proc.Signal(ctx, syscall.SIGTERM)
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
-					assert.Equal(t, -1, exitCode)
+					assert.Equal(t, 15, exitCode)
 				},
 				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					cctx, cancel := context.WithCancel(ctx)
