@@ -12,6 +12,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/grip/send"
 	"github.com/pkg/errors"
 )
@@ -170,14 +171,17 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		parallelCmds[idx] = splitCmd
 	}
 
+	catcher := grip.NewBasicCatcher()
 	errs := make(chan error, len(c.cmds))
 	for _, parallelCmd := range parallelCmds {
 		go func(innerCmd Command) {
+			defer func() {
+				errs <- recovery.HandlePanicWithError(recover(), nil, "parallel command encountered error")
+			}()
 			errs <- innerCmd.Run(ctx)
 		}(parallelCmd)
 	}
 
-	catcher := grip.NewBasicCatcher()
 	for i := 0; i < len(c.cmds); i++ {
 		select {
 		case err := <-errs:
