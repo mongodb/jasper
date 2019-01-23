@@ -175,7 +175,10 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	for _, parallelCmd := range parallelCmds {
 		go func(innerCmd Command) {
 			defer func() {
-				errs <- recovery.HandlePanicWithError(recover(), nil, "parallel command encountered error")
+				err := recovery.HandlePanicWithError(recover(), nil, "parallel command encountered error")
+				if err != nil {
+					errs <- err
+				}
 			}()
 			errs <- innerCmd.Run(ctx)
 		}(parallelCmd)
