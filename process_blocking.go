@@ -132,7 +132,12 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				if cmd.ProcessState != nil {
 					info.Successful = cmd.ProcessState.Success()
 					info.PID = cmd.ProcessState.Pid()
-					info.ExitCode = cmd.ProcessState.Sys().(syscall.WaitStatus).ExitStatus()
+					procWaitStatus := cmd.ProcessState.Sys().(syscall.WaitStatus)
+					if procWaitStatus.Signaled() {
+						info.ExitCode = int(procWaitStatus.Signal())
+					} else {
+						info.ExitCode = procWaitStatus.ExitStatus()
+					}
 				} else {
 					info.Successful = (err == nil)
 				}

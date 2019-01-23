@@ -207,7 +207,7 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 		return &OperationOutcome{
 			Success:  false,
 			Text:     err.Error(),
-			ExitCode: -3,
+			ExitCode: int32(exitCode),
 		}, nil
 	}
 
