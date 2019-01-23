@@ -171,7 +171,6 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		parallelCmds[idx] = splitCmd
 	}
 
-	catcher := grip.NewBasicCatcher()
 	errs := make(chan error, len(c.cmds))
 	for _, parallelCmd := range parallelCmds {
 		go func(innerCmd Command) {
@@ -182,6 +181,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		}(parallelCmd)
 	}
 
+	catcher := grip.NewBasicCatcher()
 	for i := 0; i < len(c.cmds); i++ {
 		select {
 		case err := <-errs:
