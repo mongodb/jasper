@@ -18,7 +18,6 @@ import (
 
 type blockingProcess struct {
 	id   string
-	host string
 	opts CreateOptions
 	ops  chan func(*exec.Cmd)
 	err  error
@@ -32,6 +31,7 @@ type blockingProcess struct {
 func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
+	opts.Hostname, _ = os.Hostname()
 
 	cmd, err := opts.Resolve(ctx)
 	if err != nil {
@@ -49,7 +49,6 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		p.Tag(t)
 	}
 
-	p.host, _ = os.Hostname()
 	p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
 
 	if err = cmd.Start(); err != nil {
@@ -124,7 +123,7 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				info = ProcessInfo{
 					ID:        p.id,
 					Options:   p.opts,
-					Host:      p.host,
+					Host:      p.opts.Hostname,
 					Complete:  true,
 					IsRunning: false,
 				}
@@ -162,7 +161,7 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			info := ProcessInfo{
 				ID:         p.id,
 				Options:    p.opts,
-				Host:       p.host,
+				Host:       p.opts.Hostname,
 				ExitCode:   -1,
 				Complete:   true,
 				IsRunning:  false,
@@ -191,7 +190,7 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 		out <- ProcessInfo{
 			ID:        p.id,
 			Options:   p.opts,
-			Host:      p.host,
+			Host:      p.opts.Hostname,
 			ExitCode:  -1,
 			Complete:  cmd.Process.Pid == -1,
 			IsRunning: cmd.Process.Pid > 0,
@@ -331,7 +330,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 
 func (p *blockingProcess) Respawn(ctx context.Context) (Process, error) {
 	opts := p.Info(ctx).Options
-	opts.closers = []func(){}
+	opts.closers = []func() error{}
 
 	newProc, err := newBlockingProcess(ctx, &opts)
 
