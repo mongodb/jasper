@@ -22,9 +22,10 @@ import (
 // such as output and error functionality and remote execution.
 type Command struct {
 	cmds     [][]string
-	opts     CreateOptions
+	opts     *CreateOptions
 	priority level.Priority
 	id       string
+	procIDs  []string
 
 	continueOnError bool
 	ignoreError     bool
@@ -70,13 +71,22 @@ func splitCmdToArgs(cmd string) []string {
 }
 
 // NewCommand returns a blank Command.
-func NewCommand() *Command { return NewCommandWithProc(newBasicProcess) }
+func NewCommand() *Command { return &Command{} }
 
-// NewCommandWithProc returns a blank Command that will use the process created
+// ProcConstructor returns a blank Command that will use the process created
 // by the given ProcessConstructor.
-func NewCommandWithProc(processConstructor ProcessConstructor) *Command {
-	return &Command{makep: processConstructor}
+func (c *Command) ProcConstructor(processConstructor ProcessConstructor) *Command {
+	c.makep = processConstructor
+	return c
 }
+
+// GetProcIDs returns an array of Process IDs associated with the sub-commands
+// being run. This method will return a nil slice until processes have actually
+// been created by the Command for execution.
+func (c *Command) GetProcIDs() []string { return c.procIDs }
+
+// ApplyFromOpts uses the CreateOptions to configure the Command.
+func (c *Command) ApplyFromOpts(opts *CreateOptions) *Command { c.opts = opts; return c }
 
 // String returns a stringified representation.
 func (c *Command) String() string { return fmt.Sprintf("id='%s', cmd='%s'", c.id, c.getCmd()) }
@@ -388,25 +398,28 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 		var out bytes.Buffer
 		opts.Output.Output = &out
 		opts.Output.Error = &out
-		newProc, err = newBasicProcess(ctx, opts)
+		newProc, err = c.makep(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
 		}
 
+		c.procIDs = append(c.procIDs, newProc.ID())
 		_, err = newProc.Wait(ctx)
 		msg["out"] = getLogOutput(out.Bytes())
 		msg["err"] = err
 	} else {
 		opts.Output.Error = c.opts.Output.Error
 		opts.Output.Output = c.opts.Output.Output
-		newProc, err = newBasicProcess(ctx, opts)
+		newProc, err = c.makep(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
 		}
 
+		c.procIDs = append(c.procIDs, newProc.ID())
 		_, err = newProc.Wait(ctx)
 		msg["err"] = err
 	}
+
 	grip.Log(c.priority, msg)
 	return err
 }

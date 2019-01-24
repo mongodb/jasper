@@ -52,7 +52,7 @@ func (m *localProcessManager) CreateProcess(ctx context.Context, opts *CreateOpt
 }
 
 func (m *localProcessManager) CreateCommand(ctx context.Context, opts *CreateOptions) (*Command, error) {
-	return NewCommandWithProc(m.CreateProcess), nil
+	return NewCommand().ProcConstructor(m.CreateProcess).ApplyFromOpts(opts), nil
 }
 
 func (m *localProcessManager) Register(ctx context.Context, proc Process) error {

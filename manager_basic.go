@@ -40,7 +40,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *CreateOpt
 }
 
 func (m *basicProcessManager) CreateCommand(ctx context.Context, opts *CreateOptions) (*Command, error) {
-	return NewCommandWithProc(m.CreateProcess), nil
+	return NewCommand().ProcConstructor(m.CreateProcess).ApplyFromOpts(opts), nil
 }
 
 func (m *basicProcessManager) Register(ctx context.Context, proc Process) error {
