@@ -92,6 +92,10 @@ type Process interface {
 	ResetTags()
 }
 
+// ProcessConstructor is a function type that, given a context.Context and a
+// CreateOptions struct, returns a Process and an error.
+type ProcessConstructor func(context.Context, *CreateOptions) (Process, error)
+
 // ProcessInfo reports on the current state of a process. It is always
 // returned and passed by value, and reflects the state of the process
 // when it was created.

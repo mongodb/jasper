@@ -39,6 +39,16 @@ const (
 	longTaskTimeout    = 100 * time.Second
 )
 
+func makeLockingProcess(pmake ProcessConstructor) ProcessConstructor {
+	return func(ctx context.Context, opts *CreateOptions) (Process, error) {
+		proc, err := pmake(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		return &localProcess{proc: proc}, nil
+	}
+}
+
 // this file contains tools and constants used throughout the test
 // suite.
 

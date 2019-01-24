@@ -34,10 +34,6 @@ type Command struct {
 	makep ProcessConstructor
 }
 
-// ProcessConstructor is a function type that, given a context.Context and a
-// CreateOptions struct, returns a Process and an error.
-type ProcessConstructor func(context.Context, *CreateOptions) (Process, error)
-
 func getRemoteCreateOpt(ctx context.Context, host string, args []string, dir string) (*CreateOptions, error) {
 	var remoteCmd string
 
@@ -71,7 +67,7 @@ func splitCmdToArgs(cmd string) []string {
 }
 
 // NewCommand returns a blank Command.
-func NewCommand() *Command { return &Command{} }
+func NewCommand() *Command { return &Command{opts: &CreateOptions{}, makep: newBasicProcess} }
 
 // ProcConstructor returns a blank Command that will use the process created
 // by the given ProcessConstructor.
@@ -198,6 +194,8 @@ func (c *Command) RunParallel(ctx context.Context) error {
 
 	for idx, cmd := range c.cmds {
 		splitCmd := *c
+		optsCopy := *(c.opts)
+		splitCmd.opts = &optsCopy
 		splitCmd.opts.closers = []func() error{}
 		splitCmd.cmds = [][]string{cmd}
 		parallelCmds[idx] = splitCmd
