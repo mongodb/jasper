@@ -60,7 +60,7 @@ func (m *selfClearingProcessManager) CreateProcess(ctx context.Context, opts *Cr
 }
 
 func (m *selfClearingProcessManager) CreateCommand(ctx context.Context, opts *CreateOptions) (*Command, error) {
-	return NewCommand(), nil
+	return NewCommandWithProc(m.CreateProcess), nil
 }
 
 func (m *selfClearingProcessManager) Register(ctx context.Context, proc Process) error {

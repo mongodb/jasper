@@ -29,7 +29,13 @@ type Command struct {
 	continueOnError bool
 	ignoreError     bool
 	prerequisite    func() bool
+
+	makep ProcessConstructor
 }
+
+// ProcessConstructor is a function type that, given a context.Context and a
+// CreateOptions struct, returns a Process and an error.
+type ProcessConstructor func(context.Context, *CreateOptions) (Process, error)
 
 func getRemoteCreateOpt(ctx context.Context, host string, args []string, dir string) (*CreateOptions, error) {
 	var remoteCmd string
@@ -64,7 +70,13 @@ func splitCmdToArgs(cmd string) []string {
 }
 
 // NewCommand returns a blank Command.
-func NewCommand() *Command { return &Command{} }
+func NewCommand() *Command { return NewCommandWithProc(newBasicProcess) }
+
+// NewCommandWithProc returns a blank Command that will use the process created
+// by the given ProcessConstructor.
+func NewCommandWithProc(processConstructor ProcessConstructor) *Command {
+	return &Command{makep: processConstructor}
+}
 
 // String returns a stringified representation.
 func (c *Command) String() string { return fmt.Sprintf("id='%s', cmd='%s'", c.id, c.getCmd()) }
