@@ -152,7 +152,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		ctx, cancel = context.WithCancel(context.Background())
 	}
 
-	proc, err := s.manager.Create(ctx, opts)
+	proc, err := s.manager.CreateProcess(ctx, opts)
 	if err != nil {
 		cancel()
 		writeError(rw, gimlet.ErrorResponse{

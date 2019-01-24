@@ -20,7 +20,8 @@ const EnvironID = "JASPER_ID"
 // interfaces and remote management tools can be implemented in terms
 // of this interface.
 type Manager interface {
-	Create(context.Context, *CreateOptions) (Process, error)
+	CreateProcess(context.Context, *CreateOptions) (Process, error)
+	CreateCommand(context.Context, *CreateOptions) (*Command, error)
 	Register(context.Context, Process) error
 
 	List(context.Context, Filter) ([]Process, error)

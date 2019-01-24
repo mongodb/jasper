@@ -50,7 +50,7 @@ func TestProcessImplementations(t *testing.T) {
 				client: httpClient,
 			}
 
-			return client.Create(ctx, opts)
+			return client.CreateProcess(ctx, opts)
 		},
 	} {
 		t.Run(cname, func(t *testing.T) {

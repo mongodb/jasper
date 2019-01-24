@@ -74,7 +74,7 @@ func (c *restClient) doRequest(ctx context.Context, method string, url string, b
 	return resp, nil
 }
 
-func (c *restClient) Create(ctx context.Context, opts *CreateOptions) (Process, error) {
+func (c *restClient) CreateProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
 	body, err := makeBody(opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building request for job create")
@@ -103,6 +103,10 @@ func (c *restClient) Create(ctx context.Context, opts *CreateOptions) (Process, 
 		id:     info.ID,
 		client: c,
 	}, nil
+}
+
+func (c *restClient) CreateCommand(ctx context.Context, opts *CreateOptions) (*Command, error) {
+	return NewCommand(), nil
 }
 
 func (c *restClient) Register(ctx context.Context, proc Process) error {

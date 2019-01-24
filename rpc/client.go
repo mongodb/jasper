@@ -25,7 +25,7 @@ func NewRPCManager(cc *grpc.ClientConn) jasper.Manager {
 	}
 }
 
-func (m *rpcManager) Create(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (m *rpcManager) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
 	proc, err := m.client.Create(ctx, internal.ConvertCreateOptions(opts))
 	if err != nil {
 		return nil, errors.WithStack(err)
