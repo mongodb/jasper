@@ -17,7 +17,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Command TODO.
+// Command objects allow a quick and lightweight interface for firing off
+// ad-hoc processes for smaller tasks. Command immediately supports features
+// such as output and error functionality and remote execution.
 type Command struct {
 	cmds     [][]string
 	opts     CreateOptions
@@ -61,46 +63,53 @@ func splitCmdToArgs(cmd string) []string {
 	return args
 }
 
-// NewCommand TODO.
+// NewCommand returns a blank Command.
 func NewCommand() *Command { return &Command{} }
 
-// String TODO.
+// String returns a stringified representation.
 func (c *Command) String() string { return fmt.Sprintf("id='%s', cmd='%s'", c.id, c.getCmd()) }
 
-// Add TODO.
+// Add adds on a sub-command.
 func (c *Command) Add(args []string) *Command { c.cmds = append(c.cmds, args); return c }
 
-// Extend TODO.
+// Extend adds on multiple sub-commands.
 func (c *Command) Extend(cmds [][]string) *Command { c.cmds = append(c.cmds, cmds...); return c }
 
-// Directory TODO.
+// Directory sets the working directory.
 func (c *Command) Directory(d string) *Command { c.opts.WorkingDirectory = d; return c }
 
-// Host TODO.
+// Host sets the hostname. A blank hostname implies local execution of the
+// command, a non-blank hostname is treated as a remotely executed command.
 func (c *Command) Host(h string) *Command { c.opts.Hostname = h; return c }
 
-// Priority TODO.
+// Priority sets the logging priority.
 func (c *Command) Priority(l level.Priority) *Command { c.priority = l; return c }
 
-// ID TODO.
+// ID sets the ID.
 func (c *Command) ID(id string) *Command { c.id = id; return c }
 
-// ContinueOnError TODO.
+// ContinueOnError sets a flag for determining if the Command should continue
+// executing its sub-commands even if one of them errors.
 func (c *Command) ContinueOnError(cont bool) *Command { c.continueOnError = cont; return c }
 
-// IgnoreError TODO.
+// IgnoreError sets a flag for determining if the Command should return a nil
+// error despite errors in its sub-command executions.
 func (c *Command) IgnoreError(ignore bool) *Command { c.ignoreError = ignore; return c }
 
-// Environment TODO.
+// Environment replaces the current environment map with the given environment
+// map.
 func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment = e; return c }
 
-// AddEnv TODO.
+// AddEnv adds a key value pair of environment variable to value into the
+// Command's environment variable map.
 func (c *Command) AddEnv(k, v string) *Command { c.setupEnv(); c.opts.Environment[k] = v; return c }
 
-// Prerequisite TODO.
+// Prerequisite sets a function on the Command such that the Command will only
+// execute if the function returns true.
 func (c *Command) Prerequisite(chk func() bool) *Command { c.prerequisite = chk; return c }
 
-// Append TODO.
+// Append takes a series of strings and splits them into sub-commands and adds
+// them to the Command.
 func (c *Command) Append(cmds ...string) *Command {
 	for _, cmd := range cmds {
 		c.cmds = append(c.cmds, splitCmdToArgs(cmd))
@@ -114,7 +123,7 @@ func (c *Command) setupEnv() {
 	}
 }
 
-// Run TODO.
+// Run starts and then waits on the Command's execution.
 func (c *Command) Run(ctx context.Context) error {
 	if c.prerequisite != nil && !c.prerequisite() {
 		grip.Debug(message.Fields{
@@ -158,7 +167,8 @@ func (c *Command) Run(ctx context.Context) error {
 	return catcher.Resolve()
 }
 
-// RunParallel TODO.
+// RunParallel is the same as Run(), but will run all sub-commands in parallel.
+// Use of this function effectively ignores the the ContinueOnError flag.
 func (c *Command) RunParallel(ctx context.Context) error {
 	// Avoid paying the copy-costs in between command structs by doing the work
 	// before executing the commands.
@@ -205,7 +215,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	return catcher.Resolve()
 }
 
-// Close TODO.
+// Close closes this command and its resources.
 func (c *Command) Close() error {
 	catcher := grip.NewBasicCatcher()
 	for _, closer := range c.opts.closers {
@@ -215,7 +225,8 @@ func (c *Command) Close() error {
 	return catcher.Resolve()
 }
 
-// SetErrorSender TODO.
+// SetErrorSender sets a Sender to be used by this Command for its output to
+// stderr.
 func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
 	c.opts.closers = append(c.opts.closers, writer.Close)
@@ -223,7 +234,8 @@ func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 	return c
 }
 
-// SetOutputSender TODO.
+// SetOutputSender sets a Sender to be used by this Command for its output to
+// stdout.
 func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
 	c.opts.closers = append(c.opts.closers, writer.Close)
@@ -231,7 +243,8 @@ func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 	return c
 }
 
-// SetCombinedSender TODO.
+// SetCombinedSender is the combination of SetErrorSender() and
+// SetOutputSender().
 func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
 	c.opts.closers = append(c.opts.closers, writer.Close)
@@ -240,21 +253,24 @@ func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 	return c
 }
 
-// SetErrorWriter TODO.
+// SetErrorWriter sets a Writer to be used by this Command for its output to
+// stderr.
 func (c *Command) SetErrorWriter(writer io.WriteCloser) *Command {
 	c.opts.closers = append(c.opts.closers, writer.Close)
 	c.opts.Output.Error = writer
 	return c
 }
 
-// SetOutputWriter TODO.
+// SetOutputWriter sets a Writer to be used by this Command for its output to
+// stdout.
 func (c *Command) SetOutputWriter(writer io.WriteCloser) *Command {
 	c.opts.closers = append(c.opts.closers, writer.Close)
 	c.opts.Output.Output = writer
 	return c
 }
 
-// SetCombinedWriter TODO.
+// SetCombinedWriter is the combination of SetErrorWriter() and
+// SetOutputWriter().
 func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
 	c.opts.closers = append(c.opts.closers, writer.Close)
 	c.opts.Output.Error = writer
@@ -383,7 +399,7 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 	return err
 }
 
-// RunCommand TODO.
+// RunCommand runs the Command given the configuration of arguments.
 func RunCommand(ctx context.Context, id string, pri level.Priority, args []string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
@@ -394,7 +410,7 @@ func RunCommand(ctx context.Context, id string, pri level.Priority, args []strin
 		Run(ctx)
 }
 
-// RunRemoteCommand TODO.
+// RunRemoteCommand runs the Command remotely given the configuration of arguments.
 func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host string, args []string, dir string) error {
 	return NewCommand().
 		ID(id).
@@ -405,7 +421,8 @@ func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host s
 		Run(ctx)
 }
 
-// RunCommandGroupContinueOnError TODO.
+// RunCommandGroupContinueOnError runs the group of sub-commands given the
+// configuration of arguments, continuing execution despite any errors.
 func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
@@ -417,7 +434,9 @@ func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Pr
 		Run(ctx)
 }
 
-// RunRemoteCommandGroupContinueOnError TODO.
+// RunRemoteCommandGroupContinueOnError runs the group of sub-commands remotely
+// given the configuration of arguments, continuing execution despite any
+// errors.
 func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
@@ -429,7 +448,8 @@ func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri le
 		Run(ctx)
 }
 
-// RunCommandGroup TODO.
+// RunCommandGroup runs the group of sub-commands given the configuration of
+// arguments.
 func RunCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
@@ -440,7 +460,8 @@ func RunCommandGroup(ctx context.Context, id string, pri level.Priority, cmds []
 		Run(ctx)
 }
 
-// RunRemoteCommandGroup TODO.
+// RunRemoteCommandGroup runs the group of sub-commands remotely given the
+// configuration of arguments.
 func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
@@ -451,7 +472,8 @@ func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, h
 		Run(ctx)
 }
 
-// RunParallelCommandGroup TODO.
+// RunParallelCommandGroup runs the group of sub-commands in
+// parallel given the configuration of arguments.
 func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
 	return NewCommand().
 		ID(id).
@@ -462,7 +484,8 @@ func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority,
 		RunParallel(ctx)
 }
 
-// RunParallelRemoteCommandGroup TODO.
+// RunParallelRemoteCommandGroup runs the group of sub-commands
+// remotely in parallel given the configuration of arguments.
 func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
 	return NewCommand().
 		ID(id).
@@ -470,29 +493,5 @@ func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Pri
 		Host(host).
 		Extend(cmds).
 		Directory(dir).
-		RunParallel(ctx)
-}
-
-// RunParallelCommandGroupContinueOnError TODO.
-func RunParallelCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Extend(cmds).
-		Directory(dir).
-		Environment(env).
-		ContinueOnError(true).
-		RunParallel(ctx)
-}
-
-// RunParallelRemoteCommandGroupContinueOnError TODO.
-func RunParallelRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Host(host).
-		Extend(cmds).
-		Directory(dir).
-		ContinueOnError(true).
 		RunParallel(ctx)
 }
