@@ -264,6 +264,23 @@ func TestCommandImplementation(t *testing.T) {
 								})
 							}
 						},
+						"GetProcIDsReturnsCorrectNumberOfIDs": func(ctx context.Context, t *testing.T, cmd Command) {
+							subCmds := [][]string{
+								[]string{echo, arg1},
+								[]string{echo, arg2},
+								[]string{ls, arg3},
+							}
+							cmd.Extend(subCmds).ContinueOnError(true).IgnoreError(true).Run(ctx)
+							assert.Len(t, cmd.GetProcIDs(), len(subCmds))
+						},
+						"ApplyFromOptsUpdatesCmdCorrectly": func(ctx context.Context, t *testing.T, cmd Command) {
+							opts := &CreateOptions{
+								WorkingDirectory: cwd,
+							}
+							cmd.ApplyFromOpts(opts).Add([]string{ls, cwd})
+							output := verifyCommandAndGetOutput(ctx, t, &cmd, runFunc, true)
+							checkOutput(t, true, output, "makefile")
+						},
 						// "": func(ctx context.Context, t *testing.T, cmd Command) {},
 					} {
 						t.Run(name, func(t *testing.T) {
