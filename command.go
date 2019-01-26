@@ -67,6 +67,8 @@ func splitCmdToArgs(cmd string) []string {
 }
 
 // NewCommand returns a blank Command.
+// New blank Commands will use basicProcess as their default Process for
+// executing sub-commands unless it is changed via ProcConstructor().
 func NewCommand() *Command { return &Command{opts: &CreateOptions{}, makep: newBasicProcess} }
 
 // ProcConstructor returns a blank Command that will use the process created
