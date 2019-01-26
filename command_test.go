@@ -105,6 +105,9 @@ func TestCommandImplementation(t *testing.T) {
 							cmd.Add([]string{})
 							assert.EqualError(t, runFunc(&cmd, ctx), "args invalid")
 						},
+						"ZeroSubCommandsIsVacuouslySuccessful": func(ctx context.Context, t *testing.T, cmd Command) {
+							assert.NoError(t, runFunc(&cmd, ctx))
+						},
 						"PreconditionDeterminesExecution": func(ctx context.Context, t *testing.T, cmd Command) {
 							for _, precondition := range []func() bool{
 								func() bool {

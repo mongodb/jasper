@@ -59,8 +59,8 @@ func (m *selfClearingProcessManager) CreateProcess(ctx context.Context, opts *Cr
 	return proc, nil
 }
 
-func (m *selfClearingProcessManager) CreateCommand(ctx context.Context, opts *CreateOptions) (*Command, error) {
-	return NewCommand().ProcConstructor(m.CreateProcess).ApplyFromOpts(opts), nil
+func (m *selfClearingProcessManager) CreateCommand(ctx context.Context) (*Command, error) {
+	return NewCommand().ProcConstructor(m.CreateProcess), nil
 }
 
 func (m *selfClearingProcessManager) Register(ctx context.Context, proc Process) error {

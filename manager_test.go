@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var echoSubCmd = []string{"echo", "foo"}
+
 func TestManagerInterface(t *testing.T) {
 	t.Parallel()
 
@@ -379,6 +381,47 @@ func TestManagerInterface(t *testing.T) {
 					nilProc, err := manager.Get(ctx, lsProc.ID())
 					assert.Nil(t, nilProc)
 					require.NoError(t, Terminate(ctx, sleepProc)) // Clean up
+				},
+				"CreateCommandPasses": func(ctx context.Context, t *testing.T, manager Manager) {
+					cmd, err := manager.CreateCommand(ctx)
+					assert.NoError(t, err)
+					cmd.Add(echoSubCmd)
+					assert.NoError(t, cmd.Run(ctx))
+				},
+				"RunningCommandCreatesNewProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+					procList, err := manager.List(ctx, All)
+					require.Error(t, err, "no processes")
+					originalProcCount := len(procList) // zero
+					cmd, err := manager.CreateCommand(ctx)
+					assert.NoError(t, err)
+					subCmds := [][]string{echoSubCmd, echoSubCmd, echoSubCmd}
+					cmd.Extend(subCmds)
+					assert.NoError(t, cmd.Run(ctx))
+					newProcList, err := manager.List(ctx, All)
+					require.NoError(t, err)
+
+					assert.Len(t, newProcList, originalProcCount+len(subCmds))
+				},
+				"CommandProcIDsMatchManagerIDs": func(ctx context.Context, t *testing.T, manager Manager) {
+					cmd, err := manager.CreateCommand(ctx)
+					assert.NoError(t, err)
+					cmd.Extend([][]string{echoSubCmd, echoSubCmd, echoSubCmd})
+					assert.NoError(t, cmd.Run(ctx))
+					newProcList, err := manager.List(ctx, All)
+					require.NoError(t, err)
+
+					findIDInProcList := func(procID string) bool {
+						for _, proc := range newProcList {
+							if proc.ID() == procID {
+								return true
+							}
+						}
+						return false
+					}
+
+					for _, procID := range cmd.GetProcIDs() {
+						assert.True(t, findIDInProcList(procID))
+					}
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {

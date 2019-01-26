@@ -34,8 +34,8 @@ func (m *rpcManager) CreateProcess(ctx context.Context, opts *jasper.CreateOptio
 	return &rpcProcess{client: m.client, info: proc}, nil
 }
 
-func (m *rpcManager) CreateCommand(ctx context.Context, opts *jasper.CreateOptions) (*jasper.Command, error) {
-	return jasper.NewCommand().ProcConstructor(m.CreateProcess).ApplyFromOpts(opts), nil
+func (m *rpcManager) CreateCommand(ctx context.Context) (*jasper.Command, error) {
+	return jasper.NewCommand().ProcConstructor(m.CreateProcess), nil
 }
 
 func (m *rpcManager) Register(ctx context.Context, proc jasper.Process) error {
