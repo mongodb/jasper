@@ -105,8 +105,8 @@ func (c *restClient) CreateProcess(ctx context.Context, opts *CreateOptions) (Pr
 	}, nil
 }
 
-func (c *restClient) CreateCommand(ctx context.Context) (*Command, error) {
-	return NewCommand().ProcConstructor(c.CreateProcess), nil
+func (c *restClient) CreateCommand(ctx context.Context) *Command {
+	return NewCommand().ProcConstructor(c.CreateProcess)
 }
 
 func (c *restClient) Register(ctx context.Context, proc Process) error {

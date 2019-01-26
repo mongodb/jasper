@@ -39,8 +39,8 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *CreateOpt
 	return proc, nil
 }
 
-func (m *basicProcessManager) CreateCommand(ctx context.Context) (*Command, error) {
-	return NewCommand().ProcConstructor(m.CreateProcess), nil
+func (m *basicProcessManager) CreateCommand(ctx context.Context) *Command {
+	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
 func (m *basicProcessManager) Register(ctx context.Context, proc Process) error {

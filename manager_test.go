@@ -383,8 +383,7 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, Terminate(ctx, sleepProc)) // Clean up
 				},
 				"CreateCommandPasses": func(ctx context.Context, t *testing.T, manager Manager) {
-					cmd, err := manager.CreateCommand(ctx)
-					assert.NoError(t, err)
+					cmd := manager.CreateCommand(ctx)
 					cmd.Add(echoSubCmd)
 					assert.NoError(t, cmd.Run(ctx))
 				},
@@ -392,8 +391,7 @@ func TestManagerInterface(t *testing.T) {
 					procList, err := manager.List(ctx, All)
 					require.Error(t, err, "no processes")
 					originalProcCount := len(procList) // zero
-					cmd, err := manager.CreateCommand(ctx)
-					assert.NoError(t, err)
+					cmd := manager.CreateCommand(ctx)
 					subCmds := [][]string{echoSubCmd, echoSubCmd, echoSubCmd}
 					cmd.Extend(subCmds)
 					assert.NoError(t, cmd.Run(ctx))
@@ -403,8 +401,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Len(t, newProcList, originalProcCount+len(subCmds))
 				},
 				"CommandProcIDsMatchManagerIDs": func(ctx context.Context, t *testing.T, manager Manager) {
-					cmd, err := manager.CreateCommand(ctx)
-					assert.NoError(t, err)
+					cmd := manager.CreateCommand(ctx)
 					cmd.Extend([][]string{echoSubCmd, echoSubCmd, echoSubCmd})
 					assert.NoError(t, cmd.Run(ctx))
 					newProcList, err := manager.List(ctx, All)

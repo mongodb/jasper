@@ -172,8 +172,8 @@ func (m *MockManager) CreateProcess(_ context.Context, opts *CreateOptions) (Pro
 	return m.Process, nil
 }
 
-func (m *MockManager) CreateCommand(_ context.Context) (*Command, error) {
-	return NewCommand().ProcConstructor(m.CreateProcess), nil
+func (m *MockManager) CreateCommand(_ context.Context) *Command {
+	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
 func (m *MockManager) Register(_ context.Context, proc Process) error {

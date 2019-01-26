@@ -21,7 +21,7 @@ const EnvironID = "JASPER_ID"
 // of this interface.
 type Manager interface {
 	CreateProcess(context.Context, *CreateOptions) (Process, error)
-	CreateCommand(context.Context) (*Command, error)
+	CreateCommand(context.Context) *Command
 	Register(context.Context, Process) error
 
 	List(context.Context, Filter) ([]Process, error)
