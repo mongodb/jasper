@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"syscall"
 	"time"
 
 	"github.com/mongodb/grip"
@@ -21,6 +22,15 @@ type ProcessTriggerSequence []ProcessTrigger
 func (s ProcessTriggerSequence) Run(info ProcessInfo) {
 	for _, trigger := range s {
 		trigger(info)
+	}
+}
+
+type SignalTrigger func(ProcessInfo, syscall.Signal)
+type SignalTriggerSequence []SignalTrigger
+
+func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) {
+	for _, trigger := range s {
+		trigger(info, sig)
 	}
 }
 

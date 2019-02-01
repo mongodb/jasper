@@ -204,14 +204,15 @@ func (m *MockManager) Close(_ context.Context) error {
 }
 
 type MockProcess struct {
-	ProcID              string
-	ProcInfo            ProcessInfo
-	IsRunning           bool
-	IsComplete          bool
-	FailSignal          bool
-	FailWait            bool
-	FailRespawn         bool
-	FailRegisterTrigger bool
+	ProcID                    string
+	ProcInfo                  ProcessInfo
+	IsRunning                 bool
+	IsComplete                bool
+	FailSignal                bool
+	FailWait                  bool
+	FailRespawn               bool
+	FailRegisterTrigger       bool
+	FailRegisterSignalTrigger bool
 }
 
 func (p *MockProcess) ID() string                         { return p.ProcID }
@@ -247,6 +248,14 @@ func (p *MockProcess) Respawn(_ context.Context) (Process, error) {
 
 func (p *MockProcess) RegisterTrigger(_ context.Context, t ProcessTrigger) error {
 	if p.FailRegisterTrigger {
+		return errors.New("always fail")
+	}
+
+	return nil
+}
+
+func (p *MockProcess) RegisterSignalTrigger(_ context.Context, _ SignalTrigger) error {
+	if p.FailRegisterSignalTrigger {
 		return errors.New("always fail")
 	}
 

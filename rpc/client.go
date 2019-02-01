@@ -204,6 +204,10 @@ func (p *rpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigge
 	return errors.New("cannot register remote triggers")
 }
 
+func (p *rpcProcess) RegisterSignalTrigger(ctx context.Context, _ jasper.SignalTrigger) error {
+	return errors.New("cannot register remote signal triggers")
+}
+
 func (p *rpcProcess) Tag(tag string) {
 	_, _ = p.client.TagProcess(context.TODO(), &internal.ProcessTags{
 		ProcessID: p.info.Id,

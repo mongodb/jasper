@@ -417,9 +417,14 @@ func (p *restProcess) Respawn(ctx context.Context) (Process, error) {
 	}, nil
 }
 
-func (p *restProcess) RegisterTrigger(ctx context.Context, _ ProcessTrigger) error {
+func (p *restProcess) RegisterTrigger(_ context.Context, _ ProcessTrigger) error {
 	return errors.New("cannot register triggers on remote processes")
 }
+
+func (p *restProcess) RegisterSignalTrigger(_ context.Context, _ SignalTrigger) error {
+	return errors.New("cannot register signal trigger on remote processes")
+}
+
 func (p *restProcess) Tag(t string) {
 	req, err := http.NewRequest(http.MethodPost, p.client.getURL("/process/%s/tags?add=%s", p.id, t), nil)
 	if err != nil {

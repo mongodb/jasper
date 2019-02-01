@@ -90,7 +90,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Len(t, output, 10)
 				},
-				"ListAllReturnsErrorWithCancledContext": func(ctx context.Context, t *testing.T, manager Manager) {
+				"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
 					cctx, cancel := context.WithCancel(ctx)
 					created, err := createProcs(ctx, trueCreateOpts(), manager, 10)
 					assert.NoError(t, err)
@@ -254,7 +254,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Error(t, err)
 					assert.Contains(t, err.Error(), "not defined")
 				},
-				"RegisterProcessErrorsForCancledContext": func(ctx context.Context, t *testing.T, manager Manager) {
+				"RegisterProcessErrorsForCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
 						t.Skip("not supported on rest interfaces")
 					}

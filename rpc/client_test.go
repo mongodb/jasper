@@ -64,7 +64,7 @@ func TestRPCManager(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, proc)
 				},
-				"ListAllReturnsErrorWithCancledContext": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+				"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
 					cctx, cancel := context.WithCancel(ctx)
 					created, err := createProcs(ctx, trueCreateOpts(), manager, 10)
 					assert.NoError(t, err)
@@ -352,7 +352,7 @@ func TestRPCProcess(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, proc)
 				},
-				"WithCancledContextProcessCreationFailes": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"WithCanceledContextProcessCreationFailes": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					pctx, pcancel := context.WithCancel(ctx)
 					pcancel()
 					proc, err := makep(pctx, opts)
@@ -424,7 +424,7 @@ func TestRPCProcess(t *testing.T) {
 					assert.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 				},
-				"WaitReturnsWithCancledContext": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"WaitReturnsWithCanceledContext": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					opts.Args = []string{"sleep", "10"}
 					pctx, pcancel := context.WithCancel(ctx)
 					proc, err := makep(ctx, opts)
@@ -527,13 +527,14 @@ func TestRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, sleepCreateOpts(100))
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					proc.Signal(ctx, syscall.SIGTERM)
+					sig := syscall.SIGTERM
+					proc.Signal(ctx, sig)
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
 					if runtime.GOOS == "windows" {
 						assert.Equal(t, -1, exitCode)
 					} else {
-						assert.Equal(t, 15, exitCode)
+						assert.Equal(t, int(sig), exitCode)
 					}
 				},
 				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
