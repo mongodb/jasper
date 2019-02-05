@@ -30,12 +30,25 @@ func TestBlockingProcess(t *testing.T) {
 					assert.NotNil(t, makeDefaultTrigger(ctx, nil, &proc.opts, "foo"))
 				},
 				"InfoIDPopulatedInBasicCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+					infoReturned := make(chan struct{})
+					go func() {
+						assert.Equal(t, proc.Info(ctx).ID, proc.ID())
+						close(infoReturned)
+					}()
+
 					go func() {
 						op := <-proc.ops
 						op(nil)
 					}()
-					info := proc.Info(ctx)
-					assert.Equal(t, info.ID, proc.ID())
+
+					gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+					defer cancel()
+
+					select {
+					case <-infoReturned:
+					case <-gracefulCtx.Done():
+						t.Error("reached timeout")
+					}
 				},
 				"InfoReturnsNotCompleteForCanceledCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
@@ -305,8 +318,7 @@ func TestBlockingProcess(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, proc *blockingProcess) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-					// ctx, cancel := context.WithCancel(context.Background())
+					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
 					id := uuid.Must(uuid.NewV4()).String()
