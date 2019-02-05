@@ -4,13 +4,32 @@ import (
 	"context"
 	"time"
 
+	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 type basicProcessManager struct {
 	procs              map[string]Process
 	skipDefaultTrigger bool
 	blocking           bool
+	tracker            processTracker
+}
+
+func newBasicProcessManager(procs map[string]Process, skipDefaultTrigger bool, blocking bool, trackProcs bool) (Manager, error) {
+	m := basicProcessManager{
+		procs:              procs,
+		blocking:           blocking,
+		skipDefaultTrigger: skipDefaultTrigger,
+	}
+	if trackProcs {
+		tracker, err := newProcessTracker("jasper" + uuid.Must(uuid.NewV4()).String())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to make process tracker")
+		}
+		m.tracker = tracker
+	}
+	return &m, nil
 }
 
 func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (Process, error) {
@@ -34,6 +53,13 @@ func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 		proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 	}
 
+	if m.tracker != nil {
+		pid := uint(proc.Info(ctx).PID)
+		if err := m.tracker.add(pid); err != nil {
+			return nil, errors.Wrap(err, "problem adding local process to tracker during process creation")
+		}
+	}
+
 	m.procs[proc.ID()] = proc
 
 	return proc, nil
@@ -51,6 +77,13 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 	id := proc.ID()
 	if id == "" {
 		return errors.New("process is malformed")
+	}
+
+	if m.tracker != nil {
+		pid := uint(proc.Info(ctx).PID)
+		if err := m.tracker.add(pid); err != nil {
+			return errors.Wrap(err, "problem registering local process to tracker")
+		}
 	}
 
 	_, ok := m.procs[id]
@@ -131,14 +164,22 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 	termCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	catcher := grip.NewBasicCatcher()
+	if m.tracker != nil {
+		err := m.tracker.cleanup()
+		if err == nil {
+			return nil
+		}
+		catcher.Add(err)
+	}
 	if err := TerminateAll(termCtx, procs); err != nil {
 		killCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		return errors.WithStack(KillAll(killCtx, procs))
+		catcher.Add(errors.WithStack(KillAll(killCtx, procs)))
 	}
 
-	return nil
+	return catcher.Resolve()
 }
 
 func (m *basicProcessManager) Group(ctx context.Context, name string) ([]Process, error) {

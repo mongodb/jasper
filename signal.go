@@ -56,7 +56,7 @@ func TerminateAll(ctx context.Context, procs []Process) error {
 }
 
 // KillAll sends a SIGKILL signal to each of the given processes under the
-// given context. This guarantees that each process will actually die.  This
+// given context. This guarantees that each process will actually die. This
 // function calls Wait() on each process after sending them SIGKILL signals. On
 // Windows, this function does not send a SIGKILL signal, but will Wait() on
 // each process until it exits. Use Kill() in a loop if you do not wish to

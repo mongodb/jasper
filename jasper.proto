@@ -191,7 +191,7 @@ message BuildloggerURLs {
 }
 
 service JasperProcessManager {
-  rpc Status(google.protobuf.Empty) returns  (StatusResponse);
+  rpc Status(google.protobuf.Empty) returns (StatusResponse);
   rpc Create(CreateOptions) returns (ProcessInfo);
   rpc List(Filter) returns (stream ProcessInfo);
   rpc Group(TagName) returns (stream ProcessInfo);
