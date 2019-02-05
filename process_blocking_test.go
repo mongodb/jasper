@@ -36,19 +36,9 @@ func TestBlockingProcess(t *testing.T) {
 						close(infoReturned)
 					}()
 
-					go func() {
-						op := <-proc.ops
-						op(nil)
-					}()
-
-					gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-					defer cancel()
-
-					select {
-					case <-infoReturned:
-					case <-gracefulCtx.Done():
-						t.Error("reached timeout")
-					}
+					op := <-proc.ops
+					op(nil)
+					<-infoReturned
 				},
 				"InfoReturnsNotCompleteForCanceledCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
