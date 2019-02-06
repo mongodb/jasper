@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const gracefulTimeout = 1000 * time.Millisecond
+
 func TestBlockingProcess(t *testing.T) {
 	t.Parallel()
 	// we run the suite multiple times given that implementation
@@ -46,15 +48,11 @@ func TestBlockingProcess(t *testing.T) {
 						cctx, cancel := context.WithCancel(ctx)
 						cancel()
 
-						assert.False(t, proc.Complete(cctx))
+						assert.False(t, proc.Info(cctx).Complete)
 						close(signal)
 					}()
 
-					go func() {
-						<-proc.ops
-					}()
-
-					gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+					gracefulCtx, cancel := context.WithTimeout(ctx, gracefulTimeout)
 					defer cancel()
 
 					select {
@@ -66,7 +64,6 @@ func TestBlockingProcess(t *testing.T) {
 				"SignalErrorsForCanceledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
 					go func() {
-
 						cctx, cancel := context.WithCancel(ctx)
 						cancel()
 
@@ -74,11 +71,7 @@ func TestBlockingProcess(t *testing.T) {
 						close(signal)
 					}()
 
-					go func() {
-						<-proc.ops
-					}()
-
-					gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+					gracefulCtx, cancel := context.WithTimeout(ctx, gracefulTimeout)
 					defer cancel()
 
 					select {
@@ -191,6 +184,8 @@ func TestBlockingProcess(t *testing.T) {
 
 					<-signal
 				},
+				// TODO: this test is somewhat flaky and fails locally with the race detector due to timing between cctx
+				// timeout and when startAt is initialized.
 				"WaitSomeBeforeCanceling": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.opts.Args = []string{"sleep", "1"}
 					cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
