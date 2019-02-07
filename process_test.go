@@ -67,7 +67,7 @@ func TestProcessImplementations(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, proc)
 				},
-				"WithCancledContextProcessCreationFailes": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"WithCanceledContextProcessCreationFails": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					pctx, pcancel := context.WithCancel(ctx)
 					pcancel()
 					proc, err := makep(pctx, opts)
@@ -135,7 +135,7 @@ func TestProcessImplementations(t *testing.T) {
 					assert.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 				},
-				"WaitReturnsWithCancledContext": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+				"WaitReturnsWithCanceledContext": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					opts.Args = []string{"sleep", "20"}
 					pctx, pcancel := context.WithCancel(ctx)
 					proc, err := makep(ctx, opts)
@@ -150,6 +150,17 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					assert.Error(t, proc.RegisterTrigger(ctx, nil))
+				},
+				"RegisterSignalTriggerErrorsForNil": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					assert.Error(t, proc.RegisterSignalTrigger(ctx, nil))
+				},
+				"RegisterSignalTriggerErrorsForExitedProcess": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					proc.Wait(ctx)
+					assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ ProcessInfo, _ syscall.Signal) {}))
 				},
 				"DefaultTriggerSucceeds": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
@@ -173,9 +184,10 @@ func TestProcessImplementations(t *testing.T) {
 					})
 
 					proc, err := makep(ctx, opts)
-					assert.NoError(t, err)
+					require.NoError(t, err)
 
-					proc.Wait(ctx)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					select {
 					case <-ctx.Done():
@@ -183,6 +195,32 @@ func TestProcessImplementations(t *testing.T) {
 					case <-countIncremented:
 						assert.Equal(t, 1, count)
 					}
+				},
+				"SignalTriggerRunsBeforeSignal": func(ctx context.Context, t *testing.T, _ *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote signal triggers are not supported on rest processes")
+					}
+					proc, err := makep(ctx, sleepCreateOpts(100))
+					require.NoError(t, err)
+
+					expectedSig := syscall.SIGKILL
+					proc.RegisterSignalTrigger(ctx, func(info ProcessInfo, actualSig syscall.Signal) {
+						assert.Equal(t, expectedSig, actualSig)
+						assert.True(t, info.IsRunning)
+						assert.False(t, info.Complete)
+					})
+					proc.Signal(ctx, expectedSig)
+
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					if runtime.GOOS == "windows" {
+						assert.Equal(t, 1, exitCode)
+					} else {
+						assert.Equal(t, int(expectedSig), exitCode)
+					}
+
+					assert.False(t, proc.Running(ctx))
+					assert.True(t, proc.Complete(ctx))
 				},
 				"ProcessLogDefault": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
@@ -419,13 +457,14 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, sleepCreateOpts(100))
 					require.NoError(t, err)
 					require.NotNil(t, proc)
-					proc.Signal(ctx, syscall.SIGTERM)
+					sig := syscall.SIGTERM
+					proc.Signal(ctx, sig)
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
 					if runtime.GOOS == "windows" {
 						assert.Equal(t, -1, exitCode)
 					} else {
-						assert.Equal(t, 15, exitCode)
+						assert.Equal(t, int(sig), exitCode)
 					}
 				},
 				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {

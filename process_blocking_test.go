@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const gracefulTimeout = 1000 * time.Millisecond
+
 func TestBlockingProcess(t *testing.T) {
 	t.Parallel()
 	// we run the suite multiple times given that implementation
@@ -30,28 +32,27 @@ func TestBlockingProcess(t *testing.T) {
 					assert.NotNil(t, makeDefaultTrigger(ctx, nil, &proc.opts, "foo"))
 				},
 				"InfoIDPopulatedInBasicCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					proc.info = &ProcessInfo{
-						ID: proc.ID(),
-					}
+					infoReturned := make(chan struct{})
+					go func() {
+						assert.Equal(t, proc.Info(ctx).ID, proc.ID())
+						close(infoReturned)
+					}()
 
-					info := proc.Info(ctx)
-					assert.Equal(t, info.ID, proc.ID())
+					op := <-proc.ops
+					op(nil)
+					<-infoReturned
 				},
-				"InfoRetrunsZeroValueForCanceledCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				"InfoReturnsNotCompleteForCanceledCase": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
 					go func() {
 						cctx, cancel := context.WithCancel(ctx)
 						cancel()
 
-						assert.Zero(t, proc.Info(cctx))
+						assert.False(t, proc.Info(cctx).Complete)
 						close(signal)
 					}()
 
-					go func() {
-						<-proc.ops
-					}()
-
-					gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+					gracefulCtx, cancel := context.WithTimeout(ctx, gracefulTimeout)
 					defer cancel()
 
 					select {
@@ -60,10 +61,9 @@ func TestBlockingProcess(t *testing.T) {
 						t.Error("reached timeout")
 					}
 				},
-				"SignalErrorsForCancledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				"SignalErrorsForCanceledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
 					go func() {
-
 						cctx, cancel := context.WithCancel(ctx)
 						cancel()
 
@@ -71,11 +71,7 @@ func TestBlockingProcess(t *testing.T) {
 						close(signal)
 					}()
 
-					go func() {
-						<-proc.ops
-					}()
-
-					gracefulCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+					gracefulCtx, cancel := context.WithTimeout(ctx, gracefulTimeout)
 					defer cancel()
 
 					select {
@@ -85,8 +81,7 @@ func TestBlockingProcess(t *testing.T) {
 					}
 				},
 				"TestRegisterTriggerAfterComplete": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					proc.info = &ProcessInfo{}
-
+					proc.info.Complete = true
 					assert.True(t, proc.Complete(ctx))
 					assert.Error(t, proc.RegisterTrigger(ctx, nil))
 					assert.Error(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, &proc.opts, "foo")))
@@ -99,7 +94,7 @@ func TestBlockingProcess(t *testing.T) {
 					assert.Len(t, proc.triggers, 1)
 				},
 				"RunningIsFalseWhenCompleteIsSatisfied": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					proc.info = &ProcessInfo{}
+					proc.info.Complete = true
 					assert.True(t, proc.Complete(ctx))
 					assert.False(t, proc.Running(ctx))
 				},
@@ -143,14 +138,14 @@ func TestBlockingProcess(t *testing.T) {
 
 					<-signal
 				},
-				"RunningIsFalseWithCancledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				"RunningIsFalseWithCanceledContext": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.ops <- func(_ *exec.Cmd) {}
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 					assert.False(t, proc.Running(cctx))
 				},
 				"SignalIsErrorAfterComplete": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					proc.info = &ProcessInfo{}
+					proc.info = ProcessInfo{Complete: true}
 					assert.True(t, proc.Complete(ctx))
 
 					assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
@@ -158,7 +153,7 @@ func TestBlockingProcess(t *testing.T) {
 				"SignalNilProcessIsError": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
 					go func() {
-						assert.Nil(t, proc.info)
+						assert.False(t, proc.Complete(ctx))
 						assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
 						close(signal)
 					}()
@@ -168,7 +163,7 @@ func TestBlockingProcess(t *testing.T) {
 
 					<-signal
 				},
-				"SignalCancledProcessIsError": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
+				"SignalCanceledProcessIsError": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 
@@ -177,7 +172,7 @@ func TestBlockingProcess(t *testing.T) {
 				"SignalErrorsInvalidProcess": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					signal := make(chan struct{})
 					go func() {
-						assert.Nil(t, proc.info)
+						assert.False(t, proc.Complete(ctx))
 						assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
 						close(signal)
 					}()
@@ -189,6 +184,8 @@ func TestBlockingProcess(t *testing.T) {
 
 					<-signal
 				},
+				// TODO: this test is somewhat flaky and fails locally with the race detector due to timing between cctx
+				// timeout and when startAt is initialized.
 				"WaitSomeBeforeCanceling": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.opts.Args = []string{"sleep", "1"}
 					cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
@@ -225,6 +222,7 @@ func TestBlockingProcess(t *testing.T) {
 							select {
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
+									Complete:   true,
 									Successful: true,
 								})
 								if op != nil {
@@ -257,6 +255,7 @@ func TestBlockingProcess(t *testing.T) {
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
+									Complete:   true,
 									Successful: true,
 								})
 								if op != nil {
@@ -290,6 +289,7 @@ func TestBlockingProcess(t *testing.T) {
 								proc.err = errors.New("signal: killed")
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
+									Complete:   true,
 									Successful: false,
 								})
 								if op != nil {
@@ -306,10 +306,12 @@ func TestBlockingProcess(t *testing.T) {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
+					id := uuid.Must(uuid.NewV4()).String()
 					proc := &blockingProcess{
-						id:   uuid.Must(uuid.NewV4()).String(),
+						id:   id,
 						ops:  make(chan func(*exec.Cmd), 1),
 						opts: CreateOptions{},
+						info: ProcessInfo{ID: id},
 					}
 
 					testCase(ctx, t, proc)

@@ -250,7 +250,7 @@ func TestRestService(t *testing.T) {
 			srv.createProcess(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
-		"CreateFailPropogatesErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"CreateFailPropagatesErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &MockManager{
 				FailCreate: true,
 			}
@@ -382,6 +382,7 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotEqual(t, 0, info.Size())
 		},
+		// TODO: fix this flaky test. It occasionally this receives 400 Bad Request instead of OK on Evergreen.
 		"DownloadFileCreatesResourceAndExtracts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			if testing.Short() {
 				t.Skip("skipping download and extract test in short mode")

@@ -77,6 +77,10 @@ type Process interface {
 	// options and return the new, "respawned" process.
 	Respawn(context.Context) (Process, error)
 
+	// RegisterSignalTrigger associates triggers with a process,
+	// which execute before the process is about to be signaled.
+	RegisterSignalTrigger(context.Context, SignalTrigger) error
+
 	// RegisterTrigger associates triggers with a process,
 	// erroring when the context is canceled, the process is
 	// complete.

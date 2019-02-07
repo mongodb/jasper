@@ -12,15 +12,16 @@ import (
 )
 
 type basicProcess struct {
-	info          ProcessInfo
-	cmd           *exec.Cmd
-	err           error
-	id            string
-	opts          CreateOptions
-	tags          map[string]struct{}
-	triggers      ProcessTriggerSequence
-	waitProcessed chan struct{}
-	initialized   chan struct{}
+	info           ProcessInfo
+	cmd            *exec.Cmd
+	err            error
+	id             string
+	opts           CreateOptions
+	tags           map[string]struct{}
+	triggers       ProcessTriggerSequence
+	signalTriggers SignalTriggerSequence
+	waitProcessed  chan struct{}
+	initialized    chan struct{}
 	sync.RWMutex
 }
 
@@ -134,6 +135,7 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 	defer p.RUnlock()
 
 	if p.Running(nil) {
+		p.signalTriggers.Run(p.Info(nil), sig)
 		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 	}
 
@@ -168,7 +170,7 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	return p.info.ExitCode, p.err
 }
 
-func (p *basicProcess) RegisterTrigger(ctx context.Context, trigger ProcessTrigger) error {
+func (p *basicProcess) RegisterTrigger(_ context.Context, trigger ProcessTrigger) error {
 	if trigger == nil {
 		return errors.New("cannot register nil trigger")
 	}
@@ -181,6 +183,23 @@ func (p *basicProcess) RegisterTrigger(ctx context.Context, trigger ProcessTrigg
 	}
 
 	p.triggers = append(p.triggers, trigger)
+
+	return nil
+}
+
+func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTrigger) error {
+	if trigger == nil {
+		return errors.New("cannot register nil trigger")
+	}
+
+	p.Lock()
+	defer p.Unlock()
+
+	if p.info.Complete {
+		return errors.New("cannot register trigger after process exits")
+	}
+
+	p.signalTriggers = append(p.signalTriggers, trigger)
 
 	return nil
 }
