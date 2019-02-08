@@ -58,7 +58,7 @@ type Process interface {
 
 	// Signal sends the specified signals to the underlying
 	// process. Its error response reflects the outcome of sending
-	// the signal, not the state of process signaled.
+	// the signal, not the state of the process signaled.
 	Signal(context.Context, syscall.Signal) error
 
 	// Wait blocks until the process exits or the context is

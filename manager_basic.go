@@ -50,13 +50,14 @@ func (m *basicProcessManager) Create(ctx context.Context, opts *CreateOptions) (
 
 	// TODO this will race because it runs later
 	if !m.skipDefaultTrigger {
-		proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
+		_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 	}
 
 	if m.tracker != nil {
 		pid := uint(proc.Info(ctx).PID)
+		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.add(pid); err != nil {
-			return nil, errors.Wrap(err, "problem adding local process to tracker during process creation")
+			grip.Warningf("problem adding local process to tracker during process creation: %s", err)
 		}
 	}
 
@@ -81,8 +82,9 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 
 	if m.tracker != nil {
 		pid := uint(proc.Info(ctx).PID)
+		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.add(pid); err != nil {
-			return errors.Wrap(err, "problem registering local process to tracker")
+			grip.Warningf("problem adding local process to tracker during process registration: %s", err)
 		}
 	}
 
@@ -164,22 +166,21 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 	termCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	catcher := grip.NewBasicCatcher()
 	if m.tracker != nil {
-		err := m.tracker.cleanup()
-		if err == nil {
+		if err := m.tracker.cleanup(); err != nil {
+			grip.Warningf("process tracker did not clean up successfully: %s", err)
+		} else {
 			return nil
 		}
-		catcher.Add(err)
 	}
 	if err := TerminateAll(termCtx, procs); err != nil {
 		killCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		catcher.Add(errors.WithStack(KillAll(killCtx, procs)))
+		return errors.WithStack(KillAll(killCtx, procs))
 	}
 
-	return catcher.Resolve()
+	return nil
 }
 
 func (m *basicProcessManager) Group(ctx context.Context, name string) ([]Process, error) {

@@ -78,9 +78,9 @@ func TestWindowsProcessTracker(t *testing.T) {
 
 			assert.NoError(t, tracker.cleanup())
 
-			windowsWaitStatus, err := WaitForSingleObject(procHandle, 60*time.Second)
+			waitEvent, err := WaitForSingleObject(procHandle, 60*time.Second)
 			assert.NoError(t, err)
-			assert.Equal(t, uintptr(WAIT_OBJECT_0), windowsWaitStatus)
+			assert.Equal(t, WAIT_OBJECT_0, waitEvent)
 			assert.NoError(t, CloseHandle(procHandle))
 
 			assert.NoError(t, cmd.Wait())
@@ -90,6 +90,8 @@ func TestWindowsProcessTracker(t *testing.T) {
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
+			// TODO: since processes can only be associated with 1 job, support Windows process and create them
+			// with the CREATE_BREAKAWAY_FROM_JOB flag.
 			t.Skip("Evergreen makes its own job object, so these will not pass in Evergreen tests",
 				"(although they will pass if locally run).")
 			ctx, cancel := context.WithCancel(context.Background())
