@@ -272,20 +272,21 @@ func SetInformationJobObjectExtended(job syscall.Handle, info JobObjectExtendedL
 	return nil
 }
 
-func WaitForSingleObject(object syscall.Handle, timeout time.Duration) (uintptr, error) {
+func WaitForSingleObject(object syscall.Handle, timeout time.Duration) (uint32, error) {
 	timeoutMillis := int64(timeout * time.Millisecond)
 	r1, _, e1 := procWaitForSingleObject.Call(
 		uintptr(object),
 		uintptr(uint32(timeoutMillis)),
 	)
-	if r1 == WAIT_FAILED {
+	waitEvent := uint32(r1)
+	if waitEvent == WAIT_FAILED {
 		if e1 != ERROR_SUCCESS {
-			return r1, e1
+			return waitEvent, e1
 		} else {
-			return r1, syscall.EINVAL
+			return waitEvent, syscall.EINVAL
 		}
 	}
-	return r1, nil
+	return waitEvent, nil
 }
 
 func OpenEvent(name string) (syscall.Handle, error) {

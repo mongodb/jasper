@@ -35,15 +35,15 @@ func makeAndStartYesCommand(ctx context.Context) (*exec.Cmd, error) {
 }
 
 func TestWindowsProcessTracker(t *testing.T) {
-	for testName, testCase := range map[string]func(context.Context, *windowsProcessTracker){
-		"NewWindowsProcessTrackerCreatesJob": func(_ context.Context, tracker *windowsProcessTracker) {
+	for testName, testCase := range map[string]func(context.Context, *testing.T, *windowsProcessTracker){
+		"NewWindowsProcessTrackerCreatesJob": func(_ context.Context, t *testing.T, tracker *windowsProcessTracker) {
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 0, int(info.NumberOfAssignedProcesses))
 
 			assert.NoError(t, tracker.job.Close())
 		},
-		"AddProcessToTrackerAssignsPid": func(ctx context.Context, tracker *windowsProcessTracker) {
+		"AddProcessToTrackerAssignsPid": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
 			cmd1, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
 			pid1 := uint(cmd1.Process.Pid)
@@ -62,7 +62,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 
 			assert.NoError(t, tracker.job.Close())
 		},
-		"AddedProcessIsTerminatedOnCleanup": func(ctx context.Context, tracker *windowsProcessTracker) {
+		"AddedProcessIsTerminatedOnCleanup": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
 			cmd, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
 			pid := uint(cmd.Process.Pid)
@@ -78,9 +78,9 @@ func TestWindowsProcessTracker(t *testing.T) {
 
 			assert.NoError(t, tracker.cleanup())
 
-			windowsWaitStatus, err := WaitForSingleObject(procHandle, 60*time.Second)
+			waitEvent, err := WaitForSingleObject(procHandle, 60*time.Second)
 			assert.NoError(t, err)
-			assert.Equal(t, uintptr(WAIT_OBJECT_0), windowsWaitStatus)
+			assert.Equal(t, WAIT_OBJECT_0, waitEvent)
 			assert.NoError(t, CloseHandle(procHandle))
 
 			assert.NoError(t, cmd.Wait())
