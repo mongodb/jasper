@@ -61,10 +61,10 @@ const (
 	EVENT_MODIFY_STATE = 0x0002
 
 	// Constants representing the wait return value
-	WAIT_OBJECT_0  = 0x00000000
-	WAIT_ABANDONED = 0x00000080
-	WAIT_FAILED    = 0xFFFFFFFF
-	WAIT_TIMEOUT   = 0x00000102
+	WAIT_OBJECT_0  uint32 = 0x00000000
+	WAIT_ABANDONED        = 0x00000080
+	WAIT_FAILED           = 0xFFFFFFFF
+	WAIT_TIMEOUT          = 0x00000102
 
 	// Max allowed length of process ID list
 	MAX_PROCESS_ID_LIST_LENGTH = 1000

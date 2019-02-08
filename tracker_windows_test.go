@@ -90,8 +90,6 @@ func TestWindowsProcessTracker(t *testing.T) {
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			t.Skip("Evergreen makes its own job object, so these will not pass in Evergreen tests",
-				"(although they will pass if locally run).")
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -99,7 +97,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, tracker)
 
-			testCase(ctx, tracker)
+			testCase(ctx, t, tracker)
 		})
 	}
 }
