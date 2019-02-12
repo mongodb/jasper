@@ -1,10 +1,13 @@
 package jasper
 
 import (
+	// "encoding/binary"
 	"fmt"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 // TODO: needs some documentation.
@@ -77,7 +80,8 @@ var (
 	procAssignProcessToJobObject  = modkernel32.NewProc("AssignProcessToJobObject")
 	procCloseHandle               = modkernel32.NewProc("CloseHandle")
 	procCreateJobObjectW          = modkernel32.NewProc("CreateJobObjectW")
-	procOpenEvent                 = modkernel32.NewProc("OpenEventW")
+	procCreateEventW              = modkernel32.NewProc("CreateEventW")
+	procOpenEventW                = modkernel32.NewProc("OpenEventW")
 	procSetEvent                  = modkernel32.NewProc("SetEvent")
 	procOpenProcess               = modkernel32.NewProc("OpenProcess")
 	procQueryInformationJobObject = modkernel32.NewProc("QueryInformationJobObject")
@@ -91,7 +95,11 @@ type Job struct {
 }
 
 func NewJob(name string) (*Job, error) {
-	hJob, err := CreateJobObject(syscall.StringToUTF16Ptr(name))
+	utf16Name, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, NewWindowsError("UTF16PtrFromString", err)
+	}
+	hJob, err := CreateJobObject(utf16Name)
 	if err != nil {
 		return nil, NewWindowsError("CreateJobObject", err)
 	}
@@ -193,12 +201,14 @@ func OpenProcess(desiredAccess uint32, inheritHandle bool, processId uint32) (sy
 	return syscall.Handle(r1), nil
 }
 
+type SecurityAttributes struct {
+	Length             uint32
+	SecurityDescriptor uintptr
+	InheritHandle      uint32
+}
+
 func CreateJobObject(name *uint16) (syscall.Handle, error) {
-	jobAttributes := &struct {
-		Length             uint32
-		SecurityDescriptor *byte
-		InheritHandle      int32
-	}{}
+	jobAttributes := &SecurityAttributes{}
 
 	r1, _, e1 := procCreateJobObjectW.Call(
 		uintptr(unsafe.Pointer(jobAttributes)),
@@ -289,11 +299,44 @@ func WaitForSingleObject(object syscall.Handle, timeout time.Duration) (uint32, 
 	return waitEvent, nil
 }
 
-func OpenEvent(name string) (syscall.Handle, error) {
-	r1, _, e1 := procOpenEvent.Call(
+func getWaitEventError(waitEvent uint32) error {
+	switch waitEvent {
+	case WAIT_OBJECT_0:
+		return nil
+	case WAIT_ABANDONED:
+		return errors.New("mutex object was not released by the owning thread before it terminated")
+	case WAIT_FAILED:
+		return errors.New("wait failed")
+	case WAIT_TIMEOUT:
+		return errors.New("wait timed out before the object could be signaled")
+	default:
+		return errors.New("wait failed due to unknown reason")
+	}
+}
+
+func CreateEvent(name *uint16) (syscall.Handle, error) {
+	r1, _, e1 := procCreateEventW.Call(
+		uintptr(unsafe.Pointer(nil)),
+		uintptr(1),
+		uintptr(0),
+		uintptr(unsafe.Pointer(name)),
+	)
+	handle := syscall.Handle(r1)
+	if r1 == 0 {
+		if e1 != ERROR_SUCCESS {
+			return handle, e1
+		} else {
+			return handle, syscall.EINVAL
+		}
+	}
+	return handle, nil
+}
+
+func OpenEvent(name *uint16) (syscall.Handle, error) {
+	r1, _, e1 := procOpenEventW.Call(
 		uintptr(EVENT_MODIFY_STATE),
 		uintptr(0),
-		uintptr(unsafe.Pointer(&name)),
+		uintptr(unsafe.Pointer(name)),
 	)
 	handle := syscall.Handle(r1)
 	if r1 == 0 {

@@ -160,7 +160,7 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					proc.Wait(ctx)
-					assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ ProcessInfo, _ syscall.Signal) {}))
+					assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ ProcessInfo, _ syscall.Signal) bool { return false }))
 				},
 				"DefaultTriggerSucceeds": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
@@ -200,16 +200,52 @@ func TestProcessImplementations(t *testing.T) {
 					if cname == "REST" {
 						t.Skip("remote signal triggers are not supported on rest processes")
 					}
-					proc, err := makep(ctx, sleepCreateOpts(100))
+					opts := yesCreateOpts(0)
+					proc, err := makep(ctx, &opts)
 					require.NoError(t, err)
 
 					expectedSig := syscall.SIGKILL
-					proc.RegisterSignalTrigger(ctx, func(info ProcessInfo, actualSig syscall.Signal) {
+					assert.NoError(t, proc.RegisterSignalTrigger(ctx, func(info ProcessInfo, actualSig syscall.Signal) bool {
 						assert.Equal(t, expectedSig, actualSig)
 						assert.True(t, info.IsRunning)
 						assert.False(t, info.Complete)
-					})
+						return false
+					}))
 					proc.Signal(ctx, expectedSig)
+
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					if runtime.GOOS == "windows" {
+						assert.Equal(t, 1, exitCode)
+					} else {
+						assert.Equal(t, int(expectedSig), exitCode)
+					}
+
+					assert.False(t, proc.Running(ctx))
+					assert.True(t, proc.Complete(ctx))
+				},
+				"SignalTriggerCanSkipSignal": func(ctx context.Context, t *testing.T, _ *CreateOptions, makep processConstructor) {
+					if cname == "REST" {
+						t.Skip("remote signal triggers are not supported on rest processes")
+					}
+					opts := yesCreateOpts(0)
+					proc, err := makep(ctx, &opts)
+					require.NoError(t, err)
+
+					expectedSig := syscall.SIGKILL
+					shouldSkipNextTime := true
+					assert.NoError(t, proc.RegisterSignalTrigger(ctx, func(info ProcessInfo, actualSig syscall.Signal) bool {
+						assert.Equal(t, expectedSig, actualSig)
+						skipSignal := shouldSkipNextTime
+						shouldSkipNextTime = false
+						return skipSignal
+					}))
+
+					assert.NoError(t, proc.Signal(ctx, expectedSig))
+					assert.True(t, proc.Running(ctx))
+					assert.False(t, proc.Complete(ctx))
+
+					assert.NoError(t, proc.Signal(ctx, expectedSig))
 
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)

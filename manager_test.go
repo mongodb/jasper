@@ -354,6 +354,7 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, err)
 					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
+					assert.Error(t, err)
 					assert.Nil(t, nilProc)
 				},
 				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
@@ -385,6 +386,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Equal(t, sleepProc.ID(), sameSleepProc.ID())
 
 					nilProc, err := manager.Get(ctx, lsProc.ID())
+					assert.Error(t, err)
 					assert.Nil(t, nilProc)
 					require.NoError(t, Terminate(ctx, sleepProc)) // Clean up
 				},
