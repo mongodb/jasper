@@ -50,7 +50,9 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		p.Tag(t)
 	}
 
-	_ = p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
+	if err = p.RegisterTrigger(ctx, makeOptionsCloseTrigger()); err != nil {
+		return nil, errors.Wrap(err, "problem registering options closer trigger")
+	}
 
 	if err = cmd.Start(); err != nil {
 		return nil, errors.Wrap(err, "problem starting command")
