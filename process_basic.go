@@ -48,7 +48,9 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.Tag(t)
 	}
 
-	_ = p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
+	if err = p.RegisterTrigger(ctx, makeOptionsCloseTrigger()); err != nil {
+		return nil, errors.Wrap(err, "problem registering options closer trigger")
+	}
 
 	err = cmd.Start()
 	if err != nil {

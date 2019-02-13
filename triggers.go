@@ -39,7 +39,6 @@ type SignalTriggerSequence []SignalTrigger
 // It returns a boolean indicating whether or not the signal should
 // be skipped after executing all of the signal triggers.
 func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSignal bool) {
-	skipSignal = false
 	for _, trigger := range s {
 		skipSignal = skipSignal || trigger(info, sig)
 	}

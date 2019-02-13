@@ -21,8 +21,6 @@ const (
 // shutdown event and waiting for the process to return.
 func makeMongodShutdownSignalTrigger() SignalTrigger {
 	return func(info ProcessInfo, sig syscall.Signal) (skipSignal bool) {
-		skipSignal = false
-
 		// Only run if the program is mongod.
 		if len(info.Options.Args) == 0 || !strings.Contains(filepath.Base(info.Options.Args[0]), "mongod") {
 			return
@@ -51,15 +49,6 @@ func makeMongodShutdownSignalTrigger() SignalTrigger {
 			grip.Errorf(errors.Wrapf(err, "failed to signal event '%s'", eventName).Error())
 			return
 		}
-
-		mongodProc, err := OpenProcess(PROCESS_ALL_ACCESS, false, uint32(pid))
-		if err != nil {
-			grip.Errorf(errors.Wrapf(err, "failed to get process handle for pid %d", pid).Error())
-			return
-		}
-		defer CloseHandle(mongodProc)
-
-		grip.Infof("mongod with pid %d received termination signal %d and was cleanly shut down", pid, sig)
 		return true
 	}
 }

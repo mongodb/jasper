@@ -85,7 +85,10 @@ outerRetry:
 			return nil, -1
 		default:
 			port := getPortNumber()
-			localManager, _ := NewLocalManager(false)
+			localManager, err := NewLocalManager(false)
+			if err != nil {
+				return nil, -1
+			}
 			srv := NewManagerService(localManager)
 			app := srv.App()
 			app.SetPrefix("jasper")

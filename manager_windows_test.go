@@ -4,6 +4,7 @@ package jasper
 
 import (
 	"context"
+	"os"
 	"syscall"
 	"testing"
 
@@ -87,10 +88,12 @@ func TestBasicManagerWithTrackedProcesses(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					// TODO: since processes can only be associated with 1 job, support Windows process and create them
-					// with the CREATE_BREAKAWAY_FROM_JOB flag.
-					t.Skip("Evergreen makes its own job object, so these will not pass in Evergreen tests",
-						"(although they will pass if locally run).")
+					if _, runningInEvgAgent := os.LookupEnv("EVR_TASK_ID"); runningInEvgAgent {
+						// TODO: since processes can only be associated with 1 job, support Windows process and create them
+						// with the CREATE_BREAKAWAY_FROM_JOB flag.
+						t.Skip("Evergreen makes its own job object, so these will not pass in Evergreen tests",
+							"(although they will pass if locally run).")
+					}
 					tctx, cancel := context.WithTimeout(ctx, longTaskTimeout)
 					defer cancel()
 					manager := makeManager(tctx, t)
