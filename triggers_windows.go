@@ -47,7 +47,7 @@ func makeMongodShutdownSignalTrigger() SignalTrigger {
 
 		if err := SetEvent(event); err != nil {
 			grip.Errorf(errors.Wrapf(err, "failed to signal event '%s'", eventName).Error())
-			return
+			return false
 		}
 
 		return true
