@@ -265,3 +265,11 @@ func (p *MockProcess) RegisterSignalTrigger(_ context.Context, _ SignalTrigger) 
 
 	return nil
 }
+
+func (p *MockProcess) RegisterSignalTriggerID(_ context.Context, _ SignalTriggerID) error {
+	if p.FailRegisterSignalTrigger {
+		return errors.New("always fail")
+	}
+
+	return nil
+}

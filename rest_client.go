@@ -114,6 +114,7 @@ func (c *restClient) getListOfProcesses(req *http.Request) ([]Process, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
 
 	if err = handleError(resp); err != nil {
 		return nil, errors.WithStack(err)
@@ -190,6 +191,7 @@ func (c *restClient) getProcessInfo(ctx context.Context, id string) (ProcessInfo
 	if err != nil {
 		return ProcessInfo{}, errors.WithStack(err)
 	}
+	defer resp.Body.Close()
 
 	out := ProcessInfo{}
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
@@ -200,10 +202,11 @@ func (c *restClient) getProcessInfo(ctx context.Context, id string) (ProcessInfo
 }
 
 func (c *restClient) Get(ctx context.Context, id string) (Process, error) {
-	_, err := c.getProcess(ctx, id)
+	resp, err := c.getProcess(ctx, id)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	defer resp.Body.Close()
 
 	// we don't actually need to parse the body of the post if we
 	// know the process exists.
@@ -219,7 +222,9 @@ func (c *restClient) Clear(ctx context.Context) {
 	req, _ := http.NewRequest(http.MethodPost, c.getURL("/clear"), nil)
 	req = req.WithContext(ctx)
 
-	c.client.Do(req)
+	if resp, err := c.client.Do(req); err == nil {
+		_ = resp.Body.Close()
+	}
 }
 
 func (c *restClient) Close(ctx context.Context) error {
@@ -233,6 +238,7 @@ func (c *restClient) Close(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
 
 	if err = handleError(resp); err != nil {
 		return errors.WithStack(err)
@@ -356,6 +362,7 @@ func (p *restProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	if err != nil {
 		return errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
 
 	if err = handleError(resp); err != nil {
 		return errors.WithStack(err)
@@ -380,6 +387,7 @@ func (p *restProcess) Wait(ctx context.Context) (int, error) {
 	if err = handleError(resp); err != nil {
 		return -1, errors.WithStack(err)
 	}
+	defer resp.Body.Close()
 
 	var exitCode int
 	gimlet.GetJSON(resp.Body, &exitCode)
@@ -401,6 +409,7 @@ func (p *restProcess) Respawn(ctx context.Context) (Process, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
 
 	if err = handleError(resp); err != nil {
 		return nil, errors.WithStack(err)
@@ -423,6 +432,27 @@ func (p *restProcess) RegisterTrigger(_ context.Context, _ ProcessTrigger) error
 
 func (p *restProcess) RegisterSignalTrigger(_ context.Context, _ SignalTrigger) error {
 	return errors.New("cannot register signal trigger on remote processes")
+}
+
+func (p *restProcess) RegisterSignalTriggerID(ctx context.Context, triggerID SignalTriggerID) error {
+	req, err := http.NewRequest(http.MethodPatch, p.client.getURL("/process/%s/signal-trigger/%d", p.id, triggerID), nil)
+	if err != nil {
+		return errors.Wrap(err, "problem building request")
+	}
+
+	req = req.WithContext(ctx)
+
+	resp, err := p.client.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "problem making request")
+	}
+	defer resp.Body.Close()
+
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
 
 func (p *restProcess) Tag(t string) {

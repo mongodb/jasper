@@ -362,12 +362,15 @@ func TestRestService(t *testing.T) {
 
 		},
 		"SignalFailsToParsePid": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			req, err := http.NewRequest(http.MethodPost, client.getURL("/process/%s/signal/f", "foo"), nil)
+			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal/f", "foo"), nil)
 			require.NoError(t, err)
-			rw := httptest.NewRecorder()
+			req = req.WithContext(ctx)
 
-			srv.signalProcess(rw, req)
-			assert.Equal(t, http.StatusBadRequest, rw.Code)
+			resp, err := client.client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			assert.Contains(t, handleError(resp).Error(), "problem converting signal 'f'")
 		},
 		"DownloadFileCreatesResource": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			file, err := ioutil.TempFile("build", "out.txt")
@@ -400,6 +403,7 @@ func TestRestService(t *testing.T) {
 			absFilePath, err := filepath.Abs(file.Name())
 			require.NoError(t, err)
 			absExtractDir, err := filepath.Abs(extractDir)
+			require.NoError(t, err)
 
 			feed, err := bond.GetArtifactsFeed(ctx, tempDir)
 			require.NoError(t, err)
@@ -588,6 +592,7 @@ func TestRestService(t *testing.T) {
 			var opts struct {
 				MaxSize string `json:"max_size"`
 			}
+			opts.MaxSize = "foo"
 			body, err := makeBody(opts)
 			require.NoError(t, err)
 			req, err := http.NewRequest(http.MethodPost, client.getURL("/configure-cache"), body)
@@ -680,6 +685,55 @@ func TestRestService(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotZero(t, info.Size())
 
+		},
+		"ServiceRegisterSignalTriggerIDChecksForExistingProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal-trigger/%d", "foo", MongodShutdownSignalTrigger), nil)
+			require.NoError(t, err)
+
+			resp, err := client.client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			assert.Contains(t, handleError(resp).Error(), "no process 'foo' found")
+		},
+		"ServiceRegisterSignalTriggerIDChecksForNumericalID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := yesCreateOpts(0)
+			proc, err := client.Create(ctx, &opts)
+			require.NoError(t, err)
+			assert.True(t, proc.Running(ctx))
+
+			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal-trigger/%s", proc.ID(), "foo"), nil)
+			require.NoError(t, err)
+
+			resp, err := client.client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			assert.Contains(t, handleError(resp).Error(), "problem converting signal trigger id 'foo'")
+
+			assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
+		},
+		"ServiceRegisterSignalTriggerIDChecksForInvalidTriggerID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := yesCreateOpts(0)
+			proc, err := client.Create(ctx, &opts)
+			require.NoError(t, err)
+			assert.True(t, proc.Running(ctx))
+
+			assert.Error(t, proc.RegisterSignalTriggerID(ctx, -1))
+
+			assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
+		},
+		"ServiceRegisterSignalTriggerIDPassesWithValidArgs": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			opts := yesCreateOpts(0)
+			proc, err := client.Create(ctx, &opts)
+			require.NoError(t, err)
+			assert.True(t, proc.Running(ctx))
+
+			assert.NoError(t, proc.RegisterSignalTriggerID(ctx, MongodShutdownSignalTrigger))
+
+			assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
 		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {

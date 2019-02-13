@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -246,6 +247,10 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		}
 
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
+			// Windows does not support SIGTERM, so terminate with SIGKILL.
+			if runtime.GOOS == "windows" && sig == syscall.SIGTERM {
+				sig = syscall.SIGKILL
+			}
 			out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
 				sig, p.id)
 		} else {
@@ -298,6 +303,14 @@ func (p *blockingProcess) RegisterSignalTrigger(_ context.Context, trigger Signa
 	p.signalTriggers = append(p.signalTriggers, trigger)
 
 	return nil
+}
+
+func (p *blockingProcess) RegisterSignalTriggerID(_ context.Context, id SignalTriggerID) error {
+	trigger, err := id.MakeSignalTrigger()
+	if err != nil {
+		return err
+	}
+	return p.RegisterSignalTrigger(nil, trigger)
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) (int, error) {

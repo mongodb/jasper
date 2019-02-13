@@ -79,6 +79,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
+	app.AddRoute("/process/{id}/signal-trigger/{trigger-id}").Version(1).Patch().Handler(s.registerSignalTriggerID)
 	app.AddRoute("/clear").Version(1).Post().Handler(s.clearManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
@@ -411,7 +412,15 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 		cancel()
 		return
 	}
-	s.manager.Register(ctx, newProc)
+	if err := s.manager.Register(ctx, newProc); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
+			Message: errors.Wrap(
+				err, "failed to register respawned process").Error(),
+		})
+		cancel()
+		return
+	}
 
 	if err := newProc.RegisterTrigger(ctx, func(_ ProcessInfo) {
 		cancel()
@@ -446,7 +455,7 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "problem finding signal '%s'", vars["signal"]).Error(),
+			Message:    errors.Wrapf(err, "problem converting signal '%s'", vars["signal"]).Error(),
 		})
 		return
 	}
@@ -619,6 +628,49 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 		s.cacheOpts.PruneDelay = opts.PruneDelay
 	}
 	s.cacheOpts.Disabled = opts.Disabled
+
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Request) {
+	vars := gimlet.GetVars(r)
+	id := vars["id"]
+	triggerID, err := strconv.Atoi(vars["trigger-id"])
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "problem converting signal trigger id '%s'", vars["trigger-id"]).Error(),
+		})
+		return
+	}
+
+	ctx := r.Context()
+	proc, err := s.manager.Get(ctx, id)
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "no process '%s' found", id).Error(),
+		})
+		return
+	}
+
+	sigTriggerID := SignalTriggerID(triggerID)
+	signalTrigger, err := sigTriggerID.MakeSignalTrigger()
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "could not make a signal trigger with id '%d'", sigTriggerID).Error(),
+		})
+		return
+	}
+
+	if err := proc.RegisterSignalTrigger(ctx, signalTrigger); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
+			Message:    errors.Wrapf(err, "problem registering signal trigger with id '%d'", sigTriggerID).Error(),
+		})
+		return
+	}
 
 	gimlet.WriteJSON(rw, struct{}{})
 }

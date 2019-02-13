@@ -7,6 +7,7 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	"github.com/pkg/errors"
 )
 
 // ProcessTrigger describes the way to write cleanup functions for
@@ -43,6 +44,24 @@ func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSi
 		skipSignal = skipSignal || trigger(info, sig)
 	}
 	return
+}
+
+// SignalTriggerID is the numerical representation of a signal trigger.
+type SignalTriggerID int
+
+const (
+	// MongodShutdownSignalTrigger is the ID for the signal trigger to use for clean mongod shutdown.
+	MongodShutdownSignalTrigger SignalTriggerID = iota + 1
+)
+
+// MakeSignalTrigger creates a signal trigger represented by the SignalTriggerID.
+func (id SignalTriggerID) MakeSignalTrigger() (SignalTrigger, error) {
+	switch id {
+	case MongodShutdownSignalTrigger:
+		return makeMongodShutdownSignalTrigger(), nil
+	default:
+		return nil, errors.New("unknown signal trigger id")
+	}
 }
 
 func makeOptionsCloseTrigger() ProcessTrigger {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -138,6 +139,10 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 
 	if p.Running(nil) {
 		if skipSignal := p.signalTriggers.Run(p.Info(nil), sig); !skipSignal {
+			// Windows does not support SIGTERM, so terminate with SIGKILL.
+			if runtime.GOOS == "windows" && sig == syscall.SIGTERM {
+				sig = syscall.SIGKILL
+			}
 			return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 		}
 		return nil
@@ -206,6 +211,14 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 	p.signalTriggers = append(p.signalTriggers, trigger)
 
 	return nil
+}
+
+func (p *basicProcess) RegisterSignalTriggerID(_ context.Context, id SignalTriggerID) error {
+	trigger, err := id.MakeSignalTrigger()
+	if err != nil {
+		return err
+	}
+	return p.RegisterSignalTrigger(nil, trigger)
 }
 
 func (p *basicProcess) Tag(t string) {

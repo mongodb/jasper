@@ -159,8 +159,28 @@ func TestProcessImplementations(t *testing.T) {
 				"RegisterSignalTriggerErrorsForExitedProcess": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
-					proc.Wait(ctx)
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
 					assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ ProcessInfo, _ syscall.Signal) bool { return false }))
+				},
+				"RegisterSignalTriggerIDErrorsForExitedProcess": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Error(t, proc.RegisterSignalTriggerID(ctx, MongodShutdownSignalTrigger))
+				},
+				"RegisterSignalTriggerIDFailsWithInvalidTriggerID": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(3)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					assert.Error(t, proc.RegisterSignalTriggerID(ctx, SignalTriggerID(-1)))
+				},
+				"RegisterSignalTriggerIDPassesWithValidTriggerID": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(3)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					assert.NoError(t, proc.RegisterSignalTriggerID(ctx, MongodShutdownSignalTrigger))
 				},
 				"DefaultTriggerSucceeds": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					if cname == "REST" {
@@ -498,7 +518,7 @@ func TestProcessImplementations(t *testing.T) {
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
 					if runtime.GOOS == "windows" {
-						assert.Equal(t, -1, exitCode)
+						assert.Equal(t, 1, exitCode)
 					} else {
 						assert.Equal(t, int(sig), exitCode)
 					}
