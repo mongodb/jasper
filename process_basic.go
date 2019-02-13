@@ -48,7 +48,9 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		p.Tag(t)
 	}
 
-	p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
+	if err = p.RegisterTrigger(ctx, makeOptionsCloseTrigger()); err != nil {
+		return nil, errors.Wrap(err, "problem registering options closer trigger")
+	}
 
 	err = cmd.Start()
 	if err != nil {
@@ -135,8 +137,10 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 	defer p.RUnlock()
 
 	if p.Running(nil) {
-		p.signalTriggers.Run(p.Info(nil), sig)
-		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
+		if skipSignal := p.signalTriggers.Run(p.Info(nil), sig); !skipSignal {
+			return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
+		}
+		return nil
 	}
 
 	return errors.New("cannot signal a process that has terminated")

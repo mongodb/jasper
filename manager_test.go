@@ -32,16 +32,24 @@ func TestManagerInterface(t *testing.T) {
 			}
 		},
 		"Basic/Lock/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
-			return NewLocalManager()
+			localManager, err := NewLocalManager(false)
+			require.NoError(t, err)
+			return localManager
 		},
 		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			return NewLocalManagerBlockingProcesses()
+			localBlockingManager, err := NewLocalManagerBlockingProcesses(false)
+			require.NoError(t, err)
+			return localBlockingManager
 		},
 		"SelfClearing/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
-			return NewSelfClearingProcessManager(10)
+			selfClearingManager, err := NewSelfClearingProcessManager(10, false)
+			require.NoError(t, err)
+			return selfClearingManager
 		},
 		"SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			return NewSelfClearingProcessManagerBlockingProcesses(10)
+			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, false)
+			require.NoError(t, err)
+			return selfClearingBlockingManager
 		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
 			srv, port := makeAndStartService(ctx, httpClient)
@@ -170,7 +178,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Len(t, procs, 0)
 					assert.Contains(t, err.Error(), "canceled")
 				},
-				"GroupPropgatesMatching": func(ctx context.Context, t *testing.T, manager Manager) {
+				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
 					require.NoError(t, err)
 
@@ -214,7 +222,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, err)
 					assert.NoError(t, manager.Close(ctx))
 				},
-				"CloseExcutesClosersForProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+				"CloseExecutesClosersForProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
 						t.Skip("not supported on rest interfaces")
 					}
@@ -346,9 +354,10 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, err)
 					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
+					assert.Error(t, err)
 					assert.Nil(t, nilProc)
 				},
-				"ClearIsANoOpForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
+				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
 					opts := sleepCreateOpts(20)
 					proc, err := manager.Create(ctx, opts)
 					require.NoError(t, err)
@@ -377,6 +386,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Equal(t, sleepProc.ID(), sameSleepProc.ID())
 
 					nilProc, err := manager.Get(ctx, lsProc.ID())
+					assert.Error(t, err)
 					assert.Nil(t, nilProc)
 					require.NoError(t, Terminate(ctx, sleepProc)) // Clean up
 				},

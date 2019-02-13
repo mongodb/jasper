@@ -27,7 +27,8 @@ func TestRPCManager(t *testing.T) {
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.Manager{
 		"Basic": func(ctx context.Context, t *testing.T) jasper.Manager {
-			mngr := jasper.NewLocalManager()
+			mngr, err := jasper.NewLocalManager(false)
+			require.NoError(t, err)
 			addr, err := startRPC(ctx, mngr)
 			require.NoError(t, err)
 
@@ -37,7 +38,8 @@ func TestRPCManager(t *testing.T) {
 			return client
 		},
 		"Blocking": func(ctx context.Context, t *testing.T) jasper.Manager {
-			mngr := jasper.NewLocalManagerBlockingProcesses()
+			mngr, err := jasper.NewLocalManagerBlockingProcesses(false)
+			require.NoError(t, err)
 			addr, err := startRPC(ctx, mngr)
 			require.NoError(t, err)
 
@@ -137,7 +139,7 @@ func TestRPCManager(t *testing.T) {
 					assert.Len(t, procs, 0)
 					assert.Contains(t, err.Error(), "canceled")
 				},
-				"GroupPropgatesMatching": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
 					proc, err := manager.Create(ctx, trueCreateOpts())
 					require.NoError(t, err)
 
@@ -210,7 +212,7 @@ func TestRPCManager(t *testing.T) {
 					nilProc, err := manager.Get(ctx, proc.ID())
 					assert.Nil(t, nilProc)
 				},
-				"ClearIsANoOpForActiveProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
+				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
 					opts := sleepCreateOpts(20)
 					proc, err := manager.Create(ctx, opts)
 					require.NoError(t, err)
@@ -308,7 +310,8 @@ func TestRPCProcess(t *testing.T) {
 
 	for cname, makeProc := range map[string]processConstructor{
 		"Basic": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
-			mngr := jasper.NewLocalManager()
+			mngr, err := jasper.NewLocalManager(false)
+			require.NoError(t, err)
 			addr, err := startRPC(ctx, mngr)
 			if err != nil {
 				return nil, errors.WithStack(err)
@@ -323,7 +326,8 @@ func TestRPCProcess(t *testing.T) {
 
 		},
 		"Blocking": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
-			mngr := jasper.NewLocalManagerBlockingProcesses()
+			mngr, err := jasper.NewLocalManagerBlockingProcesses(false)
+			require.NoError(t, err)
 			addr, err := startRPC(ctx, mngr)
 			if err != nil {
 				return nil, errors.WithStack(err)

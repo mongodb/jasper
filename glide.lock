@@ -14,7 +14,7 @@ imports:
   - name: github.com/tychoish/bond
     version: a6a4ddb19d113c553f1ab0970d6292e0e95c7221
   - name: github.com/tychoish/lru
-    version: 91dacc0e8bc08fd2a2e8019a1ad2df86b8f5b292
+    version: f77a748d12a924cfbfcf396426dd58de5aa3a9e2
   - name: github.com/mholt/archiver
     version: de0d89e255e17c8d75a40122055763e743ab0593
   - name: github.com/montanaflynn/stats

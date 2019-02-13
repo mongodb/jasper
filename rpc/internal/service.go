@@ -18,7 +18,7 @@ import (
 )
 
 // AttachService attaches the given manager to the jasper GRPC server. This
-// function eventually calls generated Protobuf code for registering the the
+// function eventually calls generated Protobuf code for registering the
 // GRPC Jasper server with the given Manager.
 func AttachService(manager jasper.Manager, s *grpc.Server) error {
 	hn, err := os.Hostname()

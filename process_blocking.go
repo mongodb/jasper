@@ -50,7 +50,9 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		p.Tag(t)
 	}
 
-	p.RegisterTrigger(ctx, makeOptionsCloseTrigger())
+	if err = p.RegisterTrigger(ctx, makeOptionsCloseTrigger()); err != nil {
+		return nil, errors.Wrap(err, "problem registering options closer trigger")
+	}
 
 	if err = cmd.Start(); err != nil {
 		return nil, errors.Wrap(err, "problem starting command")
@@ -243,10 +245,13 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 			return
 		}
 
-		p.signalTriggers.Run(p.getInfo(), sig)
+		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
+			out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
+				sig, p.id)
+		} else {
+			out <- nil
+		}
 
-		out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
-			sig, p.id)
 	}
 	select {
 	case p.ops <- operation:

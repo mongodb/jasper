@@ -25,13 +25,24 @@ func (s ProcessTriggerSequence) Run(info ProcessInfo) {
 	}
 }
 
-type SignalTrigger func(ProcessInfo, syscall.Signal)
+// SignalTrigger describes the way to write hooks that will execute
+// before a process is about to be signaled. It returns a bool
+// indicating if the signal should be skipped after execution of the
+// trigger.
+type SignalTrigger func(ProcessInfo, syscall.Signal) (skipSignal bool)
+
+// SignalTriggerSequence is a convenience type to simplify running
+// more than one signal trigger.
 type SignalTriggerSequence []SignalTrigger
 
-func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) {
+// Run loops over signal triggers and calls each of them successively.
+// It returns a boolean indicating whether or not the signal should
+// be skipped after executing all of the signal triggers.
+func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSignal bool) {
 	for _, trigger := range s {
-		trigger(info, sig)
+		skipSignal = skipSignal || trigger(info, sig)
 	}
+	return
 }
 
 func makeOptionsCloseTrigger() ProcessTrigger {
@@ -69,7 +80,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 					continue
 				}
 				p.Tag(parentID)
-				p.RegisterTrigger(ctx, func(_ ProcessInfo) { cancel() })
+				_ = p.RegisterTrigger(ctx, func(_ ProcessInfo) { cancel() })
 			}
 		case info.Successful:
 			for _, opt := range opts.OnSuccess {

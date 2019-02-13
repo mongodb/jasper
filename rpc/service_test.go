@@ -15,8 +15,8 @@ import (
 )
 
 func TestRPCService(t *testing.T) {
-	for managerName, makeManager := range map[string]func() jasper.Manager{
-		"Basic": jasper.NewLocalManager,
+	for managerName, makeManager := range map[string]func(trackProcs bool) (jasper.Manager, error){
+		"Basic":    jasper.NewLocalManager,
 		"Blocking": jasper.NewLocalManagerBlockingProcesses,
 	} {
 		t.Run(managerName, func(t *testing.T) {
@@ -125,7 +125,8 @@ func TestRPCService(t *testing.T) {
 					output := "foobar"
 					opts := jasper.CreateOptions{Args: []string{"echo", output}}
 
-					manager := makeManager()
+					manager, err := makeManager(false)
+					require.NoError(t, err)
 					addr, err := startRPC(ctx, manager)
 					require.NoError(t, err)
 
