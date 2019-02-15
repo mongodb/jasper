@@ -311,6 +311,7 @@ func TestRestService(t *testing.T) {
 		},
 		"GetProcessWhenInvalid": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &MockManager{
+				FailGet: true,
 				Process: &MockProcess{},
 			}
 
