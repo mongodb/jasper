@@ -191,6 +191,10 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, out)
 
 			proc.ResetTags()
+
+			err = proc.RegisterSignalTriggerID(ctx, MongodShutdownSignalTrigger)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem building request")
 		},
 		"ProcessRequestsFailWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 
@@ -215,6 +219,10 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, out)
 
 			proc.ResetTags()
+
+			err = proc.RegisterSignalTriggerID(ctx, MongodShutdownSignalTrigger)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "problem making request")
 		},
 		"CheckSafetyOfTagMethodsForBrokenTasks": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			proc := &restProcess{

@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -278,14 +277,6 @@ func (s *Service) getProcess(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	info := getProcInfoNoHang(ctx, proc)
-	if info.ID == "" {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    fmt.Sprintf("no process '%s' found", id),
-		})
-		return
-	}
-
 	gimlet.WriteJSON(rw, info)
 }
 
@@ -437,14 +428,6 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	info := getProcInfoNoHang(ctx, newProc)
-	if info.ID == "" {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    fmt.Sprintf("no process '%s' found", id),
-		})
-		return
-	}
-
 	gimlet.WriteJSON(rw, info)
 }
 
