@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"runtime"
 	"syscall"
 
 	"github.com/mongodb/grip"
@@ -14,10 +13,6 @@ import (
 // function does not Wait() on the given process upon sending the signal. On
 // Windows, this function is equivalent to Kill.
 func Terminate(ctx context.Context, p Process) error {
-	// Windows does not support SIGTERM, so terminate with SIGKILL.
-	if runtime.GOOS == "windows" {
-		return Kill(ctx, p)
-	}
 	return errors.WithStack(p.Signal(ctx, syscall.SIGTERM))
 }
 
