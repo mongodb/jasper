@@ -555,7 +555,7 @@ func (t SignalTriggerID) Export() jasper.SignalTriggerID {
 	case SignalTriggerID_MONGODSHUTDOWN:
 		return jasper.MongodShutdownSignalTrigger
 	default:
-		return jasper.SignalTriggerID(0)
+		return jasper.SignalTriggerID("")
 	}
 }
 

@@ -698,7 +698,7 @@ func TestRestService(t *testing.T) {
 
 		},
 		"ServiceRegisterSignalTriggerIDChecksForExistingProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal-trigger/%d", "foo", MongodShutdownSignalTrigger), nil)
+			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal-trigger/%s", "foo", MongodShutdownSignalTrigger), nil)
 			require.NoError(t, err)
 
 			resp, err := client.client.Do(req)
@@ -708,33 +708,15 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 			assert.Contains(t, handleError(resp).Error(), "no process 'foo' found")
 		},
-		"ServiceRegisterSignalTriggerIDChecksForNumericalID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := yesCreateOpts(0)
-			proc, err := client.Create(ctx, &opts)
-			require.NoError(t, err)
-			assert.True(t, proc.Running(ctx))
-
-			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal-trigger/%s", proc.ID(), "foo"), nil)
-			require.NoError(t, err)
-
-			resp, err := client.client.Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-
-			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-			assert.Contains(t, handleError(resp).Error(), "problem converting signal trigger id 'foo'")
-
-			assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
-		},
 		"ServiceRegisterSignalTriggerIDChecksForInvalidTriggerID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := yesCreateOpts(0)
 			proc, err := client.Create(ctx, &opts)
 			require.NoError(t, err)
 			assert.True(t, proc.Running(ctx))
 
-			assert.Error(t, proc.RegisterSignalTriggerID(ctx, -1))
+			assert.Error(t, proc.RegisterSignalTriggerID(ctx, SignalTriggerID("foo")))
 
-			assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
+			assert.NoError(t, proc.Signal(ctx, syscall.SIGTERM))
 		},
 		"ServiceRegisterSignalTriggerIDPassesWithValidArgs": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := yesCreateOpts(0)
@@ -744,7 +726,7 @@ func TestRestService(t *testing.T) {
 
 			assert.NoError(t, proc.RegisterSignalTriggerID(ctx, MongodShutdownSignalTrigger))
 
-			assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
+			assert.NoError(t, proc.Signal(ctx, syscall.SIGTERM))
 		},
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {

@@ -410,18 +410,17 @@ func (s *jasperService) RegisterSignalTriggerID(ctx context.Context, opts *Signa
 		}, nil
 	}
 
-	signalTrigger, err := signalTriggerID.MakeSignalTrigger()
-	if err != nil {
-		err = errors.Wrapf(err, "problem making signal trigger with id '%d'", signalTriggerID)
+	makeTrigger, ok := jasper.GetSignalTriggerFactory(signalTriggerID)
+	if !ok {
 		return &OperationOutcome{
 			Success:  false,
-			Text:     err.Error(),
+			Text:     errors.Errorf("could not find signal trigger with id '%s'", signalTriggerID).Error(),
 			ExitCode: -3,
 		}, nil
 	}
 
-	if err := proc.RegisterSignalTrigger(ctx, signalTrigger); err != nil {
-		err = errors.Wrapf(err, "problem registering signal trigger '%d'", signalTriggerID)
+	if err := proc.RegisterSignalTrigger(ctx, makeTrigger()); err != nil {
+		err = errors.Wrapf(err, "problem registering signal trigger '%s'", signalTriggerID)
 		return &OperationOutcome{
 			Success:  false,
 			Text:     err.Error(),
@@ -431,7 +430,7 @@ func (s *jasperService) RegisterSignalTriggerID(ctx context.Context, opts *Signa
 
 	return &OperationOutcome{
 		Success:  true,
-		Text:     fmt.Sprintf("registered signal trigger with id '%d' on process with id '%s'", signalTriggerID, jasperProcessID),
+		Text:     fmt.Sprintf("registered signal trigger with id '%s' on process with id '%s'", signalTriggerID, jasperProcessID),
 		ExitCode: 0,
 	}, nil
 }

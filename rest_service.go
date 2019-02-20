@@ -618,16 +618,9 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Request) {
 	vars := gimlet.GetVars(r)
 	id := vars["id"]
-	triggerID, err := strconv.Atoi(vars["trigger-id"])
-	if err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "problem converting signal trigger id '%s'", vars["trigger-id"]).Error(),
-		})
-		return
-	}
-
+	triggerID := vars["trigger-id"]
 	ctx := r.Context()
+
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
@@ -638,19 +631,21 @@ func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Reques
 	}
 
 	sigTriggerID := SignalTriggerID(triggerID)
-	signalTrigger, err := sigTriggerID.MakeSignalTrigger()
-	if err != nil {
+	grip.Debugf("kim: rest service is getting signal trigger")
+	makeTrigger, ok := GetSignalTriggerFactory(sigTriggerID)
+	if !ok {
+		grip.Debugf("kim: did not find signal trigger")
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "could not make a signal trigger with id '%d'", sigTriggerID).Error(),
+			Message:    errors.Wrapf(err, "could not find signal trigger with id '%s'", sigTriggerID).Error(),
 		})
 		return
 	}
 
-	if err := proc.RegisterSignalTrigger(ctx, signalTrigger); err != nil {
+	if err := proc.RegisterSignalTrigger(ctx, makeTrigger()); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem registering signal trigger with id '%d'", sigTriggerID).Error(),
+			Message:    errors.Wrapf(err, "problem registering signal trigger with id '%s'", sigTriggerID).Error(),
 		})
 		return
 	}

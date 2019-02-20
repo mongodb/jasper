@@ -174,7 +174,7 @@ func TestProcessImplementations(t *testing.T) {
 					opts = sleepCreateOpts(3)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
-					assert.Error(t, proc.RegisterSignalTriggerID(ctx, SignalTriggerID(-1)))
+					assert.Error(t, proc.RegisterSignalTriggerID(ctx, SignalTriggerID("foo")))
 				},
 				"RegisterSignalTriggerIDPassesWithValidTriggerID": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep processConstructor) {
 					opts = sleepCreateOpts(3)

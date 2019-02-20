@@ -302,11 +302,11 @@ func (p *blockingProcess) RegisterSignalTrigger(_ context.Context, trigger Signa
 }
 
 func (p *blockingProcess) RegisterSignalTriggerID(_ context.Context, id SignalTriggerID) error {
-	trigger, err := id.MakeSignalTrigger()
-	if err != nil {
-		return errors.Wrap(err, "failed to make signal trigger from id")
+	makeTrigger, ok := GetSignalTriggerFactory(id)
+	if !ok {
+		return errors.Errorf("could not find signal trigger with id '%s'", id)
 	}
-	return errors.Wrap(p.RegisterSignalTrigger(nil, trigger), "failed to register signal trigger")
+	return errors.Wrap(p.RegisterSignalTrigger(nil, makeTrigger()), "failed to register signal trigger")
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) (int, error) {

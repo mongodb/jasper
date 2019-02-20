@@ -210,11 +210,11 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 }
 
 func (p *basicProcess) RegisterSignalTriggerID(_ context.Context, id SignalTriggerID) error {
-	trigger, err := id.MakeSignalTrigger()
-	if err != nil {
-		return err
+	makeTrigger, ok := GetSignalTriggerFactory(id)
+	if !ok {
+		return errors.Errorf("could not find signal trigger with id '%s'", id)
 	}
-	return p.RegisterSignalTrigger(nil, trigger)
+	return errors.Wrap(p.RegisterSignalTrigger(nil, makeTrigger()), "failed to register signal trigger")
 }
 
 func (p *basicProcess) Tag(t string) {
