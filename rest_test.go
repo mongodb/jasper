@@ -694,7 +694,7 @@ func TestRestService(t *testing.T) {
 
 		},
 		"ServiceRegisterSignalTriggerIDChecksForExistingProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal-trigger/%s", "foo", MongodShutdownSignalTrigger), nil)
+			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/trigger/%s", "foo", MongodShutdownSignalTrigger), nil)
 			require.NoError(t, err)
 
 			resp, err := client.client.Do(req)

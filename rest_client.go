@@ -362,7 +362,7 @@ func (p *restProcess) RegisterSignalTrigger(_ context.Context, _ SignalTrigger) 
 }
 
 func (p *restProcess) RegisterSignalTriggerID(ctx context.Context, triggerID SignalTriggerID) error {
-	resp, err := p.client.doRequest(ctx, http.MethodPatch, p.client.getURL("/process/%s/signal-trigger/%s", p.id, triggerID), nil)
+	resp, err := p.client.doRequest(ctx, http.MethodPatch, p.client.getURL("/process/%s/trigger/%s", p.id, triggerID), nil)
 	if err != nil {
 		return errors.Wrap(err, "request returned error")
 	}

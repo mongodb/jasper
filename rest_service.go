@@ -78,7 +78,7 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
-	app.AddRoute("/process/{id}/signal-trigger/{trigger-id}").Version(1).Patch().Handler(s.registerSignalTriggerID)
+	app.AddRoute("/process/{id}/trigger/{trigger-id}").Version(1).Patch().Handler(s.registerSignalTriggerID)
 	app.AddRoute("/clear").Version(1).Post().Handler(s.clearManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 

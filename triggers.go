@@ -53,17 +53,6 @@ const (
 	MongodShutdownSignalTrigger SignalTriggerID = "mongod_shutdown"
 )
 
-// TODO: remove
-// MakeSignalTrigger creates a signal trigger represented by the SignalTriggerID.
-// func (id SignalTriggerID) MakeSignalTrigger() (SignalTrigger, error) {
-//     switch id {
-//     case MongodShutdownSignalTrigger:
-//         return makeMongodShutdownSignalTrigger(), nil
-//     default:
-//         return nil, errors.New("unknown signal trigger id")
-//     }
-// }
-
 func makeOptionsCloseTrigger() ProcessTrigger {
 	return func(info ProcessInfo) {
 		info.Options.Close()
