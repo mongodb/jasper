@@ -64,6 +64,5 @@ func (r *signalTriggerRegistry) getSignalTriggerFactory(id SignalTriggerID) (Sig
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	factory, ok := r.signalTriggers[id]
-	grip.Debugf("kim: getting signal trigger factory for id %s was successful? %t", id, ok)
 	return factory, ok
 }

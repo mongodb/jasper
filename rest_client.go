@@ -128,13 +128,6 @@ func (c *restClient) List(ctx context.Context, f Filter) ([]Process, error) {
 		return nil, errors.Wrap(err, "request returned error")
 	}
 	defer resp.Body.Close()
-	// req, err := http.NewRequest(http.MethodGet, c.getURL("/list/%s", string(f)), nil)
-	// if err != nil {
-	//     return nil, errors.Wrap(err, "problem building request")
-	// }
-	// req = req.WithContext(ctx)
-	//
-	// out, err := c.getListOfProcesses(req)
 
 	out, err := c.getListOfProcesses(resp)
 
@@ -369,7 +362,6 @@ func (p *restProcess) RegisterSignalTrigger(_ context.Context, _ SignalTrigger) 
 }
 
 func (p *restProcess) RegisterSignalTriggerID(ctx context.Context, triggerID SignalTriggerID) error {
-	grip.Debugf("kim: proc is registering signal trigger id")
 	resp, err := p.client.doRequest(ctx, http.MethodPatch, p.client.getURL("/process/%s/signal-trigger/%s", p.id, triggerID), nil)
 	if err != nil {
 		return errors.Wrap(err, "request returned error")

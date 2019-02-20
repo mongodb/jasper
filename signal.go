@@ -11,16 +11,16 @@ import (
 // Terminate sends a SIGTERM signal to the given process under the given
 // context. This does not guarantee that the process will actually die. This
 // function does not Wait() on the given process upon sending the signal. On
-// Windows, this function is equivalent to Kill.
+// Windows, this function sends a SIGKILL instead of SIGTERM.
 func Terminate(ctx context.Context, p Process) error {
-	return errors.WithStack(p.Signal(ctx, syscall.SIGTERM))
+	return errors.WithStack(p.Signal(ctx, makeCompatible(syscall.SIGTERM)))
 }
 
 // Kill sends a SIGKILL signal to the given process under the given context.
 // This guarantees that the process will die. This function does not Wait() on
 // the given process upon sending the signal.
 func Kill(ctx context.Context, p Process) error {
-	return errors.WithStack(p.Signal(ctx, syscall.SIGKILL))
+	return errors.WithStack(p.Signal(ctx, makeCompatible(syscall.SIGKILL)))
 }
 
 // TerminateAll sends a SIGTERM signal to each of the given processes under the
@@ -38,7 +38,7 @@ func TerminateAll(ctx context.Context, procs []Process) error {
 	}
 
 	for _, proc := range procs {
-		proc.Wait(ctx)
+		_, _ = proc.Wait(ctx)
 	}
 
 	return catcher.Resolve()
@@ -58,7 +58,7 @@ func KillAll(ctx context.Context, procs []Process) error {
 	}
 
 	for _, proc := range procs {
-		proc.Wait(ctx)
+		_, _ = proc.Wait(ctx)
 	}
 
 	return catcher.Resolve()

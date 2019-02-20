@@ -280,10 +280,6 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, err.Error(), "problem managing resources")
 		},
 		"InvalidFilterReturnsError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			// req, err := http.NewRequest(http.MethodGet, client.getURL("/list/%s", "foo"), nil)
-			// require.NoError(t, err)
-			// out, err := client.getListOfProcesses(resp)
-			// assert.Nil(t, out)
 			procs, err := client.List(ctx, Filter("foo"))
 			assert.Error(t, err)
 			assert.Nil(t, procs)

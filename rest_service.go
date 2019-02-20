@@ -631,10 +631,8 @@ func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Reques
 	}
 
 	sigTriggerID := SignalTriggerID(triggerID)
-	grip.Debugf("kim: rest service is getting signal trigger")
 	makeTrigger, ok := GetSignalTriggerFactory(sigTriggerID)
 	if !ok {
-		grip.Debugf("kim: did not find signal trigger")
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrapf(err, "could not find signal trigger with id '%s'", sigTriggerID).Error(),
