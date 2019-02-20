@@ -4,6 +4,6 @@ package jasper
 
 import "syscall"
 
-func modifySignal(sig syscall.Signal) syscall.Signal {
+func makeCompatible(sig syscall.Signal) syscall.Signal {
 	return sig
 }

@@ -138,7 +138,7 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 
 	if p.Running(nil) {
 		if skipSignal := p.signalTriggers.Run(p.Info(nil), sig); !skipSignal {
-			sig = modifySignal(sig)
+			sig = makeCompatible(sig)
 			return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 		}
 		return nil

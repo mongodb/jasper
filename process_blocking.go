@@ -246,7 +246,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		}
 
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
-			sig = modifySignal(sig)
+			sig = makeCompatible(sig)
 			out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
 				sig, p.id)
 		} else {
