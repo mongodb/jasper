@@ -530,3 +530,43 @@ func ConvertArchiveOptions(opts jasper.ArchiveOptions) *ArchiveOptions {
 		TargetPath:    opts.TargetPath,
 	}
 }
+
+// Export takes a protobuf RPC SignalTrigger struct and returns the analogous
+// Jasper process ID and SignalTrigger struct.
+func (t SignalTriggerParams) Export() (string, jasper.SignalTriggerID) {
+	return t.ProcessID.Value, t.SignalTriggerID.Export()
+}
+
+// ConvertSignalTriggerParams takes a Jasper process ID and a SignalTriggerID
+// and returns an equivalent protobuf RPC SignalTriggerParams struct.
+// ConvertSignalTriggerParams is the inverse of
+// (SignalTriggerParams) Export().
+func ConvertSignalTriggerParams(jasperProcessID string, signalTriggerID jasper.SignalTriggerID) *SignalTriggerParams {
+	return &SignalTriggerParams{
+		ProcessID:       &JasperProcessID{Value: jasperProcessID},
+		SignalTriggerID: ConvertSignalTriggerID(signalTriggerID),
+	}
+}
+
+// Export takes a protobuf RPC SignalTrigger struct and returns the analogous
+// Jasper process ID and SignalTrigger struct.
+func (t SignalTriggerID) Export() jasper.SignalTriggerID {
+	switch t {
+	case SignalTriggerID_MONGODSHUTDOWN:
+		return jasper.MongodShutdownSignalTrigger
+	default:
+		return jasper.SignalTriggerID("")
+	}
+}
+
+// ConvertSignalTriggerID takes a Jasper SignalTriggerID and returns an
+// equivalent protobuf RPC SignalTriggerID. ConvertSignalTrigger is the
+// inverse of (SignalTriggerID) Export().
+func ConvertSignalTriggerID(id jasper.SignalTriggerID) SignalTriggerID {
+	switch id {
+	case jasper.MongodShutdownSignalTrigger:
+		return SignalTriggerID_MONGODSHUTDOWN
+	default:
+		return SignalTriggerID_NONE
+	}
+}

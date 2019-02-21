@@ -210,6 +210,7 @@ func TestRPCManager(t *testing.T) {
 					require.NoError(t, err)
 					manager.Clear(ctx)
 					nilProc, err := manager.Get(ctx, proc.ID())
+					assert.Error(t, err)
 					assert.Nil(t, nilProc)
 				},
 				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, manager jasper.Manager) {
@@ -241,6 +242,7 @@ func TestRPCManager(t *testing.T) {
 					assert.Equal(t, sleepProc.ID(), sameSleepProc.ID())
 
 					nilProc, err := manager.Get(ctx, lsProc.ID())
+					assert.Error(t, err)
 					assert.Nil(t, nilProc)
 					require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
 				},
@@ -356,7 +358,7 @@ func TestRPCProcess(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, proc)
 				},
-				"WithCanceledContextProcessCreationFailes": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+				"WithCanceledContextProcessCreationFails": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					pctx, pcancel := context.WithCancel(ctx)
 					pcancel()
 					proc, err := makep(pctx, opts)
@@ -443,6 +445,25 @@ func TestRPCProcess(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					assert.Error(t, proc.RegisterTrigger(ctx, nil))
+				},
+				"RegisterSignalTriggerIDErrorsForExitedProcess": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Error(t, proc.RegisterSignalTriggerID(ctx, jasper.MongodShutdownSignalTrigger))
+				},
+				"RegisterSignalTriggerIDFailsWithInvalidTriggerID": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(3)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					assert.Error(t, proc.RegisterSignalTriggerID(ctx, jasper.SignalTriggerID(-1)))
+				},
+				"RegisterSignalTriggerIDPassesWithValidTriggerID": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(3)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					assert.NoError(t, proc.RegisterSignalTriggerID(ctx, jasper.MongodShutdownSignalTrigger))
 				},
 				"WaitOnRespawnedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
@@ -536,7 +557,7 @@ func TestRPCProcess(t *testing.T) {
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
 					if runtime.GOOS == "windows" {
-						assert.Equal(t, -1, exitCode)
+						assert.Equal(t, 1, exitCode)
 					} else {
 						assert.Equal(t, int(sig), exitCode)
 					}
@@ -596,7 +617,6 @@ func TestRPCProcess(t *testing.T) {
 					require.NotEqual(t, firstID, proc.ID())
 					assert.False(t, proc.Complete(ctx), proc.ID())
 				},
-
 				"RunningReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
@@ -609,7 +629,6 @@ func TestRPCProcess(t *testing.T) {
 					require.NotEqual(t, firstID, proc.ID())
 					assert.False(t, proc.Running(ctx), proc.ID())
 				},
-
 				"CompleteAlwaysReturnsTrueWhenProcessIsComplete": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
@@ -618,6 +637,14 @@ func TestRPCProcess(t *testing.T) {
 					assert.NoError(t, err)
 
 					assert.True(t, proc.Complete(ctx))
+				},
+				"RegisterSignalTriggerFails": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					opts = sleepCreateOpts(3)
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ jasper.ProcessInfo, _ syscall.Signal) bool {
+						return false
+					}))
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 			} {

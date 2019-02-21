@@ -81,6 +81,11 @@ type Process interface {
 	// which execute before the process is about to be signaled.
 	RegisterSignalTrigger(context.Context, SignalTrigger) error
 
+	// RegisterSignalTriggerID associates triggers represented by
+	// identifiers with a process, which execute before
+	// the process is about to be signaled.
+	RegisterSignalTriggerID(context.Context, SignalTriggerID) error
+
 	// RegisterTrigger associates triggers with a process,
 	// erroring when the context is canceled, the process is
 	// complete.

@@ -138,6 +138,7 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 
 	if p.Running(nil) {
 		if skipSignal := p.signalTriggers.Run(p.Info(nil), sig); !skipSignal {
+			sig = makeCompatible(sig)
 			return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 		}
 		return nil
@@ -206,6 +207,14 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 	p.signalTriggers = append(p.signalTriggers, trigger)
 
 	return nil
+}
+
+func (p *basicProcess) RegisterSignalTriggerID(ctx context.Context, id SignalTriggerID) error {
+	makeTrigger, ok := GetSignalTriggerFactory(id)
+	if !ok {
+		return errors.Errorf("could not find signal trigger with id '%s'", id)
+	}
+	return errors.Wrap(p.RegisterSignalTrigger(ctx, makeTrigger()), "failed to register signal trigger")
 }
 
 func (p *basicProcess) Tag(t string) {

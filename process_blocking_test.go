@@ -184,8 +184,6 @@ func TestBlockingProcess(t *testing.T) {
 
 					<-signal
 				},
-				// TODO: this test is somewhat flaky and fails locally with the race detector due to timing between cctx
-				// timeout and when startAt is initialized.
 				"WaitSomeBeforeCanceling": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.opts.Args = []string{"sleep", "1"}
 					cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
@@ -194,12 +192,11 @@ func TestBlockingProcess(t *testing.T) {
 					cmd, err := proc.opts.Resolve(ctx)
 					assert.NoError(t, err)
 					assert.NoError(t, cmd.Start())
-					startAt := time.Now()
+
 					go proc.reactor(ctx, cmd)
 					_, err = proc.Wait(cctx)
 					assert.Error(t, err)
 					assert.Contains(t, err.Error(), "operation canceled")
-					assert.True(t, time.Since(startAt) >= 500*time.Millisecond)
 				},
 				"WaitShouldReturnNilForSuccessfulCommandsWithoutIDs": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.opts.Args = []string{"sleep", "10"}

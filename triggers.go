@@ -45,6 +45,14 @@ func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSi
 	return
 }
 
+// SignalTriggerID is the unique representation of a signal trigger.
+type SignalTriggerID string
+
+const (
+	// MongodShutdownSignalTrigger is the ID for the signal trigger to use for clean mongod shutdown.
+	MongodShutdownSignalTrigger SignalTriggerID = "mongod_shutdown"
+)
+
 func makeOptionsCloseTrigger() ProcessTrigger {
 	return func(info ProcessInfo) {
 		info.Options.Close()

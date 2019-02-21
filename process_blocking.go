@@ -246,6 +246,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		}
 
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
+			sig = makeCompatible(sig)
 			out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
 				sig, p.id)
 		} else {
@@ -298,6 +299,14 @@ func (p *blockingProcess) RegisterSignalTrigger(_ context.Context, trigger Signa
 	p.signalTriggers = append(p.signalTriggers, trigger)
 
 	return nil
+}
+
+func (p *blockingProcess) RegisterSignalTriggerID(ctx context.Context, id SignalTriggerID) error {
+	makeTrigger, ok := GetSignalTriggerFactory(id)
+	if !ok {
+		return errors.Errorf("could not find signal trigger with id '%s'", id)
+	}
+	return errors.Wrap(p.RegisterSignalTrigger(ctx, makeTrigger()), "failed to register signal trigger")
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
