@@ -217,12 +217,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 
 // Close closes this command and its resources.
 func (c *Command) Close() error {
-	catcher := grip.NewBasicCatcher()
-	for _, closer := range c.opts.closers {
-		catcher.Add(closer())
-	}
-
-	return catcher.Resolve()
+	return c.opts.Close()
 }
 
 // SetErrorSender sets a Sender to be used by this Command for its output to

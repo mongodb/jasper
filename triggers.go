@@ -7,6 +7,7 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	"github.com/pkg/errors"
 )
 
 // ProcessTrigger describes the way to write cleanup functions for
@@ -47,7 +48,9 @@ func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSi
 
 func makeOptionsCloseTrigger() ProcessTrigger {
 	return func(info ProcessInfo) {
-		info.Options.Close()
+		if err := info.Options.Close(); err != nil {
+			grip.Warning(errors.Wrap(err, "error occurred while closing options"))
+		}
 	}
 }
 
