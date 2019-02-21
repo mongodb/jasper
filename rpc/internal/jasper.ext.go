@@ -559,6 +559,9 @@ func (t SignalTriggerID) Export() jasper.SignalTriggerID {
 	}
 }
 
+// ConvertSignalTriggerID takes a Jasper SignalTriggerID and returns an
+// equivalent protobuf RPC SignalTriggerID. ConvertSignalTrigger is the
+// inverse of (SignalTriggerID) Export().
 func ConvertSignalTriggerID(id jasper.SignalTriggerID) SignalTriggerID {
 	switch id {
 	case jasper.MongodShutdownSignalTrigger:
