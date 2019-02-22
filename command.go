@@ -426,97 +426,47 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 
 // RunCommand runs the Command given the configuration of arguments.
 func RunCommand(ctx context.Context, id string, pri level.Priority, args []string, dir string, env map[string]string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Add(args).
-		Directory(dir).
-		Environment(env).
-		Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Add(args).Directory(dir).Environment(env).Run(ctx)
 }
 
 // RunRemoteCommand runs the Command remotely given the configuration of arguments.
 func RunRemoteCommand(ctx context.Context, id string, pri level.Priority, host string, args []string, dir string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Host(host).
-		Add(args).
-		Directory(dir).
-		Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Host(host).Add(args).Directory(dir).Run(ctx)
 }
 
 // RunCommandGroupContinueOnError runs the group of sub-commands given the
 // configuration of arguments, continuing execution despite any errors.
 func RunCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Extend(cmds).
-		Directory(dir).
-		Environment(env).
-		ContinueOnError(true).
-		Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).ContinueOnError(true).Run(ctx)
 }
 
 // RunRemoteCommandGroupContinueOnError runs the group of sub-commands remotely
 // given the configuration of arguments, continuing execution despite any
 // errors.
 func RunRemoteCommandGroupContinueOnError(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Host(host).
-		Extend(cmds).
-		Directory(dir).
-		ContinueOnError(true).
-		Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).ContinueOnError(true).Run(ctx)
 }
 
 // RunCommandGroup runs the group of sub-commands given the configuration of
 // arguments.
 func RunCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Extend(cmds).
-		Directory(dir).
-		Environment(env).
-		Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).Run(ctx)
 }
 
 // RunRemoteCommandGroup runs the group of sub-commands remotely given the
 // configuration of arguments.
 func RunRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Host(host).
-		Extend(cmds).
-		Directory(dir).
-		Run(ctx)
+	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).Run(ctx)
 }
 
 // RunParallelCommandGroup runs the group of sub-commands in
 // parallel given the configuration of arguments.
 func RunParallelCommandGroup(ctx context.Context, id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Extend(cmds).
-		Directory(dir).
-		Environment(env).
-		RunParallel(ctx)
+	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env).RunParallel(ctx)
 }
 
 // RunParallelRemoteCommandGroup runs the group of sub-commands
 // remotely in parallel given the configuration of arguments.
 func RunParallelRemoteCommandGroup(ctx context.Context, id string, pri level.Priority, host string, cmds [][]string, dir string) error {
-	return NewCommand().
-		ID(id).
-		Priority(pri).
-		Host(host).
-		Extend(cmds).
-		Directory(dir).
-		RunParallel(ctx)
+	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir).RunParallel(ctx)
 }
