@@ -18,7 +18,7 @@ import (
 )
 
 // AttachService attaches the given manager to the jasper GRPC server. This
-// function eventually calls generated Protobuf code for registering the the
+// function eventually calls generated Protobuf code for registering the
 // GRPC Jasper server with the given Manager.
 func AttachService(manager jasper.Manager, s *grpc.Server) error {
 	hn, err := os.Hostname()
@@ -235,7 +235,7 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 		cancel()
 		return nil, errors.WithStack(err)
 	}
-	s.manager.Register(ctx, newProc)
+	_ = s.manager.Register(ctx, newProc)
 
 	if err := newProc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
@@ -318,14 +318,15 @@ func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownlo
 	jopts := opts.Export()
 	if err := jopts.Validate(); err != nil {
 		return &OperationOutcome{
-			Success: false,
-			Text:    errors.Wrap(err, "problem validating MongoDB download options").Error(),
+			Success:  false,
+			Text:     errors.Wrap(err, "problem validating MongoDB download options").Error(),
+			ExitCode: -2,
 		}, nil
 	}
 
 	if err := jasper.SetupDownloadMongoDBReleases(ctx, s.cache, jopts); err != nil {
 		err = errors.Wrap(err, "problem in download setup")
-		return &OperationOutcome{Success: false, Text: err.Error()}, err
+		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -3}, nil
 	}
 
 	return &OperationOutcome{Success: true, Text: "download jobs started"}, nil
@@ -336,8 +337,9 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 	if err := jopts.Validate(); err != nil {
 		err = errors.Wrap(err, "problem validating cache options")
 		return &OperationOutcome{
-			Success: false,
-			Text:    errors.Wrap(err, "problem validating cache options").Error(),
+			Success:  false,
+			Text:     errors.Wrap(err, "problem validating cache options").Error(),
+			ExitCode: -2,
 		}, nil
 	}
 
@@ -359,12 +361,12 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 
 	if err := jinfo.Validate(); err != nil {
 		err = errors.Wrap(err, "problem validating download info")
-		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -2}, err
+		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -2}, nil
 	}
 
 	if err := jinfo.Download(); err != nil {
 		err = errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path)
-		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -3}, err
+		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -3}, nil
 	}
 
 	return &OperationOutcome{
@@ -393,4 +395,42 @@ func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProces
 	}
 
 	return &BuildloggerURLs{Urls: urls}, nil
+}
+
+func (s *jasperService) RegisterSignalTriggerID(ctx context.Context, opts *SignalTriggerParams) (*OperationOutcome, error) {
+	jasperProcessID, signalTriggerID := opts.Export()
+
+	proc, err := s.manager.Get(ctx, jasperProcessID)
+	if err != nil {
+		err = errors.Wrapf(err, "problem finding process '%s'", jasperProcessID)
+		return &OperationOutcome{
+			Success:  false,
+			Text:     err.Error(),
+			ExitCode: -2,
+		}, nil
+	}
+
+	makeTrigger, ok := jasper.GetSignalTriggerFactory(signalTriggerID)
+	if !ok {
+		return &OperationOutcome{
+			Success:  false,
+			Text:     errors.Errorf("could not find signal trigger with id '%s'", signalTriggerID).Error(),
+			ExitCode: -3,
+		}, nil
+	}
+
+	if err := proc.RegisterSignalTrigger(ctx, makeTrigger()); err != nil {
+		err = errors.Wrapf(err, "problem registering signal trigger '%s'", signalTriggerID)
+		return &OperationOutcome{
+			Success:  false,
+			Text:     err.Error(),
+			ExitCode: -4,
+		}, nil
+	}
+
+	return &OperationOutcome{
+		Success:  true,
+		Text:     fmt.Sprintf("registered signal trigger with id '%s' on process with id '%s'", signalTriggerID, jasperProcessID),
+		ExitCode: 0,
+	}, nil
 }

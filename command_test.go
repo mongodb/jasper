@@ -300,6 +300,7 @@ func TestCommandImplementation(t *testing.T) {
 	}
 }
 
+// TODO: fix failure due to context deadline exceeded.
 func TestRunParallelRunsInParallel(t *testing.T) {
 	cmd := NewCommand().Extend([][]string{
 		[]string{"sleep", "3"},

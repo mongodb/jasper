@@ -100,7 +100,7 @@ func (m *rpcManager) Get(ctx context.Context, name string) (jasper.Process, erro
 }
 
 func (m *rpcManager) Clear(ctx context.Context) {
-	m.client.Clear(ctx, &empty.Empty{})
+	_, _ = m.client.Clear(ctx, &empty.Empty{})
 }
 
 func (m *rpcManager) Close(ctx context.Context) error {
@@ -206,6 +206,26 @@ func (p *rpcProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 
 func (p *rpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigger) error {
 	return errors.New("cannot register remote triggers")
+}
+
+func (p *rpcProcess) RegisterSignalTrigger(ctx context.Context, _ jasper.SignalTrigger) error {
+	return errors.New("cannot register remote signal triggers")
+}
+
+func (p *rpcProcess) RegisterSignalTriggerID(ctx context.Context, sigID jasper.SignalTriggerID) error {
+	resp, err := p.client.RegisterSignalTriggerID(ctx, &internal.SignalTriggerParams{
+		ProcessID:       &internal.JasperProcessID{Value: p.info.Id},
+		SignalTriggerID: internal.ConvertSignalTriggerID(sigID),
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
 }
 
 func (p *rpcProcess) Tag(tag string) {

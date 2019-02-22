@@ -59,7 +59,7 @@ type Process interface {
 
 	// Signal sends the specified signals to the underlying
 	// process. Its error response reflects the outcome of sending
-	// the signal, not the state of process signaled.
+	// the signal, not the state of the process signaled.
 	Signal(context.Context, syscall.Signal) error
 
 	// Wait blocks until the process exits or the context is
@@ -77,6 +77,15 @@ type Process interface {
 	// which it is called. It will spawn a new process with the same
 	// options and return the new, "respawned" process.
 	Respawn(context.Context) (Process, error)
+
+	// RegisterSignalTrigger associates triggers with a process,
+	// which execute before the process is about to be signaled.
+	RegisterSignalTrigger(context.Context, SignalTrigger) error
+
+	// RegisterSignalTriggerID associates triggers represented by
+	// identifiers with a process, which execute before
+	// the process is about to be signaled.
+	RegisterSignalTriggerID(context.Context, SignalTriggerID) error
 
 	// RegisterTrigger associates triggers with a process,
 	// erroring when the context is canceled, the process is

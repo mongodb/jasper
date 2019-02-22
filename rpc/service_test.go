@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/rpc/internal"
 	"github.com/stretchr/testify/assert"
@@ -15,8 +16,8 @@ import (
 )
 
 func TestRPCService(t *testing.T) {
-	for managerName, makeManager := range map[string]func() jasper.Manager{
-		"Basic": jasper.NewLocalManager,
+	for managerName, makeManager := range map[string]func(trackProcs bool) (jasper.Manager, error){
+		"Basic":    jasper.NewLocalManager,
 		"Blocking": jasper.NewLocalManagerBlockingProcesses,
 	} {
 		t.Run(managerName, func(t *testing.T) {
@@ -79,8 +80,9 @@ func TestRPCService(t *testing.T) {
 							Format:        jasper.ArchiveFormat("foo"),
 						},
 					}
-					_, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
-					assert.Error(t, err)
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					assert.NoError(t, err)
+					assert.False(t, outcome.Success)
 				},
 				"DownloadFileFailsForInvalidURL": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {
 					fileName := filepath.Join(buildDir, "out.txt")
@@ -89,8 +91,9 @@ func TestRPCService(t *testing.T) {
 						URL:  "://example.com",
 						Path: fileName,
 					}
-					_, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
-					assert.Error(t, err)
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					require.NoError(t, err)
+					assert.False(t, outcome.Success)
 				},
 				"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {
 					fileName := filepath.Join(buildDir, "out.txt")
@@ -99,8 +102,9 @@ func TestRPCService(t *testing.T) {
 						URL:  "http://example.com/foo",
 						Path: fileName,
 					}
-					_, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
-					assert.Error(t, err)
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					require.NoError(t, err)
+					assert.False(t, outcome.Success)
 				},
 				"GetBuildloggerURLsFailsWithNonexistentProcess": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {
 					urls, err := client.GetBuildloggerURLs(ctx, &internal.JasperProcessID{Value: "foo"})
@@ -117,7 +121,38 @@ func TestRPCService(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, urls)
 				},
-				//"": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string) {},
+				"RegisterSignalTriggerIDChecksForExistingProcess": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {
+					outcome, err := client.RegisterSignalTriggerID(ctx, internal.ConvertSignalTriggerParams("foo", jasper.MongodShutdownSignalTrigger))
+					require.NoError(t, err)
+					assert.False(t, outcome.Success)
+				},
+				"RegisterSignalTriggerIDFailsForInvalidTriggerID": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {
+					sleepOpts := sleepCreateOpts(10)
+					info, err := client.Create(ctx, internal.ConvertCreateOptions(sleepOpts))
+					require.NoError(t, err)
+
+					outcome, err := client.RegisterSignalTriggerID(ctx, internal.ConvertSignalTriggerParams(info.Id, jasper.SignalTriggerID("")))
+					require.NoError(t, err)
+					assert.False(t, outcome.Success)
+
+					outcome, err = client.Close(ctx, &empty.Empty{})
+					require.NoError(t, err)
+					assert.True(t, outcome.Success)
+				},
+				"RegisterSignalTriggerIDPassesWithValidArgs": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {
+					sleepOpts := sleepCreateOpts(10)
+					info, err := client.Create(ctx, internal.ConvertCreateOptions(sleepOpts))
+					require.NoError(t, err)
+
+					outcome, err := client.RegisterSignalTriggerID(ctx, internal.ConvertSignalTriggerParams(info.Id, jasper.MongodShutdownSignalTrigger))
+					require.NoError(t, err)
+					assert.True(t, outcome.Success)
+
+					outcome, err = client.Close(ctx, &empty.Empty{})
+					require.NoError(t, err)
+					assert.True(t, outcome.Success)
+				},
+				//"": func(ctx context.Context, t *testing.T, opts jasper.CreateOptions, client internal.JasperProcessManagerClient, output string, buildDir string) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), taskTimeout)
@@ -125,7 +160,8 @@ func TestRPCService(t *testing.T) {
 					output := "foobar"
 					opts := jasper.CreateOptions{Args: []string{"echo", output}}
 
-					manager := makeManager()
+					manager, err := makeManager(false)
+					require.NoError(t, err)
 					addr, err := startRPC(ctx, manager)
 					require.NoError(t, err)
 

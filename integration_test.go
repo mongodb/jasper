@@ -18,7 +18,7 @@ import (
 )
 
 // Returns path to release and to mongod
-func downloadMongodb(t *testing.T) (string, string) {
+func downloadMongoDB(t *testing.T) (string, string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -39,6 +39,7 @@ func downloadMongodb(t *testing.T) (string, string) {
 	arch := bond.MongoDBArch("x86_64")
 	release := "4.0-stable"
 
+	require.NoError(t, makeEnclosingDirectories("build"))
 	dir, err := ioutil.TempDir("build", "mongodb")
 	require.NoError(t, err)
 
@@ -103,7 +104,7 @@ func TestMongod(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dir, mongodPath := downloadMongodb(t)
+	dir, mongodPath := downloadMongoDB(t)
 	defer os.RemoveAll(dir)
 
 	for name, makeProc := range map[string]ProcessConstructor{
