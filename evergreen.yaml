@@ -127,6 +127,6 @@ buildvariants:
     run_on:
       - windows-64-vs2015-small
     expansions:
-      build_env: "GOROOT=c:/golang/go1.10/go PATH=/cygdrive/c/golang/go1.10/go/bin:$PATH DISABLE_COVERAGE=true"
+      build_env: "PATH=/cygdrive/c/golang/go1.10/go/bin:$PATH DISABLE_COVERAGE=true"
     tasks:
       - name: ".test"
