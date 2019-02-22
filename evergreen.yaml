@@ -71,6 +71,10 @@ tasks:
     name: test
 
   - <<: *run-build
+    tags: ["legacy-check"]
+    name: compile-base
+
+  - <<: *run-build
     tags: ["race"]
     name: race
 
@@ -99,6 +103,15 @@ buildvariants:
       - ubuntu1604-test
     tasks: 
       - name: ".test"
+
+  - name: ubuntu1604-go1.8
+    display_name: Ubuntu 16.04 (go1.8)
+    expansions:
+      build_env: "GOROOT=/opt/golang/go1.8/ PATH=/opt/golang/go1.8/bin:$PATH"
+    run_on:
+      - ubuntu1604-test
+    tasks: 
+      - name: ".legacy-check"
 
   - name: macos
     display_name: macOS 10.12
