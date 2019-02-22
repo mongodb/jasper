@@ -16,7 +16,7 @@ import (
 const mongodStartupTime = 15 * time.Second
 
 func TestMongodShutdownEventTrigger(t *testing.T) {
-	for procName, makeProc := range map[string]processConstructor{
+	for procName, makeProc := range map[string]ProcessConstructor{
 		"Basic":    newBasicProcess,
 		"Blocking": newBlockingProcess,
 	} {
