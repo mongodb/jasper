@@ -78,7 +78,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 					newctx, cancel = context.WithCancel(ctx)
 				}
 
-				p, err := m.Create(newctx, opt)
+				p, err := m.CreateProcess(newctx, opt)
 				if err != nil {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"trigger": "on-timeout",
@@ -92,7 +92,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 			}
 		case info.Successful:
 			for _, opt := range opts.OnSuccess {
-				p, err := m.Create(ctx, opt)
+				p, err := m.CreateProcess(ctx, opt)
 				if err != nil {
 					grip.Warning(message.WrapError(err, message.Fields{
 						"trigger": "on-success",
@@ -104,7 +104,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *CreateOptions, par
 			}
 		case !info.Successful:
 			for _, opt := range opts.OnFailure {
-				p, err := m.Create(ctx, opt)
+				p, err := m.CreateProcess(ctx, opt)
 				if err != nil {
 
 					grip.Warning(message.WrapError(err, message.Fields{
