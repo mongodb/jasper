@@ -8,6 +8,7 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path"
 	"testing"
@@ -15,16 +16,54 @@ import (
 	"fmt"
 
 	"github.com/mongodb/mongo-go-driver/bson"
-	"github.com/mongodb/mongo-go-driver/mongo/internal/testutil"
-	"github.com/mongodb/mongo-go-driver/mongo/readpref"
+	"github.com/mongodb/mongo-go-driver/internal/testutil"
+	"github.com/mongodb/mongo-go-driver/tag"
+	"github.com/mongodb/mongo-go-driver/x/bsonx"
 	"github.com/stretchr/testify/require"
+
+	"time"
+
+	"github.com/mongodb/mongo-go-driver/bson/bsoncodec"
+	"github.com/mongodb/mongo-go-driver/bson/bsonrw"
+	"github.com/mongodb/mongo-go-driver/mongo/options"
+	"github.com/mongodb/mongo-go-driver/mongo/readpref"
+	"github.com/mongodb/mongo-go-driver/mongo/writeconcern"
+	"github.com/mongodb/mongo-go-driver/x/mongo/driver/session"
+	"github.com/mongodb/mongo-go-driver/x/mongo/driver/uuid"
+	"github.com/mongodb/mongo-go-driver/x/network/connstring"
+	"reflect"
 )
 
 func createTestClient(t *testing.T) *Client {
+	id, _ := uuid.New()
 	return &Client{
-		cluster:        testutil.Cluster(t),
+		id:             id,
+		topology:       testutil.Topology(t),
 		connString:     testutil.ConnString(t),
 		readPreference: readpref.Primary(),
+		clock:          &session.ClusterClock{},
+		registry:       bson.DefaultRegistry,
+	}
+}
+
+func createTestClientWithConnstring(t *testing.T, cs connstring.ConnString) *Client {
+	id, _ := uuid.New()
+	return &Client{
+		id:             id,
+		topology:       testutil.TopologyWithConnString(t, cs),
+		connString:     cs,
+		readPreference: readpref.Primary(),
+		clock:          &session.ClusterClock{},
+		registry:       bson.DefaultRegistry,
+	}
+}
+
+func skipIfBelow30(t *testing.T) {
+	serverVersion, err := getServerVersion(createTestDatabase(t, nil))
+	require.NoError(t, err)
+
+	if compareVersions(t, serverVersion, "3.0") < 0 {
+		t.Skip()
 	}
 }
 
@@ -32,7 +71,7 @@ func TestNewClient(t *testing.T) {
 	t.Parallel()
 
 	c := createTestClient(t)
-	require.NotNil(t, c.cluster)
+	require.NotNil(t, c.topology)
 }
 
 func TestClient_Database(t *testing.T) {
@@ -46,7 +85,77 @@ func TestClient_Database(t *testing.T) {
 	require.Exactly(t, c, db.Client())
 }
 
+func TestClientOptions(t *testing.T) {
+	t.Parallel()
+
+	c, err := NewClientWithOptions("mongodb://localhost",
+		options.Client().SetMaxConnIdleTime(200).SetReplicaSet("test").SetLocalThreshold(10).
+			SetMaxConnIdleTime(100).SetLocalThreshold(20))
+	require.NoError(t, err)
+
+	require.Equal(t, time.Duration(20), c.connString.LocalThreshold)
+	require.Equal(t, time.Duration(100), c.connString.MaxConnIdleTime)
+	require.Equal(t, "test", c.connString.ReplicaSet)
+}
+
+type NewCodec struct {
+	ID int64 `bson:"_id"`
+}
+
+func (e *NewCodec) EncodeValue(ectx bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
+	return vw.WriteInt64(val.Int())
+}
+
+// DecodeValue negates the value of ID when reading
+func (e *NewCodec) DecodeValue(ectx bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
+	i, err := vr.ReadInt64()
+	if err != nil {
+		return err
+	}
+
+	val.SetInt(i * -1)
+	return nil
+}
+
+func TestClientRegistryPassedToCursors(t *testing.T) {
+	// register a new codec for the int64 type that does the default encoding for an int64 and negates the value when
+	// decoding
+
+	rb := bson.NewRegistryBuilder()
+	cod := &NewCodec{}
+	rb.RegisterCodec(reflect.TypeOf(int64(0)), cod)
+
+	cs := testutil.ConnString(t)
+	client, err := NewClientWithOptions(cs.String(), options.Client().SetRegistry(rb.Build()))
+	require.NoError(t, err)
+	err = client.Connect(ctx)
+	require.NoError(t, err)
+
+	db := client.Database("TestRegistryDB")
+	defer func() {
+		_ = db.Drop(ctx)
+		_ = client.Disconnect(ctx)
+	}()
+
+	coll := db.Collection("TestRegistryColl")
+
+	_, err = coll.InsertOne(ctx, NewCodec{ID: 10})
+	require.NoError(t, err)
+
+	c, err := coll.Find(ctx, bsonx.Doc{})
+	require.NoError(t, err)
+
+	require.True(t, c.Next(ctx))
+
+	var foundDoc NewCodec
+	err = c.Decode(&foundDoc)
+	require.NoError(t, err)
+
+	require.Equal(t, foundDoc.ID, int64(-10))
+}
+
 func TestClient_TLSConnection(t *testing.T) {
+	skipIfBelow30(t) // 3.0 doesn't return a security field in the serverStatus response
 	t.Parallel()
 
 	if testing.Short() {
@@ -62,18 +171,19 @@ func TestClient_TLSConnection(t *testing.T) {
 	c := createTestClient(t)
 	db := c.Database("test")
 
-	result, err := db.RunCommand(context.Background(), bson.NewDocument(bson.EC.Int32("serverStatus", 1)))
+	var result bsonx.Doc
+	err := db.RunCommand(context.Background(), bsonx.Doc{{"serverStatus", bsonx.Int32(1)}}).Decode(&result)
 	require.NoError(t, err)
 
-	security, err := result.Lookup("security")
+	security, err := result.LookupErr("security")
 	require.Nil(t, err)
 
-	require.Equal(t, security.Value().Type(), bson.TypeEmbeddedDocument)
+	require.Equal(t, security.Type(), bson.TypeEmbeddedDocument)
 
-	_, found := security.Value().ReaderDocument().Lookup("SSLServerSubjectName")
+	_, found := security.Document().LookupErr("SSLServerSubjectName")
 	require.Nil(t, found)
 
-	_, found = security.Value().ReaderDocument().Lookup("SSLServerHasCertificateAuthority")
+	_, found = security.Document().LookupErr("SSLServerHasCertificateAuthority")
 	require.Nil(t, found)
 
 }
@@ -97,25 +207,20 @@ func TestClient_X509Auth(t *testing.T) {
 	db := c.Database("$external")
 
 	// We don't care if the user doesn't already exist.
-	_, _ = db.RunCommand(
+	_ = db.RunCommand(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.String("dropUser", user),
-		),
+		bsonx.Doc{{"dropUser", bsonx.String(user)}},
 	)
 
-	_, err := db.RunCommand(
+	err := db.RunCommand(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.String("createUser", user),
-			bson.EC.ArrayFromElements("roles",
-				bson.VC.DocumentFromElements(
-					bson.EC.String("role", "readWrite"),
-					bson.EC.String("db", "test"),
-				),
-			),
-		),
-	)
+		bsonx.Doc{
+			{"createUser", bsonx.String(user)},
+			{"roles", bsonx.Array(bsonx.Arr{bsonx.Document(
+				bsonx.Doc{{"role", bsonx.String("readWrite")}, {"db", bsonx.String("test")}},
+			)})},
+		},
+	).Err()
 	require.NoError(t, err)
 
 	basePath := path.Join("..", "data", "certificates")
@@ -129,25 +234,26 @@ func TestClient_X509Auth(t *testing.T) {
 	authClient, err := NewClient(cs)
 	require.NoError(t, err)
 
+	err = authClient.Connect(context.Background())
+	require.NoError(t, err)
+
 	db = authClient.Database("test")
-	rdr, err := db.RunCommand(
+	var rdr bson.Raw
+	rdr, err = db.RunCommand(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Int32("connectionStatus", 1),
-		),
-	)
+		bsonx.Doc{{"connectionStatus", bsonx.Int32(1)}},
+	).DecodeBytes()
 	require.NoError(t, err)
 
-	users, err := rdr.Lookup("authInfo", "authenticatedUsers")
+	users, err := rdr.LookupErr("authInfo", "authenticatedUsers")
 	require.NoError(t, err)
 
-	array := users.Value().MutableArray()
+	array := users.Array()
+	elems, err := array.Elements()
+	require.NoError(t, err)
 
-	for i := uint(0); i < uint(array.Len()); i++ {
-		v, err := array.Lookup(i)
-		require.NoError(t, err)
-
-		rdr := v.ReaderDocument()
+	for _, v := range elems {
+		rdr := v.Value().Document()
 		var u struct {
 			User string
 			DB   string
@@ -165,6 +271,32 @@ func TestClient_X509Auth(t *testing.T) {
 	t.Error("unable to find authenticated user")
 }
 
+func TestClient_ReplaceTopologyError(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip()
+	}
+
+	cs := testutil.ConnString(t)
+	c, err := NewClient(cs.String())
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	_, err = c.StartSession()
+	require.Equal(t, err, ErrClientDisconnected)
+
+	_, err = c.ListDatabases(ctx, bsonx.Doc{})
+	require.Equal(t, err, ErrClientDisconnected)
+
+	err = c.Ping(ctx, nil)
+	require.Equal(t, err, ErrClientDisconnected)
+
+	err = c.Disconnect(ctx)
+	require.Equal(t, err, ErrClientDisconnected)
+
+}
+
 func TestClient_ListDatabases_noFilter(t *testing.T) {
 	t.Parallel()
 
@@ -173,31 +305,27 @@ func TestClient_ListDatabases_noFilter(t *testing.T) {
 	}
 
 	dbName := "listDatabases_noFilter"
-
 	c := createTestClient(t)
 	db := c.Database(dbName)
-	_, err := db.Collection("test").InsertOne(
+	coll := db.Collection("test")
+	coll.writeConcern = writeconcern.New(writeconcern.WMajority())
+	_, err := coll.InsertOne(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Int32("x", 1),
-		),
+		bsonx.Doc{{"x", bsonx.Int32(1)}},
 	)
 	require.NoError(t, err)
 
-	dbs, err := c.ListDatabases(context.Background(), nil)
+	dbs, err := c.ListDatabases(context.Background(), bsonx.Doc{})
+	require.NoError(t, err)
 	found := false
 
-	for dbs.Next(context.Background()) {
-		var db struct{ Name string }
-		err = dbs.Decode(&db)
-		require.NoError(t, err)
+	for _, db := range dbs.Databases {
 
 		if db.Name == dbName {
 			found = true
 			break
 		}
 	}
-	require.NoError(t, dbs.Err())
 	require.True(t, found)
 }
 
@@ -214,29 +342,21 @@ func TestClient_ListDatabases_filter(t *testing.T) {
 
 	c := createTestClient(t)
 	db := c.Database(dbName)
-	_, err := db.Collection("test").InsertOne(
+	coll := db.Collection("test")
+	coll.writeConcern = writeconcern.New(writeconcern.WMajority())
+	_, err := coll.InsertOne(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Int32("x", 1),
-		),
+		bsonx.Doc{{"x", bsonx.Int32(1)}},
 	)
 	require.NoError(t, err)
 
 	dbs, err := c.ListDatabases(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Regex("name", dbName, ""),
-		),
+		bsonx.Doc{{"name", bsonx.Regex(dbName, "")}},
 	)
 
-	require.True(t, dbs.Next(context.Background()))
-	var dbInfo struct{ Name string }
-	err = dbs.Decode(&dbInfo)
-	require.NoError(t, err)
-	require.Equal(t, dbName, dbInfo.Name)
-
-	require.False(t, dbs.Next(context.Background()))
-	require.NoError(t, dbs.Err())
+	require.Equal(t, len(dbs.Databases), 1)
+	require.Equal(t, dbName, dbs.Databases[0].Name)
 }
 
 func TestClient_ListDatabaseNames_noFilter(t *testing.T) {
@@ -250,15 +370,16 @@ func TestClient_ListDatabaseNames_noFilter(t *testing.T) {
 
 	c := createTestClient(t)
 	db := c.Database(dbName)
-	_, err := db.Collection("test").InsertOne(
+	coll := db.Collection("test")
+
+	coll.writeConcern = writeconcern.New(writeconcern.WMajority())
+	_, err := coll.InsertOne(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Int32("x", 1),
-		),
+		bsonx.Doc{{"x", bsonx.Int32(1)}},
 	)
 	require.NoError(t, err)
 
-	dbs, err := c.ListDatabaseNames(context.Background(), nil)
+	dbs, err := c.ListDatabaseNames(context.Background(), bsonx.Doc{})
 	found := false
 
 	for _, name := range dbs {
@@ -283,22 +404,137 @@ func TestClient_ListDatabaseNames_filter(t *testing.T) {
 
 	c := createTestClient(t)
 	db := c.Database(dbName)
-	_, err := db.Collection("test").InsertOne(
+	coll := db.Collection("test")
+	coll.writeConcern = writeconcern.New(writeconcern.WMajority())
+	_, err := coll.InsertOne(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Int32("x", 1),
-		),
+		bsonx.Doc{{"x", bsonx.Int32(1)}},
 	)
 	require.NoError(t, err)
 
 	dbs, err := c.ListDatabaseNames(
 		context.Background(),
-		bson.NewDocument(
-			bson.EC.Regex("name", dbName, ""),
-		),
+		bsonx.Doc{{"name", bsonx.Regex(dbName, "")}},
 	)
 
 	require.NoError(t, err)
 	require.Len(t, dbs, 1)
 	require.Equal(t, dbName, dbs[0])
+}
+
+func TestClient_NilDocumentError(t *testing.T) {
+	t.Parallel()
+
+	c := createTestClient(t)
+
+	_, err := c.Watch(context.Background(), nil)
+	require.Equal(t, err, errors.New("can only transform slices and arrays into aggregation pipelines, but got invalid"))
+
+	_, err = c.ListDatabases(context.Background(), nil)
+	require.Equal(t, err, ErrNilDocument)
+
+	_, err = c.ListDatabaseNames(context.Background(), nil)
+	require.Equal(t, err, ErrNilDocument)
+}
+
+func TestClient_ReadPreference(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip()
+	}
+	var tags = []tag.Set{
+		{
+			tag.Tag{
+				Name:  "one",
+				Value: "1",
+			},
+		},
+		{
+			tag.Tag{
+				Name:  "two",
+				Value: "2",
+			},
+		},
+	}
+	baseConnString := testutil.ConnString(t)
+	cs := testutil.AddOptionsToURI(baseConnString.String(), "readpreference=secondary&readPreferenceTags=one:1&readPreferenceTags=two:2&maxStaleness=5")
+
+	c, err := NewClient(cs)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	require.Equal(t, readpref.SecondaryMode, c.readPreference.Mode())
+	require.Equal(t, tags, c.readPreference.TagSets())
+	d, flag := c.readPreference.MaxStaleness()
+	require.True(t, flag)
+	require.Equal(t, time.Duration(5)*time.Second, d)
+}
+
+func TestClient_ReadPreferenceAbsent(t *testing.T) {
+	t.Parallel()
+
+	cs := testutil.ConnString(t)
+	c, err := NewClient(cs.String())
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	require.Equal(t, readpref.PrimaryMode, c.readPreference.Mode())
+	require.Empty(t, c.readPreference.TagSets())
+	_, flag := c.readPreference.MaxStaleness()
+	require.False(t, flag)
+}
+
+func TestClient_CausalConsistency(t *testing.T) {
+	cs := testutil.ConnString(t)
+	c, err := NewClient(cs.String())
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	err = c.Connect(ctx)
+	require.NoError(t, err)
+
+	s, err := c.StartSession(options.Session().SetCausalConsistency(true))
+	sess := s.(*sessionImpl)
+	require.NoError(t, err)
+	require.NotNil(t, sess)
+	require.True(t, sess.Consistent)
+	sess.EndSession(ctx)
+
+	s, err = c.StartSession(options.Session().SetCausalConsistency(false))
+	sess = s.(*sessionImpl)
+	require.NoError(t, err)
+	require.NotNil(t, sess)
+	require.False(t, sess.Consistent)
+	sess.EndSession(ctx)
+
+	s, err = c.StartSession()
+	sess = s.(*sessionImpl)
+	require.NoError(t, err)
+	require.NotNil(t, sess)
+	require.True(t, sess.Consistent)
+	sess.EndSession(ctx)
+}
+
+func TestClient_Ping_DefaultReadPreference(t *testing.T) {
+	cs := testutil.ConnString(t)
+	c, err := NewClient(cs.String())
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	err = c.Connect(ctx)
+	require.NoError(t, err)
+
+	err = c.Ping(ctx, nil)
+	require.NoError(t, err)
+}
+
+func TestClient_Ping_InvalidHost(t *testing.T) {
+	c, err := NewClientWithOptions("mongodb://nohost:27017", options.Client().SetServerSelectionTimeout(1*time.Millisecond))
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	err = c.Connect(ctx)
+	require.NoError(t, err)
+
+	err = c.Ping(ctx, nil)
+	require.NotNil(t, err)
 }

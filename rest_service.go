@@ -635,7 +635,7 @@ func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Reques
 	if !ok {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "could not find signal trigger with id '%s'", sigTriggerID).Error(),
+			Message:    errors.Errorf("could not find signal trigger with id '%s'", sigTriggerID).Error(),
 		})
 		return
 	}
