@@ -531,7 +531,7 @@ func TestProcessImplementations(t *testing.T) {
 					case <-ctx.Done():
 						assert.Fail(t, "call to Wait() took too long to finish")
 					}
-					Terminate(ctx, proc) // Clean up.
+					require.NoError(t, Terminate(ctx, proc)) // Clean up.
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {},
 			} {

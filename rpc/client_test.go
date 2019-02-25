@@ -582,7 +582,7 @@ func TestRPCProcess(t *testing.T) {
 					case <-ctx.Done():
 						assert.Fail(t, "call to Wait() took too long to finish")
 					}
-					jasper.Terminate(ctx, proc) // Clean up.
+					require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
 				},
 				"CallingSignalOnDeadProcessDoesError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 					proc, err := makep(ctx, opts)
