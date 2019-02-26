@@ -6,7 +6,10 @@
 
 package readconcern
 
-import "github.com/mongodb/mongo-go-driver/bson"
+import (
+	"github.com/mongodb/mongo-go-driver/bson/bsontype"
+	"github.com/mongodb/mongo-go-driver/x/bsonx/bsoncore"
+)
 
 // ReadConcern for replica sets and replica set shards determines which data to return from a query.
 type ReadConcern struct {
@@ -40,6 +43,17 @@ func Linearizable() *ReadConcern {
 	return New(Level("linearizable"))
 }
 
+// Available specifies that the query should return data from the instance with no guarantee
+// that the data has been written to a majority of the replica set members (i.e. may be rolled back).
+func Available() *ReadConcern {
+	return New(Level("available"))
+}
+
+// Snapshot is only available for operations within multi-document transactions.
+func Snapshot() *ReadConcern {
+	return New(Level("snapshot"))
+}
+
 // New constructs a new read concern from the given string.
 func New(options ...Option) *ReadConcern {
 	concern := &ReadConcern{}
@@ -51,13 +65,13 @@ func New(options ...Option) *ReadConcern {
 	return concern
 }
 
-// MarshalBSONElement implements the bson.ElementMarshaler interface.
-func (rc *ReadConcern) MarshalBSONElement() (*bson.Element, error) {
-	doc := bson.NewDocument()
+// MarshalBSONValue implements the bson.ValueMarshaler interface.
+func (rc *ReadConcern) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	var elems []byte
 
 	if len(rc.level) > 0 {
-		doc.Append(bson.EC.String("level", rc.level))
+		elems = bsoncore.AppendStringElement(elems, "level", rc.level)
 	}
 
-	return bson.EC.SubDocument("readConcern", doc), nil
+	return bsontype.EmbeddedDocument, bsoncore.BuildDocument(nil, elems), nil
 }
