@@ -79,7 +79,7 @@ tasks:
     name: race
 
   - <<: *run-build
-    tags: ["test"]
+    tags: ["bench"]
     name: benchmark
 
 #######################################
@@ -94,6 +94,7 @@ buildvariants:
       - archlinux-test
     tasks: 
       - name: ".race"
+      - name: ".bench"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04
@@ -103,6 +104,7 @@ buildvariants:
       - ubuntu1604-test
     tasks: 
       - name: ".test"
+      - name: ".bench"
 
   - name: ubuntu1604-go1.8
     display_name: Ubuntu 16.04 (go1.8)
@@ -122,6 +124,7 @@ buildvariants:
       - macos-1012
     tasks:
       - name: ".test"
+      - name: ".bench"
 
   - name: windows
     display_name: Windows
@@ -131,3 +134,4 @@ buildvariants:
       build_env: "GOROOT=c:/golang/go1.11 PATH=/cygdrive/c/golang/go1.11/bin:$PATH DISABLE_COVERAGE=true"
     tasks:
       - name: ".test"
+      - name: ".bench"

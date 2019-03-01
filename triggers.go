@@ -40,8 +40,9 @@ type SignalTriggerSequence []SignalTrigger
 // It returns a boolean indicating whether or not the signal should
 // be skipped after executing all of the signal triggers.
 func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSignal bool) {
+	skipSignal = false
 	for _, trigger := range s {
-		skipSignal = skipSignal || trigger(info, sig)
+		skipSignal = trigger(info, sig) || skipSignal
 	}
 	return
 }
@@ -50,8 +51,12 @@ func (s SignalTriggerSequence) Run(info ProcessInfo, sig syscall.Signal) (skipSi
 type SignalTriggerID string
 
 const (
-	// MongodShutdownSignalTrigger is the ID for the signal trigger to use for clean mongod shutdown.
+	// MongodShutdownSignalTrigger is the ID for the signal trigger to use for
+	// clean mongod shutdown.
 	MongodShutdownSignalTrigger SignalTriggerID = "mongod_shutdown"
+	// CleanTerminationSignalTrigger is the ID for the signal trigger to use for
+	// termination of processes with exit code 0.
+	CleanTerminationSignalTrigger SignalTriggerID = "clean_terminate"
 )
 
 func makeOptionsCloseTrigger() ProcessTrigger {
