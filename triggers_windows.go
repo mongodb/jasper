@@ -115,7 +115,7 @@ func makeMongodShutdownSignalTrigger() SignalTrigger {
 		}
 
 		waitStatus, err := WaitForSingleObject(proc, mongodShutdownEventTimeout)
-		if err != nil || waitStatus != WAIT_OBJECT_0 {
+		if err != nil {
 			grip.Error(message.WrapError(err, message.Fields{
 				"id":      info.ID,
 				"message": "failed to wait on process",
