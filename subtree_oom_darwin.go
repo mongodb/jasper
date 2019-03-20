@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
 )
 
@@ -59,6 +60,7 @@ func analyzeLogs(ctx context.Context) (bool, []int, error) {
 	}
 
 	go func() {
+		defer recovery.LogStackTraceAndContinue("log analysis")
 		select {
 		case <-ctx.Done():
 			return

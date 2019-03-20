@@ -7,6 +7,7 @@ import (
 	"context"
 	"os/exec"
 
+	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
 )
 
@@ -59,6 +60,7 @@ func analyzeDmesg(ctx context.Context) (bool, []int, error) {
 	}
 
 	go func() {
+		defer recovery.LogStackTraceAndContinue("log analysis")
 		select {
 		case <-ctx.Done():
 			return
