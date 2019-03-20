@@ -100,7 +100,7 @@ outerRetry:
 				return nil, -1
 			}
 			srv := NewManagerService(localManager)
-			app := srv.App()
+			app := srv.App(ctx)
 			app.SetPrefix("jasper")
 			if err := app.SetPort(port); err != nil {
 				continue outerRetry
