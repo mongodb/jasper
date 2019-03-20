@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (o *OOMTracker) Clear(ctx context.Context) error {
+func (o *oomTrackerImpl) Clear(ctx context.Context) error {
 	sudo, err := isSudo(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error checking sudo")
@@ -24,7 +24,7 @@ func (o *OOMTracker) Clear(ctx context.Context) error {
 	return errors.Wrap(exec.CommandContext(ctx, "dmesg", "-c").Run(), "error clearing dmesg")
 }
 
-func (o *OOMTracker) Check(ctx context.Context) error {
+func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	wasOOMKilled, pids, err := analyzeDmesg(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error searching log")

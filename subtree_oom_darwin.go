@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (o *OOMTracker) Clear(ctx context.Context) error {
+func (o *oomTrackerImpl) Clear(ctx context.Context) error {
 	sudo, err := isSudo(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error checking sudo")
@@ -25,7 +25,7 @@ func (o *OOMTracker) Clear(ctx context.Context) error {
 	return errors.Wrap(exec.CommandContext(ctx, "log", "erase", "--all").Run(), "error clearing log")
 }
 
-func (o *OOMTracker) Check(ctx context.Context) error {
+func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	wasOOMKilled, pids, err := analyzeLogs(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error searching log")

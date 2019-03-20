@@ -8,10 +8,10 @@ import (
 
 // placeholders for windows tests
 
-func (o *OOMTracker) Clear(ctx context.Context) error {
+func (o *oomTrackerImpl) Clear(ctx context.Context) error {
 	return nil
 }
 
-func (o *OOMTracker) Check(ctx context.Context) error {
+func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	return nil
 }

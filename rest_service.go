@@ -69,6 +69,8 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/download/mongodb").Version(1).Post().Handler(s.downloadMongoDB)
 	app.AddRoute("/list/{filter}").Version(1).Get().Handler(s.listProcesses)
 	app.AddRoute("/list/group/{name}").Version(1).Get().Handler(s.listGroupMembers)
+	app.AddRoute("/list/oom").Version(1).Delete().Handler(s.oomTrackerClear)
+	app.AddRoute("/list/oom").Version(1).Get().Handler(s.oomTrackerList)
 	app.AddRoute("/process/{id}").Version(1).Get().Handler(s.getProcess)
 	app.AddRoute("/process/{id}/buildlogger-urls").Version(1).Get().Handler(s.getBuildloggerURLs)
 	app.AddRoute("/process/{id}/tags").Version(1).Get().Handler(s.getProcessTags)
@@ -679,4 +681,26 @@ func (s *Service) signalEvent(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func (s *Service) oomTrackerClear(rw http.ResponseWriter, r *http.Request) {
+	resp := &oomTrackerImpl{}
+
+	if err := resp.Clear(r.Context()); err != nil {
+		gimlet.WriteJSONInternalError(rw, err.Error())
+		return
+	}
+
+	gimlet.WriteJSON(rw, resp)
+}
+
+func (s *Service) oomTrackerList(rw http.ResponseWriter, r *http.Request) {
+	resp := &oomTrackerImpl{}
+
+	if err := resp.Check(r.Context()); err != nil {
+		gimlet.WriteJSONInternalError(rw, err.Error())
+		return
+	}
+
+	gimlet.WriteJSON(rw, resp)
 }
