@@ -12,6 +12,7 @@ import (
 	"github.com/evergreen-ci/gimlet"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/grip/send"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
@@ -50,7 +51,7 @@ const (
 
 // App constructs and returns a gimlet application for this
 // service. It attaches no middleware and does not start the service.
-func (s *Service) App() *gimlet.APIApp {
+func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	s.hostID, _ = os.Hostname()
 	s.cache = lru.NewCache()
 	s.cacheMutex.Lock()
@@ -68,6 +69,8 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/download/mongodb").Version(1).Post().Handler(s.downloadMongoDB)
 	app.AddRoute("/list/{filter}").Version(1).Get().Handler(s.listProcesses)
 	app.AddRoute("/list/group/{name}").Version(1).Get().Handler(s.listGroupMembers)
+	app.AddRoute("/list/oom").Version(1).Delete().Handler(s.oomTrackerClear)
+	app.AddRoute("/list/oom").Version(1).Get().Handler(s.oomTrackerList)
 	app.AddRoute("/process/{id}").Version(1).Get().Handler(s.getProcess)
 	app.AddRoute("/process/{id}/buildlogger-urls").Version(1).Get().Handler(s.getBuildloggerURLs)
 	app.AddRoute("/process/{id}/tags").Version(1).Get().Handler(s.getProcessTags)
@@ -83,26 +86,38 @@ func (s *Service) App() *gimlet.APIApp {
 	app.AddRoute("/clear").Version(1).Post().Handler(s.clearManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
-	go s.backgroundPrune()
+	go s.backgroundPrune(ctx)
 
 	return app
 }
 
-func (s *Service) backgroundPrune() {
+func (s *Service) backgroundPrune(ctx context.Context) {
+	defer func() {
+		err := recovery.HandlePanicWithError(recover(), nil, "background pruning")
+		if ctx.Err() != nil || err == nil {
+			return
+		}
+		go s.backgroundPrune(ctx)
+	}()
+
 	s.cacheMutex.RLock()
 	timer := time.NewTimer(s.cacheOpts.PruneDelay)
 	s.cacheMutex.RUnlock()
 
 	for {
-		<-timer.C
-		s.cacheMutex.RLock()
-		if !s.cacheOpts.Disabled {
-			if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
-				grip.Error(errors.Wrap(err, "error during cache pruning"))
+		select {
+		case <-timer.C:
+			s.cacheMutex.RLock()
+			if !s.cacheOpts.Disabled {
+				if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
+					grip.Error(errors.Wrap(err, "error during cache pruning"))
+				}
 			}
+			timer.Reset(s.cacheOpts.PruneDelay)
+			s.cacheMutex.RUnlock()
+		case <-ctx.Done():
+			return
 		}
-		timer.Reset(s.cacheOpts.PruneDelay)
-		s.cacheMutex.RUnlock()
 	}
 }
 
@@ -666,4 +681,26 @@ func (s *Service) signalEvent(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})
+}
+
+func (s *Service) oomTrackerClear(rw http.ResponseWriter, r *http.Request) {
+	resp := &oomTrackerImpl{}
+
+	if err := resp.Clear(r.Context()); err != nil {
+		gimlet.WriteJSONInternalError(rw, err.Error())
+		return
+	}
+
+	gimlet.WriteJSON(rw, resp)
+}
+
+func (s *Service) oomTrackerList(rw http.ResponseWriter, r *http.Request) {
+	resp := &oomTrackerImpl{}
+
+	if err := resp.Check(r.Context()); err != nil {
+		gimlet.WriteJSONInternalError(rw, err.Error())
+		return
+	}
+
+	gimlet.WriteJSON(rw, resp)
 }
