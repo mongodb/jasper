@@ -60,9 +60,11 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	p.info.Options = p.opts
 	p.info.Host = p.opts.Hostname
 
-	go p.transition(ctx, cmd)
-
+	p.info.Options.started = true
+	p.opts.started = true
 	opts.started = true
+
+	go p.transition(ctx, cmd)
 
 	return p, nil
 }
@@ -79,7 +81,6 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.Lock()
 		defer p.Unlock()
 		defer close(p.initialized)
-		p.opts.started = true
 		p.info.IsRunning = true
 		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
