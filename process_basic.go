@@ -52,9 +52,8 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 		return nil, errors.Wrap(err, "problem registering options closer trigger")
 	}
 
-	err = cmd.Start()
-	if err != nil {
-		return nil, errors.Wrap(err, "problem creating command")
+	if err = cmd.Start(); err != nil {
+		return nil, errors.Wrap(err, "problem starting command")
 	}
 
 	p.info.ID = p.id
@@ -152,10 +151,8 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 	p.RLock()
 	defer p.RUnlock()
 
-	opts := p.info.Options
-	opts.closers = []func() error{}
-
-	return newBasicProcess(ctx, &opts)
+	optsCopy := p.info.Options.CopyExported()
+	return newBasicProcess(ctx, optsCopy)
 }
 
 func (p *basicProcess) Wait(ctx context.Context) (int, error) {

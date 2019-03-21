@@ -345,11 +345,8 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 
 func (p *blockingProcess) Respawn(ctx context.Context) (Process, error) {
 	opts := p.Info(ctx).Options
-	opts.closers = []func() error{}
-
-	newProc, err := newBlockingProcess(ctx, &opts)
-
-	return newProc, err
+	optsCopy := opts.CopyExported()
+	return newBlockingProcess(ctx, optsCopy)
 }
 
 func (p *blockingProcess) Tag(t string) {
