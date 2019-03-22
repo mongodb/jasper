@@ -192,9 +192,9 @@ func (opts *CreateOptions) Close() error {
 	return catcher.Resolve()
 }
 
-// Copy returns a copy of the exported fields in CreateOptions. The caller is
-// responsible for re-populating the unexported fields, which are cleared.
-func (opts *CreateOptions) CopyExported() *CreateOptions {
+// Copy returns a copy of the options for only the exported fields. Unexported
+// fields are cleared.
+func (opts *CreateOptions) Copy() *CreateOptions {
 	optsCopy := *opts
 
 	if opts.Args != nil {
@@ -229,7 +229,7 @@ func (opts *CreateOptions) CopyExported() *CreateOptions {
 		_ = copy(optsCopy.OnTimeout, opts.OnTimeout)
 	}
 
-	optsCopy.Output = *opts.Output.CopyExported()
+	optsCopy.Output = *opts.Output.Copy()
 
 	optsCopy.closers = nil
 	optsCopy.started = false

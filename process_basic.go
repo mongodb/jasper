@@ -152,7 +152,7 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 	p.RLock()
 	defer p.RUnlock()
 
-	optsCopy := p.info.Options.CopyExported()
+	optsCopy := p.info.Options.Copy()
 	return newBasicProcess(ctx, optsCopy)
 }
 

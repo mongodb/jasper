@@ -346,7 +346,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 
 func (p *blockingProcess) Respawn(ctx context.Context) (Process, error) {
 	opts := p.Info(ctx).Options
-	optsCopy := opts.CopyExported()
+	optsCopy := opts.Copy()
 	return newBlockingProcess(ctx, optsCopy)
 }
 

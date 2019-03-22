@@ -412,9 +412,9 @@ func (o *OutputOptions) GetError() (io.Writer, error) {
 	return o.errorMulti, nil
 }
 
-// CopyExported returns a copy of the options for only the exported fields.
-// Unexported fields are cleared.
-func (o *OutputOptions) CopyExported() *OutputOptions {
+// Copy returns a copy of the options for only the exported fields. Unexported
+// fields are cleared.
+func (o *OutputOptions) Copy() *OutputOptions {
 	optsCopy := *o
 
 	optsCopy.outputSender = nil
