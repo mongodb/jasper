@@ -45,7 +45,7 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		opts:     *opts,
 		tags:     make(map[string]struct{}),
 		ops:      make(chan func(*exec.Cmd)),
-		complete: make(chan struct{}, 0),
+		complete: make(chan struct{}),
 	}
 
 	for _, t := range opts.Tags {

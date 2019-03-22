@@ -187,7 +187,7 @@ func TestBlockingProcess(t *testing.T) {
 				},
 				"WaitSomeBeforeCanceling": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.opts.Args = []string{"sleep", "1"}
-					proc.complete = make(chan struct{}, 0)
+					proc.complete = make(chan struct{})
 					cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
 					defer cancel()
 
