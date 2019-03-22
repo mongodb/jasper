@@ -151,11 +151,9 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 				}))
 			}()
 
+			p.triggers.Run(info)
 			p.setErr(err)
 			p.setInfo(info)
-			p.mu.RLock()
-			p.triggers.Run(info)
-			p.mu.RUnlock()
 			return
 		case <-ctx.Done():
 			// note, the process might take a moment to
@@ -165,8 +163,8 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			info.IsRunning = false
 			info.Successful = false
 
-			p.setInfo(info)
 			p.triggers.Run(info)
+			p.setInfo(info)
 			return
 		case op := <-p.ops:
 			if op != nil {
