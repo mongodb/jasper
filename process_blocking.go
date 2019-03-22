@@ -58,6 +58,7 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 		return nil, errors.Wrap(err, "problem starting command")
 	}
 
+	p.info.Options.started = true
 	p.opts.started = true
 	opts.started = true
 
@@ -345,11 +346,8 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 
 func (p *blockingProcess) Respawn(ctx context.Context) (Process, error) {
 	opts := p.Info(ctx).Options
-	opts.closers = []func() error{}
-
-	newProc, err := newBlockingProcess(ctx, &opts)
-
-	return newProc, err
+	optsCopy := opts.Copy()
+	return newBlockingProcess(ctx, optsCopy)
 }
 
 func (p *blockingProcess) Tag(t string) {
