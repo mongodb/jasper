@@ -94,6 +94,7 @@ buildvariants:
       - archlinux-test
     tasks: 
       - name: ".race"
+      - name: ".bench"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04
@@ -114,7 +115,6 @@ buildvariants:
     tasks: 
       - name: ".legacy-check"
 
-
   - name: macos
     display_name: macOS 10.12
     expansions:
@@ -123,6 +123,7 @@ buildvariants:
       - macos-1012
     tasks:
       - name: ".test"
+      - name: ".bench"
 
   - name: windows
     display_name: Windows
@@ -132,3 +133,4 @@ buildvariants:
       build_env: "GOROOT=c:/golang/go1.11 PATH=/cygdrive/c/golang/go1.11/bin:$PATH DISABLE_COVERAGE=true"
     tasks:
       - name: ".test"
+      - name: ".bench"
