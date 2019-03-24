@@ -86,6 +86,9 @@ func (c *Command) GetProcIDs() []string { return c.procIDs }
 // ApplyFromOpts uses the CreateOptions to configure the Command.
 func (c *Command) ApplyFromOpts(opts *CreateOptions) *Command { c.opts = opts; return c }
 
+// SetOutputOptions sets the output options for a command.
+func (c *Command) SetOutputOptions(opts OutputOptions) *Command { c.opts.Output = opts; return c }
+
 // String returns a stringified representation.
 func (c *Command) String() string { return fmt.Sprintf("id='%s', cmd='%s'", c.id, c.getCmd()) }
 
