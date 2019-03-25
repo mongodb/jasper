@@ -94,7 +94,6 @@ buildvariants:
       - archlinux-test
     tasks: 
       - name: ".race"
-      - name: ".bench"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04
