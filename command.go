@@ -155,6 +155,23 @@ func (c *Command) ContinueOnError(cont bool) *Command { c.continueOnError = cont
 // error despite errors in its sub-command executions.
 func (c *Command) IgnoreError(ignore bool) *Command { c.ignoreError = ignore; return c }
 
+// SuppressStandardError, when set to true, discards all standard
+// error content.
+func (c *Command) SuppressStandardError(v bool) *Command { c.opts.Output.SuppressError = v; return c }
+
+// SuppressStandardOutput, when set to true, discards all standard
+// output content.
+func (c *Command) SuppressStandardOutput(v bool) *Command { c.opts.Output.SuppressOutput = v; return c }
+
+// RedirectOutputToError sends all standard output content to standard error.
+func (c *Command) RedirectOuputToError(v bool) *Command { c.opts.Output.SendOutputToError = v; return c }
+
+// RedirectOutputToError sends all standard error output to standard output.
+func (c *Command) RedirectErrorToOutput(v bool) *Command {
+	c.opts.Output.SendOutputToError = v
+	return c
+}
+
 // Environment replaces the current environment map with the given environment
 // map.
 func (c *Command) Environment(e map[string]string) *Command { c.opts.Environment = e; return c }
