@@ -22,7 +22,6 @@ type CreateOptions struct {
 	Environment      map[string]string `json:"env,omitempty"`
 	WorkingDirectory string            `json:"working_directory,omitempty"`
 	Output           OutputOptions     `json:"output"`
-	Hostname         string            `json:"host,omitempty"`
 	OverrideEnviron  bool              `json:"override_env,omitempty"`
 	TimeoutSecs      int               `json:"timeout_secs,omitempty"`
 	Timeout          time.Duration     `json:"-"`

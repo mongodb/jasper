@@ -164,7 +164,10 @@ func (c *Command) SuppressStandardError(v bool) *Command { c.opts.Output.Suppres
 func (c *Command) SuppressStandardOutput(v bool) *Command { c.opts.Output.SuppressOutput = v; return c }
 
 // RedirectOutputToError sends all standard output content to standard error.
-func (c *Command) RedirectOuputToError(v bool) *Command { c.opts.Output.SendOutputToError = v; return c }
+func (c *Command) RedirectOutputToError(v bool) *Command {
+	c.opts.Output.SendOutputToError = v
+	return c
+}
 
 // RedirectOutputToError sends all standard error output to standard output.
 func (c *Command) RedirectErrorToOutput(v bool) *Command {
