@@ -399,10 +399,7 @@ func getCreateOpt(ctx context.Context, args []string, dir string, env map[string
 		opts = &CreateOptions{Args: args}
 	}
 	opts.WorkingDirectory = dir
-
-	for k, v := range env {
-		opts.Environment[k] = v
-	}
+	opts.Environment = env
 
 	return opts, nil
 }
