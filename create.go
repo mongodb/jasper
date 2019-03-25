@@ -20,9 +20,9 @@ import (
 type CreateOptions struct {
 	Args             []string          `json:"args"`
 	Environment      map[string]string `json:"env,omitempty"`
-	Hostname         string            `json:"host,omitempty"`
 	WorkingDirectory string            `json:"working_directory,omitempty"`
 	Output           OutputOptions     `json:"output"`
+	Hostname         string            `json:"host,omitempty"`
 	OverrideEnviron  bool              `json:"override_env,omitempty"`
 	TimeoutSecs      int               `json:"timeout_secs,omitempty"`
 	Timeout          time.Duration     `json:"-"`
