@@ -46,7 +46,8 @@ func runIteration(ctx context.Context, makeProc func(context.Context, *CreateOpt
 	}
 	exitCode, err := proc.Wait(ctx)
 	if err != nil {
-		if runtime.GOOS != "windows" && err.Error() != "signal: killed" || runtime.GOOS == "windows" && err.Error() != "exit code 1" {
+		if runtime.GOOS != "windows" && err.Error() != "signal: killed" ||
+			runtime.GOOS == "windows" && err.Error() != "exit status 1" {
 			return errors.Wrapf(err, "process with id '%s' exited with code %d", proc.ID(), exitCode)
 		}
 	}
