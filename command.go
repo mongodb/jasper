@@ -213,7 +213,7 @@ func (c *Command) Append(cmds ...string) *Command {
 
 // AppendArgs is the variadic equivalent of Add, which adds a command
 // in the form of arguments.
-func (c *Command) AppendArgs(args ...string) *Command { return C.Add(args) }
+func (c *Command) AppendArgs(args ...string) *Command { return c.Add(args) }
 
 func (c *Command) setupEnv() {
 	if c.opts.Environment == nil {
