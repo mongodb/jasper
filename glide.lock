@@ -23,6 +23,8 @@ imports:
     version: ba41957778899cce2775284bfdb7155475794657
   - name: github.com/google/shlex
     version: 6f45313302b9c56850fc17f99e40caebce98c716
+  - name: github.com/containerd/cgroups
+    version: dbea6f2bd41658b84b00417ceefa416b979cbf10
 
   # grpc and dependencies
   - name: google.golang.org/grpc
