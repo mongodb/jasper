@@ -8,7 +8,7 @@ func newProcessTracker(name string) (processTracker, error) {
 	return &freebsdProcessTracker{}, nil
 }
 
-func (_ *freebsdProcessTracker) add(pid uint) error {
+func (_ *freebsdProcessTracker) add(pid int) error {
 	return nil
 }
 

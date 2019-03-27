@@ -18,11 +18,11 @@ func newProcessTracker(name string) (processTracker, error) {
 	return &windowsProcessTracker{job: job}, nil
 }
 
-func (t *windowsProcessTracker) add(pid uint) error {
+func (t *windowsProcessTracker) add(pid int) error {
 	if t.job == nil {
 		return errors.New("cannot add process because job is invalid")
 	}
-	return t.job.AssignProcess(pid)
+	return t.job.AssignProcess(uint(pid))
 }
 
 func (t *windowsProcessTracker) cleanup() error {

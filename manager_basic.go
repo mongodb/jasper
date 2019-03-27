@@ -59,7 +59,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *CreateOpt
 	}
 
 	if m.tracker != nil {
-		pid := uint(proc.Info(ctx).PID)
+		pid := proc.Info(ctx).PID
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.add(pid); err != nil {
 			grip.Warning(message.WrapError(err, "problem adding local process to tracker during process creation"))
@@ -90,7 +90,7 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 	}
 
 	if m.tracker != nil {
-		pid := uint(proc.Info(ctx).PID)
+		pid := proc.Info(ctx).PID
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.add(pid); err != nil {
 			grip.Warning(message.WrapError(err, "problem adding local process to tracker during process registration"))

@@ -1,52 +1,61 @@
 package jasper
 
 import (
-	"fmt"
+	"os"
+	"syscall"
 
 	"github.com/containerd/cgroups"
+	"github.com/mongodb/grip"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 )
 
-// TODO: implement
-// kim: TODO: allow cgroups to:
-// 1. add procs to the list (for later killing).
-// 2. impose limits (via a separate functionality).
-
-type linuxProcessTracker struct {
-	cgroups map[string]cgroups.Cgroup
-}
+const (
+	defaultSubsystem = cgroups.Memory
+)
 
 func newProcessTracker(name string) (processTracker, error) {
-	shares := uint64(100)
-	cgroups := make(map[string]cgroups.Cgroup)
-
-	cgroup, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/jasper"), &specs.LinuxResources{
-		CPU: &specs.CPU{
-			Shares: &shares,
-		},
-	})
+	cgroup, err := cgroups.New(cgroups.V1, cgroups.StaticPath(name), &specs.LinuxResources{})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create cgroup")
+		return nil, errors.Wrap(err, "could not create default cgroup")
 	}
-	fmt.Println(cgroup)
 
-	return &linuxProcessTracker{cgroups: cgroups}, nil
+	tracker := &linuxProcessTracker{cgroup: cgroup}
+
+	return tracker, nil
 }
 
-func (t *linuxProcessTracker) add(pid uint) error {
-	proc := cgroups.Process{}
+func (t *linuxProcessTracker) add(pid int) error {
+	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: pid}
+
+	// kim: TODO: check if pid is already in the cgroup when forked. Can do this in testing.
 	t.cgroup.Add(proc)
 	return nil
 }
 
-// kim: TODO: addLimit for other OSes
-// func (t *linuxProcessTracker) addLimit(pid uint, limit string) error {
-//     return nil
-// }
+// kim: updateLimit updates the resource limit on all tracked processes.
+func (t *linuxProcessTracker) updateLimit(limit Subsystem) error {
+
+	return nil
+}
 
 func (t *linuxProcessTracker) cleanup() error {
 	// Get all procs.
-	// t.cgroup.Processes("something", false)
-	// Send SIGTERM to all procs.
-	// for _, proc := range procs
+	cgroupProcs, err := t.cgroup.Processes(defaultSubsystem, true)
+	if err != nil {
+		return errors.Wrap(err, "could not find tracked processes")
+	}
+
+	catcher := grip.NewBasicCatcher()
+	for _, cgroupProc := range cgroupProcs {
+		osProc, err := os.FindProcess(cgroupProc.Pid)
+		catcher.Add(errors.Wrap(err, "failed to find tracked process"))
+		err = osProc.Signal(syscall.SIGTERM)
+		if err != nil {
+			catcher.Add(errors.Wrap(err, "could not signal process to terminate"))
+			catcher.Add(errors.Wrap(osProc.Kill(), "could not kill process"))
+		}
+	}
+
+	return catcher.Resolve()
 }
