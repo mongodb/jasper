@@ -13,43 +13,35 @@ import (
 
 var echoSubCmd = []string{"echo", "foo"}
 
-func TestManagerInterface(t *testing.T) {
-	t.Parallel()
-
-	httpClient := &http.Client{}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
-		"Basic/NoLock/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
-			return &basicProcessManager{
-				procs:    map[string]Process{},
-				blocking: false,
-			}
+func getManagerCases(t *testing.T, trackProcs bool, httpClient *http.Client) map[string]func(context.Context, *testing.T) Manager {
+	return map[string]func(context.Context, *testing.T) Manager{
+		"Basic/NoLock/BasicProcs": func(_ context.Context, _ *testing.T) Manager {
+			manager, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
+			require.NoError(t, err)
+			return manager
 		},
-		"Basic/NoLock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			return &basicProcessManager{
-				procs:    map[string]Process{},
-				blocking: true,
-			}
+		"Basic/NoLock/BlockingProcs": func(_ context.Context, _ *testing.T) Manager {
+			manager, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
+			require.NoError(t, err)
+			return manager
 		},
-		"Basic/Lock/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
-			localManager, err := NewLocalManager(false)
+		"Basic/Lock/BasicProcs": func(_ context.Context, t *testing.T) Manager {
+			localManager, err := NewLocalManager(trackProcs)
 			require.NoError(t, err)
 			return localManager
 		},
 		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			localBlockingManager, err := NewLocalManagerBlockingProcesses(false)
+			localBlockingManager, err := NewLocalManagerBlockingProcesses(trackProcs)
 			require.NoError(t, err)
 			return localBlockingManager
 		},
 		"SelfClearing/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
-			selfClearingManager, err := NewSelfClearingProcessManager(10, false)
+			selfClearingManager, err := NewSelfClearingProcessManager(10, trackProcs)
 			require.NoError(t, err)
 			return selfClearingManager
 		},
 		"SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, false)
+			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, trackProcs)
 			require.NoError(t, err)
 			return selfClearingBlockingManager
 		},
@@ -62,7 +54,17 @@ func TestManagerInterface(t *testing.T) {
 				client: httpClient,
 			}
 		},
-	} {
+	}
+}
+
+func TestManagerInterface(t *testing.T) {
+	t.Parallel()
+
+	httpClient := &http.Client{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for mname, factory := range getManagerCases(t, false, httpClient) {
 		t.Run(mname, func(t *testing.T) {
 			for name, test := range map[string]func(context.Context, *testing.T, Manager){
 				"ValidateFixture": func(ctx context.Context, t *testing.T, manager Manager) {
@@ -429,6 +431,41 @@ func TestManagerInterface(t *testing.T) {
 					for _, procID := range cmd.GetProcIDs() {
 						assert.True(t, findIDInProcList(procID))
 					}
+				},
+				"LimitsSucceedsWithoutProcessTracking": func(ctx context.Context, t *testing.T, manager Manager) {
+					if mname == "REST" {
+						t.Skip("limit is not supported on rest interfaces")
+					}
+					assert.NoError(t, manager.Limit(ctx, nil))
+				},
+				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
+			} {
+				t.Run(name, func(t *testing.T) {
+					tctx, cancel := context.WithTimeout(ctx, managerTestTimeout)
+					defer cancel()
+					test(tctx, t, factory(tctx, t))
+				})
+			}
+		})
+	}
+}
+
+// kim: TODO: test manager with mockProcessTracker
+func TestTrackedManagers(t *testing.T) {
+	t.Parallel()
+
+	httpClient := &http.Client{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for mname, factory := range getManagerCases(t, true, httpClient) {
+		t.Run(mname, func(t *testing.T) {
+			for name, test := range map[string]func(context.Context, *testing.T, Manager){
+				"LimitsSucceedsWithProcessTracking": func(ctx context.Context, t *testing.T, manager Manager) {
+					if mname == "REST" {
+						t.Skip("limit is not supported on rest interfaces")
+					}
+					assert.NoError(t, manager.Limit(ctx, nil))
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
