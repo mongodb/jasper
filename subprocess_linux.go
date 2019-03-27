@@ -1,29 +1,31 @@
 package jasper
 
-import "github.com/containerd/cgroups"
+// Documentation for each subsystem can be found in the kernel docs:
+// https://www.kernel.org/doc/Documentation/cgroup-v1
 
-type Subsystem string
-
-const (
-	Devices   Subsystem = "devices"
-	Hugetlb             = "hugetlb"
-	Freezer             = "freezer"
-	Pids                = "pids"
-	NetCLS              = "net_cls"
-	NetPrio             = "net_prio"
-	PerfEvent           = "perf_event"
-	CPUset              = "cpuset"
-	CPU                 = "cpu"
-	CPUacct             = "cpuacct"
-	Memory              = "memory"
-	Blkio               = "blkio"
-	Rdma                = "rdma"
-)
-
-type linuxProcessTracker struct {
-	cgroup cgroups.Cgroup
+// LinuxResources represents runtime resource constraints.
+type LinuxResources struct {
+	// Devices configures the device whitelist.
+	Devices []LinuxDeviceCgroup `json:"devices,omitempty"`
+	// Memory restriction configuration
+	Memory *LinuxMemory `json:"memory,omitempty"`
+	// CPU resource restriction configuration
+	CPU *LinuxCPU `json:"cpu,omitempty"`
+	// Task resource restriction configuration.
+	Pids *LinuxPids `json:"pids,omitempty"`
+	// BlockIO restriction configuration
+	BlockIO *LinuxBlockIO `json:"blockIO,omitempty"`
+	// Hugetlb limit (in bytes)
+	HugepageLimits []LinuxHugepageLimit `json:"hugepageLimits,omitempty"`
+	// Network restriction configuration
+	Network *LinuxNetwork `json:"network,omitempty"`
+	// Rdma resource restriction configuration.
+	// Limits are a set of key value pairs that define RDMA resource limits,
+	// where the key is device name and value is resource limits.
+	Rdma map[string]LinuxRdma `json:"rdma,omitempty"`
 }
 
+// LinuxDeviceCgroup represents a device rule for the whitelist controller.
 type LinuxDeviceCgroup struct {
 	// Allow or deny
 	Allow bool `json:"allow"`
@@ -37,6 +39,7 @@ type LinuxDeviceCgroup struct {
 	Access string `json:"access,omitempty"`
 }
 
+// LinuxMemory represents limits for the memory subsystem.
 type LinuxMemory struct {
 	// Memory limit (in bytes).
 	Limit *int64 `json:"limit,omitempty"`
@@ -54,6 +57,7 @@ type LinuxMemory struct {
 	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
 }
 
+// LinuxCPU represents limits for the CPU subsystem.
 type LinuxCPU struct {
 	// CPU shares (relative weight (ratio) vs. other cgroups with cpu shares).
 	Shares *uint64 `json:"shares,omitempty"`
@@ -71,11 +75,13 @@ type LinuxCPU struct {
 	Mems string `json:"mems,omitempty"`
 }
 
+// LinuxPids represents limits for the pid subsystem.
 type LinuxPids struct {
 	// Maximum number of PIDs. Default is "no limit".
 	Limit int64 `json:"limit"`
 }
 
+// LinuxBlockIO represents limits for the blkio subsystem.
 type LinuxBlockIO struct {
 	// Specifies per cgroup weight
 	Weight *uint16 `json:"weight,omitempty"`
@@ -93,6 +99,7 @@ type LinuxBlockIO struct {
 	ThrottleWriteIOPSDevice []LinuxThrottleDevice `json:"throttleWriteIOPSDevice,omitempty"`
 }
 
+// LinuxWeightDevice struct holds a `major:minor weight` pair for weightDevice.
 type LinuxWeightDevice struct {
 	// Weight is the bandwidth rate for the device.
 	Weight *uint16 `json:"weight,omitempty"`
@@ -100,11 +107,13 @@ type LinuxWeightDevice struct {
 	LeafWeight *uint16 `json:"leafWeight,omitempty"`
 }
 
+// LinuxThrottleDevice struct holds a `major:minor rate_per_second` pair.
 type LinuxThrottleDevice struct {
 	// Rate is the IO rate limit per cgroup per device
 	Rate uint64 `json:"rate"`
 }
 
+// LinuxHugepageLimit
 type LinuxHugepageLimit struct {
 	// Pagesize is the hugepage size
 	Pagesize string `json:"pageSize"`

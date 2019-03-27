@@ -99,6 +99,10 @@ func (m *rpcManager) Get(ctx context.Context, name string) (jasper.Process, erro
 	return &rpcProcess{client: m.client, info: info}, nil
 }
 
+func (m *rpcManager) Limit(_ context.Context, _ interface{}) error {
+	return errors.New("cannot set limits on remote proceses")
+}
+
 func (m *rpcManager) Clear(ctx context.Context) {
 	_, _ = m.client.Clear(ctx, &empty.Empty{})
 }

@@ -6,8 +6,8 @@ import (
 )
 
 type windowsProcessTracker struct {
-	job        *Job
-	terminated bool
+	processTrackerBase
+	job *Job
 }
 
 func newProcessTracker(name string) (processTracker, error) {

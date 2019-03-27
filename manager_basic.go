@@ -155,6 +155,14 @@ func (m *basicProcessManager) Get(ctx context.Context, id string) (Process, erro
 	return proc, nil
 }
 
+func (m *basicProcessManager) Limit(ctx context.Context, limits interface{}) error {
+	if m.tracker == nil {
+		return nil
+	}
+
+	return m.tracker.updateLimits(limits)
+}
+
 func (m *basicProcessManager) Clear(ctx context.Context) {
 	for procID, proc := range m.procs {
 		if proc.Complete(ctx) {

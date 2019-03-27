@@ -80,6 +80,12 @@ func (m *localProcessManager) Get(ctx context.Context, id string) (Process, erro
 	return proc, errors.WithStack(err)
 }
 
+func (m *localProcessManager) Limit(ctx context.Context, limits interface{}) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.manager.Limit(ctx, limits)
+}
+
 func (m *localProcessManager) Clear(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

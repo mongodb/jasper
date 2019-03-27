@@ -189,6 +189,10 @@ func (c *restClient) Get(ctx context.Context, id string) (Process, error) {
 	}, nil
 }
 
+func (c *restClient) Limit(_ context.Context, _ interface{}) error {
+	return errors.New("cannot set limits on remote processes")
+}
+
 func (c *restClient) Clear(ctx context.Context) {
 	// Avoid errors here, because we can't return them anyways, and these errors
 	// should not really ever happen.
