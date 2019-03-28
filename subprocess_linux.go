@@ -57,7 +57,7 @@ type LinuxMemory struct {
 	DisableOOMKiller *bool `json:"disableOOMKiller,omitempty"`
 }
 
-// LinuxCPU represents limits for the CPU subsystem.
+// LinuxCPU represents limits for the cpuacct,cpuset subsystems.
 type LinuxCPU struct {
 	// CPU shares (relative weight (ratio) vs. other cgroups with cpu shares).
 	Shares *uint64 `json:"shares,omitempty"`
@@ -99,7 +99,7 @@ type LinuxBlockIO struct {
 	ThrottleWriteIOPSDevice []LinuxThrottleDevice `json:"throttleWriteIOPSDevice,omitempty"`
 }
 
-// LinuxWeightDevice struct holds a `major:minor weight` pair for weightDevice.
+// LinuxWeightDevice represents the weighting for time-based division of disk policy.
 type LinuxWeightDevice struct {
 	// Weight is the bandwidth rate for the device.
 	Weight *uint16 `json:"weight,omitempty"`
@@ -107,13 +107,13 @@ type LinuxWeightDevice struct {
 	LeafWeight *uint16 `json:"leafWeight,omitempty"`
 }
 
-// LinuxThrottleDevice struct holds a `major:minor rate_per_second` pair.
+// LinuxThrottleDevice represents the upper limit on I/O rate to a device.
 type LinuxThrottleDevice struct {
 	// Rate is the IO rate limit per cgroup per device
 	Rate uint64 `json:"rate"`
 }
 
-// LinuxHugepageLimit
+// LinuxHugepageLimit represents limits for the hugetlb subsystem.
 type LinuxHugepageLimit struct {
 	// Pagesize is the hugepage size
 	Pagesize string `json:"pageSize"`
@@ -121,6 +121,7 @@ type LinuxHugepageLimit struct {
 	Limit uint64 `json:"limit"`
 }
 
+// LinuxNetwork represents priorities for the net_cls,net_prio subsystems.
 type LinuxNetwork struct {
 	// Set class identifier for container's network packets
 	ClassID *uint32 `json:"classID,omitempty"`
@@ -128,6 +129,7 @@ type LinuxNetwork struct {
 	Priorities []LinuxInterfacePriority `json:"priorities,omitempty"`
 }
 
+// LinuxInterfacePriority represents a priority on a network interface.
 type LinuxInterfacePriority struct {
 	// Name is the name of the network interface
 	Name string `json:"name"`
@@ -135,6 +137,7 @@ type LinuxInterfacePriority struct {
 	Priority uint32 `json:"priority"`
 }
 
+// LinuxRdma represents limits on the rdma subsystem.
 type LinuxRdma struct {
 	// Maximum number of HCA handles that can be opened. Default is "no limit".
 	HcaHandles *uint32 `json:"hcaHandles,omitempty"`
