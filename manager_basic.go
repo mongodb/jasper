@@ -161,7 +161,7 @@ func (m *basicProcessManager) Limit(ctx context.Context, limits interface{}) err
 		return nil
 	}
 
-	return m.tracker.updateLimits(limits)
+	return m.tracker.setLimits(limits)
 }
 
 func (m *basicProcessManager) Clear(ctx context.Context) {

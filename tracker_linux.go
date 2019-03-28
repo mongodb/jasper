@@ -66,10 +66,10 @@ func (t *linuxProcessTracker) add(pid int) error {
 	return nil
 }
 
-// updateLimits requires a pointer to a LinuxResources struct. The new
+// setLimits requires a pointer to a LinuxResources struct. The new
 // limits cannot be less than the current resource usage of the tracked
 // processes.
-func (t *linuxProcessTracker) updateLimits(limits interface{}) error {
+func (t *linuxProcessTracker) setLimits(limits interface{}) error {
 	linuxResourceLimits, ok := limits.(*LinuxResources)
 	if !ok {
 		return errors.New("process tracker requires (*LinuxResources) in order to update resource limits")

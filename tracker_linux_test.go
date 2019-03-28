@@ -139,14 +139,14 @@ func TestLinuxProcessTracker(t *testing.T) {
 					assert.Len(t, pids, 1)
 				},
 				"UpdateLimitChecksForLinuxResources": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					assert.Error(t, tracker.updateLimits("foobar"))
-					assert.NoError(t, tracker.updateLimits(&LinuxResources{}))
+					assert.Error(t, tracker.setLimits("foobar"))
+					assert.NoError(t, tracker.setLimits(&LinuxResources{}))
 				},
 				"UpdateLimitKillsProcessWithZeroMemoryLimit": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
 					pid := proc.Info(ctx).PID
 
 					zero := int64(0)
-					require.NoError(t, tracker.updateLimits(&LinuxResources{
+					require.NoError(t, tracker.setLimits(&LinuxResources{
 						Memory: &LinuxMemory{Limit: &zero},
 					}))
 
