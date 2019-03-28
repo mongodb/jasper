@@ -47,12 +47,12 @@ func TestWindowsProcessTracker(t *testing.T) {
 		"AddProcessToTrackerAssignsPid": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
 			cmd1, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
-			pid1 := uint(cmd1.Process.Pid)
+			pid1 := cmd1.Process.Pid
 			assert.NoError(t, tracker.add(pid1))
 
 			cmd2, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
-			pid2 := uint(cmd2.Process.Pid)
+			pid2 := cmd2.Process.Pid
 			assert.NoError(t, tracker.add(pid2))
 
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
@@ -66,7 +66,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 		"AddedProcessIsTerminatedOnCleanup": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
 			cmd, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
-			pid := uint(cmd.Process.Pid)
+			pid := cmd.Process.Pid
 
 			assert.NoError(t, tracker.add(pid))
 
