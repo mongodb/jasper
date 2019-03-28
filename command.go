@@ -99,7 +99,8 @@ func (c *Command) ProcConstructor(processConstructor ProcessConstructor) *Comman
 // been created by the Command for execution.
 func (c *Command) GetProcIDs() []string { return c.procIDs }
 
-// ApplyFromOpts uses the CreateOptions to configure the Command.
+// ApplyFromOpts uses the CreateOptions to configure the Command. If Args is
+// set on the CreateOptions, it will be ignored; the Args can be added using Add.
 func (c *Command) ApplyFromOpts(opts *CreateOptions) *Command { c.opts = opts; return c }
 
 // SetOutputOptions sets the output options for a command.
@@ -224,6 +225,7 @@ func (c *Command) Run(ctx context.Context) error {
 		return catcher.Resolve()
 	}
 
+	grip.Infof("Ranging over create opts")
 	for idx, opt := range opts {
 		if err := ctx.Err(); err != nil {
 			catcher.Add(errors.Wrap(err, "operation canceled"))
@@ -430,6 +432,10 @@ func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
 	}
 	if catcher.HasErrors() {
 		return nil, catcher.Resolve()
+	}
+
+	for _, opt := range out {
+		grip.Infof("create opt = %+v", *opt)
 	}
 
 	return out, nil

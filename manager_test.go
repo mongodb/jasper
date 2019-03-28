@@ -13,35 +13,43 @@ import (
 
 var echoSubCmd = []string{"echo", "foo"}
 
-func getManagerCases(t *testing.T, trackProcs bool, httpClient *http.Client) map[string]func(context.Context, *testing.T) Manager {
-	return map[string]func(context.Context, *testing.T) Manager{
+func TestManagerInterface(t *testing.T) {
+	t.Parallel()
+
+	httpClient := &http.Client{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for mname, factory := range map[string]func(context.Context, *testing.T) Manager{
 		"Basic/NoLock/BasicProcs": func(_ context.Context, _ *testing.T) Manager {
-			manager, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
-			require.NoError(t, err)
-			return manager
+			return &basicProcessManager{
+				procs:    map[string]Process{},
+				blocking: false,
+			}
 		},
 		"Basic/NoLock/BlockingProcs": func(_ context.Context, _ *testing.T) Manager {
-			manager, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
-			require.NoError(t, err)
-			return manager
+			return &basicProcessManager{
+				procs:    map[string]Process{},
+				blocking: true,
+			}
 		},
 		"Basic/Lock/BasicProcs": func(_ context.Context, t *testing.T) Manager {
-			localManager, err := NewLocalManager(trackProcs)
+			localManager, err := NewLocalManager(false)
 			require.NoError(t, err)
 			return localManager
 		},
 		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			localBlockingManager, err := NewLocalManagerBlockingProcesses(trackProcs)
+			localBlockingManager, err := NewLocalManagerBlockingProcesses(false)
 			require.NoError(t, err)
 			return localBlockingManager
 		},
 		"SelfClearing/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
-			selfClearingManager, err := NewSelfClearingProcessManager(10, trackProcs)
+			selfClearingManager, err := NewSelfClearingProcessManager(10, false)
 			require.NoError(t, err)
 			return selfClearingManager
 		},
 		"SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, trackProcs)
+			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, false)
 			require.NoError(t, err)
 			return selfClearingBlockingManager
 		},
@@ -54,17 +62,7 @@ func getManagerCases(t *testing.T, trackProcs bool, httpClient *http.Client) map
 				client: httpClient,
 			}
 		},
-	}
-}
-
-func TestManagerInterface(t *testing.T) {
-	t.Parallel()
-
-	httpClient := &http.Client{}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	for mname, factory := range getManagerCases(t, false, httpClient) {
+	} {
 		t.Run(mname, func(t *testing.T) {
 			for name, test := range map[string]func(context.Context, *testing.T, Manager){
 				"ValidateFixture": func(ctx context.Context, t *testing.T, manager Manager) {
@@ -450,29 +448,120 @@ func TestManagerInterface(t *testing.T) {
 	}
 }
 
-// kim: TODO: test manager with mockProcessTracker
-func TestTrackedManagers(t *testing.T) {
+func TestTrackedManager(t *testing.T) {
 	t.Parallel()
 
-	httpClient := &http.Client{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for mname, factory := range getManagerCases(t, true, httpClient) {
-		t.Run(mname, func(t *testing.T) {
-			for name, test := range map[string]func(context.Context, *testing.T, Manager){
-				"LimitsSucceedsWithProcessTracking": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("limit is not supported on rest interfaces")
-					}
+	for managerName, makeManager := range map[string]func() *basicProcessManager{
+		"Basic/NoLock/BasicProcs": func() *basicProcessManager {
+			return &basicProcessManager{
+				procs:    map[string]Process{},
+				blocking: false,
+				tracker:  &mockProcessTracker{},
+			}
+		},
+		"Basic/NoLock/BlockingProcs": func() *basicProcessManager {
+			return &basicProcessManager{
+				procs:    map[string]Process{},
+				blocking: true,
+				tracker:  &mockProcessTracker{},
+			}
+		},
+	} {
+		t.Run(managerName, func(t *testing.T) {
+			for name, test := range map[string]func(context.Context, *testing.T, *basicProcessManager, *CreateOptions){
+				"ValidateFixtureSetup": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					assert.NotNil(t, manager.tracker)
+					assert.Len(t, manager.procs, 0)
+				},
+				"CreateProcessTracksProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					proc, err := manager.CreateProcess(ctx, opts)
+					require.NoError(t, err)
+					assert.Len(t, manager.procs, 1)
+
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+					require.Len(t, mockTracker.pids, 1)
+					assert.Equal(t, proc.Info(ctx).PID, mockTracker.pids[0])
+				},
+				"CreateCommandTracksCommandAfterRun": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
+					require.NoError(t, err)
+					assert.Len(t, manager.procs, 1)
+
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+					require.Len(t, mockTracker.pids, 1)
+					assert.NotZero(t, mockTracker.pids[0])
+				},
+				"DoNotTrackProcessIfCreateProcessDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					opts.Args = []string{"foo"}
+					_, err := manager.CreateProcess(ctx, opts)
+					require.Error(t, err)
+					assert.Len(t, manager.procs, 0)
+
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+					assert.Len(t, mockTracker.pids, 0)
+				},
+				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					opts.Args = []string{"foo"}
+					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
+					require.Error(t, err)
+					assert.Len(t, manager.procs, 0)
+
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+					assert.Len(t, mockTracker.pids, 0)
+				},
+				"LimitSucceedsForNil": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
 					assert.NoError(t, manager.Limit(ctx, nil))
+				},
+				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
+					assert.Len(t, manager.procs, 1)
+
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+					require.Len(t, mockTracker.pids, 1)
+					assert.NotZero(t, mockTracker.pids[0])
+
+					require.NoError(t, manager.Close(ctx))
+					assert.Len(t, mockTracker.pids, 0)
+					require.NoError(t, manager.Close(ctx))
+				},
+				"CloseWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+
+					require.NoError(t, manager.Close(ctx))
+					assert.Len(t, mockTracker.pids, 0)
+					require.NoError(t, manager.Close(ctx))
+					assert.Len(t, mockTracker.pids, 0)
+				},
+				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
+					assert.Len(t, manager.procs, 1)
+
+					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					require.True(t, ok)
+					require.Len(t, mockTracker.pids, 1)
+					assert.NotZero(t, mockTracker.pids[0])
+
+					require.NoError(t, manager.Close(ctx))
+					assert.Len(t, mockTracker.pids, 0)
+					require.NoError(t, manager.Close(ctx))
+					assert.Len(t, mockTracker.pids, 0)
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, managerTestTimeout)
 					defer cancel()
-					test(tctx, t, factory(tctx, t))
+					opts := yesCreateOpts(managerTestTimeout)
+					test(tctx, t, makeManager(), &opts)
 				})
 			}
 		})

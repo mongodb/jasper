@@ -64,6 +64,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *CreateOpt
 		if err := m.tracker.add(pid); err != nil {
 			grip.Warning(message.WrapError(err, "problem adding local process to tracker during process creation"))
 		}
+		grip.Infof("tracker added pid")
 	}
 
 	m.procs[proc.ID()] = proc
