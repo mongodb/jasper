@@ -67,7 +67,7 @@ func TestGetEnvironmentVariables(t *testing.T) {
 			value := "bar"
 
 			opts := yesCreateOpts(taskTimeout)
-			opts.AddEnvVar("foo", "bar")
+			opts.AddEnvVar(envVar, value)
 
 			proc, err := makeProc(ctx, &opts)
 			require.NoError(t, err)
@@ -78,12 +78,12 @@ func TestGetEnvironmentVariables(t *testing.T) {
 				select {
 				case <-ctx.Done():
 					assert.Fail(t, "context timed out before environment variables were set for process")
-					break
+					return
 				default:
 					if env, err := getEnvironmentVariables(pid); err == nil {
 						if actualValue, ok := env[envVar]; ok {
 							assert.Equal(t, value, actualValue)
-							break
+							return
 						}
 					}
 				}
