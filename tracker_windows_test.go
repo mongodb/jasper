@@ -48,12 +48,12 @@ func TestWindowsProcessTracker(t *testing.T) {
 			cmd1, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
 			pid1 := cmd1.Process.Pid
-			assert.NoError(t, tracker.add(pid1))
+			assert.NoError(t, tracker.Add(pid1))
 
 			cmd2, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
 			pid2 := cmd2.Process.Pid
-			assert.NoError(t, tracker.add(pid2))
+			assert.NoError(t, tracker.Add(pid2))
 
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
@@ -68,7 +68,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 			require.NoError(t, err)
 			pid := cmd.Process.Pid
 
-			assert.NoError(t, tracker.add(pid))
+			assert.NoError(t, tracker.Add(pid))
 
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
@@ -77,7 +77,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 			procHandle, err := OpenProcess(PROCESS_ALL_ACCESS, false, uint32(pid))
 			assert.NoError(t, err)
 
-			assert.NoError(t, tracker.cleanup())
+			assert.NoError(t, tracker.Cleanup())
 
 			waitEvent, err := WaitForSingleObject(procHandle, 60*time.Second)
 			assert.NoError(t, err)
