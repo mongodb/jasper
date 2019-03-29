@@ -78,6 +78,7 @@ func TestGetEnvironmentVariables(t *testing.T) {
 				select {
 				case <-ctx.Done():
 					assert.Fail(t, "context timed out before environment variables were set for process")
+					break
 				default:
 					if env, err := getEnvironmentVariables(pid); err == nil {
 						if actualValue, ok := env[envVar]; ok {
