@@ -1,5 +1,19 @@
 package jasper
 
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"strings"
+	"syscall"
+
+	"github.com/mongodb/grip"
+	"github.com/pkg/errors"
+)
+
 // Documentation for each subsystem can be found in the kernel docs:
 // https://www.kernel.org/doc/Documentation/cgroup-v1
 
@@ -143,4 +157,79 @@ type LinuxRdma struct {
 	HcaHandles *uint32 `json:"hcaHandles,omitempty"`
 	// Maximum number of HCA objects that can be created. Default is "no limit".
 	HcaObjects *uint32 `json:"hcaObjects,omitempty"`
+}
+
+// getActivePIDs returns a list of active PIDs on the system by listing the
+// contents of /proc and looking for entries that appear to be valid PIDs.
+func getActivePIDs() ([]int, error) {
+	d, err := os.Open("/proc")
+	if err != nil {
+		return nil, err
+	}
+	defer d.Close()
+
+	results := make([]int, 0, 50)
+	for {
+		fileInfos, err := d.Readdir(10)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		for _, fileInfo := range fileInfos {
+			// PID must be a directory with a numeric name.
+			if !fileInfo.IsDir() {
+				continue
+			}
+
+			// Using Atoi here will also filter out "." and "..".
+			pid, err := strconv.Atoi(fileInfo.Name())
+			if err != nil {
+				continue
+			}
+			results = append(results, pid)
+		}
+	}
+	return results, nil
+}
+
+// getEnvironmentVariables returns a map of environment variables for the
+// given pid. This function works by reading from /proc/${pid}/environ, so the
+// entries returned only reflect the values of the environment variables at the
+// time that the process was started.
+func getEnvironmentVariables(pid int) (map[string]string, error) {
+	rawEnv, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
+	if err != nil {
+		// This is probably either "permission denied" because we do not own the process,
+		// or the process simply doesn't exist anymore.
+		return nil, err
+	}
+	parts := bytes.Split(rawEnv, []byte{0})
+
+	env := map[string]string{}
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		nameAndValue := strings.Split(string(part), "=")
+		if len(nameAndValue) == 1 {
+			env[nameAndValue[0]] = ""
+		} else if len(nameAndValue) == 2 {
+			env[nameAndValue[0]] = nameAndValue[1]
+		}
+	}
+
+	return env, nil
+}
+
+func cleanupProcess(proc *os.Process) error {
+	catcher := grip.NewBasicCatcher()
+	if err := proc.Signal(syscall.SIGTERM); err != nil {
+		catcher.Add(errors.Wrap(err, "could not signal process to terminate"))
+		catcher.Add(errors.Wrap(proc.Kill(), "could not kill process"))
+	}
+	return catcher.Resolve()
 }

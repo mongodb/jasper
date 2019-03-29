@@ -225,7 +225,6 @@ func (c *Command) Run(ctx context.Context) error {
 		return catcher.Resolve()
 	}
 
-	grip.Infof("Ranging over create opts")
 	for idx, opt := range opts {
 		if err := ctx.Err(); err != nil {
 			catcher.Add(errors.Wrap(err, "operation canceled"))
@@ -432,10 +431,6 @@ func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
 	}
 	if catcher.HasErrors() {
 		return nil, catcher.Resolve()
-	}
-
-	for _, opt := range out {
-		grip.Infof("create opt = %+v", *opt)
 	}
 
 	return out, nil

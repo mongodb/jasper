@@ -2,62 +2,64 @@ package jasper
 
 import "github.com/pkg/errors"
 
-// processTracker provides a way to logically group processes that
+// ProcessTracker provides a way to logically group processes that
 // should be managed collectively. Implementation details are
 // platform-specific since each one has its own means of managing
 // groups of processes.
-type processTracker interface {
-	// add begins tracking a process identified by its PID.
-	add(pid int) error
-	// setLimits modifies the resource limit on all tracked processes. The
+type ProcessTracker interface {
+	// Add begins tracking a process identified by its PID.
+	Add(pid int) error
+	// SetLimits modifies the resource limit on all tracked processes. The
 	// expected limits parameter is platform-dependent.
-	setLimits(limits interface{}) error
-	// cleanup terminates this group of processes.
-	cleanup() error
+	SetLimits(limits interface{}) error
+	// Cleanup terminates this group of processes.
+	Cleanup() error
 }
 
 // processTrackerBase provides convenience no-op implementations of the
 // processTracker interface.
-type processTrackerBase struct{}
+type processTrackerBase struct {
+	Name string
+}
 
-func (processTrackerBase) add(_ int) error { return nil }
+func (processTrackerBase) Add(_ int) error { return nil }
 
-func (processTrackerBase) setLimits(_ interface{}) error { return nil }
+func (processTrackerBase) SetLimits(_ interface{}) error { return nil }
 
-func (processTrackerBase) cleanup() error { return nil }
+func (processTrackerBase) Cleanup() error { return nil }
 
 type mockProcessTracker struct {
-	failAdd          bool
-	failUpdateLimits bool
-	failCleanup      bool
-	pids             []int
+	FailAdd          bool
+	FailUpdateLimits bool
+	FailCleanup      bool
+	PIDs             []int
 }
 
-func newMockProcessTracker() mockProcessTracker {
-	return mockProcessTracker{
-		pids: []int{},
+func newMockProcessTracker() ProcessTracker {
+	return &mockProcessTracker{
+		PIDs: []int{},
 	}
 }
 
-func (t *mockProcessTracker) add(pid int) error {
-	if t.failAdd {
+func (t *mockProcessTracker) Add(pid int) error {
+	if t.FailAdd {
 		return errors.New("fail in add")
 	}
-	t.pids = append(t.pids, pid)
+	t.PIDs = append(t.PIDs, pid)
 	return nil
 }
 
-func (t *mockProcessTracker) setLimits(_ interface{}) error {
-	if t.failUpdateLimits {
+func (t *mockProcessTracker) SetLimits(_ interface{}) error {
+	if t.FailUpdateLimits {
 		return errors.New("failed in setLimits")
 	}
 	return nil
 }
 
-func (t *mockProcessTracker) cleanup() error {
-	if t.failCleanup {
+func (t *mockProcessTracker) Cleanup() error {
+	if t.FailCleanup {
 		return errors.New("failed in cleanup")
 	}
-	t.pids = []int{}
+	t.PIDs = []int{}
 	return nil
 }

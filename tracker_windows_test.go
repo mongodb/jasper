@@ -17,7 +17,7 @@ import (
 )
 
 func makeTracker() (*windowsProcessTracker, error) {
-	tracker, err := newProcessTracker("foo" + uuid.Must(uuid.NewV4()).String())
+	tracker, err := NewProcessTracker("foo" + uuid.Must(uuid.NewV4()).String())
 	if err != nil {
 		return nil, err
 	}

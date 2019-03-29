@@ -459,14 +459,14 @@ func TestTrackedManager(t *testing.T) {
 			return &basicProcessManager{
 				procs:    map[string]Process{},
 				blocking: false,
-				tracker:  &mockProcessTracker{},
+				tracker:  newMockProcessTracker(),
 			}
 		},
 		"Basic/NoLock/BlockingProcs": func() *basicProcessManager {
 			return &basicProcessManager{
 				procs:    map[string]Process{},
 				blocking: true,
-				tracker:  &mockProcessTracker{},
+				tracker:  newMockProcessTracker(),
 			}
 		},
 	} {
@@ -483,8 +483,8 @@ func TestTrackedManager(t *testing.T) {
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
-					require.Len(t, mockTracker.pids, 1)
-					assert.Equal(t, proc.Info(ctx).PID, mockTracker.pids[0])
+					require.Len(t, mockTracker.PIDs, 1)
+					assert.Equal(t, proc.Info(ctx).PID, mockTracker.PIDs[0])
 				},
 				"CreateCommandTracksCommandAfterRun": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
 					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
@@ -493,8 +493,8 @@ func TestTrackedManager(t *testing.T) {
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
-					require.Len(t, mockTracker.pids, 1)
-					assert.NotZero(t, mockTracker.pids[0])
+					require.Len(t, mockTracker.PIDs, 1)
+					assert.NotZero(t, mockTracker.PIDs[0])
 				},
 				"DoNotTrackProcessIfCreateProcessDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
 					opts.Args = []string{"foo"}
@@ -504,7 +504,7 @@ func TestTrackedManager(t *testing.T) {
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 				},
 				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
 					opts.Args = []string{"foo"}
@@ -514,7 +514,7 @@ func TestTrackedManager(t *testing.T) {
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 				},
 				"LimitSucceedsForNil": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
 					assert.NoError(t, manager.Limit(ctx, nil))
@@ -525,11 +525,11 @@ func TestTrackedManager(t *testing.T) {
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
-					require.Len(t, mockTracker.pids, 1)
-					assert.NotZero(t, mockTracker.pids[0])
+					require.Len(t, mockTracker.PIDs, 1)
+					assert.NotZero(t, mockTracker.PIDs[0])
 
 					require.NoError(t, manager.Close(ctx))
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 					require.NoError(t, manager.Close(ctx))
 				},
 				"CloseWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
@@ -537,9 +537,9 @@ func TestTrackedManager(t *testing.T) {
 					require.True(t, ok)
 
 					require.NoError(t, manager.Close(ctx))
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 					require.NoError(t, manager.Close(ctx))
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 				},
 				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
 					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
@@ -547,13 +547,13 @@ func TestTrackedManager(t *testing.T) {
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
-					require.Len(t, mockTracker.pids, 1)
-					assert.NotZero(t, mockTracker.pids[0])
+					require.Len(t, mockTracker.PIDs, 1)
+					assert.NotZero(t, mockTracker.PIDs[0])
 
 					require.NoError(t, manager.Close(ctx))
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 					require.NoError(t, manager.Close(ctx))
-					assert.Len(t, mockTracker.pids, 0)
+					assert.Len(t, mockTracker.PIDs, 0)
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {

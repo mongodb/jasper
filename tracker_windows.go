@@ -10,22 +10,22 @@ type windowsProcessTracker struct {
 	job *Job
 }
 
-func newProcessTracker(name string) (processTracker, error) {
+func NewProcessTracker(name string) (ProcessTracker, error) {
 	job, err := NewJob(name)
 	if err != nil {
 		return nil, err
 	}
-	return &windowsProcessTracker{job: job}, nil
+	return &windowsProcessTracker{processTrackerBase: processTrackerBase{Name: name}, job: job}, nil
 }
 
-func (t *windowsProcessTracker) add(pid int) error {
+func (t *windowsProcessTracker) Add(pid int) error {
 	if t.job == nil {
 		return errors.New("cannot add process because job is invalid")
 	}
 	return t.job.AssignProcess(uint(pid))
 }
 
-func (t *windowsProcessTracker) cleanup() error {
+func (t *windowsProcessTracker) Cleanup() error {
 	if t.job == nil {
 		return errors.New("cannot close because job is invalid")
 	}

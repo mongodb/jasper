@@ -6,6 +6,6 @@ type freebsdProcessTracker struct {
 	processTrackerBase
 }
 
-func newProcessTracker(name string) (processTracker, error) {
-	return &freebsdProcessTracker{}, nil
+func NewProcessTracker(name string) (ProcessTracker, error) {
+	return &freebsdProcessTracker{processTrackerBase: processTrackerBase{Name: name}}, nil
 }
