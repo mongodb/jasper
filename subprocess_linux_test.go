@@ -72,9 +72,21 @@ func TestGetEnvironmentVariables(t *testing.T) {
 			proc, err := makeProc(ctx, &opts)
 			require.NoError(t, err)
 			pid := proc.Info(ctx).PID
-			env, err := getEnvironmentVariables(pid)
-			require.NoError(t, err)
-			assert.Equal(t, value, env[envVar])
+
+			// Wait for the process to set up the environment variable and check that it is correct.
+			for {
+				select {
+				case <-ctx.Done():
+					assert.Fail(t, "context timed out before environment variables were set for process")
+				default:
+					if env, err := getEnvironmentVariables(pid); err == nil {
+						if actualValue, ok := env[envVar]; ok {
+							assert.Equal(t, value, actualValue)
+							break
+						}
+					}
+				}
+			}
 		})
 	}
 }
