@@ -324,6 +324,9 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 					assert.Equal(t, value, manager.id, "process should have manager environment variable set")
 				},
 				"CreateCommandAddsEnvironmentVariables": func(ctx context.Context, t *testing.T, manager *basicProcessManager) {
+					envVar := ManagerEnvironID
+					value := manager.id
+
 					cmdArgs := []string{"yes"}
 					cmd := manager.CreateCommand(ctx).AddEnv(ManagerEnvironID, manager.id).Add(cmdArgs).Background(true)
 					require.NoError(t, cmd.Run(ctx))
