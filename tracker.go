@@ -17,7 +17,7 @@ type ProcessTracker interface {
 }
 
 // processTrackerBase provides convenience no-op implementations of the
-// processTracker interface.
+// ProcessTracker interface.
 type processTrackerBase struct {
 	Name string
 }

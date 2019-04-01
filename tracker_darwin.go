@@ -6,6 +6,6 @@ type darwinProcessTracker struct {
 	processTrackerBase
 }
 
-func NewProcessTracker(name string) (processTracker, error) {
+func NewProcessTracker(name string) (ProcessTracker, error) {
 	return &darwinProcessTracker{processTrackerBase{Name: name}}, nil
 }
