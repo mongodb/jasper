@@ -17,7 +17,7 @@ import (
 // to access RPC-specific functionality.
 type Client interface {
 	jasper.Manager
-	Status(context.Context) (hostID string, active bool, err error)
+	Status(context.Context) (string, bool, error)
 	ConfigureCache(context.Context, jasper.CacheOptions) error
 	DownloadFile(context.Context, jasper.DownloadInfo) error
 	DownloadMongoDB(context.Context, jasper.MongoDBDownloadOptions) error
