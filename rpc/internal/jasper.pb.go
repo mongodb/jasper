@@ -1598,6 +1598,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type JasperProcessManagerClient interface {
+	// Manager functions
 	Create(ctx context.Context, in *CreateOptions, opts ...grpc.CallOption) (*ProcessInfo, error)
 	List(ctx context.Context, in *Filter, opts ...grpc.CallOption) (JasperProcessManager_ListClient, error)
 	Group(ctx context.Context, in *TagName, opts ...grpc.CallOption) (JasperProcessManager_GroupClient, error)
@@ -1605,12 +1606,14 @@ type JasperProcessManagerClient interface {
 	Signal(ctx context.Context, in *SignalProcess, opts ...grpc.CallOption) (*OperationOutcome, error)
 	Clear(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*OperationOutcome, error)
 	Close(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*OperationOutcome, error)
+	// Process functions
 	TagProcess(ctx context.Context, in *ProcessTags, opts ...grpc.CallOption) (*OperationOutcome, error)
 	ResetTags(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*OperationOutcome, error)
 	GetTags(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessTags, error)
 	RegisterSignalTriggerID(ctx context.Context, in *SignalTriggerParams, opts ...grpc.CallOption) (*OperationOutcome, error)
 	Wait(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*OperationOutcome, error)
 	Respawn(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessInfo, error)
+	// RPC-specific functions
 	Status(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*StatusResponse, error)
 	ConfigureCache(ctx context.Context, in *CacheOptions, opts ...grpc.CallOption) (*OperationOutcome, error)
 	DownloadFile(ctx context.Context, in *DownloadInfo, opts ...grpc.CallOption) (*OperationOutcome, error)
@@ -1846,6 +1849,7 @@ func (c *jasperProcessManagerClient) SignalEvent(ctx context.Context, in *EventN
 
 // JasperProcessManagerServer is the server API for JasperProcessManager service.
 type JasperProcessManagerServer interface {
+	// Manager functions
 	Create(context.Context, *CreateOptions) (*ProcessInfo, error)
 	List(*Filter, JasperProcessManager_ListServer) error
 	Group(*TagName, JasperProcessManager_GroupServer) error
@@ -1853,12 +1857,14 @@ type JasperProcessManagerServer interface {
 	Signal(context.Context, *SignalProcess) (*OperationOutcome, error)
 	Clear(context.Context, *empty.Empty) (*OperationOutcome, error)
 	Close(context.Context, *empty.Empty) (*OperationOutcome, error)
+	// Process functions
 	TagProcess(context.Context, *ProcessTags) (*OperationOutcome, error)
 	ResetTags(context.Context, *JasperProcessID) (*OperationOutcome, error)
 	GetTags(context.Context, *JasperProcessID) (*ProcessTags, error)
 	RegisterSignalTriggerID(context.Context, *SignalTriggerParams) (*OperationOutcome, error)
 	Wait(context.Context, *JasperProcessID) (*OperationOutcome, error)
 	Respawn(context.Context, *JasperProcessID) (*ProcessInfo, error)
+	// RPC-specific functions
 	Status(context.Context, *empty.Empty) (*StatusResponse, error)
 	ConfigureCache(context.Context, *CacheOptions) (*OperationOutcome, error)
 	DownloadFile(context.Context, *DownloadInfo) (*OperationOutcome, error)

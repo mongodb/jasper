@@ -12,8 +12,11 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-// Client provides an interface to interact with Jasper Managers over RPC.
+// Client provides an interface access all functionality from the Jasper RPC
+// service. It includes an interface to interact with Jasper Managers over RPC.
+// to access RPC-specific functionality.
 type Client interface {
+	jasper.Manager
 	Status(context.Context) (hostID string, active bool, err error)
 	ConfigureCache(context.Context, jasper.CacheOptions) error
 	DownloadFile(context.Context, jasper.DownloadInfo) error
@@ -28,8 +31,8 @@ type rpcManager struct {
 
 // TODO provide some better way of constructing this object
 
-// NewRPCManager is a constructor for a rpcManager.
-func NewRPCManager(cc *grpc.ClientConn) jasper.Manager {
+// NewClient is a constructor for an RPC client.
+func NewClient(cc *grpc.ClientConn) Client {
 	return &rpcManager{
 		client: internal.NewJasperProcessManagerClient(cc),
 	}
@@ -125,7 +128,7 @@ func (m *rpcManager) Close(ctx context.Context) error {
 	return errors.New(resp.Text)
 }
 
-func (m *rpcManager) Status(ctx context.Context, opts *jasper.CacheOptions) (string, bool, error) {
+func (m *rpcManager) Status(ctx context.Context) (string, bool, error) {
 	resp, err := m.client.Status(ctx, &empty.Empty{})
 	if err != nil {
 		return "", false, errors.WithStack(err)
@@ -188,11 +191,6 @@ func (m *rpcManager) SignalEvent(ctx context.Context, name string) error {
 
 	return errors.New(resp.Text)
 }
-
-// DownloadMongoDB
-// ConfigureCache
-// GetBuildloggerURLs
-// SignalEvent
 
 type rpcProcess struct {
 	client internal.JasperProcessManagerClient

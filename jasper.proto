@@ -204,6 +204,7 @@ message EventName {
 }
 
 service JasperProcessManager {
+  // Manager functions
   rpc Create(CreateOptions) returns (ProcessInfo);
   rpc List(Filter) returns (stream ProcessInfo);
   rpc Group(TagName) returns (stream ProcessInfo);
@@ -212,6 +213,7 @@ service JasperProcessManager {
   rpc Clear(google.protobuf.Empty) returns (OperationOutcome);
   rpc Close(google.protobuf.Empty) returns (OperationOutcome);
 
+  // Process functions
   rpc TagProcess(ProcessTags) returns (OperationOutcome);
   rpc ResetTags(JasperProcessID) returns (OperationOutcome);
   rpc GetTags(JasperProcessID) returns (ProcessTags);
@@ -219,6 +221,7 @@ service JasperProcessManager {
   rpc Wait(JasperProcessID) returns (OperationOutcome);
   rpc Respawn(JasperProcessID) returns (ProcessInfo);
 
+  // RPC-specific functions
   rpc Status(google.protobuf.Empty) returns (StatusResponse);
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
   rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
