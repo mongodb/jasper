@@ -51,7 +51,7 @@ func TestWindowsRPCService(t *testing.T) {
 					require.NoError(t, err)
 					require.NoError(t, startTestServer(ctx, manager, addr))
 
-					conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
+					conn, err := grpc.DialContext(ctx, addr.String(), grpc.WithInsecure(), grpc.WithBlock())
 					require.NoError(t, err)
 					client := internal.NewJasperProcessManagerClient(conn)
 
