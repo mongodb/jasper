@@ -29,7 +29,7 @@ func TestRPCManager(t *testing.T) {
 
 	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.Manager{
 		"Basic": func(ctx context.Context, t *testing.T) jasper.Manager {
-			mngr, err := jasper.NewLocalManagerBlockingProcesses(false)
+			mngr, err := jasper.NewLocalManager(false)
 			require.NoError(t, err)
 
 			addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", getPortNumber()))
