@@ -225,6 +225,7 @@ func getEnvironmentVariables(pid int) (map[string]string, error) {
 	return env, nil
 }
 
+// cleanupProcess kills the given process.
 func cleanupProcess(proc *os.Process) error {
 	catcher := grip.NewBasicCatcher()
 	if err := proc.Signal(syscall.SIGTERM); err != nil {

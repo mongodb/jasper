@@ -22,11 +22,11 @@ type processTrackerBase struct {
 	Name string
 }
 
-func (processTrackerBase) Add(_ int) error { return nil }
+func (*processTrackerBase) Add(_ int) error { return nil }
 
-func (processTrackerBase) SetLimits(_ interface{}) error { return nil }
+func (*processTrackerBase) SetLimits(_ interface{}) error { return nil }
 
-func (processTrackerBase) Cleanup() error { return nil }
+func (*processTrackerBase) Cleanup() error { return nil }
 
 type mockProcessTracker struct {
 	FailAdd          bool
@@ -43,7 +43,7 @@ func newMockProcessTracker() ProcessTracker {
 
 func (t *mockProcessTracker) Add(pid int) error {
 	if t.FailAdd {
-		return errors.New("fail in add")
+		return errors.New("failed in Add")
 	}
 	t.PIDs = append(t.PIDs, pid)
 	return nil
@@ -51,14 +51,14 @@ func (t *mockProcessTracker) Add(pid int) error {
 
 func (t *mockProcessTracker) SetLimits(_ interface{}) error {
 	if t.FailUpdateLimits {
-		return errors.New("failed in setLimits")
+		return errors.New("failed in SetLimits")
 	}
 	return nil
 }
 
 func (t *mockProcessTracker) Cleanup() error {
 	if t.FailCleanup {
-		return errors.New("failed in cleanup")
+		return errors.New("failed in Cleanup")
 	}
 	t.PIDs = []int{}
 	return nil
