@@ -72,7 +72,7 @@ func (t *linuxProcessTracker) Add(info ProcessInfo) error {
 		return nil
 	}
 
-	infos = append(infos, info)
+	t.infos = append(t.infos, info)
 
 	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: info.PID}
 	if err := t.cgroup.Add(proc); err != nil {
@@ -142,9 +142,9 @@ func (t *linuxProcessTracker) doCleanupByEnvironmentVariable() error {
 func cleanupProcess(pid int) error {
 	catcher := grip.NewBasicCatcher()
 	// A process returns syscall.ESRCH if it already terminated.
-	if err := syscall.Kill(info.PID, syscall.SIGTERM); err != syscall.ESRCH {
+	if err := syscall.Kill(pid, syscall.SIGTERM); err != syscall.ESRCH {
 		catcher.Add(errors.Wrapf(err, "failed to send sigterm to process with pid '%d'", pid))
-		catcher.Add(errors.Wrapf(syscall.Kill(info.PID, syscall.SIGKILL), "failed to send sigkill to process with pid '%d'", pid))
+		catcher.Add(errors.Wrapf(syscall.Kill(pid, syscall.SIGKILL), "failed to send sigkill to process with pid '%d'", pid))
 	}
 	return catcher.Resolve()
 }

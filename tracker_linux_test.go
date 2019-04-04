@@ -260,10 +260,9 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 					opts := yesCreateOpts(managerTestTimeout)
 					proc, err := manager.CreateProcess(ctx, &opts)
 					require.NoError(t, err)
-					pid := proc.Info(ctx).PID
 
-					env, err := getEnvironmentVariables(pid)
-					require.NoError(t, err)
+					env := proc.Info(ctx).Options.Environment
+					require.NotNil(t, env)
 					value, ok := env[ManagerEnvironID]
 					require.True(t, ok)
 					assert.Equal(t, value, manager.id, "process should have manager environment variable set")
@@ -280,22 +279,11 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 					require.Len(t, ids, 1)
 					proc, err := manager.Get(ctx, ids[0])
 					require.NoError(t, err)
-					pid := proc.Info(ctx).PID
-
-					for {
-						select {
-						case <-ctx.Done():
-							assert.Fail(t, "context timed out before environment variables were set for process")
-							return
-						default:
-							if env, err := getEnvironmentVariables(pid); err == nil {
-								if actualValue, ok := env[envVar]; ok {
-									assert.Equal(t, value, actualValue)
-									return
-								}
-							}
-						}
-					}
+					env := proc.Info(ctx).Options.Environment
+					require.NotNil(t, env)
+					actualValue, ok := env[envVar]
+					require.True(t, ok)
+					assert.Equal(value, actualValue)
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
