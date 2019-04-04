@@ -81,10 +81,10 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					require.NoError(t, err)
 					assert.Len(t, pids, 0)
 				},
-				"ListCgroupPIDsErrorsIfCgroupDeleted": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
+				"ListCgroupPIDsDoesNotErrorIfCgroupDeleted": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
 					assert.NoError(t, tracker.cgroup.Delete())
 					pids, err := tracker.listCgroupPIDs()
-					assert.Error(t, err)
+					assert.NoError(t, err)
 					assert.Len(t, pids, 0)
 				},
 				"CleanupNoProcsSucceeds": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
@@ -171,6 +171,9 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 					assert.NoError(t, tracker.Add(proc.Info(ctx)))
+					// Cgroup might be re-initialized in Add(), so invalidate
+					// it.
+					tracker.cgroup = nil
 					assert.NoError(t, tracker.Cleanup())
 
 					procTerminated := make(chan struct{})
@@ -185,13 +188,6 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 						assert.Fail(t, "context timed out before process was complete")
 					}
 				},
-				"CleanupDoesNotFindProcessesWithoutAdd": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
-					opts.AddEnvVar(envVarName, envVarValue)
-					proc, err := makeProc(ctx, opts)
-					require.NoError(t, err)
-					assert.NoError(t, tracker.Cleanup())
-					assert.True(t, proc.Running(ctx))
-				},
 				"CleanupIgnoresAddedProcessesWithoutEnvironmentVariable": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
@@ -199,6 +195,9 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 					require.False(t, ok)
 
 					assert.NoError(t, tracker.Add(proc.Info(ctx)))
+					// Cgroup might be re-initialized in Add(), so invalidate
+					// it.
+					tracker.cgroup = nil
 					assert.NoError(t, tracker.Cleanup())
 					assert.True(t, proc.Running(ctx))
 				},
