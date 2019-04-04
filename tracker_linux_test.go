@@ -94,8 +94,7 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					assert.NoError(t, tracker.Cleanup())
 				},
 				"CleanupTerminatesProcessInCgroup": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					pid := proc.Info(ctx).PID
-					assert.NoError(t, tracker.Add(pid))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 					assert.NoError(t, tracker.Cleanup())
 
 					procTerminated := make(chan struct{})
@@ -111,12 +110,12 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					}
 				},
 				"CleanupAfterDoubleAddDoesNotError": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					assert.NoError(t, tracker.Add(process.Info(ctx)))
-					assert.NoError(t, tracker.Add(process.Info(ctx)))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 					assert.NoError(t, tracker.Cleanup())
 				},
 				"DoubleCleanupDoesNotError": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					assert.NoError(t, tracker.Add(process.Info(ctx)))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 					assert.NoError(t, tracker.Cleanup())
 					assert.NoError(t, tracker.Cleanup())
 				},
@@ -283,7 +282,7 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 					require.NotNil(t, env)
 					actualValue, ok := env[envVar]
 					require.True(t, ok)
-					assert.Equal(value, actualValue)
+					assert.Equal(t, value, actualValue)
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
