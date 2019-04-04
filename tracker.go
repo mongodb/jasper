@@ -26,10 +26,9 @@ func (*processTrackerBase) Add(ProcessInfo) error {
 func (*processTrackerBase) Cleanup() error { return nil }
 
 type mockProcessTracker struct {
-	FailAdd          bool
-	FailUpdateLimits bool
-	FailCleanup      bool
-	Infos            []ProcessInfo
+	FailAdd     bool
+	FailCleanup bool
+	Infos       []ProcessInfo
 }
 
 func newMockProcessTracker() ProcessTracker {

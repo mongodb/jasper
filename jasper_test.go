@@ -164,7 +164,6 @@ type MockManager struct {
 	FailGet      bool
 	FailClear    bool
 	FailClose    bool
-	FailLimit    bool
 	Process      *MockProcess
 	Array        []Process
 }
@@ -201,14 +200,6 @@ func (m *MockManager) Group(_ context.Context, name string) ([]Process, error) {
 	}
 
 	return m.Array, nil
-}
-
-func (m *MockManager) Limit(_ context.Context, _ interface{}) error {
-	if m.FailLimit {
-		return errors.New("always fail")
-	}
-
-	return nil
 }
 
 func (m *MockManager) Get(_ context.Context, name string) (Process, error) {
