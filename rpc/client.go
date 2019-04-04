@@ -191,7 +191,7 @@ func (p *rpcProcess) Wait(ctx context.Context) (int, error) {
 
 	if resp.Success {
 		if resp.ExitCode != 0 {
-			return int(resp.ExitCode), errors.New("operation failed")
+			return int(resp.ExitCode), errors.Wrap(resp.Text, "operation failed")
 		}
 		return int(resp.ExitCode), nil
 	}
