@@ -66,13 +66,13 @@ func (t *linuxProcessTracker) setDefaultCgroupIfInvalid() error {
 }
 
 // Add adds this PID to the cgroup if cgroups is available. It also keeps track
-// of this process' Jasper ID.
+// of this process' ProcessInfo.
 func (t *linuxProcessTracker) Add(info ProcessInfo) error {
+	t.infos = append(t.infos, info)
+
 	if err := t.setDefaultCgroupIfInvalid(); err != nil {
 		return nil
 	}
-
-	t.infos = append(t.infos, info)
 
 	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: info.PID}
 	if err := t.cgroup.Add(proc); err != nil {
@@ -152,8 +152,8 @@ func cleanupProcess(pid int) error {
 // Cleanup kills all tracked processes. If cgroups is available, it kills all
 // processes in the cgroup. Otherwise, it kills processes based on the expected
 // environment variable that should be set in all managed processes. This means
-// that there should be an environment variable named ManagerEnvironID that has
-// a value equal to this process tracker's name.
+// that there should be an environment variable ManagerEnvironID that has a
+// value equal to this process tracker's name.
 func (t *linuxProcessTracker) Cleanup() error {
 	catcher := grip.NewBasicCatcher()
 	if t.validCgroup() {
