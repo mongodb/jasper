@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"syscall"
 	"testing"
 	"time"
@@ -29,12 +28,6 @@ func makeTracker() (*windowsProcessTracker, error) {
 	return windowsTracker, nil
 }
 
-func makeAndStartYesCommand(ctx context.Context) (*exec.Cmd, error) {
-	cmd := exec.CommandContext(ctx, "yes", "yes")
-	err := cmd.Start()
-	return cmd, err
-}
-
 func TestWindowsProcessTracker(t *testing.T) {
 	for testName, testCase := range map[string]func(context.Context, *testing.T, *windowsProcessTracker){
 		"NewWindowsProcessTrackerCreatesJob": func(_ context.Context, t *testing.T, tracker *windowsProcessTracker) {
@@ -44,16 +37,16 @@ func TestWindowsProcessTracker(t *testing.T) {
 
 			assert.NoError(t, tracker.job.Close())
 		},
-		"AddProcessToTrackerAssignsPid": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
+		"AddProcessToTrackerAssignsPID": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
 			cmd1, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
 			pid1 := cmd1.Process.Pid
-			assert.NoError(t, tracker.Add(pid1))
+			assert.NoError(t, tracker.Add(ProcessInfo{PID: pid1}))
 
 			cmd2, err := makeAndStartYesCommand(ctx)
 			require.NoError(t, err)
 			pid2 := cmd2.Process.Pid
-			assert.NoError(t, tracker.Add(pid2))
+			assert.NoError(t, tracker.Add(ProcessInfo{PID: pid2}))
 
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
@@ -68,7 +61,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 			require.NoError(t, err)
 			pid := cmd.Process.Pid
 
-			assert.NoError(t, tracker.Add(pid))
+			assert.NoError(t, tracker.Add(ProcessInfo{PID: pid}))
 
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
@@ -89,6 +82,35 @@ func TestWindowsProcessTracker(t *testing.T) {
 			waitStatus := cmd.ProcessState.Sys().(syscall.WaitStatus)
 			assert.True(t, waitStatus.Exited())
 		},
+		"CleanupWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
+			assert.NoError(t, tracker.Cleanup())
+		},
+		"DoubleCleanupDoesNotError": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
+			cmd, err := makeAndStartYesCommand(ctx)
+			require.NoError(t, err)
+			pid := cmd.Process.Pid
+
+			assert.NoError(t, tracker.Add(ProcessInfo{PID: pid}))
+			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			assert.NoError(t, err)
+			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
+
+			assert.NoError(t, tracker.Cleanup())
+			assert.NoError(t, tracker.Cleanup())
+		},
+		"CanAddProcessAfterCleanup": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {
+			assert.NoError(t, tracker.Cleanup())
+			cmd, err := makeAndStartYesCommand(ctx)
+			require.NoError(t, err)
+			pid := cmd.Process.Pid
+
+			assert.NoError(t, tracker.Add(ProcessInfo{PID: pid}))
+			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			assert.NoError(t, err)
+			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
+			assert.NoError(t, tracker.Cleanup())
+		},
+		// "": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
 			if _, runningInEvgAgent := os.LookupEnv("EVR_TASK_ID"); runningInEvgAgent {
@@ -99,6 +121,9 @@ func TestWindowsProcessTracker(t *testing.T) {
 			defer cancel()
 
 			tracker, err := makeTracker()
+			defer func() {
+				assert.NoError(t, tracker.Cleanup())
+			}()
 			require.NoError(t, err)
 			require.NotNil(t, tracker)
 

@@ -3,9 +3,9 @@ package jasper
 // TODO
 
 type darwinProcessTracker struct {
-	processTrackerBase
+	*processTrackerBase
 }
 
 func NewProcessTracker(name string) (ProcessTracker, error) {
-	return &darwinProcessTracker{processTrackerBase{Name: name}}, nil
+	return &darwinProcessTracker{processTrackerBase: &processTrackerBase{Name: name}}, nil
 }

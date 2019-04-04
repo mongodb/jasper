@@ -1,8 +1,7 @@
 package jasper
 
 import (
-	"encoding/json"
-	"os"
+	"syscall"
 
 	"github.com/containerd/cgroups"
 	"github.com/mongodb/grip"
@@ -19,20 +18,24 @@ const (
 	defaultSubsystem = cgroups.Freezer
 )
 
-// linuxProcessTracker uses cgroups to track processes.
+// linuxProcessTracker uses cgroups to track processes. If cgroups is not
+// available, it kills processes by checking the process' environment variables
+// for the marker ManagerEnvironID.
 type linuxProcessTracker struct {
-	processTrackerBase
-	cgroup     cgroups.Cgroup
-	cgroupName string
+	*processTrackerBase
+	cgroup cgroups.Cgroup
+	infos  []ProcessInfo
 }
 
 // NewProcessTracker creates a cgroup for all tracked processes if supported.
-// Cgroups functionality requires admin privileges. If cgroups are not
-// supported, all ProcessTracker functions are no-ops except for Cleanup, which
-// terminates processes that have the environment variable EnvironID set to a
-// value that matches the process tracker's name.
+// Cgroups functionality requires admin privileges. It also tracks the
+// ProcessInfo for all added processes so that it can find processes to
+// terminate in Cleanup() based on their environment variables.
 func NewProcessTracker(name string) (ProcessTracker, error) {
-	tracker := &linuxProcessTracker{processTrackerBase: processTrackerBase{Name: name}}
+	tracker := &linuxProcessTracker{
+		processTrackerBase: &processTrackerBase{Name: name},
+		infos:              []ProcessInfo{},
+	}
 	if err := tracker.setDefaultCgroupIfInvalid(); err != nil {
 		grip.Debug(message.WrapErrorf(err, "could not initialize process tracker named '%s' with cgroup", name))
 	}
@@ -53,7 +56,7 @@ func (t *linuxProcessTracker) setDefaultCgroupIfInvalid() error {
 		return nil
 	}
 
-	cgroup, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/"+t.cgroupName), &specs.LinuxResources{})
+	cgroup, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/"+t.Name), &specs.LinuxResources{})
 	if err != nil {
 		return errors.Wrap(err, "could not create default cgroup")
 	}
@@ -62,50 +65,20 @@ func (t *linuxProcessTracker) setDefaultCgroupIfInvalid() error {
 	return nil
 }
 
-// Add adds this PID to the cgroup if cgroups is available. Otherwise, it no-ops.
-func (t *linuxProcessTracker) Add(pid int) error {
+// Add adds this PID to the cgroup if cgroups is available. It also keeps track
+// of this process' Jasper ID.
+func (t *linuxProcessTracker) Add(info ProcessInfo) error {
 	if err := t.setDefaultCgroupIfInvalid(); err != nil {
 		return nil
 	}
 
-	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: pid}
+	infos = append(infos, info)
+
+	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: info.PID}
 	if err := t.cgroup.Add(proc); err != nil {
 		return errors.Wrap(err, "failed to add process with pid '%d' to cgroup")
 	}
 	return nil
-}
-
-// SetLimits requires a pointer to a LinuxResources struct. The new
-// limits cannot be less than the current resource usage of the tracked
-// processes. This may return EBUSY if processes are running when this is
-// called. If cgroups is not available, it no-ops.
-func (t *linuxProcessTracker) SetLimits(limits interface{}) error {
-	if !t.validCgroup() {
-		return nil
-	}
-
-	linuxResourceLimits, ok := limits.(*LinuxResources)
-	if !ok {
-		return errors.New("process tracker requires (*LinuxResources) in order to update resource limits")
-	}
-	return t.doCgroupUpdateLimits(linuxResourceLimits)
-}
-
-func (t *linuxProcessTracker) doCgroupUpdateLimits(resourceLimits *LinuxResources) error {
-	bytes, err := json.Marshal(resourceLimits)
-	if err != nil {
-		return errors.Wrap(err, "error marshalling resource limits")
-	}
-	specsResourceLimits := &specs.LinuxResources{}
-	if err = json.Unmarshal(bytes, specsResourceLimits); err != nil {
-		return errors.Wrap(err, "error unmarshalling resource limits")
-	}
-
-	if err := t.setDefaultCgroupIfInvalid(); err != nil {
-		return errors.Wrapf(err, "failed to initialize cgroup while updating limits")
-	}
-
-	return t.cgroup.Update(specsResourceLimits)
 }
 
 // listCgroupPIDs lists all PIDs in the cgroup. If no cgroup is available, this
@@ -127,40 +100,6 @@ func (t *linuxProcessTracker) listCgroupPIDs() ([]int, error) {
 	return pids, nil
 }
 
-// doCleanupByEnvironmentVariable terminates running processes whose
-// value for environment variable ManagerEnvironID equals this process
-// tracker's name (except for the current process).
-func (t *linuxProcessTracker) doCleanupByEnvironmentVariable() error {
-	myPid := os.Getpid()
-	pids, err := getActivePIDs()
-	if err != nil {
-		return errors.Wrap(err, "could not get active PIDs")
-	}
-
-	catcher := grip.NewBasicCatcher()
-	for _, pid := range pids {
-		if pid == myPid {
-			continue
-		}
-
-		env, err := getEnvironmentVariables(pid)
-		if err != nil {
-			continue
-		}
-
-		if env[ManagerEnvironID] == t.Name {
-			osProc, err := os.FindProcess(pid)
-			if err != nil {
-				catcher.Add(errors.Wrap(err, "failed to tracked process"))
-				continue
-			}
-			catcher.Add(errors.Wrapf(cleanupProcess(osProc), "error while cleaning up process with pid '%d'", pid))
-		}
-	}
-
-	return catcher.Resolve()
-}
-
 // doCleanupByCgroup terminates running processes in this process tracker's
 // cgroup.
 func (t *linuxProcessTracker) doCleanupByCgroup() error {
@@ -175,17 +114,38 @@ func (t *linuxProcessTracker) doCleanupByCgroup() error {
 
 	catcher := grip.NewBasicCatcher()
 	for _, pid := range pids {
-		osProc, err := os.FindProcess(pid)
-		if err != nil {
-			catcher.Add(errors.Wrap(err, "failed to find tracked process"))
-			continue
-		}
-		catcher.Add(errors.Wrapf(cleanupProcess(osProc), "error while cleaning up process with pid '%d'", pid))
+		catcher.Add(errors.Wrapf(cleanupProcess(pid), "error while cleaning up process with pid '%d'", pid))
 	}
 
 	// Delete the cgroup. If the process tracker is still used, the cgroup must
 	// be re-initialized.
 	catcher.Add(t.cgroup.Delete())
+	return catcher.Resolve()
+}
+
+// doCleanupByEnvironmentVariable terminates running processes whose
+// value for environment variable ManagerEnvironID equals this process
+// tracker's name.
+func (t *linuxProcessTracker) doCleanupByEnvironmentVariable() error {
+	catcher := grip.NewBasicCatcher()
+	for _, info := range t.infos {
+		if value, ok := info.Options.Environment[ManagerEnvironID]; ok && value == t.Name {
+			catcher.Add(cleanupProcess(info.PID))
+		}
+	}
+	t.infos = []ProcessInfo{}
+	return catcher.Resolve()
+}
+
+// cleanupProcess terminates the process given by its PID. If the process has
+// already terminated, this will not return an error.
+func cleanupProcess(pid int) error {
+	catcher := grip.NewBasicCatcher()
+	// A process returns syscall.ESRCH if it already terminated.
+	if err := syscall.Kill(info.PID, syscall.SIGTERM); err != syscall.ESRCH {
+		catcher.Add(errors.Wrapf(err, "failed to send sigterm to process with pid '%d'", pid))
+		catcher.Add(errors.Wrapf(syscall.Kill(info.PID, syscall.SIGKILL), "failed to send sigkill to process with pid '%d'", pid))
+	}
 	return catcher.Resolve()
 }
 

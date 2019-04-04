@@ -5,7 +5,6 @@ package jasper
 import (
 	"context"
 	"os"
-	"runtime"
 	"syscall"
 	"testing"
 
@@ -24,12 +23,12 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 		t.Run(procName, func(t *testing.T) {
 
 			for name, testCase := range map[string]func(context.Context, *testing.T, *linuxProcessTracker, Process){
-				"ValidateInitialSetup": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
+				"VerifyInitialSetup": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
 					require.NotNil(t, tracker.cgroup)
 					require.True(t, tracker.validCgroup())
 					pids, err := tracker.listCgroupPIDs()
 					require.NoError(t, err)
-					require.Len(t, pids, 0)
+					assert.Len(t, pids, 0)
 				},
 				"NilCgroupIsInvalid": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
 					tracker.cgroup = nil
@@ -51,44 +50,38 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					assert.NotNil(t, tracker.cgroup)
 				},
 				"AddNewProcessSucceeds": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					pid := proc.Info(ctx).PID
-					assert.NoError(t, tracker.Add(pid))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 
 					pids, err := tracker.listCgroupPIDs()
 					require.NoError(t, err)
-					require.Len(t, pids, 1)
-					assert.Equal(t, pid, pids[0])
+					assert.Len(t, pids, 1)
+					assert.Contains(t, pids, proc.Info(ctx).PID)
 				},
-				"DoubleAddProcessSucceedsButDoesNotDuplicateProcess": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
+				"DoubleAddProcessSucceedsButDoesNotDuplicateProcessInCgroup": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
 					pid := proc.Info(ctx).PID
-					assert.NoError(t, tracker.Add(pid))
-					assert.NoError(t, tracker.Add(pid))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 
 					pids, err := tracker.listCgroupPIDs()
 					require.NoError(t, err)
-					require.Len(t, pids, 1)
-					assert.Equal(t, pid, pids[0])
+					assert.Len(t, pids, 1)
+					assert.Contains(t, pids, pid)
 				},
-				"ListPIDsDoesNotSeeTerminatedProcesses": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					pid := proc.Info(ctx).PID
-					require.NoError(t, tracker.Add(pid))
+				"ListCgroupPIDsDoesNotSeeTerminatedProcesses": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
+					require.NoError(t, tracker.Add(proc.Info(ctx)))
 
 					assert.NoError(t, proc.RegisterSignalTriggerID(ctx, CleanTerminationSignalTrigger))
 					err := proc.Signal(ctx, syscall.SIGTERM)
 					assert.NoError(t, err)
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
-					if runtime.GOOS == "windows" {
-						assert.Zero(t, exitCode)
-					} else {
-						assert.Equal(t, exitCode, int(syscall.SIGTERM))
-					}
+					assert.Equal(t, exitCode, int(syscall.SIGTERM))
 
 					pids, err := tracker.listCgroupPIDs()
 					require.NoError(t, err)
 					assert.Len(t, pids, 0)
 				},
-				"ListPIDsErrorsIfCgroupDeleted": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
+				"ListCgroupPIDsErrorsIfCgroupDeleted": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
 					assert.NoError(t, tracker.cgroup.Delete())
 					pids, err := tracker.listCgroupPIDs()
 					assert.Error(t, err)
@@ -117,67 +110,29 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 						assert.Fail(t, "context timed out before process was complete")
 					}
 				},
+				"CleanupAfterDoubleAddDoesNotError": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
+					assert.NoError(t, tracker.Add(process.Info(ctx)))
+					assert.NoError(t, tracker.Add(process.Info(ctx)))
+					assert.NoError(t, tracker.Cleanup())
+				},
 				"DoubleCleanupDoesNotError": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					pid := proc.Info(ctx).PID
-					assert.NoError(t, tracker.Add(pid))
+					assert.NoError(t, tracker.Add(process.Info(ctx)))
 					assert.NoError(t, tracker.Cleanup())
 					assert.NoError(t, tracker.Cleanup())
 				},
 				"AddProcessAfterCleanupSucceeds": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					pid := proc.Info(ctx).PID
-					require.NoError(t, tracker.Add(pid))
+					require.NoError(t, tracker.Add(proc.Info(ctx)))
 					require.NoError(t, tracker.Cleanup())
 
 					opts := yesCreateOpts(0)
 					newProc, err := makeProc(ctx, &opts)
 					require.NoError(t, err)
-					newPID := newProc.Info(ctx).PID
 
-					require.NoError(t, tracker.Add(newPID))
+					require.NoError(t, tracker.Add(newProc.Info(ctx)))
 					pids, err := tracker.listCgroupPIDs()
 					require.NoError(t, err)
 					assert.Len(t, pids, 1)
-				},
-				"UpdateLimitChecksForLinuxResources": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					assert.Error(t, tracker.SetLimits("foobar"))
-					assert.NoError(t, tracker.SetLimits(&LinuxResources{}))
-				},
-				"UpdateLimitKillsProcessWithZeroMemoryLimit": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, proc Process) {
-					pid := proc.Info(ctx).PID
-
-					zero := int64(0)
-					require.NoError(t, tracker.SetLimits(&LinuxResources{
-						Memory: &LinuxMemory{Limit: &zero},
-					}))
-
-					require.NoError(t, tracker.Add(pid))
-
-					procTerminated := make(chan struct{})
-					go func() {
-						defer close(procTerminated)
-						_, _ = proc.Wait(ctx)
-					}()
-
-					select {
-					case <-procTerminated:
-					case <-ctx.Done():
-						require.Fail(t, "context timed out before process was killed")
-					}
-
-					oomTracker := NewOOMTracker()
-					assert.NoError(t, oomTracker.Check(ctx))
-					oomKilled, pids := oomTracker.Report()
-					assert.True(t, oomKilled)
-					assert.NotZero(t, len(pids))
-
-					oomKilledProc := false
-					for _, oomKilledPID := range pids {
-						if oomKilledPID == pid {
-							oomKilledProc = true
-							break
-						}
-					}
-					assert.True(t, oomKilledProc)
+					assert.Contains(t, pids, newProc.Info(ctx).PID)
 				},
 			} {
 				t.Run(name, func(t *testing.T) {
@@ -216,8 +171,7 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 					opts.AddEnvVar(envVarName, envVarValue)
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
-					pid := proc.Info(ctx).PID
-					assert.NoError(t, tracker.Add(pid))
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 					assert.NoError(t, tracker.Cleanup())
 
 					procTerminated := make(chan struct{})
@@ -232,29 +186,20 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 						assert.Fail(t, "context timed out before process was complete")
 					}
 				},
-				"CleanupFindsProcessesWithoutAdd": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
+				"CleanupDoesNotFindProcessesWithoutAdd": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
 					opts.AddEnvVar(envVarName, envVarValue)
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 					assert.NoError(t, tracker.Cleanup())
-
-					procTerminated := make(chan struct{})
-					go func() {
-						defer close(procTerminated)
-						_, _ = proc.Wait(ctx)
-					}()
-
-					select {
-					case <-procTerminated:
-					case <-ctx.Done():
-						assert.Fail(t, "context timed out before process was complete")
-					}
+					assert.True(t, proc.Running(ctx))
 				},
 				"CleanupIgnoresAddedProcessesWithoutEnvironmentVariable": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
-					pid := proc.Info(ctx).PID
-					assert.NoError(t, tracker.Add(pid))
+					_, ok := proc.Info(ctx).Options.Environment[envVarName]
+					require.False(t, ok)
+
+					assert.NoError(t, tracker.Add(proc.Info(ctx)))
 					assert.NoError(t, tracker.Cleanup())
 					assert.True(t, proc.Running(ctx))
 				},
@@ -277,7 +222,7 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 						// Ensure that the cgroup is cleaned up.
 						assert.NoError(t, tracker.Cleanup())
 					}()
-					// Ignore cgroup behavior.
+					// Override default cgroup behavior.
 					linuxTracker.cgroup = nil
 
 					testCase(ctx, t, linuxTracker, &opts, ManagerEnvironID, envVarValue)
