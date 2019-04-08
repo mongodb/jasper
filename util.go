@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
@@ -30,19 +31,24 @@ func makeEnclosingDirectories(path string) error {
 	return nil
 }
 
-func writeFile(reader io.Reader, path string) error {
+func writeFile(reader io.Reader, path string) (err error) {
 	if err := makeEnclosingDirectories(filepath.Dir(path)); err != nil {
 		return errors.Wrap(err, "problem making enclosing directories")
 	}
 
 	file, err := os.Create(path)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "problem creating file")
 	}
 
-	if _, err := io.Copy(file, reader); err != nil {
-		return err
-	}
+	catcher := grip.NewBasicCatcher()
+	defer func() {
+		catcher.Add(errors.Wrap(file.Close(), "problem closing file"))
+		err = catcher.Resolve()
+	}()
 
-	return nil
+	_, err = io.Copy(file, reader)
+	catcher.Add(errors.Wrap(err, "problem writing file"))
+
+	return catcher.Resolve()
 }
