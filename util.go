@@ -31,7 +31,7 @@ func makeEnclosingDirectories(path string) error {
 	return nil
 }
 
-func writeFile(reader io.Reader, path string) (err error) {
+func writeFile(reader io.Reader, path string) error {
 	if err := makeEnclosingDirectories(filepath.Dir(path)); err != nil {
 		return errors.Wrap(err, "problem making enclosing directories")
 	}
