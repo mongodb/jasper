@@ -40,12 +40,13 @@ func writeFile(reader io.Reader, path string) error {
 	if err != nil {
 		return errors.Wrap(err, "problem creating file")
 	}
+
+	catcher := grip.NewBasicCatcher()
 	if _, err := io.Copy(file, reader); err != nil {
-		catcher := grip.NewBasicCatcher()
 		catcher.Add(errors.Wrap(err, "problem writing file"))
-		catcher.Add(errors.Wrap(file.Close(), "problem closing file"))
-		return catcher.Resolve()
 	}
 
-	return errors.Wrap(file.Close(), "problem closing file")
+	catcher.Add(errors.Wrap(file.Close(), "problem closing file"))
+
+	return catcher.Resolve()
 }
