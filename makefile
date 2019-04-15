@@ -79,4 +79,3 @@ vendor-clean:
 	rm -rf vendor/github.com/mholt/archiver/tarxz.go
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor -type d -empty | xargs rm -rf 
-	find vendor -type d -empty | xargs rm -rf 

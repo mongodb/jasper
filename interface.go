@@ -6,9 +6,8 @@ import (
 )
 
 const (
-	// EnvironID is the environment variable that is set on all managed
-	// processes. The value of this environment variable is always the
-	// ID of the process.
+	// EnvironID is the environment variable that is set on all processes. The
+	// value of this environment variable is always the ID of the process.
 	EnvironID = "JASPER_ID"
 
 	// ManagerEnvironID is the environment variable that is set on
