@@ -14,19 +14,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// Client provides an interface to access all functionality from the Jasper RPC
-// service. It includes an interface to interact with Jasper Managers over RPC
-// as well as access to RPC-specific functionality.
-// type Client interface {
-//     jasper.Manager
-//     Status(context.Context) (string, bool, error)
-//     ConfigureCache(context.Context, jasper.CacheOptions) error
-//     DownloadFile(context.Context, jasper.DownloadInfo) error
-//     DownloadMongoDB(context.Context, jasper.MongoDBDownloadOptions) error
-//     GetBuildloggerURLs(ctx context.Context, name string) ([]string, error)
-//     SignalEvent(ctx context.Context, name string) error
-// }
-
 type rpcClient struct {
 	client       internal.JasperProcessManagerClient
 	clientCloser jasper.CloseFunc

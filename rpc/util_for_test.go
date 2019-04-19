@@ -93,7 +93,7 @@ func newTestClient(ctx context.Context, addr net.Addr) (jasper.Manager, error) {
 
 	go func() {
 		<-ctx.Done()
-		client.CloseConn()
+		client.CloseConnection()
 	}()
 
 	return client, nil
