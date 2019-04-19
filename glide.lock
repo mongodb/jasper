@@ -23,6 +23,8 @@ imports:
     version: ba41957778899cce2775284bfdb7155475794657
   - name: github.com/google/shlex
     version: 6f45313302b9c56850fc17f99e40caebce98c716
+  - name: github.com/urfave/cli
+    version: 693af58b4d51b8fcc7f9d89576da170765980581
 
   # cgroup requirements
   - name: github.com/containerd/cgroups
@@ -37,7 +39,6 @@ imports:
     version: f93dedc6ceb4596891d18bae4a2adf9258f0acfb
   - name: github.com/gogo/protobuf
     version: 382325bbbb4d1c850eec1f3ec92a1a16f502d68b
-
 
   # grpc and dependencies
   - name: google.golang.org/grpc

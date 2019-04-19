@@ -2,7 +2,7 @@ buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
 
-_testPackages := ./ ./rpc ./rpc/internal
+_testPackages := ./ ./cli ./rpc ./rpc/internal
 
 testArgs := -v
 ifneq (,$(RUN_TEST))
@@ -44,6 +44,7 @@ $(buildDir)/cover.out:$(buildDir) $(testFiles) .FORCE
 	go test $(testArgs) -coverprofile $@ -cover $(_testPackages)
 $(buildDir)/cover.html:$(buildDir)/cover.out
 	go tool cover -html=$< -o $@
+
 .FORCE:
 
 
@@ -56,6 +57,7 @@ clean:
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/urfave/cli/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/pkg/errors
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/evergreen-ci/gimlet
