@@ -19,9 +19,9 @@ import (
 // Note: these tests are largely copied directly from the top level
 // package into this package to avoid an import cycle.
 
-func TestRPCManager(t *testing.T) {
+func TestRPCClient(t *testing.T) {
 	assert.NotPanics(t, func() {
-		newRPCManager(nil)
+		newRPCClient(nil)
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())

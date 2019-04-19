@@ -110,13 +110,13 @@ type ProcessConstructor func(context.Context, *CreateOptions) (Process, error)
 // returned and passed by value, and reflects the state of the process
 // when it was created.
 type ProcessInfo struct {
-	ID         string
-	Host       string
-	PID        int
-	ExitCode   int
-	IsRunning  bool
-	Successful bool
-	Complete   bool
-	Timeout    bool
-	Options    CreateOptions
+	ID         string        `json:"id"`
+	Host       string        `json:"host"`
+	PID        int           `json:"pid"`
+	ExitCode   int           `json:"exit_code"`
+	IsRunning  bool          `json:"is_running"`
+	Successful bool          `json:"successful"`
+	Complete   bool          `json:"complete"`
+	Timeout    bool          `json:"timeout"`
+	Options    CreateOptions `json:"options"`
 }
