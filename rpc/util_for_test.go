@@ -67,17 +67,17 @@ func createProcs(ctx context.Context, opts *jasper.CreateOptions, manager jasper
 	return out, catcher.Resolve()
 }
 
-// startTestServer creates a server for testing purposes that terminates when
+// startTestService creates a server for testing purposes that terminates when
 // the context is done.
-func startTestServer(ctx context.Context, mngr jasper.Manager, addr net.Addr) error {
-	closeServer, err := StartService(ctx, mngr, addr, "", "")
+func startTestService(ctx context.Context, mngr jasper.Manager, addr net.Addr) error {
+	closeService, err := StartService(ctx, mngr, addr, "", "")
 	if err != nil {
 		return errors.Wrap(err, "could not start server")
 	}
 
 	go func() {
 		<-ctx.Done()
-		closeServer()
+		closeService()
 	}()
 
 	return nil

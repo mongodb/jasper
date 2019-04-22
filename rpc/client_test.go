@@ -35,7 +35,7 @@ func TestRPCClient(t *testing.T) {
 			addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", getPortNumber()))
 			require.NoError(t, err)
 
-			require.NoError(t, startTestServer(ctx, mngr, addr))
+			require.NoError(t, startTestService(ctx, mngr, addr))
 			client, err := newTestClient(ctx, addr)
 			require.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestRPCClient(t *testing.T) {
 			addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", getPortNumber()))
 			require.NoError(t, err)
 
-			require.NoError(t, startTestServer(ctx, mngr, addr))
+			require.NoError(t, startTestService(ctx, mngr, addr))
 			client, err := newTestClient(ctx, addr)
 			require.NoError(t, err)
 
@@ -325,7 +325,7 @@ func TestRPCProcess(t *testing.T) {
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			if err := startTestServer(ctx, mngr, addr); err != nil {
+			if err := startTestService(ctx, mngr, addr); err != nil {
 				return nil, errors.WithStack(err)
 			}
 
@@ -345,7 +345,7 @@ func TestRPCProcess(t *testing.T) {
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			if err := startTestServer(ctx, mngr, addr); err != nil {
+			if err := startTestService(ctx, mngr, addr); err != nil {
 				return nil, errors.WithStack(err)
 			}
 
