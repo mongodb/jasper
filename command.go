@@ -99,7 +99,8 @@ func (c *Command) ProcConstructor(processConstructor ProcessConstructor) *Comman
 func (c *Command) GetProcIDs() []string { return c.procIDs }
 
 // ApplyFromOpts uses the CreateOptions to configure the Command. If Args is
-// set on the CreateOptions, it will be ignored; the Args can be added using Add.
+// set on the CreateOptions, it will be ignored; the Args can be added using
+// Add.
 func (c *Command) ApplyFromOpts(opts *CreateOptions) *Command { c.opts = opts; return c }
 
 // SetOutputOptions sets the output options for a command.
