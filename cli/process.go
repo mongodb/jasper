@@ -15,184 +15,182 @@ func Process() cli.Command {
 		Name:  "process",
 		Flags: []cli.Flag{},
 		Subcommands: []cli.Command{
-			info(),
-			running(),
-			complete(),
-			signal(),
-			wait(),
-			respawn(),
-			registerSignalTriggerID(),
-			tag(),
-			getTags(),
-			resetTags(),
+			processInfo(),
+			processRunning(),
+			processComplete(),
+			processSignal(),
+			processWait(),
+			processRespawn(),
+			processRegisterSignalTriggerID(),
+			processTag(),
+			processGetTags(),
+			processResetTags(),
 		},
 	}
 }
 
-func info() cli.Command {
+func processInfo() cli.Command {
 	return cli.Command{
 		Name: "info",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
-				return InfoResponse{proc.Info(ctx)}
+				return &InfoResponse{Info: proc.Info(ctx), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
 }
 
-func running() cli.Command {
+func processRunning() cli.Command {
 	return cli.Command{
 		Name: "running",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return &RunningResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
-				return RunningResponse{proc.Running(ctx)}
+				return &RunningResponse{Running: proc.Running(ctx), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
 }
 
-func complete() cli.Command {
+func processComplete() cli.Command {
 	return cli.Command{
 		Name: "complete",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, &IDInput{}, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return &CompleteResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
-				return CompleteResponse{proc.Complete(ctx)}
+				return &CompleteResponse{Complete: proc.Complete(ctx), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
 }
 
-func signal() cli.Command {
+func processSignal() cli.Command {
 	return cli.Command{
 		Name: "signal",
 		Action: func(c *cli.Context) error {
 			input := &SignalInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))
 				}
-				return ErrorResponse{proc.Signal(ctx, syscall.Signal(input.Signal))}
+				return makeOutcomeResponse(proc.Signal(ctx, syscall.Signal(input.Signal)))
 			})
 		},
 	}
 }
 
-func wait() cli.Command {
+func processWait() cli.Command {
 	return cli.Command{
 		Name: "wait",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return &WaitResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
 				exitCode, err := proc.Wait(ctx)
-				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error waiting on process with id '%s'", input.ID)}
-				}
-				return WaitResponse{ExitCode: exitCode}
+				return &WaitResponse{ExitCode: exitCode, Error: err.Error(), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
 }
 
-func respawn() cli.Command {
+func processRespawn() cli.Command {
 	return cli.Command{
 		Name: "respawn",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
 				newProc, err := proc.Respawn(ctx)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error respawning process with id '%s'", input.ID)}
+					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error respawning process with id '%s'", input.ID))}
 				}
-				return InfoResponse{newProc.Info(ctx)}
+				return &InfoResponse{Info: newProc.Info(ctx), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
 }
 
-func registerSignalTriggerID() cli.Command {
+func processRegisterSignalTriggerID() cli.Command {
 	return cli.Command{
 		Name: "register-signal-trigger-id",
 		Action: func(c *cli.Context) error {
 			input := &SignalTriggerIDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))
 				}
-				return ErrorResponse{errors.Wrapf(proc.RegisterSignalTriggerID(ctx, input.SignalTriggerID), "couldn't register signal trigger with id '%s' on process with id '%s'", input.SignalTriggerID, input.ID)}
+				return makeOutcomeResponse(errors.Wrapf(proc.RegisterSignalTriggerID(ctx, input.SignalTriggerID), "couldn't register signal trigger with id '%s' on process with id '%s'", input.SignalTriggerID, input.ID))
 			})
 		},
 	}
 }
 
-func tag() cli.Command {
+func processTag() cli.Command {
 	return cli.Command{
 		Name: "tag",
 		Action: func(c *cli.Context) error {
 			input := &TagIDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))
 				}
 				proc.Tag(input.Tag)
-				return ErrorResponse{nil}
+				return makeOutcomeResponse(nil)
 			})
 		},
 	}
 }
 
-func getTags() cli.Command {
+func processGetTags() cli.Command {
 	return cli.Command{
 		Name: "get-tags",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return &TagsResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
-				return TagsResponse{Tags: proc.GetTags()}
+				return &TagsResponse{Tags: proc.GetTags(), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
 }
 
-func resetTags() cli.Command {
+func processResetTags() cli.Command {
 	return cli.Command{
-		Name: "get-tags",
+		Name: "reset-tags",
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
-			return doPassthrough(c, input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+			return doPassthroughInputOutput(c.Parent(), input, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return ErrorResponse{errors.Wrapf(err, "error finding process with id '%s'", input.ID)}
+					return makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))
 				}
-				return TagsResponse{Tags: proc.GetTags()}
+				proc.ResetTags()
+				return makeOutcomeResponse(nil)
 			})
 		},
 	}

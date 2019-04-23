@@ -40,9 +40,10 @@ func remoteClient(ctx context.Context, service, host string, port int, certFileP
 	return nil, errors.Errorf("unrecognized service type '%s'", service)
 }
 
-// doPassthrough passes input from stdin to the input validator, validates the
-// input, runs the request, and writes the response of the request to stdout.
-func doPassthrough(c *cli.Context, input Validator, request func(context.Context, jasper.RemoteClient) interface{}) error {
+// doPassthroughInputOutput passes input from stdin to the input validator,
+// validates the input, runs the request, and writes the response of the request
+// to stdout.
+func doPassthroughInputOutput(c *cli.Context, input Validator, request func(context.Context, jasper.RemoteClient) (response interface{})) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -58,9 +59,9 @@ func doPassthrough(c *cli.Context, input Validator, request func(context.Context
 	})
 }
 
-// doPassthrough runs the request and writes the output of the request to
+// doPassthroughOutput runs the request and writes the output of the request to
 // stdout.
-func doPassthroughNoInput(c *cli.Context, request func(context.Context, jasper.RemoteClient) interface{}) error {
+func doPassthroughOutput(c *cli.Context, request func(context.Context, jasper.RemoteClient) (response interface{})) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -72,10 +73,10 @@ func doPassthroughNoInput(c *cli.Context, request func(context.Context, jasper.R
 // withConnection runs the operation within the scope of a remote client
 // connection.
 func withConnection(ctx context.Context, c *cli.Context, operation func(jasper.RemoteClient) error) error {
-	host := c.Parent().String(hostFlagName)
-	port := c.Parent().Int(portFlagName)
-	service := c.Parent().String(serviceFlagName)
-	certFilePath := c.Parent().String(certFilePathFlagName)
+	host := c.String(hostFlagName)
+	port := c.Int(portFlagName)
+	service := c.String(serviceFlagName)
+	certFilePath := c.String(certFilePathFlagName)
 
 	client, err := remoteClient(ctx, service, host, port, certFilePath)
 	if err != nil {

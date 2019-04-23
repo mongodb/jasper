@@ -39,7 +39,7 @@ func readInput(input io.Reader, output interface{}) error {
 
 // writeOutput encodes the output as JSON and writes it to w.
 func writeOutput(output io.Writer, input interface{}) error {
-	bytes, err := json.Marshal(input)
+	bytes, err := json.MarshalIndent(input, "", "    ")
 	if err != nil {
 		return errors.Wrap(err, "error encoding input")
 	}

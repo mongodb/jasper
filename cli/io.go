@@ -12,44 +12,74 @@ type Validator interface {
 	Validate() error
 }
 
-// ErrorResponse represents CLI-specific output containing an error message.
-type ErrorResponse struct {
-	Error error `json:"error"`
+// OutcomeResponse represents CLI-specific output describing if the request was
+// processed successfully and if not, the associated error message.  For other
+// responses that compose OutcomeResponse, their results are valid only if
+// Success is true.
+type OutcomeResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
 }
 
-// InfoResponse represents represents CLI-specific output containing process
-// information and an error message.
+// Successful returns whether the request was successfully processed.
+func (o OutcomeResponse) Successful() bool {
+	return o.Success
+}
+
+// ErrorMessage returns the error message if the request was not successfully
+// processed.
+func (o OutcomeResponse) ErrorMessage() string {
+	return o.Message
+}
+
+func makeOutcomeResponse(err error) *OutcomeResponse {
+	if err != nil {
+		return &OutcomeResponse{Success: false, Message: err.Error()}
+	}
+	return &OutcomeResponse{Success: true}
+}
+
+// InfoResponse represents represents CLI-specific output containing the request
+// outcome and process information.
 type InfoResponse struct {
-	Info jasper.ProcessInfo `json:"info"`
+	OutcomeResponse `json:"outcome"`
+	Info            jasper.ProcessInfo `json:"info,omitempty"`
 }
 
-// InfosResponse represents CLI-specific output containing information for
-// multiple processes and an error message.
+// InfosResponse represents CLI-specific output containing the request outcome
+// and information for multiple processes.
 type InfosResponse struct {
-	Infos []jasper.ProcessInfo `json:"infos"`
+	OutcomeResponse `json:"outcome"`
+	Infos           []jasper.ProcessInfo `json:"infos,omitempty"`
 }
 
-// TagsResponse represents CLI-specific output containing a list of process tags
-// and an error message.
+// TagsResponse represents CLI-specific output containing the request outcome
+// and tags.
 type TagsResponse struct {
-	Tags []string `json:"tags"`
+	OutcomeResponse `json:"outcome"`
+	Tags            []string `json:"tags,omitempty"`
 }
 
-// RunningResponse represents CLI-specific output for whether the process is
-// running or not.
+// RunningResponse represents CLI-specific output containing the request outcome
+// and whether the process is running or not.
 type RunningResponse struct {
-	Running bool `json:"running"`
+	OutcomeResponse `json:"outcome"`
+	Running         bool `json:"running,omitempty"`
 }
 
-// CompleteResponse represents CLI-specific output for whether the process is
-// complete or not.
+// CompleteResponse represents CLI-specific output containing the request
+// outcome and whether the process is complete or not.
 type CompleteResponse struct {
-	Complete bool `json:"complete"`
+	OutcomeResponse `json:"outcome"`
+	Complete        bool `json:"complete,omitempty"`
 }
 
-// WaitResponse represents CLI-specific output for the wait exit code.
+// WaitResponse represents CLI-specific output containing the request outcome,
+// the wait exit code, and the error from wait.
 type WaitResponse struct {
-	ExitCode int `json:"exit_code"`
+	OutcomeResponse `json:"outcome"`
+	ExitCode        int    `json:"exit_code,omitempty"`
+	Error           string `json:"error,omitempty"`
 }
 
 // IDInput represents CLI-specific input representing a Jasper process ID.
@@ -107,19 +137,28 @@ func (sig *SignalTriggerIDInput) Validate() error {
 
 // CommandInput represents CLI-specific input to create a jasper.Command.
 type CommandInput struct {
-	Background      bool                 `json:"background"`
-	CreateOptions   jasper.CreateOptions `json:"create_options"`
-	Priority        level.Priority       `json:"priority"`
-	ContinueOnError bool                 `json:"continue_on_error"`
-	IgnoreError     bool                 `json:"ignore_error"`
+	Commands        [][]string           `json:"commands"`
+	Background      bool                 `json:"background,omitempty"`
+	CreateOptions   jasper.CreateOptions `json:"create_options,omitempty"`
+	Priority        level.Priority       `json:"priority,omitempty"`
+	ContinueOnError bool                 `json:"continue_on_error,omitempty"`
+	IgnoreError     bool                 `json:"ignore_error,omitempty"`
 }
 
 // Validate checks that the input to the jasper.Command is valid.
 func (c *CommandInput) Validate() error {
 	catcher := grip.NewBasicCatcher()
+	// The semantics of CreateOptions expects Args to be non-empty, but
+	// jasper.Command ignores (CreateOptions).Args.
+	if len(c.CreateOptions.Args) == 0 {
+		c.CreateOptions.Args = []string{""}
+	}
 	catcher.Add(c.CreateOptions.Validate())
 	if c.Priority != 0 && !level.IsValidPriority(c.Priority) {
 		catcher.Add(errors.New("priority is not in the valid range of values"))
+	}
+	if len(c.Commands) == 0 {
+		catcher.Add(errors.New("must specify at least one command"))
 	}
 	return catcher.Resolve()
 }
