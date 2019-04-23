@@ -120,20 +120,16 @@ func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, er
 			if info.IsRunning {
 				out = append(out, proc)
 			}
-			continue
 		case f == Successful:
 			if info.Successful {
 				out = append(out, proc)
 			}
-			continue
 		case f == Failed:
 			if info.Complete && !info.Successful {
 				out = append(out, proc)
 			}
-			continue
 		case f == All:
 			out = append(out, proc)
-			continue
 		}
 	}
 

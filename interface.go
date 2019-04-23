@@ -50,12 +50,10 @@ type Process interface {
 	Info(context.Context) ProcessInfo
 
 	// Running provides a quick predicate for checking to see if a
-	// process is running. Processes that haven't been started
-	// are neither complete nor running.
+	// process is running.
 	Running(context.Context) bool
 	// Complete provides a quick predicate for checking if a
-	// process has finished. Processes that haven't been started
-	// are neither complete nor running.
+	// process has finished.
 	Complete(context.Context) bool
 
 	// Signal sends the specified signals to the underlying
