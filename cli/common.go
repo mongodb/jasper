@@ -13,16 +13,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-const (
-	hostFlagName         = "flag"
-	portFlagName         = "port"
-	serviceFlagName      = "service"
-	certFilePathFlagName = "cert_path"
-
-	serviceREST = "rest"
-	serviceRPC  = "rpc"
-)
-
 // remoteClient returns a remote client that connects to the service at the
 // given host and port, with the optional SSL/TLS credentials file specified at
 // the given location.
