@@ -55,22 +55,26 @@ func TestCLICommon(t *testing.T) {
 				},
 				"DoPassthroughInputOutputReadsFromStdin": func(ctx context.Context, t *testing.T, c *cli.Context, client jasper.RemoteClient) {
 					withMockStdin(t, `{"value":"foo"}`, func(stdin *os.File) error {
-						input := &mockInput{}
-						require.NoError(t, doPassthroughInputOutput(c, input, mockRequest("")))
-						output, err := ioutil.ReadAll(stdin)
-						require.NoError(t, err)
-						assert.Len(t, output, 0)
-						return nil
+						return withMockStdout(t, func(*os.File) error {
+							input := &mockInput{}
+							require.NoError(t, doPassthroughInputOutput(c, input, mockRequest("")))
+							output, err := ioutil.ReadAll(stdin)
+							require.NoError(t, err)
+							assert.Len(t, output, 0)
+							return nil
+						})
 					})
 				},
 				"DoPassthroughInputOutputSetsAndValidatesInput": func(ctx context.Context, t *testing.T, c *cli.Context, client jasper.RemoteClient) {
 					expectedInput := "foo"
 					withMockStdin(t, fmt.Sprintf(`{"value":"%s"}`, expectedInput), func(*os.File) error {
-						input := &mockInput{}
-						require.NoError(t, doPassthroughInputOutput(c, input, mockRequest("")))
-						assert.Equal(t, expectedInput, input.Value)
-						assert.True(t, input.validated)
-						return nil
+						return withMockStdout(t, func(*os.File) error {
+							input := &mockInput{}
+							require.NoError(t, doPassthroughInputOutput(c, input, mockRequest("")))
+							assert.Equal(t, expectedInput, input.Value)
+							assert.True(t, input.validated)
+							return nil
+						})
 					})
 				},
 				"DoPassthroughInputOutputWritesResponseToStdout": func(ctx context.Context, t *testing.T, c *cli.Context, client jasper.RemoteClient) {
@@ -95,11 +99,14 @@ func TestCLICommon(t *testing.T) {
 				"DoPassthroughOutputIgnoresStdin": func(ctx context.Context, t *testing.T, c *cli.Context, client jasper.RemoteClient) {
 					input := "foo"
 					withMockStdin(t, input, func(stdin *os.File) error {
-						require.NoError(t, doPassthroughOutput(c, mockRequest("")))
-						output, err := ioutil.ReadAll(stdin)
-						require.NoError(t, err)
-						assert.Len(t, output, len(input))
-						return nil
+						return withMockStdout(t, func(*os.File) error {
+							require.NoError(t, doPassthroughOutput(c, mockRequest("")))
+							output, err := ioutil.ReadAll(stdin)
+							require.NoError(t, err)
+							assert.Len(t, output, len(input))
+							return nil
+
+						})
 					})
 				},
 				"DoPassthroughOutputWritesResponseToStdout": func(ctx context.Context, t *testing.T, c *cli.Context, client jasper.RemoteClient) {

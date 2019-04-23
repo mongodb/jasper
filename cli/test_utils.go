@@ -113,6 +113,7 @@ func withMockStdin(t *testing.T, input string, operation func(*os.File) error) e
 	tmpFile, err := ioutil.TempFile(buildDir(t), "mock_stdin.txt")
 	require.NoError(t, err)
 	defer func() {
+		assert.NoError(t, tmpFile.Close())
 		assert.NoError(t, os.Remove(tmpFile.Name()))
 	}()
 	_, err = tmpFile.WriteString(input)
@@ -133,6 +134,7 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 	tmpFile, err := ioutil.TempFile(buildDir(t), "mock_stdout.txt")
 	require.NoError(t, err)
 	defer func() {
+		assert.NoError(t, tmpFile.Close())
 		assert.NoError(t, os.Remove(tmpFile.Name()))
 	}()
 	os.Stdout = tmpFile
