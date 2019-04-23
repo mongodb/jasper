@@ -137,10 +137,6 @@ func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, er
 		}
 	}
 
-	if len(out) == 0 {
-		return nil, errors.New("no processes")
-	}
-
 	return out, nil
 }
 
@@ -200,10 +196,6 @@ func (m *basicProcessManager) Group(ctx context.Context, name string) ([]Process
 		if sliceContains(proc.GetTags(), name) {
 			out = append(out, proc)
 		}
-	}
-
-	if len(out) == 0 {
-		return nil, errors.Errorf("no jobs tagged '%s'", name)
 	}
 
 	return out, nil
