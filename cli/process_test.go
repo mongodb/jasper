@@ -3,12 +3,9 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net"
 	"testing"
 
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/rpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -26,30 +23,8 @@ const nonexistentID = "nonexistent"
 
 func TestCLIProcess(t *testing.T) {
 	for remoteType, makeService := range map[string]func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc{
-		serviceREST: func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc {
-			srv := jasper.NewManagerService(manager)
-			app := srv.App(ctx)
-			app.SetPrefix("jasper")
-			require.NoError(t, app.SetPort(port))
-
-			go func() {
-				assert.NoError(t, app.Run(ctx))
-			}()
-
-			waitForRESTService(ctx, t, fmt.Sprintf("http://localhost:%d/jasper/v1", port))
-
-			closeService := func() error { return nil }
-			return closeService
-		},
-		serviceRPC: func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc {
-			addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", "localhost", port))
-			require.NoError(t, err)
-
-			closeService, err := rpc.StartService(ctx, manager, addr, "", "")
-			require.NoError(t, err)
-
-			return closeService
-		},
+		serviceREST: makeRESTService,
+		serviceRPC:  makeRPCService,
 	} {
 		t.Run(remoteType, func(t *testing.T) {
 			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string){
