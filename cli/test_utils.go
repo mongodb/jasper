@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/rpc"
 	"github.com/stretchr/testify/assert"
@@ -143,7 +144,7 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 
 // waitForRESTService waits until the REST service becomes available to serve
 // requests or the context times out.
-func waitForRESTService(ctx context.Context, t *testing.T, url string) {
+func waitForRESTService(ctx context.Context, t *testing.T, url string, client *http.Client) {
 	// Block until the service comes up
 	timeoutInterval := 10 * time.Millisecond
 	timer := time.NewTimer(timeoutInterval)
@@ -159,7 +160,7 @@ func waitForRESTService(ctx context.Context, t *testing.T, url string) {
 				continue
 			}
 			req = req.WithContext(ctx)
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := client.Do(req)
 			if err != nil {
 				timer.Reset(timeoutInterval)
 				continue
@@ -199,40 +200,111 @@ func execCLICommandOutput(t *testing.T, c *cli.Context, cmd cli.Command, output 
 	})
 }
 
-func makeRESTServiceAndClient(ctx context.Context, t *testing.T, port int, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient) {
-	closeService := makeRESTService(ctx, t, port, manager)
+func makeRESTServiceAndClient(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient, int) {
+	closeService, port := makeRESTService(ctx, t, manager)
 	client, err := makeRemoteClient(ctx, serviceREST, "localhost", port, "")
 	require.NoError(t, err)
-	return closeService, client
+	return closeService, client, port
 }
 
-func makeRESTService(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc {
-	srv := jasper.NewManagerService(manager)
-	app := srv.App(ctx)
-	app.SetPrefix("jasper")
-	require.NoError(t, app.SetPort(port))
+func makeAndStartService(ctx context.Context, client *http.Client) int {
+outerRetry:
+	for {
+		select {
+		case <-ctx.Done():
+			grip.Warning("timed out starting REST service")
+			return -1
+		default:
+			port := getNextPort()
+			localManager, err := jasper.NewLocalManager(false)
+			if err != nil {
+				return -1
+			}
+			srv := jasper.NewManagerService(localManager)
+			app := srv.App(ctx)
+			app.SetPrefix("jasper")
+			if err := app.SetPort(port); err != nil {
+				continue outerRetry
 
-	go func() {
-		assert.NoError(t, app.Run(ctx))
-	}()
+			}
+			go func() {
+				_ = app.Run(ctx)
+			}()
 
-	waitForRESTService(ctx, t, fmt.Sprintf("http://localhost:%d/jasper/v1", port))
-	return func() error { return nil }
+			timerTimeout := 5 * time.Millisecond
+			timer := time.NewTimer(timerTimeout)
+			defer timer.Stop()
+			url := fmt.Sprintf("http://localhost:%d/jasper/v1/", port)
+
+			trials := 0
+		checkLoop:
+			for {
+				if trials > 40 {
+					continue outerRetry
+				}
+
+				select {
+				case <-ctx.Done():
+					return -1
+				case <-timer.C:
+					req, err := http.NewRequest(http.MethodGet, url, nil)
+					if err != nil {
+						timer.Reset(timerTimeout)
+						trials++
+						continue checkLoop
+					}
+					req = req.WithContext(ctx)
+					resp, err := client.Do(req)
+					if err != nil {
+						timer.Reset(timerTimeout)
+						trials++
+						continue checkLoop
+					}
+					if resp.StatusCode != http.StatusOK {
+						timer.Reset(timerTimeout)
+						trials++
+						continue checkLoop
+					}
+
+					return port
+				}
+			}
+		}
+	}
 }
 
-func makeRPCServiceAndClient(ctx context.Context, t *testing.T, port int, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient) {
-	closeService := makeRPCService(ctx, t, port, manager)
+func makeRESTService(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, int) {
+	port := makeAndStartService(ctx, &http.Client{})
+	require.NotEqual(t, port, -1)
+	/*
+		srv := jasper.NewManagerService(manager)
+		app := srv.App(ctx)
+		app.SetPrefix("jasper")
+		require.NoError(t, app.SetPort(port))
+
+		go func() {
+		    assert.NoError(t, app.Run(ctx))
+		}()
+
+		waitForRESTService(ctx, t, fmt.Sprintf("http://localhost:%d/jasper/v1", port), &http.Client{})
+	*/
+	return func() error { return nil }, port
+}
+
+func makeRPCServiceAndClient(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient, int) {
+	closeService, port := makeRPCService(ctx, t, manager)
 	client, err := makeRemoteClient(ctx, serviceRPC, "localhost", port, "")
 	require.NoError(t, err)
-	return closeService, client
+	return closeService, client, port
 }
 
-func makeRPCService(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc {
+func makeRPCService(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, int) {
+	port := getNextPort()
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", "localhost", port))
 	require.NoError(t, err)
 
 	closeService, err := rpc.StartService(ctx, manager, addr, "", "")
 	require.NoError(t, err)
 
-	return closeService
+	return closeService, port
 }

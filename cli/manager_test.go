@@ -12,7 +12,7 @@ import (
 )
 
 func TestCLIManager(t *testing.T) {
-	for remoteType, makeService := range map[string]func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc{
+	for remoteType, makeService := range map[string]func(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, int){
 		serviceREST: makeRESTService,
 		serviceRPC:  makeRPCService,
 	} {
@@ -101,11 +101,10 @@ func TestCLIManager(t *testing.T) {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 					defer cancel()
-					port := getNextPort()
-					c := mockCLIContext(remoteType, port)
 					manager, err := jasper.NewLocalManager(false)
 					require.NoError(t, err)
-					closeService := makeService(ctx, t, port, manager)
+					closeService, port := makeService(ctx, t, manager)
+					c := mockCLIContext(remoteType, port)
 					require.NoError(t, err)
 					defer func() {
 						assert.NoError(t, closeService())

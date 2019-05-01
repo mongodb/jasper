@@ -21,7 +21,7 @@ func TestRemoteClientInvalidService(t *testing.T) {
 }
 
 func TestRemoteClient(t *testing.T) {
-	for remoteType, makeServiceAndClient := range map[string]func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient){
+	for remoteType, makeServiceAndClient := range map[string]func(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient, int){
 		serviceREST: makeRESTServiceAndClient,
 		serviceRPC:  makeRPCServiceAndClient,
 	} {
@@ -30,7 +30,7 @@ func TestRemoteClient(t *testing.T) {
 			defer cancel()
 			manager, err := jasper.NewLocalManager(false)
 			require.NoError(t, err)
-			closeService, client := makeServiceAndClient(ctx, t, getNextPort(), manager)
+			closeService, client, _ := makeServiceAndClient(ctx, t, manager)
 			assert.NoError(t, closeService())
 			assert.NoError(t, client.CloseConnection())
 		})
@@ -38,7 +38,7 @@ func TestRemoteClient(t *testing.T) {
 }
 
 func TestCLICommon(t *testing.T) {
-	for remoteType, makeServiceAndClient := range map[string]func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient){
+	for remoteType, makeServiceAndClient := range map[string]func(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient, int){
 		serviceREST: makeRESTServiceAndClient,
 		serviceRPC:  makeRPCServiceAndClient,
 	} {
@@ -128,11 +128,10 @@ func TestCLICommon(t *testing.T) {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 					defer cancel()
-					port := getNextPort()
-					c := mockCLIContext(remoteType, port)
 					manager, err := jasper.NewLocalManager(false)
 					require.NoError(t, err)
-					closeService, client := makeServiceAndClient(ctx, t, port, manager)
+					closeService, client, port := makeServiceAndClient(ctx, t, manager)
+					c := mockCLIContext(remoteType, port)
 					defer func() {
 						assert.NoError(t, client.CloseConnection())
 						assert.NoError(t, closeService())
