@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -66,8 +67,8 @@ func trueCreateOpts() *jasper.CreateOptions {
 	return &jasper.CreateOptions{Args: []string{"true"}}
 }
 
-func yesCreateOpts(timeoutSecs int) *jasper.CreateOptions {
-	return &jasper.CreateOptions{Args: []string{"yes"}, TimeoutSecs: timeoutSecs}
+func sleepCreateOpts(timeoutSecs int) *jasper.CreateOptions {
+	return &jasper.CreateOptions{Args: []string{"sleep", strconv.Itoa(timeoutSecs)}}
 }
 
 // mockCLIContext creates a *cli.Context on localhost with the given service

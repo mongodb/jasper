@@ -95,8 +95,8 @@ func TestCLIProcess(t *testing.T) {
 					resp := &WaitResponse{}
 					require.NoError(t, execCLICommandInputOutput(t, c, processWait(), input, resp))
 					require.True(t, resp.Successful())
-					// Process should be killed by context timeout.
-					assert.NotZero(t, resp.ExitCode)
+					assert.Empty(t, resp.Error)
+					assert.Zero(t, resp.ExitCode)
 				},
 				"WaitWithNonexistentIDFails": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
 					input, err := json.Marshal(IDInput{nonexistentID})
@@ -185,7 +185,7 @@ func TestCLIProcess(t *testing.T) {
 
 					cmdCtx := cli.NewContext(nil, nil, c)
 					resp := &InfoResponse{}
-					input, err := json.Marshal(yesCreateOpts(int(testTimeout.Seconds())))
+					input, err := json.Marshal(sleepCreateOpts(int(testTimeout.Seconds()) - 1))
 					require.NoError(t, err)
 					require.NoError(t, execCLICommandInputOutput(t, cmdCtx, managerCreateProcess(), input, resp))
 					require.True(t, resp.Successful())

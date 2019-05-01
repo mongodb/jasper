@@ -104,7 +104,10 @@ func processWait() cli.Command {
 					return &WaitResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error finding process with id '%s'", input.ID))}
 				}
 				exitCode, err := proc.Wait(ctx)
-				return &WaitResponse{ExitCode: exitCode, Error: err.Error(), OutcomeResponse: *makeOutcomeResponse(nil)}
+				if err != nil {
+					return &WaitResponse{ExitCode: exitCode, Error: err.Error(), OutcomeResponse: *makeOutcomeResponse(nil)}
+				}
+				return &WaitResponse{ExitCode: exitCode, OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
 		},
 	}
