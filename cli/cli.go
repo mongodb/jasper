@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"math"
+
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -22,15 +24,14 @@ func Jasper() cli.Command {
 		Usage: "Jasper CLI to interact with Jasper services",
 		Before: mergeBeforeFuncs(
 			func(c *cli.Context) error {
-				port := c.Int(portFlagName)
-				minPort, maxPort := 0, 1<<16-1
-				if port < minPort || port > maxPort {
+				port := c.GlobalInt(portFlagName)
+				if port < 0 || port > math.MaxUint16 {
 					return errors.New("port must be within 0-65535 inclusive")
 				}
 				return nil
 			},
 			func(c *cli.Context) error {
-				service := c.String(serviceFlagName)
+				service := c.GlobalString(serviceFlagName)
 				if service != serviceREST && service != serviceRPC {
 					return errors.Errorf("service must be '%s' or '%s'", serviceREST, serviceRPC)
 				}

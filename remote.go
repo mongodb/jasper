@@ -6,17 +6,12 @@ import "context"
 // connection to a service.
 type CloseFunc func() error
 
-// ConnectionCloser represents a connection that can be closed.
-type ConnectionCloser interface {
-	CloseConnection() error
-}
-
 // RemoteClient provides an interface to access all functionality from the
 // Jasper REST service. It includes an interface to interact with Jasper
 // Managers remotely as well as access to remote-specific functionality.
 type RemoteClient interface {
 	Manager
-	ConnectionCloser
+	CloseConnection() error
 	ConfigureCache(context.Context, CacheOptions) error
 	DownloadFile(context.Context, DownloadInfo) error
 	DownloadMongoDB(context.Context, MongoDBDownloadOptions) error

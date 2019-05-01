@@ -63,10 +63,10 @@ func doPassthroughOutput(c *cli.Context, request func(context.Context, jasper.Re
 // withConnection runs the operation within the scope of a remote client
 // connection.
 func withConnection(ctx context.Context, c *cli.Context, operation func(jasper.RemoteClient) error) error {
-	host := c.String(hostFlagName)
-	port := c.Int(portFlagName)
-	service := c.String(serviceFlagName)
-	certFilePath := c.String(certFilePathFlagName)
+	host := c.GlobalString(hostFlagName)
+	port := c.GlobalInt(portFlagName)
+	service := c.GlobalString(serviceFlagName)
+	certFilePath := c.GlobalString(certFilePathFlagName)
 
 	client, err := makeRemoteClient(ctx, service, host, port, certFilePath)
 	if err != nil {
