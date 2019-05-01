@@ -22,7 +22,7 @@ import (
 func NewRESTClient(addr net.Addr) RemoteClient {
 	return &restClient{
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr.String()),
-		client: &http.Client{},
+		client: http.DefaultClient,
 	}
 }
 
