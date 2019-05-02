@@ -105,18 +105,10 @@ func (c *Command) GetProcIDs() []string { return c.procIDs }
 // on the CreateOptions, it will be ignored; the Args can be added using Add,
 // Append, AppendArgs, or Extend.
 // This overwrites options that were previously set in the following functions:
-// * AddEnv
-// * Environment
-// * RedirectErrorToOutput
-// * RedirectOutputToError
-// * SetCombinedSender
-// * SetErrorSender
-// * SetErrorWriter
-// * SetOutputOptions
-// * SetOutputSender
-// * SetOutputWriter
-// * SuppressStandardError
-// * SuppressStandardOutput
+// AddEnv, Environment, RedirectErrorToOutput, RedirectOutputToError,
+// SetCombinedSender, SetErrorSender, SetErrorWriter, SetOutputOptions,
+// SetOutputSender, SetOutputWriter, SuppressStandardError, and
+// SuppressStandardOutput.
 func (c *Command) ApplyFromOpts(opts *CreateOptions) *Command { c.opts = opts; return c }
 
 // SetOutputOptions sets the output options for a command.
