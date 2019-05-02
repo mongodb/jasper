@@ -21,19 +21,18 @@ import (
 // ad-hoc processes for smaller tasks. Command immediately supports features
 // such as output and error functionality and remote execution.
 type Command struct {
-	cmds     [][]string
-	opts     *CreateOptions
-	priority level.Priority
-	id       string
-	procIDs  []string
-	remote   remoteCommandOptions
-
 	continueOnError bool
 	ignoreError     bool
-	runBackground   bool
+	opts            *CreateOptions
 	prerequisite    func() bool
+	priority        level.Priority
+	runBackground   bool
 
-	makep ProcessConstructor
+	cmds    [][]string
+	id      string
+	procIDs []string
+	remote  remoteCommandOptions
+	makep   ProcessConstructor
 }
 
 type remoteCommandOptions struct {
