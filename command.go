@@ -485,7 +485,9 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 	addOutOp := func(msg message.Fields) message.Fields { return msg }
 	var err error
 	var newProc Process
-	if c.opts.Output.Output == nil {
+	// TODO: the logic below this is not strictly correct if, for example,
+	// Output is redirected to Error and Error has been defined.
+	if opts.Output.Output == nil {
 		var out bytes.Buffer
 		opts.Output.Output = &out
 		opts.Output.Error = &out
@@ -500,8 +502,6 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 			return msg
 		}
 	} else {
-		opts.Output.Error = c.opts.Output.Error
-		opts.Output.Output = c.opts.Output.Output
 		newProc, err = c.makep(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
