@@ -53,14 +53,13 @@ func TestWindowsProcessTracker(t *testing.T) {
 		"AddedProcessIsTerminatedOnCleanup": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker, opts *CreateOptions) {
 			proc, err := newBasicProcess(ctx, opts)
 			require.NoError(t, err)
-			pid := proc.Info(ctx).PID
 
 			assert.NoError(t, tracker.Add(proc.Info(ctx)))
 
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-			assert.Contains(t, info.ProcessIdList, pid)
+			assert.Contains(t, info.ProcessIdList, uint64(proc.Info(ctx).PID))
 
 			assert.NoError(t, tracker.Cleanup())
 
@@ -76,13 +75,13 @@ func TestWindowsProcessTracker(t *testing.T) {
 		"DoubleCleanupDoesNotError": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker, opts *CreateOptions) {
 			proc, err := newBasicProcess(ctx, opts)
 			require.NoError(t, err)
-			pid := proc.Info(ctx).PID
 
 			assert.NoError(t, tracker.Add(proc.Info(ctx)))
+
 			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-			assert.Contains(t, info.ProcessIdList, pid)
+			assert.Contains(t, info.ProcessIdList, uint64(proc.Info(ctx).PID))
 
 			assert.NoError(t, tracker.Cleanup())
 			assert.NoError(t, tracker.Cleanup())
