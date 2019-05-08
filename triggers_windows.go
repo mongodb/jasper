@@ -16,10 +16,10 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 			return false
 		}
 
-		proc, err := OpenProcess(PROCESS_TERMINATE|PROCESS_QUERY_INFORMATION, false, uint32(info.PID))
+		proc, err := OpenProcess(procRightTerminate|procRightQueryInformation, false, uint32(info.PID))
 		if err != nil {
-			// OpenProcess returns ERROR_INVALID_PARAMETER if the process has already exited.
-			if err == ERROR_INVALID_PARAMETER {
+			// OpenProcess returns errInvalidParameter if the process has already exited.
+			if err == errInvalidParameter {
 				grip.Debug(message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
@@ -36,11 +36,19 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 			}
 			return false
 		}
-		defer CloseHandle(proc)
+		defer func() {
+			grip.Warning(message.WrapError(NewWindowsError("CloseHandle", CloseHandle(proc)), message.Fields{
+				"message": "failed to close job object handle",
+				"id":      info.ID,
+				"pid":     info.PID,
+				"source":  cleanTerminationSignalTriggerSource,
+			}))
+		}()
 
 		if err := TerminateProcess(proc, 0); err != nil {
-			// TerminateProcess returns ERROR_ACCESS_DENIED if the process has already died.
-			if err != ERROR_ACCESS_DENIED {
+			// TerminateProcess returns errAccessDenied if the process has
+			// already died.
+			if err != errAccessDenied {
 				grip.Error(message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
@@ -61,7 +69,7 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 				}))
 				return false
 			}
-			if exitCode == STILL_ACTIVE {
+			if exitCode == procStillActive {
 				grip.Error(message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,

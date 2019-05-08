@@ -45,13 +45,15 @@ func TestWindowsEvents(t *testing.T) {
 
 					event, err := jasper.CreateEvent(utf16EventName)
 					require.NoError(t, err)
-					defer jasper.CloseHandle(event)
+					defer func() {
+						assert.NoError(t, jasper.CloseHandle(event))
+					}()
 
 					require.NoError(t, client.SignalEvent(ctx, eventName))
 
 					status, err := jasper.WaitForSingleObject(event, time.Second)
 					require.NoError(t, err)
-					assert.Equal(t, jasper.WAIT_OBJECT_0, status)
+					assert.Zero(t, status)
 				},
 				// "": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {},
 			} {

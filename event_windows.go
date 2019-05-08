@@ -2,26 +2,20 @@ package jasper
 
 import (
 	"context"
-	"syscall"
 
 	"github.com/pkg/errors"
 )
 
 // SignalEvent signals the event object represented by the given name.
 func SignalEvent(ctx context.Context, name string) error {
-	utf16EventName, err := syscall.UTF16PtrFromString(name)
+	event, err := GetEvent(name)
 	if err != nil {
-		return errors.Wrapf(err, "failed to convert event name '%s'", name)
+		return errors.Wrapf(err, "getting event '%s'", name)
 	}
+	defer event.Close()
 
-	event, err := OpenEvent(utf16EventName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to open event '%s'", name)
-	}
-	defer CloseHandle(event)
-
-	if err := SetEvent(event); err != nil {
-		return errors.Wrapf(err, "failed to signal event '%s'", name)
+	if err := event.Set(); err != nil {
+		return errors.Wrapf(err, "signalling event '%s'", name)
 	}
 
 	return nil

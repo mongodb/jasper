@@ -5,77 +5,50 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 )
 
-// TODO: needs some documentation.
-
 const (
-	// Constants for error codes
-	ERROR_SUCCESS           syscall.Errno = 0
-	ERROR_FILE_NOT_FOUND    syscall.Errno = 2
-	ERROR_ACCESS_DENIED     syscall.Errno = 5
-	ERROR_INVALID_HANDLE    syscall.Errno = 6
-	ERROR_INVALID_PARAMETER syscall.Errno = 87
+	// Constants for error codes.
+	// Documentation: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
 
-	DELETE                   = 0x00010000
-	READ_CONTROL             = 0x00020000
-	WRITE_DAC                = 0x00040000
-	WRITE_OWNER              = 0x00080000
-	SYNCHRONIZE              = 0x00100000
-	STANDARD_RIGHTS_REQUIRED = 0x000F0000
-	STANDARD_RIGHTS_READ     = READ_CONTROL
-	STANDARD_RIGHTS_WRITE    = READ_CONTROL
-	STANDARD_RIGHTS_EXECUTE  = READ_CONTROL
-	STANDARD_RIGHTS_ALL      = 0x001F0000
-	SPECIFIC_RIGHTS_ALL      = 0x0000FFFF
-	ACCESS_SYSTEM_SECURITY   = 0x01000000
-	MAXIMUM_ALLOWED          = 0x02000000
+	errSuccess          syscall.Errno = 0
+	errAccessDenied     syscall.Errno = 5
+	errInvalidParameter syscall.Errno = 87
 
-	// Constants for process permissions
-	PROCESS_TERMINATE                 = 0x0001
-	PROCESS_CREATE_THREAD             = 0x0002
-	PROCESS_SET_SESSIONID             = 0x0004
-	PROCESS_VM_OPERATION              = 0x0008
-	PROCESS_VM_READ                   = 0x0010
-	PROCESS_VM_WRITE                  = 0x0020
-	PROCESS_DUP_HANDLE                = 0x0040
-	PROCESS_CREATE_PROCESS            = 0x0080
-	PROCESS_SET_QUOTA                 = 0x0100
-	PROCESS_SET_INFORMATION           = 0x0200
-	PROCESS_QUERY_INFORMATION         = 0x0400
-	PROCESS_SUSPEND_RESUME            = 0x0800
-	PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-	PROCESS_ALL_ACCESS                = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFFF
+	// Constants for process and standard access rights.
+	// Documentation: https://doc.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 
-	// Constants for job object limits
-	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE          = 0x2000
-	JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION = 0x400
-	JOB_OBJECT_LIMIT_ACTIVE_PROCESS             = 8
-	JOB_OBJECT_LIMIT_JOB_MEMORY                 = 0x200
-	JOB_OBJECT_LIMIT_JOB_TIME                   = 4
-	JOB_OBJECT_LIMIT_PROCESS_MEMORY             = 0x100
-	JOB_OBJECT_LIMIT_PROCESS_TIME               = 2
-	JOB_OBJECT_LIMIT_WORKINGSET                 = 1
-	JOB_OBJECT_LIMIT_AFFINITY                   = 0x00000010
+	standardRightRequired     = 0x000F0000
+	procRightTerminate        = 0x00010000
+	procRightSynchronize      = 0x00100000
+	procRightQueryInformation = 0x04000000
+	procRightAllAccess        = standardRightRequired | procRightSynchronize | 0xFFFF
 
-	JobObjectInfoClassNameBasicProcessIdList       = 3
-	JobObjectInfoClassNameExtendedLimitInformation = 9
+	// Constants for additional configuration for job object API calls.
+	// Documentation: https://docs.microsoft.com/en-us/windows/win32/procthread/job-objects
 
-	// Constants for exit codes
-	STILL_ACTIVE = 0x103
+	jobObjectLimitKillOnJobClose = 0x2000
 
-	// Constants for access rights for event objects
-	EVENT_ALL_ACCESS   = 0x1F0003
-	EVENT_MODIFY_STATE = 0x0002
+	jobObjectInfoClassNameBasicProcessIDList       = 3
+	jobObjectInfoClassNameExtendedLimitInformation = 9
 
-	// Constants representing the wait return value
-	WAIT_OBJECT_0  uint32 = 0x00000000
-	WAIT_ABANDONED uint32 = 0x00000080
-	WAIT_FAILED    uint32 = 0xFFFFFFFF
-	WAIT_TIMEOUT   uint32 = 0x00000102
+	// Constants for process exit codes.
 
-	// Max allowed length of process ID list
-	MAX_PROCESS_ID_LIST_LENGTH = 1000
+	procStillActive = 0x103
+
+	// Constants for event object access rights.
+
+	eventRightModifyState = 0x0002
+
+	// Constants representing the wait return value.
+
+	waitFailed uint32 = 0xFFFFFFFF
+
+	// Max allowed length of the process ID list.
+	maxProcessIDListLength = 1000
 )
 
 var (
@@ -86,6 +59,7 @@ var (
 	procCreateEventW              = modkernel32.NewProc("CreateEventW")
 	procOpenEventW                = modkernel32.NewProc("OpenEventW")
 	procSetEvent                  = modkernel32.NewProc("SetEvent")
+	procResetEvent                = modkernel32.NewProc("ResetEvent")
 	procGetExitCodeProcess        = modkernel32.NewProc("GetExitCodeProcess")
 	procOpenProcess               = modkernel32.NewProc("OpenProcess")
 	procTerminateProcess          = modkernel32.NewProc("TerminateProcess")
@@ -95,43 +69,54 @@ var (
 	procWaitForSingleObject       = modkernel32.NewProc("WaitForSingleObject")
 )
 
+// JobObject is a wrapper for a Windows job object.
 type JobObject struct {
 	handle syscall.Handle
 }
 
+// NewWindowsJobObject creates a new Windows object object with the given name.
 func NewWindowsJobObject(name string) (*JobObject, error) {
 	utf16Name, err := syscall.UTF16PtrFromString(name)
 	if err != nil {
 		return nil, NewWindowsError("UTF16PtrFromString", err)
 	}
-	hJob, err := CreateJobObject(utf16Name)
+	handle, err := CreateJobObject(utf16Name)
 	if err != nil {
 		return nil, NewWindowsError("CreateJobObject", err)
 	}
 
-	if err := SetInformationJobObjectExtended(hJob, JobObjectExtendedLimitInformation{
+	if err := SetInformationJobObjectExtended(handle, JobObjectExtendedLimitInformation{
 		BasicLimitInformation: JobObjectBasicLimitInformation{
-			LimitFlags: JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+			LimitFlags: jobObjectLimitKillOnJobClose,
 		},
 	}); err != nil {
 		return nil, NewWindowsError("SetInformationJobObject", err)
 	}
 
-	return &JobObject{handle: hJob}, nil
+	return &JobObject{handle: handle}, nil
 }
 
+// AssignProcess assigns a process to this job object.
 func (j *JobObject) AssignProcess(pid uint) error {
-	hProcess, err := OpenProcess(PROCESS_ALL_ACCESS, false, uint32(pid))
+	hProcess, err := OpenProcess(procRightAllAccess, false, uint32(pid))
 	if err != nil {
 		return NewWindowsError("OpenProcess", err)
 	}
-	defer CloseHandle(hProcess)
+	defer func() {
+		grip.Warning(message.WrapError(NewWindowsError("CloseHandle", CloseHandle(hProcess)), message.Fields{
+			"message": "failed to close job object handle",
+			"pid":     pid,
+			"op":      "AssignProcess",
+		}))
+	}()
+
 	if err := AssignProcessToJobObject(j.handle, hProcess); err != nil {
 		return NewWindowsError("AssignProcessToJobObject", err)
 	}
 	return nil
 }
 
+// Terminate terminates all processes associated with this job object.
 func (j *JobObject) Terminate(exitCode uint) error {
 	if err := TerminateJobObject(j.handle, uint32(exitCode)); err != nil {
 		return NewWindowsError("TerminateJobObject", err)
@@ -139,6 +124,7 @@ func (j *JobObject) Terminate(exitCode uint) error {
 	return nil
 }
 
+// Close closes the job object's handle.
 func (j *JobObject) Close() error {
 	if j.handle != 0 {
 		if err := CloseHandle(j.handle); err != nil {
@@ -149,13 +135,70 @@ func (j *JobObject) Close() error {
 	return nil
 }
 
+// Event is a wrapper for a Windows event object.
+type Event struct {
+	handle syscall.Handle
+}
+
+// NewEvent creates a new event object with the given name or opens an existing
+// event with the given name.
+func NewEvent(name string) (*Event, error) {
+	utf16Name, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, NewWindowsError("UTF16PtrFromString", err)
+	}
+	handle, err := CreateEvent(utf16Name)
+	if err != nil {
+		return nil, NewWindowsError("CreateEvent", err)
+	}
+	return &Event{handle: handle}, nil
+}
+
+// GetEvent gets an existing event object with the given name.
+func GetEvent(name string) (*Event, error) {
+	utf16Name, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return nil, NewWindowsError("UTF16PtrFromString", err)
+	}
+	handle, err := OpenEvent(utf16Name)
+	if err != nil {
+		return nil, NewWindowsError("OpenEvent", err)
+	}
+	return &Event{handle: handle}, nil
+}
+
+// Set sets the event object to the signaled state.
+func (event *Event) Set() error {
+	if err := SetEvent(event.handle); err != nil {
+		return NewWindowsError("SetEvent", err)
+	}
+	return nil
+}
+
+// Reset resets the event object to the non-signaled state.
+func (event *Event) Reset() error {
+	if err := ResetEvent(event.handle); err != nil {
+		return NewWindowsError("ResetEvent", err)
+	}
+	return nil
+}
+
+// Close closes the event object's handle.
+func (event *Event) Close() error {
+	if err := CloseHandle(event.handle); err != nil {
+		return NewWindowsError("CloseHandle", err)
+	}
+	return nil
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 //
 // All the methods below are boilerplate functions for accessing the Windows syscalls.
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-type IoCounters struct {
+// IOCounters includes accounting information for a process or job object.
+type IOCounters struct {
 	ReadOperationCount  uint64
 	WriteOperationCount uint64
 	OtherOperationCount uint64
@@ -164,6 +207,17 @@ type IoCounters struct {
 	OtherTransferCount  uint64
 }
 
+// JobObjectBasicProcessIDList returns information about the processes running
+// in a job object.
+type JobObjectBasicProcessIDList struct {
+	NumberOfAssignedProcesses uint32
+	NumberOfProcessIDsInList  uint32
+	ProcessIDList             [maxProcessIDListLength]uint64
+}
+
+// JobObjectBasicLimitInformation contains basic information to configure a job
+// object's limits.
+//nolint:maligned
 type JobObjectBasicLimitInformation struct {
 	PerProcessUserTimeLimit uint64
 	PerJobUserTimeLimit     uint64
@@ -176,66 +230,70 @@ type JobObjectBasicLimitInformation struct {
 	SchedulingClass         uint32
 }
 
+// JobObjectExtendedLimitInformation contains extended information to configure
+// a job object's limits.
+//nolint:maligned
 type JobObjectExtendedLimitInformation struct {
 	BasicLimitInformation JobObjectBasicLimitInformation
-	IoInfo                IoCounters
+	IOInfo                IOCounters
 	ProcessMemoryLimit    uintptr
 	JobMemoryLimit        uintptr
 	PeakProcessMemoryUsed uintptr
 	PeakJobMemoryUsed     uintptr
 }
 
-func OpenProcess(desiredAccess uint32, inheritHandle bool, processId uint32) (syscall.Handle, error) {
-	var inheritHandleRaw int32
-	if inheritHandle {
-		inheritHandleRaw = 1
-	} else {
-		inheritHandleRaw = 0
-	}
-	r1, _, e1 := procOpenProcess.Call(
-		uintptr(desiredAccess),
-		uintptr(inheritHandleRaw),
-		uintptr(processId))
-	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
-			return 0, e1
-		} else {
-			return 0, syscall.EINVAL
-		}
-	}
-	return syscall.Handle(r1), nil
-}
-
-func GetExitCodeProcess(handle syscall.Handle, exitCode *uint32) error {
-	r1, _, e1 := procGetExitCodeProcess.Call(uintptr(handle), uintptr(unsafe.Pointer(exitCode)))
-	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
-			return e1
-		} else {
-			return syscall.EINVAL
-		}
-	}
-	return nil
-}
-
-func TerminateProcess(handle syscall.Handle, exitCode uint32) error {
-	r1, _, e1 := procTerminateProcess.Call(uintptr(handle), uintptr(exitCode))
-	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
-			return e1
-		} else {
-			return syscall.EINVAL
-		}
-	}
-	return nil
-}
-
+// SecurityAttributes specifies the security configuration for a job object.
+//nolint:maligned
 type SecurityAttributes struct {
 	Length             uint32
 	SecurityDescriptor uintptr
 	InheritHandle      uint32
 }
 
+// OpenProcess opens an existing process object.
+func OpenProcess(desiredRight uint32, inheritHandle bool, pid uint32) (syscall.Handle, error) {
+	var inheritHandleRaw int32
+	if inheritHandle {
+		inheritHandleRaw = 1
+	}
+	r1, _, e1 := procOpenProcess.Call(
+		uintptr(desiredRight),
+		uintptr(inheritHandleRaw),
+		uintptr(pid))
+	if r1 == 0 {
+		if e1 != errSuccess {
+			return 0, e1
+		}
+		return 0, syscall.EINVAL
+	}
+	return syscall.Handle(r1), nil
+}
+
+// GetExitCodeProcess gets the exit status of the process given by the handle.
+func GetExitCodeProcess(handle syscall.Handle, exitCode *uint32) error {
+	r1, _, e1 := procGetExitCodeProcess.Call(uintptr(handle), uintptr(unsafe.Pointer(exitCode)))
+	if r1 == 0 {
+		if e1 != errSuccess {
+			return e1
+		}
+		return syscall.EINVAL
+	}
+	return nil
+}
+
+// TerminateProcess terminates the process given by the handle.
+func TerminateProcess(handle syscall.Handle, exitCode uint32) error {
+	r1, _, e1 := procTerminateProcess.Call(uintptr(handle), uintptr(exitCode))
+	if r1 == 0 {
+		if e1 != errSuccess {
+			return e1
+		}
+		return syscall.EINVAL
+	}
+	return nil
+}
+
+// CreateJobObject creates a new job object with the given name.
 func CreateJobObject(name *uint16) (syscall.Handle, error) {
 	jobAttributes := &SecurityAttributes{}
 
@@ -243,32 +301,34 @@ func CreateJobObject(name *uint16) (syscall.Handle, error) {
 		uintptr(unsafe.Pointer(jobAttributes)),
 		uintptr(unsafe.Pointer(name)))
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return 0, e1
-		} else {
-			return 0, syscall.EINVAL
 		}
+		return 0, syscall.EINVAL
 	}
 	return syscall.Handle(r1), nil
 }
 
+// AssignProcessToJobObject assigns a process to a job object given by the
+// handle.
 func AssignProcessToJobObject(job syscall.Handle, process syscall.Handle) error {
 	r1, _, e1 := procAssignProcessToJobObject.Call(uintptr(job), uintptr(process))
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return e1
-		} else {
-			return syscall.EINVAL
 		}
+		return syscall.EINVAL
 	}
 	return nil
 }
 
-func QueryInformationJobObjectProcessIdList(job syscall.Handle) (*JobObjectBasicProcessIdList, error) {
-	info := JobObjectBasicProcessIdList{}
+// QueryInformationJobObjectProcessIDList gets information about the processes
+// in a job object.
+func QueryInformationJobObjectProcessIDList(job syscall.Handle) (*JobObjectBasicProcessIDList, error) {
+	var info JobObjectBasicProcessIDList
 	_, err := QueryInformationJobObject(
 		job,
-		JobObjectInfoClassNameBasicProcessIdList,
+		jobObjectInfoClassNameBasicProcessIDList,
 		unsafe.Pointer(&info),
 		uint32(unsafe.Sizeof(info)),
 	)
@@ -278,6 +338,8 @@ func QueryInformationJobObjectProcessIdList(job syscall.Handle) (*JobObjectBasic
 	return &info, nil
 }
 
+// QueryInformationJobObject gets information about a job object given by the
+// handle.
 func QueryInformationJobObject(job syscall.Handle, infoClass uint32, info unsafe.Pointer, length uint32) (uint32, error) {
 	var nLength uint32
 	r1, _, e1 := procQueryInformationJobObject.Call(
@@ -288,46 +350,43 @@ func QueryInformationJobObject(job syscall.Handle, infoClass uint32, info unsafe
 		uintptr(unsafe.Pointer(&nLength)),
 	)
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return 0, e1
-		} else {
-			return 0, syscall.EINVAL
 		}
+		return 0, syscall.EINVAL
 	}
 	return nLength, nil
 }
 
+// SetInformationJobObjectExtended sets limits for a job object given by the
+// handle.
 func SetInformationJobObjectExtended(job syscall.Handle, info JobObjectExtendedLimitInformation) error {
-	r1, _, e1 := procSetInformationJobObject.Call(uintptr(job), JobObjectInfoClassNameExtendedLimitInformation,
+	r1, _, e1 := procSetInformationJobObject.Call(uintptr(job), jobObjectInfoClassNameExtendedLimitInformation,
 		uintptr(unsafe.Pointer(&info)),
 		uintptr(uint32(unsafe.Sizeof(info))))
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return e1
-		} else {
-			return syscall.EINVAL
 		}
+		return syscall.EINVAL
 	}
 	return nil
 }
 
-func WaitForSingleObject(object syscall.Handle, timeout time.Duration) (uint32, error) {
-	timeoutMillis := int64(timeout * time.Millisecond)
-	r1, _, e1 := procWaitForSingleObject.Call(
-		uintptr(object),
-		uintptr(uint32(timeoutMillis)),
-	)
-	waitStatus := uint32(r1)
-	if waitStatus == WAIT_FAILED {
-		if e1 != ERROR_SUCCESS {
-			return waitStatus, e1
-		} else {
-			return waitStatus, syscall.EINVAL
+// TerminateJobObject terminates all processes currently associated with the
+// job.
+func TerminateJobObject(job syscall.Handle, exitCode uint32) error {
+	r1, _, e1 := procTerminateJobObject.Call(uintptr(job), uintptr(exitCode))
+	if r1 == 0 {
+		if e1 != errSuccess {
+			return e1
 		}
+		return syscall.EINVAL
 	}
-	return waitStatus, nil
+	return nil
 }
 
+// CreateEvent creates or opens a named event object.
 func CreateEvent(name *uint16) (syscall.Handle, error) {
 	r1, _, e1 := procCreateEventW.Call(
 		uintptr(unsafe.Pointer(nil)),
@@ -337,85 +396,110 @@ func CreateEvent(name *uint16) (syscall.Handle, error) {
 	)
 	handle := syscall.Handle(r1)
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return handle, e1
-		} else {
-			return handle, syscall.EINVAL
 		}
+		return handle, syscall.EINVAL
 	}
 	return handle, nil
 }
 
+// OpenEvent opens an existing named event.
 func OpenEvent(name *uint16) (syscall.Handle, error) {
 	r1, _, e1 := procOpenEventW.Call(
-		uintptr(EVENT_MODIFY_STATE),
+		uintptr(eventRightModifyState),
 		uintptr(0),
 		uintptr(unsafe.Pointer(name)),
 	)
 	handle := syscall.Handle(r1)
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return handle, e1
-		} else {
-			return handle, syscall.EINVAL
 		}
+		return handle, syscall.EINVAL
 	}
 	return handle, nil
 }
 
+// SetEvent sets the event to the signaled state.
 func SetEvent(event syscall.Handle) error {
 	r1, _, e1 := procSetEvent.Call(uintptr(event))
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return e1
-		} else {
-			return syscall.EINVAL
 		}
+		return syscall.EINVAL
 	}
 	return nil
 }
 
-func TerminateJobObject(job syscall.Handle, exitCode uint32) error {
-	r1, _, e1 := procTerminateJobObject.Call(uintptr(job), uintptr(exitCode))
+// ResetEvent sets the event to the non-signaled state.
+func ResetEvent(event syscall.Handle) error {
+	r1, _, e1 := procResetEvent.Call(uintptr(event))
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return e1
-		} else {
-			return syscall.EINVAL
 		}
+		return syscall.EINVAL
 	}
 	return nil
 }
 
+// WaitForSingleObject waits until the specified object is signaled or the
+// timeout elapses.
+func WaitForSingleObject(object syscall.Handle, timeout time.Duration) (uint32, error) {
+	timeoutMillis := int64(timeout * time.Millisecond)
+	r1, _, e1 := procWaitForSingleObject.Call(
+		uintptr(object),
+		uintptr(uint32(timeoutMillis)),
+	)
+	waitStatus := uint32(r1)
+	if waitStatus == waitFailed {
+		if e1 != errSuccess {
+			return waitStatus, e1
+		}
+		return waitStatus, syscall.EINVAL
+	}
+	return waitStatus, nil
+}
+
+// CloseHandle closes an open object handle.
 func CloseHandle(object syscall.Handle) error {
 	r1, _, e1 := procCloseHandle.Call(uintptr(object))
 	if r1 == 0 {
-		if e1 != ERROR_SUCCESS {
+		if e1 != errSuccess {
 			return e1
-		} else {
-			return syscall.EINVAL
 		}
+		return syscall.EINVAL
 	}
 	return nil
 }
 
+// WindowsError represents a Windows API error.
 type WindowsError struct {
-	functionName string
 	innerError   error
+	functionName string
 }
 
-func NewWindowsError(functionName string, innerError error) *WindowsError {
-	return &WindowsError{functionName, innerError}
+// NewWindowsError creates a new Windows API error.
+func NewWindowsError(functionName string, err error) *WindowsError {
+	if err == nil {
+		return nil
+	}
+	return &WindowsError{innerError: err, functionName: functionName}
 }
 
-func (self *WindowsError) FunctionName() string {
-	return self.functionName
+// FunctionName returns the name of the Windows API function.
+func (e *WindowsError) FunctionName() string {
+	return e.functionName
 }
 
-func (self *WindowsError) InnerError() error {
-	return self.innerError
+// InnerError returns the raw error from the Windows API.
+func (e *WindowsError) InnerError() error {
+	return e.innerError
 }
 
-func (self *WindowsError) Error() string {
-	return fmt.Sprintf("gowin32: %s failed: %v", self.functionName, self.innerError)
+// Error returns the formatted Windows API error.
+func (e *WindowsError) Error() string {
+	return fmt.Sprintf("gowin32: %s failed: %v", e.functionName, e.innerError)
 }
