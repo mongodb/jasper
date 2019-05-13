@@ -13,8 +13,8 @@ import (
 
 func TestCLIManager(t *testing.T) {
 	for remoteType, makeService := range map[string]func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) jasper.CloseFunc{
-		serviceREST: makeRESTService,
-		serviceRPC:  makeRPCService,
+		restService: makeTestRESTService,
+		rpcService:  makeTestRPCService,
 	} {
 		t.Run(remoteType, func(t *testing.T) {
 			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string){
