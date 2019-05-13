@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
@@ -23,30 +22,30 @@ const (
 func serviceCombined() cli.Command {
 	return cli.Command{
 		Name:  "combined",
-		Usage: "start a combined multiprotocol Jasper service",
+		Usage: "start a combined multiprotocol service",
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:   restHostFlagName,
 				EnvVar: envVarRESTHost,
-				Usage:  fmt.Sprintf("the host running the REST service (default: %s)", defaultLocalHostName),
+				Usage:  "the host running the REST service ",
 				Value:  defaultLocalHostName,
 			},
 			cli.IntFlag{
 				Name:   restPortFlagName,
 				EnvVar: envVarRPCPort,
-				Usage:  fmt.Sprintf("the port running the REST service (default: %d)", defaultRESTPort),
+				Usage:  "the port running the REST service ",
 				Value:  defaultRESTPort,
 			},
 			cli.StringFlag{
 				Name:   rpcHostFlagName,
 				EnvVar: envVarRPCHost,
-				Usage:  fmt.Sprintf("the host running the RPC service (default: %s)", defaultLocalHostName),
+				Usage:  "the host running the RPC service ",
 				Value:  defaultLocalHostName,
 			},
 			cli.IntFlag{
 				Name:   rpcPortFlagName,
 				EnvVar: envVarRPCPort,
-				Usage:  fmt.Sprintf("the port running the RPC service (default: %d)", defaultRPCPort),
+				Usage:  "the port running the RPC service",
 				Value:  defaultRPCPort,
 			},
 			cli.StringFlag{
@@ -95,7 +94,7 @@ func serviceCombined() cli.Command {
 				grip.Warning(errors.Wrap(closeRPCService(), "error stopping RPC service"))
 			}()
 
-			// Wait for services to shut down.
+			// Wait for both services to shut down.
 			<-ctx.Done()
 			return nil
 		},

@@ -14,23 +14,27 @@ import (
 
 const (
 	keyFilePathFlagName = "key_path"
+
+	envVarRPCHost  = "JASPER_RPC_HOST"
+	envVarRPCPort  = "JASPER_RPC_PORT"
+	defaultRPCPort = 2286
 )
 
 func serviceRPC() cli.Command {
 	return cli.Command{
 		Name:  "rpc",
-		Usage: "run jasper service accessible with RPC",
+		Usage: "run an RPC service",
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:   hostFlagName,
 				EnvVar: envVarRPCHost,
-				Usage:  fmt.Sprintf("the host running the RPC service (default: %s)", defaultLocalHostName),
+				Usage:  "the host running the RPC service",
 				Value:  defaultLocalHostName,
 			},
 			cli.IntFlag{
 				Name:   portFlagName,
 				EnvVar: envVarRPCPort,
-				Usage:  fmt.Sprintf("the port running the RPC service (default: %d)", defaultRPCPort),
+				Usage:  "the port running the RPC service",
 				Value:  defaultRPCPort,
 			},
 			cli.StringFlag{

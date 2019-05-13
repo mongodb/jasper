@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
@@ -10,21 +9,27 @@ import (
 	"github.com/urfave/cli"
 )
 
+const (
+	envVarRESTHost  = "JASPER_REST_HOST"
+	envVarRESTPort  = "JASPER_REST_PORT"
+	defaultRESTPort = 2287
+)
+
 func serviceREST() cli.Command {
 	return cli.Command{
 		Name:  "rest",
-		Usage: "run jasper service accessible with a REST interface",
+		Usage: "run a REST service",
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:   hostFlagName,
 				EnvVar: envVarRESTHost,
-				Usage:  fmt.Sprintf("the host running the REST service (default: %s)", defaultLocalHostName),
+				Usage:  "the host running the REST service",
 				Value:  defaultLocalHostName,
 			},
 			cli.IntFlag{
 				Name:   portFlagName,
 				EnvVar: envVarRESTPort,
-				Usage:  fmt.Sprintf("the port running the REST service (default: %d)", defaultRESTPort),
+				Usage:  "the port running the REST service",
 				Value:  defaultRESTPort,
 			},
 		},

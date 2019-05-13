@@ -43,12 +43,45 @@ func joinFlagNames(names ...string) string {
 // validatePort validates that the flag given by the name is a valid port value.
 func validatePort(flagName string) func(*cli.Context) error {
 	return func(c *cli.Context) error {
-		port := c.GlobalInt(flagName)
+		port := c.Int(flagName)
 		if port <= 0 || port > math.MaxUint16 {
 			return errors.New("port must be between 0-65536 exclusive")
 		}
 		return nil
 	}
+}
+
+// clientFlags returns flags used by all client commands.
+func clientFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  hostFlagName,
+			Usage: "the host running the Jasper service",
+			Value: defaultLocalHostName,
+		},
+		cli.IntFlag{
+			Name:  portFlagName,
+			Usage: "the port running the Jasper service",
+		},
+		cli.StringFlag{
+			Name:  serviceFlagName,
+			Usage: fmt.Sprintf("the type of Jasper service ('%s', or '%s')", restService, rpcService),
+		},
+	}
+}
+
+// clientBefore returns the cli.BeforeFunc used by all client commands.
+func clientBefore() func(c *cli.Context) error {
+	return mergeBeforeFuncs(
+		validatePort(portFlagName),
+		func(c *cli.Context) error {
+			service := c.String(serviceFlagName)
+			if service != restService && service != rpcService {
+				return errors.Errorf("service must be '%s' or '%s'", restService, rpcService)
+			}
+			return nil
+		},
+	)
 }
 
 // readInput reads JSON from the input and decodes it to the output.
@@ -94,7 +127,7 @@ func makeRemoteClient(ctx context.Context, service, host string, port int, certF
 // validates the input, runs the request, and writes the response of the request
 // to standard output.
 func doPassthroughInputOutput(c *cli.Context, input Validator, request func(context.Context, jasper.RemoteClient) (response interface{})) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), clientConnectionTimeout)
 	defer cancel()
 
 	if err := readInput(os.Stdin, input); err != nil {
@@ -123,10 +156,10 @@ func doPassthroughOutput(c *cli.Context, request func(context.Context, jasper.Re
 // withConnection runs the operation within the scope of a remote client
 // connection.
 func withConnection(ctx context.Context, c *cli.Context, operation func(jasper.RemoteClient) error) error {
-	host := c.GlobalString(hostFlagName)
-	port := c.GlobalInt(portFlagName)
-	service := c.GlobalString(serviceFlagName)
-	certFilePath := c.GlobalString(certFilePathFlagName)
+	host := c.String(hostFlagName)
+	port := c.Int(portFlagName)
+	service := c.String(serviceFlagName)
+	certFilePath := c.String(certFilePathFlagName)
 
 	client, err := makeRemoteClient(ctx, service, host, port, certFilePath)
 	if err != nil {

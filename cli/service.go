@@ -11,16 +11,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-const (
-	envVarRPCHost  = "JASPER_RPC_HOST"
-	envVarRPCPort  = "JASPER_RPC_PORT"
-	defaultRPCPort = 2286
-
-	envVarRESTHost  = "JASPER_REST_HOST"
-	envVarRESTPort  = "JASPER_REST_PORT"
-	defaultRESTPort = 2287
-)
-
 // Service encapsulates the functionality to set up Jasper services.
 func Service() cli.Command {
 	return cli.Command{
