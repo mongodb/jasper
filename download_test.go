@@ -163,10 +163,10 @@ func TestProcessDownloadJobs(t *testing.T) {
 	}
 	assert.NoError(t, catcher.Resolve())
 
-	_ = amboy.WaitCtxInterval(ctx, q, 100*time.Millisecond)
+	require.False(t, amboy.WaitCtxInterval(ctx, q, 100*time.Millisecond))
 	require.NoError(t, amboy.ResolveErrors(ctx, q))
 
-	assert.NoError(t, processDownloadJobs(ctx, addMongoDBFilesToCache(cache, absDir))(q))
+	require.NoError(t, processDownloadJobs(ctx, addMongoDBFilesToCache(cache, absDir))(q))
 
 	downloadedFiles := []string{}
 	filepath.Walk(absDir, func(path string, info os.FileInfo, err error) error {
