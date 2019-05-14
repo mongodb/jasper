@@ -40,11 +40,16 @@ func joinFlagNames(names ...string) string {
 	return strings.Join(names, ", ")
 }
 
+const (
+	minPort = 1 << 10
+	maxPort = math.MaxUint16 - 1
+)
+
 // validatePort validates that the flag given by the name is a valid port value.
 func validatePort(flagName string) func(*cli.Context) error {
 	return func(c *cli.Context) error {
 		port := c.Int(flagName)
-		if port <= 0 || port > math.MaxUint16 {
+		if port < minPort || port > maxPort {
 			return errors.New("port must be between 0-65536 exclusive")
 		}
 		return nil
