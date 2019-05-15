@@ -2,7 +2,9 @@ package jasper
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -40,6 +42,37 @@ func validMongoDBDownloadOptions() MongoDBDownloadOptions {
 		},
 		Releases: []string{"4.0-current"},
 	}
+}
+
+func addFileToDirectory(dir string, fileName string, fileContents string) error {
+	if format := archiver.MatchingFormat(fileName); format != nil {
+		tmpFile, err := ioutil.TempFile(dir, "tmp.txt")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tmpFile.Name())
+		if _, err := tmpFile.Write([]byte(fileContents)); err != nil {
+			return err
+		}
+		if err := tmpFile.Close(); err != nil {
+			return err
+		}
+
+		if err := format.Make(filepath.Join(dir, fileName), []string{tmpFile.Name()}); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	file, err := os.Create(filepath.Join(dir, fileName))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err := file.Write([]byte(fileContents)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func TestSetupDownloadMongoDBReleasesFailsWithZeroOptions(t *testing.T) {
@@ -129,21 +162,33 @@ func TestCreateDownloadJobsWithInvalidPath(t *testing.T) {
 }
 
 func TestProcessDownloadJobs(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skip download job test in short mode")
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
 	defer cancel()
 
-	file, err := ioutil.TempFile("build", "download_test")
+	downloadDir, err := ioutil.TempDir("build", "download_test")
+	require.NoError(t, err)
+
+	serverDir, err := ioutil.TempDir("build", "download_test_server")
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, file.Close())
-		assert.NoError(t, os.Remove(file.Name()))
+		assert.NoError(t, os.RemoveAll(serverDir))
 	}()
 
-	job, err := recall.NewDownloadJob("https://example.com", file.Name(), true)
+	fileName := "foo.zip"
+	fileContents := "foo"
+	require.NoError(t, addFileToDirectory(serverDir, fileName, fileContents))
+
+	port := getPortNumber()
+	serverAddr := fmt.Sprintf("localhost:%d", port)
+	server := &http.Server{Addr: serverAddr, Handler: http.FileServer(http.Dir(serverDir))}
+	defer func() {
+		assert.NoError(t, server.Close())
+	}()
+	go func() {
+		server.ListenAndServe()
+	}()
+
+	job, err := recall.NewDownloadJob(fmt.Sprintf("http://%s/%s", serverAddr, fileName), downloadDir, true)
 	require.NoError(t, err)
 
 	q := queue.NewLocalUnordered(1)

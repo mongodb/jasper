@@ -245,7 +245,7 @@ func processDownloadJobs(ctx context.Context, processFile func(string) error) fu
 				catcher.Add(errors.New("problem retrieving download job from queue"))
 				continue
 			}
-			if err := processFile(downloadJob.FileName); err != nil {
+			if err := processFile(filepath.Join(downloadJob.Directory, downloadJob.FileName)); err != nil {
 				catcher.Add(err)
 			}
 		}
