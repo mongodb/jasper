@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -29,7 +30,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
 
-	cmd, err := opts.Resolve(ctx)
+	cmd, cmdCtx, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
@@ -60,12 +61,12 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	p.info.Host, _ = os.Hostname()
 	p.info.IsRunning = true
 
-	go p.transition(ctx, cmd)
+	go p.transition(ctx, cmdCtx, cmd)
 
 	return p, nil
 }
 
-func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
+func (p *basicProcess) transition(ctx context.Context, cmdCtx context.Context, cmd *exec.Cmd) {
 	waitFinished := make(chan error)
 
 	go func() {
@@ -93,8 +94,12 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		procWaitStatus := p.cmd.ProcessState.Sys().(syscall.WaitStatus)
 		if procWaitStatus.Signaled() {
 			p.info.ExitCode = int(procWaitStatus.Signal())
+			p.info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && cmdCtx.Err() == context.DeadlineExceeded
 		} else {
 			p.info.ExitCode = procWaitStatus.ExitStatus()
+			if runtime.GOOS == "windows" {
+				p.info.Timeout = procWaitStatus.ExitStatus() == 1 && cmdCtx.Err() == context.DeadlineExceeded
+			}
 		}
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)

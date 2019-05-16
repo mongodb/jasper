@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -34,7 +35,7 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
 
-	cmd, err := opts.Resolve(ctx)
+	cmd, cmdCtx, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
@@ -67,7 +68,7 @@ func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, erro
 	}
 	p.info.Host, _ = os.Hostname()
 
-	go p.reactor(ctx, cmd)
+	go p.reactor(ctx, cmdCtx, cmd)
 
 	return p, nil
 }
@@ -105,7 +106,7 @@ func (p *blockingProcess) getErr() error {
 	return p.err
 }
 
-func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
+func (p *blockingProcess) reactor(ctx context.Context, cmdCtx context.Context, cmd *exec.Cmd) {
 	signal := make(chan error)
 	go func() {
 		defer close(signal)
@@ -131,8 +132,12 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 					procWaitStatus := cmd.ProcessState.Sys().(syscall.WaitStatus)
 					if procWaitStatus.Signaled() {
 						info.ExitCode = int(procWaitStatus.Signal())
+						p.info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && cmdCtx.Err() == context.DeadlineExceeded
 					} else {
 						info.ExitCode = procWaitStatus.ExitStatus()
+						if runtime.GOOS == "windows" {
+							p.info.Timeout = procWaitStatus.ExitStatus() == 1 && cmdCtx.Err() == context.DeadlineExceeded
+						}
 					}
 				} else {
 					info.Successful = (err == nil)
@@ -165,6 +170,16 @@ func (p *blockingProcess) reactor(ctx context.Context, cmd *exec.Cmd) {
 			p.mu.RUnlock()
 			p.setInfo(info)
 			return
+		case <-cmdCtx.Done():
+			info := p.getInfo()
+			info.Complete = true
+			info.IsRunning = false
+			info.Successful = false
+
+			p.mu.RLock()
+			p.triggers.Run(info)
+			p.mu.RUnlock()
+			p.setInfo(info)
 		case op := <-p.ops:
 			if op != nil {
 				op(cmd)

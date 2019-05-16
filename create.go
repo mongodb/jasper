@@ -64,7 +64,7 @@ func (opts *CreateOptions) Validate() error {
 	}
 
 	if opts.Timeout > 0 && opts.Timeout < time.Second {
-		return errors.New("when specifying a timeout you must use out greater than one second")
+		return errors.New("when specifying a timeout, it must be greater than one second")
 	}
 
 	if opts.Timeout != 0 && opts.TimeoutSecs != 0 {
@@ -100,14 +100,14 @@ func (opts *CreateOptions) Validate() error {
 }
 
 // Resolve creates the command object according to the create options.
-func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
+func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, context.Context, error) {
 	var err error
 	if ctx.Err() != nil {
-		return nil, errors.New("cannot resolve command with canceled context")
+		return nil, nil, errors.New("cannot resolve command with canceled context")
 	}
 
 	if err = opts.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
 	if opts.WorkingDirectory == "" {
@@ -129,7 +129,7 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		opts.closers = append(opts.closers, func() (_ error) { cancel(); return })
+		opts.closers = append(opts.closers, func() error { cancel(); return nil })
 	}
 
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
@@ -137,11 +137,11 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 
 	cmd.Stdout, err = opts.Output.GetOutput()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	cmd.Stderr, err = opts.Output.GetError()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	cmd.Env = env
 
@@ -169,7 +169,7 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 		return errors.WithStack(catcher.Resolve())
 	})
 
-	return cmd, nil
+	return cmd, ctx, nil
 }
 
 // getEnvSlice returns the (CreateOptions).Environment as a slice of environment
