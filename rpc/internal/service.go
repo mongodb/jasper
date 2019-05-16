@@ -376,15 +376,16 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 	}, nil
 }
 
-func (s *jasperService) GetLogs(ctx context.Context, id *JasperProcessID) (*Logs, error) {
+func (s *jasperService) GetLogs(ctx context.Context, request *LogRequest) (*LogStream, error) {
+	id := request.Id
 	proc, err := s.manager.Get(ctx, id.Value)
 	if err != nil {
-		return nil, errors.Wrapf(err, "problem fetching process '%s'", id.Value)
+		return &LogStream{}, nil
 	}
 
 	logs, err := jasper.GetInMemoryLogs(ctx, proc)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get logs for process '%s'", id.Value)
+		return nil, errors.Wrapf(err, "could not get logs for process '%s'", request.Id.Value)
 	}
 	return &Logs{Logs: logs}, nil
 }

@@ -189,8 +189,15 @@ message BuildloggerURLs {
     repeated string urls = 1;
 }
 
-message Logs {
-    repeated string logs = 1;
+message LogRequest {
+    JasperProcessID id = 1;
+    int64 max_logs = 2;
+}
+message LogStream {
+    OperationOutcome outcome = 1;
+    repeated string logs = 2;
+    int64 count = 3;
+    bool eof = 4;
 }
 
 enum SignalTriggerID {
@@ -230,7 +237,7 @@ service JasperProcessManager {
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
   rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
   rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
-  rpc GetLogs(JasperProcessID) returns (Logs);
+  rpc GetLogs(LogRequest) returns (LogStream);
   rpc GetBuildloggerURLs(JasperProcessID) returns (BuildloggerURLs);
   rpc SignalEvent(EventName) returns (OperationOutcome);
 }
