@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -372,6 +373,104 @@ func TestLoggers(t *testing.T) {
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			test(t, Logger{Type: LogDefault, Options: LogOptions{Format: LogFormatPlain}})
+		})
+	}
+}
+
+func TestGetInMemoryLogs(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for procType, makeProc := range map[string]ProcessConstructor{
+		"Basic":    newBasicProcess,
+		"Blocking": newBlockingProcess,
+	} {
+		t.Run(procType, func(t *testing.T) {
+
+			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, opts *CreateOptions, makeProc ProcessConstructor, output string){
+				"FailsWithNilProcess": func(ctx context.Context, t *testing.T, opts *CreateOptions, makeProc ProcessConstructor, output string) {
+					logs, err := GetInMemoryLogs(ctx, nil)
+					assert.Error(t, err)
+					assert.Nil(t, logs)
+				},
+				"FailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, opts *CreateOptions, makeProc ProcessConstructor, output string) {
+					proc, err := makeProc(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := GetInMemoryLogs(ctx, proc)
+					assert.Error(t, err)
+					assert.Nil(t, logs)
+				},
+				"SucceedsWithInMemoryLogger": func(ctx context.Context, t *testing.T, opts *CreateOptions, makeProc ProcessConstructor, output string) {
+					opts.Output.Loggers = []Logger{
+						{
+							Type: LogInMemory,
+							Options: LogOptions{
+								Format:      LogFormatPlain,
+								InMemoryCap: 100,
+							},
+						},
+					}
+					proc, err := makeProc(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := GetInMemoryLogs(ctx, proc)
+					assert.NoError(t, err)
+					assert.Contains(t, logs, output)
+				},
+				"MultipleInMemoryLoggersReturnsLogsFromOnlyOne": func(ctx context.Context, t *testing.T, opts *CreateOptions, makeProc ProcessConstructor, output string) {
+					opts.Output.Loggers = []Logger{
+						{
+							Type: LogInMemory,
+							Options: LogOptions{
+								Format:      LogFormatPlain,
+								InMemoryCap: 100,
+							},
+						},
+						{
+							Type: LogInMemory,
+							Options: LogOptions{
+								Format:      LogFormatPlain,
+								InMemoryCap: 100,
+							},
+						},
+					}
+					proc, err := makeProc(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := GetInMemoryLogs(ctx, proc)
+					assert.NoError(t, err)
+					assert.Contains(t, logs, output)
+
+					outputCount := 0
+					for _, log := range logs {
+						if strings.Contains(log, output) {
+							outputCount++
+						}
+					}
+					assert.Equal(t, 1, outputCount)
+				},
+				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, output string) {},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					tctx, tcancel := context.WithTimeout(ctx, processTestTimeout)
+					defer tcancel()
+
+					output := "foo"
+					opts := &CreateOptions{Args: []string{"echo", output}}
+					testCase(tctx, t, opts, makeProc, output)
+				})
+			}
+
 		})
 	}
 }

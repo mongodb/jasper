@@ -13,7 +13,6 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/recovery"
-	"github.com/mongodb/grip/send"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
 )
@@ -544,30 +543,11 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info := getProcInfoNoHang(ctx, proc)
-	// Implicitly assumes that there's at most 1 in-memory logger.
-	var inMemorySender *send.InMemorySender
-	for _, logger := range info.Options.Output.Loggers {
-		sender, ok := logger.sender.(*send.InMemorySender)
-		if ok {
-			inMemorySender = sender
-			break
-		}
-	}
-
-	if inMemorySender == nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Errorf("no in-memory logger found for process '%s'", id).Error(),
-		})
-		return
-	}
-
-	logs, err := inMemorySender.GetString()
+	logs, err := GetInMemoryLogs(ctx, proc)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+			Message:    errors.Wrapf(err, "could not get logs for process '%s'", id).Error(),
 		})
 		return
 	}

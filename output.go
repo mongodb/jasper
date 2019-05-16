@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"time"
@@ -230,6 +231,27 @@ func (l *Logger) Configure() (send.Sender, error) {
 	l.sender = sender
 
 	return l.sender, nil
+}
+
+// GetInMemoryLogs gets the in-memory output logs from a process. If the process
+// has not been called with Process.Wait(), this is not guaranteed to produce
+// all the logs. This function assumes that there is exactly one in-memory
+// logger attached to this process's output.
+func GetInMemoryLogs(ctx context.Context, proc Process) ([]string, error) {
+	if proc == nil {
+		return nil, errors.New("cannot get output logs from nil process")
+	}
+	for _, logger := range proc.Info(ctx).Options.Output.Loggers {
+		if logger.Type != LogInMemory {
+			continue
+		}
+		inMemorySender, ok := logger.sender.(*send.InMemorySender)
+		if !ok {
+			continue
+		}
+		return inMemorySender.GetString()
+	}
+	return nil, errors.New("could not find in-memory output logs")
 }
 
 // BufferOptions packages options for whether or not a Logger should be

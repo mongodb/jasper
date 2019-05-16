@@ -376,6 +376,19 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 	}, nil
 }
 
+func (s *jasperService) GetLogs(ctx context.Context, id *JasperProcessID) (*Logs, error) {
+	proc, err := s.manager.Get(ctx, id.Value)
+	if err != nil {
+		return nil, errors.Wrapf(err, "problem fetching process '%s'", id.Value)
+	}
+
+	logs, err := jasper.GetInMemoryLogs(ctx, proc)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get logs for process '%s'", id.Value)
+	}
+	return &Logs{Logs: logs}, nil
+}
+
 func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProcessID) (*BuildloggerURLs, error) {
 	proc, err := s.manager.Get(ctx, id.Value)
 	if err != nil {

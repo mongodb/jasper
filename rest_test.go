@@ -531,8 +531,9 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
 		"GetLogsFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			output := "foo"
 			opts := &CreateOptions{
-				Args: []string{"echo", "foo"},
+				Args: []string{"echo", output},
 				Output: OutputOptions{
 					Loggers: []Logger{
 						Logger{
@@ -544,29 +545,32 @@ func TestRestService(t *testing.T) {
 			}
 
 			proc, err := client.CreateProcess(ctx, opts)
-			assert.NoError(t, err)
-			assert.NotNil(t, proc)
+			require.NoError(t, err)
+			require.NotNil(t, proc)
 
 			_, err = proc.Wait(ctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			logs, err := client.GetLogs(ctx, proc.ID())
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotEmpty(t, logs)
+			assert.Contains(t, logs, output)
 		},
-		"GetLogsFromNonexistentProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"GetLogsFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			logs, err := client.GetLogs(ctx, "foo")
 			assert.Error(t, err)
 			assert.Empty(t, logs)
 		},
-		"GetLogsFailsForProcessWithoutLogs": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"GetLogsFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{Args: []string{"echo", "foo"}}
 
 			proc, err := client.CreateProcess(ctx, opts)
-			assert.NoError(t, err)
-			assert.NotNil(t, proc)
+			require.NoError(t, err)
+			require.NotNil(t, proc)
+
 			_, err = proc.Wait(ctx)
-			assert.NoError(t, err)
+			require.NoError(t, err)
+
 			logs, err := client.GetLogs(ctx, proc.ID())
 			assert.Error(t, err)
 			assert.Empty(t, logs)
