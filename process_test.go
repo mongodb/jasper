@@ -535,6 +535,18 @@ func TestProcessImplementations(t *testing.T) {
 					}
 					require.NoError(t, Terminate(ctx, proc)) // Clean up.
 				},
+				"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
+					opts = sleepCreateOpts(100)
+					opts.Timeout = time.Second
+					opts.TimeoutSecs = 1
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					assert.Equal(t, int(syscall.SIGKILL), exitCode)
+					assert.True(t, proc.Info(ctx).Timeout)
+				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {

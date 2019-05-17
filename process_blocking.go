@@ -132,11 +132,11 @@ func (p *blockingProcess) reactor(ctx context.Context, cmdCtx context.Context, c
 					procWaitStatus := cmd.ProcessState.Sys().(syscall.WaitStatus)
 					if procWaitStatus.Signaled() {
 						info.ExitCode = int(procWaitStatus.Signal())
-						p.info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && cmdCtx.Err() == context.DeadlineExceeded
+						info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && cmdCtx.Err() == context.DeadlineExceeded
 					} else {
 						info.ExitCode = procWaitStatus.ExitStatus()
 						if runtime.GOOS == "windows" {
-							p.info.Timeout = procWaitStatus.ExitStatus() == 1 && cmdCtx.Err() == context.DeadlineExceeded
+							info.Timeout = procWaitStatus.ExitStatus() == 1 && cmdCtx.Err() == context.DeadlineExceeded
 						}
 					}
 				} else {
@@ -170,16 +170,6 @@ func (p *blockingProcess) reactor(ctx context.Context, cmdCtx context.Context, c
 			p.mu.RUnlock()
 			p.setInfo(info)
 			return
-		case <-cmdCtx.Done():
-			info := p.getInfo()
-			info.Complete = true
-			info.IsRunning = false
-			info.Successful = false
-
-			p.mu.RLock()
-			p.triggers.Run(info)
-			p.mu.RUnlock()
-			p.setInfo(info)
 		case op := <-p.ops:
 			if op != nil {
 				op(cmd)

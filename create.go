@@ -25,12 +25,13 @@ type CreateOptions struct {
 	Output           OutputOptions     `json:"output"`
 	OverrideEnviron  bool              `json:"override_env,omitempty"`
 	TimeoutSecs      int               `json:"timeout_secs,omitempty"`
-	Timeout          time.Duration     `json:"-"`
-	Tags             []string          `json:"tags"`
-	OnSuccess        []*CreateOptions  `json:"on_success"`
-	OnFailure        []*CreateOptions  `json:"on_failure"`
-	OnTimeout        []*CreateOptions  `json:"on_timeout"`
-	StandardInput    io.Reader         `json:"-"`
+	// On remote interfaces, TimeoutSecs must be set instead of Timeout.
+	Timeout       time.Duration    `json:"-"`
+	Tags          []string         `json:"tags"`
+	OnSuccess     []*CreateOptions `json:"on_success"`
+	OnFailure     []*CreateOptions `json:"on_failure"`
+	OnTimeout     []*CreateOptions `json:"on_timeout"`
+	StandardInput io.Reader        `json:"-"`
 
 	closers []func() error
 }
