@@ -544,7 +544,11 @@ func TestProcessImplementations(t *testing.T) {
 
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
-					assert.Equal(t, int(syscall.SIGKILL), exitCode)
+					if runtime.GOOS == "windows" {
+						assert.Equal(t, 1, exitCode)
+					} else {
+						assert.Equal(t, int(syscall.SIGKILL), exitCode)
+					}
 					assert.True(t, proc.Info(ctx).Timeout)
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {},
