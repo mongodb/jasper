@@ -1,7 +1,6 @@
 package jasper
 
 import (
-<<<<<<< Updated upstream
 	"context"
 	"strings"
 	"testing"
@@ -131,23 +130,5 @@ func TestAmboyJob(t *testing.T) {
 			job.Run(ctx)
 			require.Error(t, job.Error())
 		})
-=======
-	"testing"
-
-	"github.com/mongodb/amboy/registry"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestAmboyJob(t *testing.T) {
-	t.Run("Registry", func(t *testing.T) {
-		count := 0
-		for n := range registry.JobTypeNames() {
-			if n != "" {
-				count++
-			}
-		}
-		assert.Equal(t, 0, count)
->>>>>>> Stashed changes
 	})
-
 }
