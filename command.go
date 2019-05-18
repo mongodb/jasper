@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/shlex"
+	"github.com/mongodb/amboy"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
@@ -27,6 +28,7 @@ type Command struct {
 	prerequisite    func() bool
 	priority        level.Priority
 	runBackground   bool
+	tags            []string
 
 	cmds    [][]string
 	id      string
@@ -155,6 +157,19 @@ func (c *Command) Priority(l level.Priority) *Command { c.priority = l; return c
 
 // ID sets the ID.
 func (c *Command) ID(id string) *Command { c.id = id; return c }
+
+// SetTags overrides any existing tags for a process with the
+// specified list. Tags are used to filter process with the manager.
+func (c *Command) SetTags(tags []string) *Command { c.tags = tags; return c }
+
+// AppendTags adds the specified tags to the existing tag slice. Tags
+// are used to filter process with the manager.
+func (c *Command) AppendTags(t ...string) *Command { c.tags = append(c.tags, t...); return c }
+
+// ExtendTags adds all tags in the specified slice to the tags will be
+// added to the process after creation. Tags are used to filter
+// process with the manager.
+func (c *Command) ExendTag(t []string) *Command { c.tags = append(c.tags, t...); return c }
 
 // Background allows you to set the command to run in the background
 // when you call Run(), the command will begin executing but will not
@@ -397,6 +412,74 @@ func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
 	return c
 }
 
+// EnqueueForeground adds separate jobs to the queue for every operation
+// captured in the command. These operations will execute in
+// parallel. The output of the commands are logged, using the default
+// grip sender in the foreground.
+func (c *Command) EnqueueForeground(ctx context.Context, q amboy.Queue) error {
+	jobs, err := c.JobsForeground(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	catcher := grip.NewBasicCatcher()
+	for _, j := range jobs {
+		catcher.Add(q.Put(j))
+	}
+
+	return catcher.Resolve()
+}
+
+// Enqueue adds separate jobs to the queue for every operation
+// captured in the command. These operations will execute in
+// parallel. The output of the operations is captured in the body of
+// the job.
+func (c *Command) Enqueue(ctx context.Context, q amboy.Queue) error {
+	jobs, err := c.Jobs(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	catcher := grip.NewBasicCatcher()
+	for _, j := range jobs {
+		catcher.Add(q.Put(j))
+	}
+
+	return catcher.Resolve()
+}
+
+// JobseForeground returns a slice of jobs for every operation
+// captured in the command. The output of the commands are logged,
+// using the default grip sender in the foreground.
+func (c *Command) JobsForeground(ctx context.Context) ([]amboy.Job, error) {
+	opts, err := c.getCreateOpts(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	out := make([]amboy.Job, len(opts))
+	for idx := range opts {
+		out[idx] = NewJobForeground(c.makep, opts[idx])
+	}
+	return out, nil
+}
+
+// Jobs returns a slice of jobs for every operation in the
+// command. The output of the commands are captured in the body of the
+// job.
+func (c *Command) Jobs(ctx context.Context) ([]amboy.Job, error) {
+	opts, err := c.getCreateOpts(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	out := make([]amboy.Job, len(opts))
+	for idx := range opts {
+		out[idx] = NewJobOptions(c.makep, opts[idx])
+	}
+	return out, nil
+}
+
 func (c *Command) finalizeWriters() {
 	if c.opts.Output.Output == nil {
 		c.opts.Output.Output = ioutil.Discard
@@ -475,6 +558,7 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 		"idx": idx,
 		"len": len(c.cmds),
 		"bkg": c.runBackground,
+		"tag": c.tags,
 	}
 
 	addOutOp := func(msg message.Fields) message.Fields { return msg }
@@ -500,6 +584,10 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 		newProc, err = c.makep(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
+		}
+
+		for _, t := range c.tags {
+			newProc.Tag(t)
 		}
 
 		c.procIDs = append(c.procIDs, newProc.ID())
