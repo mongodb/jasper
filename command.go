@@ -500,7 +500,7 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 			opts.Output.Error = &out
 		}
 		addOutOp = func(msg message.Fields) message.Fields {
-			getLogOutput(out.String())
+			msg["out"] = getLogOutput(out.String())
 			return msg
 		}
 	}
