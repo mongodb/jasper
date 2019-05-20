@@ -196,18 +196,21 @@ func TestCommandImplementation(t *testing.T) {
 								"StdOutOnly": func(ctx context.Context, t *testing.T, cmd Command, buf *Buffer) {
 									cmd.SetOutputWriter(buf)
 									require.NoError(t, runFunc(&cmd, ctx))
+									grip.Infof("kim: stdout buf.String():\n%s\n", buf.String())
 									checkOutput(t, true, buf.String(), arg1, arg2)
 									checkOutput(t, false, buf.String(), lsErrorMsg)
 								},
 								"StdErrOnly": func(ctx context.Context, t *testing.T, cmd Command, buf *Buffer) {
 									cmd.SetErrorWriter(buf)
 									require.NoError(t, runFunc(&cmd, ctx))
+									grip.Infof("kim: stderr buf.String():\n%s\n", buf.String())
 									checkOutput(t, true, buf.String(), lsErrorMsg)
 									checkOutput(t, false, buf.String(), arg1, arg2)
 								},
 								"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd Command, buf *Buffer) {
 									cmd.SetCombinedWriter(buf)
 									require.NoError(t, runFunc(&cmd, ctx))
+									grip.Infof("kim: stdout and stderr buf.String():\n%s\n", buf.String())
 									checkOutput(t, true, buf.String(), arg1, arg2, lsErrorMsg)
 								},
 							} {
