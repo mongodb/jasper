@@ -28,7 +28,7 @@ type CreateOptions struct {
 	Output           OutputOptions     `bson:"output" json:"output" yaml:"output"`
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	TimeoutSecs      int               `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
-	Timeout          time.Duration     `bson:"timeout" json:"-" yaml:"-"`
+	Timeout          time.Duration     `bson:"-" json:"-" yaml:"-"`
 	Tags             []string          `bson:"tags" json:"tags" yaml:"tags"`
 	OnSuccess        []*CreateOptions  `bson:"on_success" json:"on_success" yaml:"on_success"`
 	OnFailure        []*CreateOptions  `bson:"on_failure" json:"on_failure" yaml:"on_failure"`
