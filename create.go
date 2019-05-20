@@ -114,11 +114,7 @@ func (opts *CreateOptions) hash() hash.Hash {
 		_, _ = io.WriteString(hash, t)
 	}
 
-	env := []string{}
-	for k, v := range opts.Environment {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-
+	env := opts.getEnvSlice()
 	sort.Strings(env)
 	for _, e := range env {
 		_, _ = io.WriteString(hash, e)

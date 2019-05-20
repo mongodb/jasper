@@ -169,7 +169,7 @@ func (c *Command) AppendTags(t ...string) *Command { c.tags = append(c.tags, t..
 // ExtendTags adds all tags in the specified slice to the tags will be
 // added to the process after creation. Tags are used to filter
 // process with the manager.
-func (c *Command) ExendTag(t []string) *Command { c.tags = append(c.tags, t...); return c }
+func (c *Command) ExtendTags(t []string) *Command { c.tags = append(c.tags, t...); return c }
 
 // Background allows you to set the command to run in the background
 // when you call Run(), the command will begin executing but will not
