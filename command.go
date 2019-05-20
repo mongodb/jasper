@@ -20,7 +20,8 @@ import (
 
 // Command objects allow a quick and lightweight interface for firing off
 // ad-hoc processes for smaller tasks. Command immediately supports features
-// such as output and error functionality and remote execution.
+// such as output and error functionality and remote execution. Command methods
+// are not thread-safe.
 type Command struct {
 	continueOnError bool
 	ignoreError     bool
@@ -35,6 +36,8 @@ type Command struct {
 	procIDs []string
 	remote  remoteCommandOptions
 	makep   ProcessConstructor
+
+	procs []Process
 }
 
 type remoteCommandOptions struct {
@@ -95,7 +98,9 @@ func splitCmdToArgs(cmd string) []string {
 // NewCommand returns a blank Command.
 // New blank Commands will use basicProcess as their default Process for
 // executing sub-commands unless it is changed via ProcConstructor().
-func NewCommand() *Command { return &Command{opts: &CreateOptions{}, makep: newBasicProcess} }
+func NewCommand() *Command {
+	return &Command{opts: &CreateOptions{}, makep: newBasicProcess}
+}
 
 // ProcConstructor returns a blank Command that will use the process created
 // by the given ProcessConstructor.
@@ -107,7 +112,13 @@ func (c *Command) ProcConstructor(processConstructor ProcessConstructor) *Comman
 // GetProcIDs returns an array of Process IDs associated with the sub-commands
 // being run. This method will return a nil slice until processes have actually
 // been created by the Command for execution.
-func (c *Command) GetProcIDs() []string { return c.procIDs }
+func (c *Command) GetProcIDs() []string {
+	ids := []string{}
+	for _, proc := range c.procs {
+		ids = append(ids, proc.ID())
+	}
+	return ids
+}
 
 // ApplyFromOpts uses the CreateOptions to configure the Command. If this is a
 // remote command (i.e. host has been set), the WorkingDirectory and Environment
@@ -305,7 +316,7 @@ func (c *Command) Run(ctx context.Context) error {
 }
 
 // RunParallel is the same as Run(), but will run all sub-commands in parallel.
-// Use of this function effectively ignores the the ContinueOnError flag.
+// Use of this function effectively ignores the ContinueOnError flag.
 func (c *Command) RunParallel(ctx context.Context) error {
 	// Avoid paying the copy-costs in between command structs by doing the work
 	// before executing the commands.
@@ -330,6 +341,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 				}
 			}()
 			errs <- innerCmd.Run(ctx)
+			c.procs = append(c.procs, innerCmd.procs...)
 		}(parallelCmd)
 	}
 
@@ -563,43 +575,68 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 
 	addOutOp := func(msg message.Fields) message.Fields { return msg }
 	var err error
-	var newProc Process
 	// TODO: the logic below this is not strictly correct if, for example,
 	// Output is redirected to Error and Error has been defined.
 	if opts.Output.Output == nil {
 		var out bytes.Buffer
 		opts.Output.Output = &out
 		opts.Output.Error = &out
-		newProc, err = c.makep(ctx, opts)
+		proc, err := c.makep(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
 		}
+		c.procs = append(c.procs, proc)
 
-		c.procIDs = append(c.procIDs, newProc.ID())
 		addOutOp = func(msg message.Fields) message.Fields {
 			getLogOutput(out.Bytes())
 			return msg
 		}
 	} else {
-		newProc, err = c.makep(ctx, opts)
+		proc, err := c.makep(ctx, opts)
 		if err != nil {
 			return errors.Wrapf(err, "problem starting command")
 		}
 
 		for _, t := range c.tags {
-			newProc.Tag(t)
+			proc.Tag(t)
 		}
 
-		c.procIDs = append(c.procIDs, newProc.ID())
+		c.procs = append(c.procs, proc)
+
 	}
 
 	if !c.runBackground {
-		_, err = newProc.Wait(ctx)
-		msg["err"] = err
+		waitCatcher := grip.NewBasicCatcher()
+		for _, proc := range c.procs {
+			_, err = proc.Wait(ctx)
+			waitCatcher.Add(errors.Wrapf(err, "error waiting on process '%s'", proc.ID()))
+		}
+		msg["err"] = waitCatcher.Resolve()
+	}
+	grip.Log(c.priority, addOutOp(msg))
+
+	return errors.WithStack(err)
+}
+
+// Wait returns the exit code and error waiting for the underlying process to
+// complete.
+// For commands run with RunParallel, Wait only returns a zero exit code if all
+// the underlying processes return exit code zero; otherwise, it returns a
+// non-zero exit code. Similarly, it will return a non-nil error if any of the
+// underlying processes encounter an error while waiting.
+func (c *Command) Wait(ctx context.Context) (int, error) {
+	if len(c.procs) == 0 {
+		return 0, errors.New("cannot call wait on a command if no processes have started yet")
 	}
 
-	grip.Log(c.priority, addOutOp(msg))
-	return errors.WithStack(err)
+	for _, proc := range c.procs {
+		exitCode, err := proc.Wait(ctx)
+		if err != nil || exitCode != 0 {
+			return exitCode, errors.Wrapf(err, "error waiting on process '%s'", proc.ID())
+		}
+	}
+
+	return 0, nil
 }
 
 // BuildCommand builds the Command given the configuration of arguments.
