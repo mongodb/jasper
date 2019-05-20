@@ -325,9 +325,9 @@ func (c *Command) RunParallel(ctx context.Context) error {
 				if err != nil {
 					errs <- err
 				}
-				procs <- innerCmd.procs
 			}()
 			errs <- innerCmd.Run(ctx)
+			procs <- innerCmd.procs
 		}(parallelCmd)
 	}
 
