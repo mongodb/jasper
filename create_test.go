@@ -165,11 +165,11 @@ func TestCreateOptions(t *testing.T) {
 			opts.Timeout = time.Second
 			opts.Args = []string{"sleep", "2"}
 
-			cmd, cmdCtx, err := opts.Resolve(ctx)
+			cmd, deadline, err := opts.Resolve(ctx)
 			require.NoError(t, err)
-			assert.NoError(t, cmdCtx.Err())
+			assert.True(t, time.Now().Before(deadline))
 			assert.Error(t, cmd.Run())
-			assert.Error(t, cmdCtx.Err())
+			assert.True(t, time.Now().After(deadline))
 		},
 		"ReturnedContextWrapsResolveContext": func(t *testing.T, opts *CreateOptions) {
 			opts = sleepCreateOpts(10)
@@ -177,11 +177,11 @@ func TestCreateOptions(t *testing.T) {
 			tctx, tcancel := context.WithTimeout(ctx, time.Millisecond)
 			defer tcancel()
 
-			cmd, cmdCtx, err := opts.Resolve(ctx)
+			cmd, deadline, err := opts.Resolve(ctx)
 			require.NoError(t, err)
 			assert.Error(t, cmd.Run())
 			assert.Equal(t, context.DeadlineExceeded, tctx.Err())
-			assert.Equal(t, context.DeadlineExceeded, cmdCtx.Err())
+			assert.True(t, time.Now().After(deadline))
 		},
 		"ReturnedContextErrorsOnTimeout": func(t *testing.T, opts *CreateOptions) {
 			opts = sleepCreateOpts(10)
@@ -190,13 +190,13 @@ func TestCreateOptions(t *testing.T) {
 			defer tcancel()
 
 			start := time.Now()
-			cmd, cmdCtx, err := opts.Resolve(ctx)
+			cmd, deadline, err := opts.Resolve(ctx)
 			require.NoError(t, err)
 			assert.Error(t, cmd.Run())
 			elapsed := time.Since(start)
 			assert.True(t, elapsed > opts.Timeout)
 			assert.NoError(t, tctx.Err())
-			assert.Equal(t, context.DeadlineExceeded, cmdCtx.Err())
+			assert.True(t, time.Now().After(deadline))
 		},
 		"ClosersAreAlwaysCalled": func(t *testing.T, opts *CreateOptions) {
 			var counter int

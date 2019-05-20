@@ -191,11 +191,11 @@ func TestBlockingProcess(t *testing.T) {
 					cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
 					defer cancel()
 
-					cmd, cmdCtx, err := proc.opts.Resolve(ctx)
+					cmd, deadline, err := proc.opts.Resolve(ctx)
 					assert.NoError(t, err)
 					assert.NoError(t, cmd.Start())
 
-					go proc.reactor(ctx, cmdCtx, cmd)
+					go proc.reactor(ctx, deadline, cmd)
 					_, err = proc.Wait(cctx)
 					assert.Error(t, err)
 					assert.Contains(t, err.Error(), "operation canceled")

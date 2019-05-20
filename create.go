@@ -100,15 +100,17 @@ func (opts *CreateOptions) Validate() error {
 	return nil
 }
 
-// Resolve creates the command object according to the create options.
-func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, context.Context, error) {
+// Resolve creates the command object according to the create options. It
+// returns the resolved command and the deadline when the command will be
+// terminated by timeout. If there is no deadline, it returns the zero time.
+func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 	var err error
 	if ctx.Err() != nil {
-		return nil, nil, errors.New("cannot resolve command with canceled context")
+		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
 	}
 
 	if err = opts.Validate(); err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, time.Time{}, errors.WithStack(err)
 	}
 
 	if opts.WorkingDirectory == "" {
@@ -127,9 +129,11 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, context.Cont
 		args = opts.Args[1:]
 	}
 
+	var deadline time.Time
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		deadline, _ = ctx.Deadline()
 		opts.closers = append(opts.closers, func() error { cancel(); return nil })
 	}
 
@@ -138,11 +142,11 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, context.Cont
 
 	cmd.Stdout, err = opts.Output.GetOutput()
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.Stderr, err = opts.Output.GetError()
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.Env = env
 
@@ -170,7 +174,7 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, context.Cont
 		return errors.WithStack(catcher.Resolve())
 	})
 
-	return cmd, ctx, nil
+	return cmd, deadline, nil
 }
 
 // getEnvSlice returns the (CreateOptions).Environment as a slice of environment
