@@ -530,10 +530,10 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 
 // Wait returns the exit code and error waiting for the underlying process to
 // complete.
-// For processes running in parallel, it only returns a zero exit code
-// if all the underlying processes return exit code zero; otherwise, it returns
-// a non-zero exit code. Similarly, it will return a non-nil error if any of
-// the underlying processes encounter an error while waiting.
+// For commands run with RunParallel, Wait only returns a zero exit code if all
+// the underlying processes return exit code zero; otherwise, it returns a
+// non-zero exit code. Similarly, it will return a non-nil error if any of the
+// underlying processes encounter an error while waiting.
 func (c *Command) Wait(ctx context.Context) (int, error) {
 	if len(c.procs) == 0 {
 		return 0, errors.New("cannot call wait on a command if no processes have started yet")
