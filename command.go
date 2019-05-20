@@ -80,10 +80,6 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*Creat
 	return opts, nil
 }
 
-func getLogOutput(out string) string {
-	return strings.Trim(strings.Replace(out, "\n", "\n\t out -> ", -1), "\n\t out->")
-}
-
 func splitCmdToArgs(cmd string) []string {
 	args, err := shlex.Split(cmd)
 	if err != nil {
@@ -500,7 +496,7 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 			opts.Output.Error = &out
 		}
 		addOutOp = func(msg message.Fields) message.Fields {
-			msg["out"] = getLogOutput(out.String())
+			msg["out"] = out.String()
 			return msg
 		}
 	}
