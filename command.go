@@ -29,11 +29,10 @@ type Command struct {
 	priority        level.Priority
 	runBackground   bool
 
-	cmds    [][]string
-	id      string
-	procIDs []string
-	remote  remoteCommandOptions
-	makep   ProcessConstructor
+	cmds   [][]string
+	id     string
+	remote remoteCommandOptions
+	makep  ProcessConstructor
 
 	procs []Process
 }
@@ -313,10 +312,12 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		splitCmd.opts = &optsCopy
 		splitCmd.opts.closers = []func() error{}
 		splitCmd.cmds = [][]string{cmd}
+		splitCmd.procs = []Process{}
 		parallelCmds[idx] = splitCmd
 	}
 
 	errs := make(chan error, len(c.cmds))
+	procs := make(chan []Process, len(c.cmds))
 	for _, parallelCmd := range parallelCmds {
 		go func(innerCmd Command) {
 			defer func() {
@@ -324,9 +325,9 @@ func (c *Command) RunParallel(ctx context.Context) error {
 				if err != nil {
 					errs <- err
 				}
+				procs <- innerCmd.procs
 			}()
 			errs <- innerCmd.Run(ctx)
-			c.procs = append(c.procs, innerCmd.procs...)
 		}(parallelCmd)
 	}
 
@@ -337,7 +338,9 @@ func (c *Command) RunParallel(ctx context.Context) error {
 			if !c.ignoreError {
 				catcher.Add(err)
 			}
+			c.procs = append(c.procs, <-procs...)
 		case <-ctx.Done():
+			c.procs = []Process{}
 			catcher.Add(c.Close())
 			catcherErr := catcher.Resolve()
 			if catcherErr != nil {
