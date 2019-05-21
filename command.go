@@ -316,29 +316,35 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		parallelCmds[idx] = splitCmd
 	}
 
-	errs := make(chan error, len(c.cmds))
-	procs := make(chan []Process, len(c.cmds))
+	type cmdResult struct {
+		procs []Process
+		err   error
+	}
+	cmdResults := make(chan cmdResult, len(c.cmds))
 	for _, parallelCmd := range parallelCmds {
 		go func(innerCmd Command) {
 			defer func() {
 				err := recovery.HandlePanicWithError(recover(), nil, "parallel command encountered error")
 				if err != nil {
-					errs <- err
+					cmdResults <- cmdResult{err: err}
 				}
 			}()
-			errs <- innerCmd.Run(ctx)
-			procs <- innerCmd.procs
+			err := innerCmd.Run(ctx)
+			select {
+			case cmdResults <- cmdResult{procs: innerCmd.procs, err: err}:
+			case <-ctx.Done():
+			}
 		}(parallelCmd)
 	}
 
 	catcher := grip.NewBasicCatcher()
 	for i := 0; i < len(c.cmds); i++ {
 		select {
-		case err := <-errs:
+		case cmdRes := <-cmdResults:
 			if !c.ignoreError {
-				catcher.Add(err)
+				catcher.Add(cmdRes.err)
 			}
-			c.procs = append(c.procs, <-procs...)
+			c.procs = append(c.procs, cmdRes.procs...)
 		case <-ctx.Done():
 			c.procs = []Process{}
 			catcher.Add(c.Close())
