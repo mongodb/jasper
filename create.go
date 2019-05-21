@@ -29,7 +29,7 @@ type CreateOptions struct {
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	TimeoutSecs      int               `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
 	// On remote interfaces, TimeoutSecs must be set instead of Timeout.
-	Timeout       time.Duration    `bson:"-" json:"-" yaml:"-"`
+	Timeout       time.Duration    `bson:"timeout" json:"-" yaml:"-"`
 	Tags          []string         `bson:"tags" json:"tags" yaml:"tags"`
 	OnSuccess     []*CreateOptions `bson:"on_success" json:"on_success" yaml:"on_success"`
 	OnFailure     []*CreateOptions `bson:"on_failure" json:"on_failure" yaml:"on_failure"`
@@ -115,7 +115,11 @@ func (opts *CreateOptions) hash() hash.Hash {
 		_, _ = io.WriteString(hash, t)
 	}
 
-	env := opts.getEnvSlice()
+	env := []string{}
+	for k, v := range opts.Environment {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
 	sort.Strings(env)
 	for _, e := range env {
 		_, _ = io.WriteString(hash, e)
