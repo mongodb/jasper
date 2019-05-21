@@ -80,10 +80,6 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*Creat
 	return opts, nil
 }
 
-func getLogOutput(out []byte) string {
-	return strings.Trim(strings.Replace(string(out), "\n", "\n\t out -> ", -1), "\n\t out->")
-}
-
 func splitCmdToArgs(cmd string) []string {
 	args, err := shlex.Split(cmd)
 	if err != nil {
@@ -489,31 +485,27 @@ func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error 
 		"bkg": c.runBackground,
 	}
 
-	addOutOp := func(msg message.Fields) message.Fields { return msg }
 	var err error
-	// TODO: the logic below this is not strictly correct if, for example,
-	// Output is redirected to Error and Error has been defined.
-	if opts.Output.Output == nil {
-		var out bytes.Buffer
-		opts.Output.Output = &out
-		opts.Output.Error = &out
-		proc, err := c.makep(ctx, opts)
-		if err != nil {
-			return errors.Wrapf(err, "problem starting command")
+	var out bytes.Buffer
+	addOutOp := func(msg message.Fields) message.Fields { return msg }
+	if opts.Output.Output == nil || opts.Output.Error == nil {
+		if opts.Output.Output == nil {
+			opts.Output.Output = &out
 		}
-		c.procs = append(c.procs, proc)
-
+		if opts.Output.Error == nil {
+			opts.Output.Error = &out
+		}
 		addOutOp = func(msg message.Fields) message.Fields {
-			getLogOutput(out.Bytes())
+			msg["out"] = out.String()
 			return msg
 		}
-	} else {
-		proc, err := c.makep(ctx, opts)
-		if err != nil {
-			return errors.Wrapf(err, "problem starting command")
-		}
-		c.procs = append(c.procs, proc)
 	}
+
+	proc, err := c.makep(ctx, opts)
+	if err != nil {
+		return errors.Wrap(err, "problem starting command")
+	}
+	c.procs = append(c.procs, proc)
 
 	if !c.runBackground {
 		waitCatcher := grip.NewBasicCatcher()
