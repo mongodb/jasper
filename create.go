@@ -25,12 +25,13 @@ type CreateOptions struct {
 	Output           OutputOptions     `json:"output"`
 	OverrideEnviron  bool              `json:"override_env,omitempty"`
 	TimeoutSecs      int               `json:"timeout_secs,omitempty"`
-	Timeout          time.Duration     `json:"-"`
-	Tags             []string          `json:"tags"`
-	OnSuccess        []*CreateOptions  `json:"on_success"`
-	OnFailure        []*CreateOptions  `json:"on_failure"`
-	OnTimeout        []*CreateOptions  `json:"on_timeout"`
-	StandardInput    io.Reader         `json:"-"`
+	// On remote interfaces, TimeoutSecs must be set instead of Timeout.
+	Timeout       time.Duration    `json:"-"`
+	Tags          []string         `json:"tags"`
+	OnSuccess     []*CreateOptions `json:"on_success"`
+	OnFailure     []*CreateOptions `json:"on_failure"`
+	OnTimeout     []*CreateOptions `json:"on_timeout"`
+	StandardInput io.Reader        `json:"-"`
 
 	closers []func() error
 }
@@ -64,7 +65,7 @@ func (opts *CreateOptions) Validate() error {
 	}
 
 	if opts.Timeout > 0 && opts.Timeout < time.Second {
-		return errors.New("when specifying a timeout you must use out greater than one second")
+		return errors.New("when specifying a timeout, it must be greater than one second")
 	}
 
 	if opts.Timeout != 0 && opts.TimeoutSecs != 0 {
@@ -99,15 +100,17 @@ func (opts *CreateOptions) Validate() error {
 	return nil
 }
 
-// Resolve creates the command object according to the create options.
-func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
+// Resolve creates the command object according to the create options. It
+// returns the resolved command and the deadline when the command will be
+// terminated by timeout. If there is no deadline, it returns the zero time.
+func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 	var err error
 	if ctx.Err() != nil {
-		return nil, errors.New("cannot resolve command with canceled context")
+		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
 	}
 
 	if err = opts.Validate(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, time.Time{}, errors.WithStack(err)
 	}
 
 	if opts.WorkingDirectory == "" {
@@ -126,10 +129,12 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 		args = opts.Args[1:]
 	}
 
+	var deadline time.Time
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		opts.closers = append(opts.closers, func() (_ error) { cancel(); return })
+		deadline, _ = ctx.Deadline()
+		opts.closers = append(opts.closers, func() error { cancel(); return nil })
 	}
 
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
@@ -137,11 +142,11 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 
 	cmd.Stdout, err = opts.Output.GetOutput()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.Stderr, err = opts.Output.GetError()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.Env = env
 
@@ -169,7 +174,7 @@ func (opts *CreateOptions) Resolve(ctx context.Context) (*exec.Cmd, error) {
 		return errors.WithStack(catcher.Resolve())
 	})
 
-	return cmd, nil
+	return cmd, deadline, nil
 }
 
 // getEnvSlice returns the (CreateOptions).Environment as a slice of environment

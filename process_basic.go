@@ -4,8 +4,10 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -29,7 +31,7 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
 
-	cmd, err := opts.Resolve(ctx)
+	cmd, deadline, err := opts.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building command from options")
 	}
@@ -60,12 +62,12 @@ func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) 
 	p.info.Host, _ = os.Hostname()
 	p.info.IsRunning = true
 
-	go p.transition(ctx, cmd)
+	go p.transition(ctx, deadline, cmd)
 
 	return p, nil
 }
 
-func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
+func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd *exec.Cmd) {
 	waitFinished := make(chan error)
 
 	go func() {
@@ -87,14 +89,21 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.Lock()
 		defer p.Unlock()
 		defer close(p.waitProcessed)
+		finishTime := time.Now()
 		p.err = err
 		p.info.IsRunning = false
 		p.info.Complete = true
 		procWaitStatus := p.cmd.ProcessState.Sys().(syscall.WaitStatus)
 		if procWaitStatus.Signaled() {
 			p.info.ExitCode = int(procWaitStatus.Signal())
+			if !deadline.IsZero() {
+				p.info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && finishTime.After(deadline)
+			}
 		} else {
 			p.info.ExitCode = procWaitStatus.ExitStatus()
+			if runtime.GOOS == "windows" && !deadline.IsZero() {
+				p.info.Timeout = procWaitStatus.ExitStatus() == 1 && finishTime.After(deadline)
+			}
 		}
 		p.info.Successful = p.cmd.ProcessState.Success()
 		p.triggers.Run(p.info)
