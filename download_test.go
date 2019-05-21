@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/mholt/archiver"
 	"github.com/mongodb/amboy/queue"
@@ -191,7 +192,9 @@ func TestProcessDownloadJobs(t *testing.T) {
 	job, err := recall.NewDownloadJob(fmt.Sprintf("http://%s/%s", serverAddr, fileName), downloadDir, true)
 	require.NoError(t, err)
 
-	q := queue.NewLocalUnordered(1)
+	time.Sleep(100 * time.Millisecond)
+
+	q := queue.NewLocalUnordered(2)
 	require.NoError(t, q.Start(ctx))
 	require.NoError(t, q.Put(job))
 
