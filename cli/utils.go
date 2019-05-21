@@ -67,7 +67,7 @@ func clientFlags() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:  portFlagName,
-			Usage: fmt.Sprintf("the port running the Jasper service (if service is 'rest', default port is %d; if service is 'rpc', default port is %d)", defaultRESTPort, defaultRPCPort),
+			Usage: fmt.Sprintf("the port running the Jasper service (if service is '%s', default port is %d; if service is '%s', default port is %d)", restService, defaultRESTPort, rpcService, defaultRPCPort),
 		},
 		cli.StringFlag{
 			Name:  serviceFlagName,
