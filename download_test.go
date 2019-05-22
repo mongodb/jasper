@@ -196,7 +196,7 @@ func TestProcessDownloadJobs(t *testing.T) {
 
 	q := queue.NewLocalUnordered(2)
 	require.NoError(t, q.Start(ctx))
-	require.NoError(t, q.Put(job))
+	require.NoError(t, q.Put(ctx, job))
 
 	checkFileNonempty := func(fileName string) error {
 		info, err := os.Stat(fileName)

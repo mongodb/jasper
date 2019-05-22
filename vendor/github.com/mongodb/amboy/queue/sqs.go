@@ -36,6 +36,10 @@ type sqsFIFOQueue struct {
 	mutex  sync.RWMutex
 }
 
+// NewSQSFifoQueue constructs a AWS SQS backed Queue
+// implementation. This queue, generally is ephemeral: tasks are
+// removed from the queue, and therefore may not handle jobs across
+// restarts.
 func NewSQSFifoQueue(queueName string, workers int) (amboy.Queue, error) {
 	q := &sqsFIFOQueue{}
 	q.tasks.completed = make(map[string]bool)
@@ -58,7 +62,7 @@ func NewSQSFifoQueue(queueName string, workers int) (amboy.Queue, error) {
 	return q, nil
 }
 
-func (q *sqsFIFOQueue) Put(j amboy.Job) error {
+func (q *sqsFIFOQueue) Put(ctx context.Context, j amboy.Job) error {
 	name := j.ID()
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
@@ -92,7 +96,7 @@ func (q *sqsFIFOQueue) Put(j amboy.Job) error {
 		MessageGroupId:         aws.String(randomString(16)),
 		MessageDeduplicationId: aws.String(dedupID),
 	}
-	_, err = q.sqsClient.SendMessage(input)
+	_, err = q.sqsClient.SendMessageWithContext(ctx, input)
 
 	if err != nil {
 		return errors.Wrap(err, "Error sending message in Put")
@@ -118,10 +122,13 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) amboy.Job {
 		return nil
 	}
 	message := messageOutput.Messages[0]
-	q.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
+	_, err = q.sqsClient.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
 		QueueUrl:      aws.String(q.sqsURL),
 		ReceiptHandle: message.ReceiptHandle,
 	})
+	if err != nil {
+		return nil
+	}
 
 	var jobItem *registry.JobInterchange
 	err = json.Unmarshal([]byte(*message.Body), jobItem)
@@ -136,7 +143,7 @@ func (q *sqsFIFOQueue) Next(ctx context.Context) amboy.Job {
 	return job
 }
 
-func (q *sqsFIFOQueue) Get(name string) (amboy.Job, bool) {
+func (q *sqsFIFOQueue) Get(ctx context.Context, name string) (amboy.Job, bool) {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 
@@ -152,6 +159,9 @@ func (q *sqsFIFOQueue) Started() bool {
 // Used to mark a Job complete and remove it from the pending
 // work of the queue.
 func (q *sqsFIFOQueue) Complete(ctx context.Context, job amboy.Job) {
+	if ctx.Err() != nil {
+		return
+	}
 	name := job.ID()
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
@@ -177,8 +187,8 @@ func (q *sqsFIFOQueue) Results(ctx context.Context) <-chan amboy.Job {
 	results := make(chan amboy.Job)
 
 	go func() {
-		q.mutex.Lock()
-		defer q.mutex.Unlock()
+		q.mutex.RLock()
+		defer q.mutex.RUnlock()
 		defer close(results)
 		defer recovery.LogStackTraceAndContinue("cancelled context in Results")
 		for name, job := range q.tasks.all {
@@ -200,11 +210,16 @@ func (q *sqsFIFOQueue) Results(ctx context.Context) <-chan amboy.Job {
 func (q *sqsFIFOQueue) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo {
 	allInfo := make(chan amboy.JobStatusInfo)
 	go func() {
-		q.mutex.Lock()
-		defer q.mutex.Unlock()
+		q.mutex.RLock()
+		defer q.mutex.RUnlock()
 		defer close(allInfo)
 		for _, job := range q.tasks.all {
-			allInfo <- job.Status()
+			select {
+			case <-ctx.Done():
+				return
+			case allInfo <- job.Status():
+			}
+
 		}
 	}()
 	return allInfo
@@ -212,7 +227,7 @@ func (q *sqsFIFOQueue) JobStats(ctx context.Context) <-chan amboy.JobStatusInfo 
 
 // Returns an object that contains statistics about the
 // current state of the Queue.
-func (q *sqsFIFOQueue) Stats() amboy.QueueStats {
+func (q *sqsFIFOQueue) Stats(ctx context.Context) amboy.QueueStats {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
 	s := amboy.QueueStats{
@@ -220,17 +235,18 @@ func (q *sqsFIFOQueue) Stats() amboy.QueueStats {
 	}
 	s.Running = q.numRunning - s.Completed
 
-	output, err := q.sqsClient.GetQueueAttributes(&sqs.GetQueueAttributesInput{
-		AttributeNames: []*string{aws.String("ApproximateNumberOfMessages"),
-			aws.String("ApproximateNumberOfMessagesNotVisible")},
-		QueueUrl: aws.String(q.sqsURL),
-	})
+	output, err := q.sqsClient.GetQueueAttributesWithContext(ctx,
+		&sqs.GetQueueAttributesInput{
+			AttributeNames: []*string{aws.String("ApproximateNumberOfMessages"),
+				aws.String("ApproximateNumberOfMessagesNotVisible")},
+			QueueUrl: aws.String(q.sqsURL),
+		})
 	if err != nil {
 		return s
 	}
 
-	numMsgs, _ := strconv.Atoi(*output.Attributes["ApproximateNumberOfMessages"])
-	numMsgsInFlight, _ := strconv.Atoi(*output.Attributes["ApproximateNumberOfMessagesNotVisible"])
+	numMsgs, _ := strconv.Atoi(*output.Attributes["ApproximateNumberOfMessages"])                   // nolint
+	numMsgsInFlight, _ := strconv.Atoi(*output.Attributes["ApproximateNumberOfMessagesNotVisible"]) // nolint
 
 	s.Pending = numMsgs + numMsgsInFlight
 	s.Total = s.Pending + s.Completed

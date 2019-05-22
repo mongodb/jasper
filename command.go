@@ -441,7 +441,7 @@ func (c *Command) EnqueueForeground(ctx context.Context, q amboy.Queue) error {
 
 	catcher := grip.NewBasicCatcher()
 	for _, j := range jobs {
-		catcher.Add(q.Put(j))
+		catcher.Add(q.Put(ctx, j))
 	}
 
 	return catcher.Resolve()
@@ -459,7 +459,7 @@ func (c *Command) Enqueue(ctx context.Context, q amboy.Queue) error {
 
 	catcher := grip.NewBasicCatcher()
 	for _, j := range jobs {
-		catcher.Add(q.Put(j))
+		catcher.Add(q.Put(ctx, j))
 	}
 
 	return catcher.Resolve()

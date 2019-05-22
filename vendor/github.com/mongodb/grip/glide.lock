@@ -14,7 +14,7 @@ imports:
 - name: github.com/montanaflynn/stats
   version: db72e6cae808b936b0c01fd330ff1fcd2c86c95e
 - name: github.com/shirou/gopsutil
-  version: 93564b314264efac01934715fad4c355ed6af1c5
+  version: da37b31860c94582c739949e48be902d69a321ae
 - name: github.com/shirou/w32
   version: bb4de0191aa41b5507caa14b0650cdbddcd9280b
 - name: github.com/StackExchange/wmi
@@ -26,6 +26,8 @@ imports:
 
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
+- name: github.com/pkg/errors
+  version: 248dadf4e9068a0b3e79f02ed0a610d935de5302
 
 - name: github.com/fuyufjh/splunk-hec-go
   version: 69956d6a6cbd511dade209563c3256c204c9ae51

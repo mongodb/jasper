@@ -2,27 +2,22 @@ package pool
 
 import (
 	"context"
-	"fmt"
 	"sync"
-	"time"
 
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
 )
 
 type abortablePool struct {
-	queue amboy.Queue
-	jobs  map[string]context.CancelFunc
-
-	canceler context.CancelFunc
+	size     int
+	started  bool
 	wg       sync.WaitGroup
 	mu       sync.RWMutex
-
-	size    int
-	started bool
+	canceler context.CancelFunc
+	queue    amboy.Queue
+	jobs     map[string]context.CancelFunc
 }
 
 // NewAbortablePool produces a simple implementation of a worker pool
@@ -63,22 +58,36 @@ func (p *abortablePool) SetQueue(q amboy.Queue) error {
 	return nil
 }
 
-func (p *abortablePool) Close() {
+func (p *abortablePool) Close(ctx context.Context) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
-	for id, closer := range p.jobs {
-		closer()
-		delete(p.jobs, id)
-	}
 
 	if p.canceler != nil {
 		p.canceler()
 		p.canceler = nil
 		p.started = false
-		p.wg.Wait()
 	}
 
+	for id, closer := range p.jobs {
+		if ctx.Err() != nil {
+			return
+		}
+
+		closer()
+		delete(p.jobs, id)
+	}
+
+	wait := make(chan struct{})
+	go func() {
+		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer close(wait)
+		p.wg.Wait()
+	}()
+
+	select {
+	case <-ctx.Done():
+	case <-wait:
+	}
 }
 
 func (p *abortablePool) Start(ctx context.Context) error {
@@ -128,8 +137,10 @@ func (p *abortablePool) worker(ctx context.Context, jobs <-chan workUnit) {
 				p.queue.Complete(ctx, job)
 			}
 
-			// start a replacement worker.
-			go p.worker(ctx, jobs)
+			if ctx.Err() == nil {
+				// start a replacement worker.
+				go p.worker(ctx, jobs)
+			}
 		}
 
 		if cancel != nil {
@@ -174,23 +185,7 @@ func (p *abortablePool) runJob(ctx context.Context, job amboy.Job) {
 		delete(p.jobs, job.ID())
 	}()
 
-	start := time.Now()
-
-	executeJob(ctx, job, p.queue, start)
-
-	r := message.Fields{
-		"job":           job.ID(),
-		"job_type":      job.Type().Name,
-		"duration_secs": job.TimeInfo().Duration().Seconds(),
-		"queue_type":    fmt.Sprintf("%T", p.queue),
-		"pool_type":     "abortable",
-	}
-	if err := job.Error(); err != nil {
-		r["error"] = err.Error()
-		grip.Error(r)
-	} else {
-		grip.Debug(r)
-	}
+	executeJob(ctx, "abortable", job, p.queue)
 }
 
 func (p *abortablePool) IsRunning(id string) bool {
@@ -225,7 +220,7 @@ func (p *abortablePool) Abort(ctx context.Context, id string) error {
 	cancel()
 	delete(p.jobs, id)
 
-	job, ok := p.queue.Get(id)
+	job, ok := p.queue.Get(ctx, id)
 	if !ok {
 		return errors.Errorf("could not find '%s' in the queue", id)
 	}
@@ -245,7 +240,7 @@ func (p *abortablePool) AbortAll(ctx context.Context) {
 		}
 		cancel()
 		delete(p.jobs, id)
-		job, ok := p.queue.Get(id)
+		job, ok := p.queue.Get(ctx, id)
 		if !ok {
 			continue
 		}

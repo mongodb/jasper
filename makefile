@@ -65,6 +65,7 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/montanaflynn/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/mongodb/grip/vendor/golang.org/x/sys/
+	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
 	rm -rf vendor/github.com/mongodb/grip/buildscripts/
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/stretchr/testify/
@@ -74,6 +75,7 @@ vendor-clean:
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/satori/go.uuid/
 	rm -rf vendor/github.com/tychoish/lru/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/tychoish/lru/vendor/github.com/pkg/errors/
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/pkg/
 	rm -rf vendor/github.com/mholt/archiver/rar.go
 	rm -rf vendor/github.com/mholt/archiver/tarbz2.go
 	rm -rf vendor/github.com/mholt/archiver/tarlz4.go

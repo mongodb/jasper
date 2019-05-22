@@ -51,7 +51,7 @@ func (s *LocalWorkersSuite) TestPanicJobsDoNotPanicHarness() {
 	defer cancel()
 	wg := &sync.WaitGroup{}
 
-	s.NotPanics(func() { worker(ctx, jobsChanWithPanicingJobs(ctx, s.size), s.queue, wg) })
+	s.NotPanics(func() { worker(ctx, "test-local", jobsChanWithPanicingJobs(ctx, s.size), s.queue, wg) })
 }
 
 func (s *LocalWorkersSuite) TestConstructedInstanceImplementsInterface() {
@@ -91,13 +91,13 @@ func (s *LocalWorkersSuite) TestPoolStartsAndProcessesJobs() {
 	s.NoError(s.queue.Start(ctx))
 
 	for _, job := range jobs {
-		s.NoError(s.queue.Put(job))
+		s.NoError(s.queue.Put(ctx, job))
 	}
 
 	s.True(s.pool.Started())
 	s.True(s.queue.Started())
 
-	amboy.WaitInterval(s.queue, 100*time.Millisecond)
+	amboy.WaitInterval(ctx, s.queue, 100*time.Millisecond)
 
 	counter := 0
 	for j := range s.queue.Results(ctx) {
