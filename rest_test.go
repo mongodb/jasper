@@ -102,7 +102,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
-			_, err = client.GetLogs(ctx, "foo")
+			_, err = client.GetLogStream(ctx, "foo", 1)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem building request")
 
@@ -149,7 +149,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
-			_, err = client.GetLogs(ctx, "foo")
+			_, err = client.GetLogStream(ctx, "foo", 1)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 
@@ -551,15 +551,15 @@ func TestRestService(t *testing.T) {
 			_, err = proc.Wait(ctx)
 			require.NoError(t, err)
 
-			logs, err := client.GetLogs(ctx, proc.ID())
+			stream, err := client.GetLogStream(ctx, proc.ID(), 100)
 			require.NoError(t, err)
-			assert.NotEmpty(t, logs)
-			assert.Contains(t, logs, output)
+			assert.False(t, stream.Done)
+			assert.Contains(t, stream.Logs, output)
 		},
 		"GetLogsFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			logs, err := client.GetLogs(ctx, "foo")
+			stream, err := client.GetLogStream(ctx, "foo", 1)
 			assert.Error(t, err)
-			assert.Empty(t, logs)
+			assert.Zero(t, stream)
 		},
 		"GetLogsFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{Args: []string{"echo", "foo"}}
@@ -571,9 +571,9 @@ func TestRestService(t *testing.T) {
 			_, err = proc.Wait(ctx)
 			require.NoError(t, err)
 
-			logs, err := client.GetLogs(ctx, proc.ID())
+			stream, err := client.GetLogStream(ctx, proc.ID(), 1)
 			assert.Error(t, err)
-			assert.Empty(t, logs)
+			assert.Zero(t, stream)
 		},
 		"InitialCacheOptionsMatchDefault": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			assert.Equal(t, DefaultMaxCacheSize, srv.cacheOpts.MaxSize)
@@ -688,9 +688,10 @@ func TestRestService(t *testing.T) {
 			_, err = proc.Wait(ctx)
 			require.NoError(t, err)
 
-			logs, err := client.GetLogs(ctx, proc.ID())
+			stream, err := client.GetLogStream(ctx, proc.ID(), 1)
 			require.NoError(t, err)
-			assert.NotEmpty(t, logs)
+			assert.NotEmpty(t, stream.Logs)
+			assert.False(t, stream.Done)
 
 			info, err := os.Stat(file.Name())
 			require.NoError(t, err)

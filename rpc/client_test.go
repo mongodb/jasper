@@ -252,7 +252,7 @@ func TestRPCClient(t *testing.T) {
 				// The following test cases are added specifically for the
 				// RemoteClient.
 
-				"GetLogsFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GetLogStreamFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					output := "foo"
 					opts := &jasper.CreateOptions{
 						Args: []string{"echo", output},
@@ -276,17 +276,17 @@ func TestRPCClient(t *testing.T) {
 					_, err = proc.Wait(ctx)
 					require.NoError(t, err)
 
-					logs, err := client.GetLogs(ctx, proc.ID())
+					stream, err := client.GetLogStream(ctx, proc.ID(), 100)
 					require.NoError(t, err)
-					assert.NotEmpty(t, logs)
-					assert.Contains(t, logs, output)
+					assert.False(t, stream.Done)
+					assert.Contains(t, stream.Logs, output)
 				},
-				"GetLogsFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					logs, err := client.GetLogs(ctx, "foo")
+				"GetLogStreamFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+					stream, err := client.GetLogStream(ctx, "foo", 1)
 					assert.Error(t, err)
-					assert.Empty(t, logs)
+					assert.Zero(t, stream)
 				},
-				"GetLogsFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					opts := &jasper.CreateOptions{Args: []string{"echo", "foo"}}
 
 					proc, err := client.CreateProcess(ctx, opts)
@@ -296,9 +296,9 @@ func TestRPCClient(t *testing.T) {
 					_, err = proc.Wait(ctx)
 					require.NoError(t, err)
 
-					logs, err := client.GetLogs(ctx, proc.ID())
+					stream, err := client.GetLogStream(ctx, proc.ID(), 1)
 					assert.Error(t, err)
-					assert.Empty(t, logs)
+					assert.Zero(t, stream)
 				},
 				// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
 

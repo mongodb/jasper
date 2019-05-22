@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -376,18 +377,21 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 	}, nil
 }
 
-func (s *jasperService) GetLogs(ctx context.Context, request *LogRequest) (*LogStream, error) {
+func (s *jasperService) GetLogStream(ctx context.Context, request *LogRequest) (*LogStream, error) {
 	id := request.Id
 	proc, err := s.manager.Get(ctx, id.Value)
 	if err != nil {
-		return &LogStream{}, nil
+		return nil, errors.Wrapf(err, "problem finding process '%s'", id.Value)
 	}
 
-	logs, err := jasper.GetInMemoryLogs(ctx, proc)
-	if err != nil {
+	stream := &LogStream{}
+	stream.Logs, err = jasper.GetInMemoryLogStream(ctx, proc, int(request.Count))
+	if err == io.EOF {
+		stream.Done = true
+	} else if err != nil {
 		return nil, errors.Wrapf(err, "could not get logs for process '%s'", request.Id.Value)
 	}
-	return &Logs{Logs: logs}, nil
+	return stream, nil
 }
 
 func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProcessID) (*BuildloggerURLs, error) {

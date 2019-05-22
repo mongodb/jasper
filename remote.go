@@ -15,7 +15,7 @@ type RemoteClient interface {
 	ConfigureCache(context.Context, CacheOptions) error
 	DownloadFile(context.Context, DownloadInfo) error
 	DownloadMongoDB(context.Context, MongoDBDownloadOptions) error
-	GetLogs(context.Context, string) ([]string, error)
+	GetLogStream(context.Context, string, int) (LogStream, error)
 	GetBuildloggerURLs(context.Context, string) ([]string, error)
 	SignalEvent(context.Context, string) error
 }

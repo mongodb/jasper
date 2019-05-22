@@ -3,7 +3,7 @@ package message
 import "fmt"
 
 type jiraMessage struct {
-	issue JiraIssue
+	issue *JiraIssue
 	Base
 }
 
@@ -13,6 +13,7 @@ type jiraMessage struct {
 // To see whether you have the right permissions to create an issue with certain
 // fields, check your JIRA interface on the web.
 type JiraIssue struct {
+	IssueKey    string   `bson:"issue_key" json:"issue_key" yaml:"issue_key"`
 	Project     string   `bson:"project" json:"project" yaml:"project"`
 	Summary     string   `bson:"summary" json:"summary" yaml:"summary"`
 	Description string   `bson:"description" json:"description" yaml:"description"`
@@ -21,8 +22,10 @@ type JiraIssue struct {
 	Type        string   `bson:"type" json:"type" yaml:"type"`
 	Components  []string `bson:"components" json:"components" yaml:"components"`
 	Labels      []string `bson:"labels" json:"labels" yaml:"labels"`
+	FixVersions []string `bson:"versions" json:"versions" yaml:"versions"`
 	// ... other fields
-	Fields map[string]interface{} `bson:"fields" json:"fields" yaml:"fields"`
+	Fields   map[string]interface{} `bson:"fields" json:"fields" yaml:"fields"`
+	Callback func(string)           `bson:"-" json:"-" yaml:"-"`
 }
 
 // JiraField is a struct composed of a key-value pair.
@@ -32,7 +35,7 @@ type JiraField struct {
 }
 
 // MakeJiraMessage creates a jiraMessage instance with the given JiraIssue.
-func MakeJiraMessage(issue JiraIssue) Composer {
+func MakeJiraMessage(issue *JiraIssue) Composer {
 	return &jiraMessage{
 		issue: issue,
 	}
@@ -74,7 +77,7 @@ func NewJiraMessage(project, summary string, fields ...JiraField) Composer {
 		issue.Type = "Task"
 	}
 
-	return MakeJiraMessage(issue)
+	return MakeJiraMessage(&issue)
 }
 
 func (m *jiraMessage) String() string   { return m.issue.Summary }

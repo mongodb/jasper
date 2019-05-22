@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -77,7 +78,7 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/process/{id}/wait").Version(1).Get().Handler(s.waitForProcess)
 	app.AddRoute("/process/{id}/respawn").Version(1).Get().Handler(s.respawnProcess)
 	app.AddRoute("/process/{id}/metrics").Version(1).Get().Handler(s.processMetrics)
-	app.AddRoute("/process/{id}/logs").Version(1).Get().Handler(s.getLogs)
+	app.AddRoute("/process/{id}/logs/{count}").Version(1).Get().Handler(s.getLogStream)
 	app.AddRoute("/process/{id}/loginfo").Version(1).Get().Handler(s.getBuildloggerURLs)
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/process/{id}/trigger/signal/{trigger-id}").Version(1).Patch().Handler(s.registerSignalTriggerID)
@@ -529,9 +530,18 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	gimlet.WriteJSON(rw, struct{}{})
 }
 
-func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
+func (s *Service) getLogStream(rw http.ResponseWriter, r *http.Request) {
 	vars := gimlet.GetVars(r)
 	id := vars["id"]
+	count, err := strconv.Atoi(vars["count"])
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "problem converting count '%s'", vars["count"]).Error(),
+		})
+		return
+	}
+
 	ctx := r.Context()
 
 	proc, err := s.manager.Get(ctx, id)
@@ -543,8 +553,12 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logs, err := GetInMemoryLogs(ctx, proc)
-	if err != nil {
+	stream := LogStream{}
+	stream.Logs, err = GetInMemoryLogStream(ctx, proc, count)
+
+	if err == io.EOF {
+		stream.Done = true
+	} else if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
 			Message:    errors.Wrapf(err, "could not get logs for process '%s'", id).Error(),
@@ -552,7 +566,7 @@ func (s *Service) getLogs(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gimlet.WriteJSON(rw, logs)
+	gimlet.WriteJSON(rw, stream)
 }
 
 func (s *Service) clearManager(rw http.ResponseWriter, r *http.Request) {
