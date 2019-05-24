@@ -252,34 +252,46 @@ func TestRPCClient(t *testing.T) {
 				// The following test cases are added specifically for the
 				// RemoteClient.
 
-				"GetLogStreamFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"WithInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					output := "foo"
 					opts := &jasper.CreateOptions{
 						Args: []string{"echo", output},
 						Output: jasper.OutputOptions{
 							Loggers: []jasper.Logger{
 								jasper.Logger{
-									Type: jasper.LogInMemory,
-									Options: jasper.LogOptions{
-										InMemoryCap: 100,
-										Format:      jasper.LogFormatPlain,
-									},
+									Type:    jasper.LogInMemory,
+									Options: jasper.LogOptions{InMemoryCap: 100, Format: jasper.LogFormatPlain},
 								},
 							},
 						},
 					}
 
-					proc, err := client.CreateProcess(ctx, opts)
-					require.NoError(t, err)
-					require.NotNil(t, proc)
+					for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, proc jasper.Process){
+						"GetLogStreamFailsForInvalidCount": func(ctx context.Context, t *testing.T, proc jasper.Process) {
+							stream, err := client.GetLogStream(ctx, proc.ID(), -1)
+							assert.Error(t, err)
+							assert.Zero(t, stream)
+						},
+						"GetLogStreamReturnsOutputOnSuccess": func(ctx context.Context, t *testing.T, proc jasper.Process) {
+							logs := []string{}
+							for stream, err := client.GetLogStream(ctx, proc.ID(), 1); !stream.Done; stream, err = client.GetLogStream(ctx, proc.ID(), 1) {
+								require.NoError(t, err)
+								require.NotEmpty(t, stream.Logs)
+								logs = append(logs, stream.Logs...)
+							}
+							assert.Contains(t, logs, output)
+						},
+					} {
+						t.Run(testName, func(t *testing.T) {
+							proc, err := client.CreateProcess(ctx, opts)
+							require.NoError(t, err)
+							require.NotNil(t, proc)
 
-					_, err = proc.Wait(ctx)
-					require.NoError(t, err)
-
-					stream, err := client.GetLogStream(ctx, proc.ID(), 100)
-					require.NoError(t, err)
-					assert.False(t, stream.Done)
-					assert.Contains(t, stream.Logs, output)
+							_, err = proc.Wait(ctx)
+							require.NoError(t, err)
+							testCase(ctx, t, proc)
+						})
+					}
 				},
 				"GetLogStreamFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					stream, err := client.GetLogStream(ctx, "foo", 1)

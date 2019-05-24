@@ -237,7 +237,7 @@ func (l *Logger) Configure() (send.Sender, error) {
 // stream, containing the logs (if any) and whether or not the stream is done
 // reading.
 type LogStream struct {
-	Logs []string `json:"logs"`
+	Logs []string `json:"logs,omitempty"`
 	Done bool     `json:"done"`
 }
 

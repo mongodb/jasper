@@ -530,7 +530,7 @@ func TestRestService(t *testing.T) {
 			srv.downloadFile(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
-		"GetLogsFromProcessWithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"WithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			output := "foo"
 			opts := &CreateOptions{
 				Args: []string{"echo", output},
@@ -544,24 +544,39 @@ func TestRestService(t *testing.T) {
 				},
 			}
 
-			proc, err := client.CreateProcess(ctx, opts)
-			require.NoError(t, err)
-			require.NotNil(t, proc)
+			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, proc Process){
+				"GetLogStreamFailsForInvalidCount": func(ctx context.Context, t *testing.T, proc Process) {
+					stream, err := client.GetLogStream(ctx, proc.ID(), -1)
+					assert.Error(t, err)
+					assert.Zero(t, stream)
+				},
+				"GetLogStreamReturnsOutputOnSuccess": func(ctx context.Context, t *testing.T, proc Process) {
+					logs := []string{}
+					for stream, err := client.GetLogStream(ctx, proc.ID(), 1); !stream.Done; stream, err = client.GetLogStream(ctx, proc.ID(), 1) {
+						require.NoError(t, err)
+						require.NotEmpty(t, stream.Logs)
+						logs = append(logs, stream.Logs...)
+					}
+					assert.Contains(t, logs, output)
+				},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					proc, err := client.CreateProcess(ctx, opts)
+					require.NoError(t, err)
+					require.NotNil(t, proc)
 
-			_, err = proc.Wait(ctx)
-			require.NoError(t, err)
-
-			stream, err := client.GetLogStream(ctx, proc.ID(), 100)
-			require.NoError(t, err)
-			assert.False(t, stream.Done)
-			assert.Contains(t, stream.Logs, output)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+					testCase(ctx, t, proc)
+				})
+			}
 		},
-		"GetLogsFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"GetLogStreamFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			stream, err := client.GetLogStream(ctx, "foo", 1)
 			assert.Error(t, err)
 			assert.Zero(t, stream)
 		},
-		"GetLogsFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			opts := &CreateOptions{Args: []string{"echo", "foo"}}
 
 			proc, err := client.CreateProcess(ctx, opts)
