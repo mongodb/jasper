@@ -15,17 +15,18 @@ import (
 // OutputOptions provides a common way to define and represent the
 // output behavior of a evergreen/subprocess.Command operation.
 type OutputOptions struct {
-	Output            io.Writer `json:"-"`
-	Error             io.Writer `json:"-"`
-	SuppressOutput    bool      `json:"suppress_output"`
-	SuppressError     bool      `json:"suppress_error"`
-	SendOutputToError bool      `json:"redirect_output_to_error"`
-	SendErrorToOutput bool      `json:"redirect_error_to_output"`
-	Loggers           []Logger  `json:"loggers"`
-	outputSender      *send.WriterSender
-	errorSender       *send.WriterSender
-	outputMulti       io.Writer
-	errorMulti        io.Writer
+	Output            io.Writer `bson:"-" json:"-" yaml:"-"`
+	Error             io.Writer `bson:"-" json:"-" yaml:"-"`
+	SuppressOutput    bool      `bson:"suppress_output" json:"suppress_output" yaml:"suppress_output"`
+	SuppressError     bool      `bson:"suppress_error" json:"suppress_error" yaml:"suppress_error"`
+	SendOutputToError bool      `bson:"redirect_output_to_error" json:"redirect_output_to_error" yaml:"redirect_output_to_error"`
+	SendErrorToOutput bool      `bson:"redirect_error_to_output" json:"redirect_error_to_output" yaml:"redirect_error_to_output"`
+	Loggers           []Logger  `bson:"loggers" json:"loggers" yaml:"loggers"`
+
+	outputSender *send.WriterSender
+	errorSender  *send.WriterSender
+	outputMulti  io.Writer
+	errorMulti   io.Writer
 }
 
 // LogType is a type for representing various logging options.
@@ -95,9 +96,10 @@ func (opts LogOptions) Validate() error {
 
 // Logger is a wrapper struct around a grip/send.Sender.
 type Logger struct {
-	Type    LogType    `json:"log_type"`
-	Options LogOptions `json:"log_options"`
-	sender  send.Sender
+	Type    LogType    `bson:"log_type" json:"log_type" yaml:"log_type"`
+	Options LogOptions `bson:"log_options" json:"log_options" yaml:"log_options"`
+
+	sender send.Sender
 }
 
 // Validate ensures that LogOptions is valid.
@@ -286,9 +288,9 @@ func GetInMemoryLogStream(ctx context.Context, proc Process, count int) ([]strin
 // buffered and the duration and size of the respective buffer in the case that
 // it should be.
 type BufferOptions struct {
-	Buffered bool          `json:"buffered"`
-	Duration time.Duration `json:"duration"`
-	MaxSize  int           `json:"max_size"`
+	Buffered bool          `bson:"buffered" json:"buffered" yaml:"buffered"`
+	Duration time.Duration `bson:"duration" json:"duration" yaml:"duration"`
+	MaxSize  int           `bson:"max_size" json:"max_size" yaml:"max_size"`
 }
 
 func (o OutputOptions) outputIsNull() bool {

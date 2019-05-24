@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"time"
 
 	"github.com/mongodb/amboy"
 )
@@ -25,4 +26,32 @@ type Driver interface {
 	JobStats(context.Context) <-chan amboy.JobStatusInfo
 
 	LockManager
+}
+
+// MongoDBOptions is a struct passed to the NewMgo constructor to
+// communicate mgoDriver specific settings about the driver's behavior
+// and operation.
+type MongoDBOptions struct {
+	URI             string
+	DB              string
+	Priority        bool
+	CheckWaitUntil  bool
+	SkipIndexBuilds bool
+	Format          amboy.Format
+	WaitInterval    time.Duration
+}
+
+// DefaultMongoDBOptions constructs a new options object with default
+// values: connecting to a MongoDB instance on localhost, using the
+// "amboy" database, and *not* using priority ordering of jobs.
+func DefaultMongoDBOptions() MongoDBOptions {
+	return MongoDBOptions{
+		URI:             "mongodb://localhost:27017",
+		DB:              "amboy",
+		Priority:        false,
+		CheckWaitUntil:  true,
+		SkipIndexBuilds: false,
+		WaitInterval:    time.Second,
+		Format:          amboy.BSON,
+	}
 }

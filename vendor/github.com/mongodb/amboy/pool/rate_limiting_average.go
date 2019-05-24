@@ -205,7 +205,7 @@ func (p *ewmaRateLimiting) runJob(ctx context.Context, j amboy.Job) time.Duratio
 		delete(p.jobs, j.ID())
 	}()
 
-	executeJob(ctx, j, p.queue, start)
+	runJob(ctx, j, p.queue, start)
 
 	duration := time.Since(start)
 	interval := p.getNextTime(duration)
@@ -215,7 +215,7 @@ func (p *ewmaRateLimiting) runJob(ctx context.Context, j amboy.Job) time.Duratio
 		"duration_secs": duration.Seconds(),
 		"queue_type":    fmt.Sprintf("%T", p.queue),
 		"interval_secs": interval.Seconds(),
-		"pool":          "rate limiting, moving average",
+		"pool":          "rate-limited-average",
 	}
 	if err := j.Error(); err != nil {
 		r["error"] = err.Error()
@@ -239,7 +239,7 @@ func (p *ewmaRateLimiting) SetQueue(q amboy.Queue) error {
 	return nil
 }
 
-func (p *ewmaRateLimiting) Close() {
+func (p *ewmaRateLimiting) Close(ctx context.Context) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -262,8 +262,17 @@ func (p *ewmaRateLimiting) Close() {
 	// which doesn't affect behavior but does cause this to panic in
 	// tests
 	defer func() { recover() }()
+	wait := make(chan struct{})
+	go func() {
+		defer recovery.LogStackTraceAndContinue("waiting for close")
+		defer close(wait)
+		p.wg.Wait()
+	}()
 
-	p.wg.Wait()
+	select {
+	case <-ctx.Done():
+	case <-wait:
+	}
 }
 
 func (p *ewmaRateLimiting) IsRunning(id string) bool {
@@ -299,7 +308,7 @@ func (p *ewmaRateLimiting) Abort(ctx context.Context, id string) error {
 	cancel()
 	delete(p.jobs, id)
 
-	job, ok := p.queue.Get(id)
+	job, ok := p.queue.Get(ctx, id)
 	if !ok {
 		return errors.Errorf("could not find '%s' in the queue", id)
 	}
@@ -319,7 +328,7 @@ func (p *ewmaRateLimiting) AbortAll(ctx context.Context) {
 		}
 		cancel()
 		delete(p.jobs, id)
-		job, ok := p.queue.Get(id)
+		job, ok := p.queue.Get(ctx, id)
 		if !ok {
 			continue
 		}

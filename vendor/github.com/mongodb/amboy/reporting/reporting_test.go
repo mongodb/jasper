@@ -10,6 +10,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -25,30 +27,141 @@ type ReportingSuite struct {
 	suite.Suite
 }
 
-func TestReportingSuiteBackedByMongoDB(t *testing.T) {
+func TestReportingSuiteBackedByLegacyMongoDB(t *testing.T) {
 	s := new(ReportingSuite)
-	dbName := "amboy_test"
+	name := uuid.NewV4().String()
 	opts := queue.DefaultMongoDBOptions()
+	opts.DB = "amboy_test"
 	session, err := mgo.Dial(opts.URI)
 	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	s.factory = func() Reporter {
-		name := uuid.NewV4().String()
-		opts.DB = dbName
-		reporter, err := MakeDBQueueState(name, opts, session)
+		reporter, err := MakeLegacyDBQueueState(name, opts, session)
 		s.Require().NoError(err)
 		return reporter
 	}
 
 	s.setup = func() {
 		remote := queue.NewRemoteUnordered(2)
-		driver := queue.NewMongoDBDriver(dbName, opts)
+		driver := queue.NewMgoDriver(name, opts)
 		s.NoError(remote.SetDriver(driver))
 		s.queue = remote
 	}
 
 	s.cleanup = func() error {
 		session.Close()
-		s.queue.Runner().Close()
+		s.queue.Runner().Close(ctx)
+		return nil
+	}
+
+	suite.Run(t, s)
+}
+
+func TestReportingSuiteBackedByMongoDB(t *testing.T) {
+	s := new(ReportingSuite)
+	name := uuid.NewV4().String()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	opts := queue.DefaultMongoDBOptions()
+	opts.DB = "amboy_test"
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
+	require.NoError(t, err)
+	s.factory = func() Reporter {
+		reporter, err := MakeDBQueueState(ctx, DBQueueReporterOptions{
+			Options: opts,
+			Name:    name,
+		}, client)
+		require.NoError(t, err)
+		return reporter
+	}
+
+	s.setup = func() {
+		remote := queue.NewRemoteUnordered(2)
+		driver, err := queue.OpenNewMongoDriver(ctx, name, opts, client)
+		require.NoError(t, err)
+		require.NoError(t, remote.SetDriver(driver))
+		s.queue = remote
+	}
+
+	s.cleanup = func() error {
+		require.NoError(t, client.Disconnect(ctx))
+		s.queue.Runner().Close(ctx)
+		return nil
+	}
+
+	suite.Run(t, s)
+}
+
+func TestReportingSuiteBackedByMongoDBSingleGroup(t *testing.T) {
+	s := new(ReportingSuite)
+	name := uuid.NewV4().String()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	opts := queue.DefaultMongoDBOptions()
+	opts.DB = "amboy_test"
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
+	require.NoError(t, err)
+	s.factory = func() Reporter {
+		reporter, err := MakeDBQueueState(ctx, DBQueueReporterOptions{
+			Options:     opts,
+			Name:        name,
+			Group:       "foo",
+			SingleGroup: true,
+		}, client)
+		require.NoError(t, err)
+		return reporter
+	}
+
+	s.setup = func() {
+		remote := queue.NewRemoteUnordered(2)
+		driver, err := queue.OpenNewMongoGroupDriver(ctx, name, opts, "foo", client)
+		require.NoError(t, err)
+		require.NoError(t, remote.SetDriver(driver))
+		s.queue = remote
+	}
+
+	s.cleanup = func() error {
+		require.NoError(t, client.Disconnect(ctx))
+		s.queue.Runner().Close(ctx)
+		return nil
+	}
+
+	suite.Run(t, s)
+}
+
+func TestReportingSuiteBackedByMongoDBMultiGroup(t *testing.T) {
+	s := new(ReportingSuite)
+	name := uuid.NewV4().String()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	opts := queue.DefaultMongoDBOptions()
+	opts.DB = "amboy_test"
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(opts.URI))
+	require.NoError(t, err)
+	s.factory = func() Reporter {
+		reporter, err := MakeDBQueueState(ctx, DBQueueReporterOptions{
+			Options:  opts,
+			Name:     name,
+			ByGroups: true,
+		}, client)
+		require.NoError(t, err)
+		return reporter
+	}
+
+	s.setup = func() {
+		remote := queue.NewRemoteUnordered(2)
+		driver, err := queue.OpenNewMongoGroupDriver(ctx, name, opts, "foo", client)
+		require.NoError(t, err)
+		require.NoError(t, remote.SetDriver(driver))
+		s.queue = remote
+	}
+
+	s.cleanup = func() error {
+		require.NoError(t, client.Disconnect(ctx))
+		s.queue.Runner().Close(ctx)
 		return nil
 	}
 

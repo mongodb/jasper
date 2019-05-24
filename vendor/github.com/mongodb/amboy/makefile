@@ -16,7 +16,7 @@ lintDeps := github.com/alecthomas/gometalinter
 lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
-lintArgs += --disable="gotype" --disable="gas" --enable="goimports"
+lintArgs += --disable="gotype" --disable="gas" --disable="gocyclo" --enable="goimports"
 lintArgs += --skip="$(buildDir)" --skip="buildscripts"
 #  add and configure additional linters
 lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
@@ -117,7 +117,7 @@ lint-%:$(buildDir)/output.%.lint
 #    tests have compile and runtime deps. This varable has everything
 #    that the tests actually need to run. (The "build" target is
 #    intentional and makes these targets rerun as expected.)
-testArgs := -test.v --test.timeout=15m
+testArgs := -test.v --test.timeout=20m
 ifneq (,$(RUN_TEST))
 testArgs += -test.run='$(RUN_TEST)'
 endif
@@ -185,13 +185,13 @@ vendor-clean:
 	rm -rf vendor/gopkg.in/mgo.v2/internal/json/testdata
 	rm -rf vendor/gopkg.in/mgo.v2/.git/
 	rm -rf vendor/gopkg.in/mgo.v2/txn/
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/vendor/gopkg.in/yaml.v2
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/vendor/github.com/davecgh/
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/vendor/github.com/stretchr/testify/
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/data/
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/vendor/github.com/pmezard/
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/vendor/github.com/google/go-cmp/
-	rm -rf vendor/github.com/mongodb/mongo-go-driver/vendor/github.com/kr/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/gopkg.in/yaml.v2
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/davecgh/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/stretchr/testify/
+	rm -rf vendor/go.mongodb.org/mongo-driver/data/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pmezard/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/google/go-cmp/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/kr/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*.dat" -o -name "*testdata" | xargs rm -rf
 #   define dependencies for buildscripts
 phony += vendor-deps vendor-clean

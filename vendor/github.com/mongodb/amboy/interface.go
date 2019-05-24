@@ -112,12 +112,12 @@ func (j JobTimeInfo) Duration() time.Duration { return j.End.Sub(j.Start) }
 type Queue interface {
 	// Used to add a job to the queue. Should only error if the
 	// Queue cannot accept jobs.
-	Put(Job) error
+	Put(context.Context, Job) error
 
 	// Given a job id, get that job. The second return value is a
 	// Boolean, which indicates if the named job had been
 	// registered by a Queue.
-	Get(string) (Job, bool)
+	Get(context.Context, string) (Job, bool)
 
 	// Returns the next job in the queue. These calls are
 	// blocking, but may be interrupted with a canceled context.
@@ -140,7 +140,7 @@ type Queue interface {
 
 	// Returns an object that contains statistics about the
 	// current state of the Queue.
-	Stats() QueueStats
+	Stats(context.Context) QueueStats
 
 	// Getter for the Runner implementation embedded in the Queue
 	// instance.
@@ -155,6 +155,30 @@ type Queue interface {
 	// Begins the execution of the job Queue, using the embedded
 	// Runner.
 	Start(context.Context) error
+}
+
+// QueueGroup describes a group of queues. Each queue is indexed by a
+// string. Users can use these queues if there are many different types
+// of work or if the types of work are only knowable at runtime.
+type QueueGroup interface {
+	// Get a queue with the given index.
+	Get(context.Context, string) (Queue, error)
+
+	// Put a queue at the given index.
+	Put(context.Context, string, Queue) error
+
+	// Prune old queues.
+	Prune(context.Context) error
+
+	// Close the queues.
+	Close(context.Context) error
+
+	// Len returns the number of active queues managed in the
+	// group.
+	Len() int
+
+	// Queues returns all currently registered and running queues
+	Queues(context.Context) []string
 }
 
 // Runner describes a simple worker interface for executing jobs in
@@ -179,7 +203,7 @@ type Runner interface {
 
 	// Termaintes all in progress work and waits for processes to
 	// return.
-	Close()
+	Close(context.Context)
 }
 
 // AbortableRunner provides a superset of the Runner interface but

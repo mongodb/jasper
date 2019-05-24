@@ -228,8 +228,8 @@ func createDownloadJobs(path string, urls <-chan string, catcher grip.Catcher) <
 
 func processDownloadJobs(ctx context.Context, processFile func(string) error) func(amboy.Queue) error {
 	return func(q amboy.Queue) error {
-		grip.Infof("waiting for %d download jobs to complete", q.Stats().Total)
-		if !amboy.WaitCtxInterval(ctx, q, time.Second) {
+		grip.Infof("waiting for %d download jobs to complete", q.Stats(ctx).Total)
+		if !amboy.WaitInterval(ctx, q, time.Second) {
 			return errors.New("download job timed out")
 		}
 		grip.Info("all download tasks complete, processing errors now")
@@ -240,12 +240,13 @@ func processDownloadJobs(ctx context.Context, processFile func(string) error) fu
 
 		catcher := grip.NewBasicCatcher()
 		for job := range q.Results(ctx) {
+			catcher.Add(job.Error())
 			downloadJob, ok := job.(*recall.DownloadFileJob)
 			if !ok {
 				catcher.Add(errors.New("problem retrieving download job from queue"))
 				continue
 			}
-			if err := processFile(downloadJob.FileName); err != nil {
+			if err := processFile(filepath.Join(downloadJob.Directory, downloadJob.FileName)); err != nil {
 				catcher.Add(err)
 			}
 		}

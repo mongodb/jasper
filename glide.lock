@@ -12,7 +12,7 @@ imports:
   - name: github.com/evergreen-ci/gimlet
     version: 8a317d725d0315a97c5d0c08ec04921f3ba498d5
   - name: github.com/tychoish/bond
-    version: b4258699e61406e09c9e4dcca2151eed6c228043
+    version: d08240643c676e2d06c340a41ce66f62988fcfa1
   - name: github.com/tychoish/lru
     version: f77a748d12a924cfbfcf396426dd58de5aa3a9e2
   - name: github.com/mholt/archiver
@@ -20,7 +20,7 @@ imports:
   - name: github.com/montanaflynn/stats
     version: db72e6cae808b936b0c01fd330ff1fcd2c86c95e
   - name: github.com/mongodb/amboy
-    version: ba41957778899cce2775284bfdb7155475794657
+    version: 2b8431d235ec6c322dba74eff51988ebd8ac1f7f
   - name: github.com/google/shlex
     version: 6f45313302b9c56850fc17f99e40caebce98c716
   - name: github.com/urfave/cli
