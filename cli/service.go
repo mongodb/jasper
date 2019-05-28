@@ -21,6 +21,7 @@ func Service() cli.Command {
 			serviceRPC(),
 			serviceREST(),
 			serviceCombined(),
+			serviceInstall(),
 		},
 	}
 }

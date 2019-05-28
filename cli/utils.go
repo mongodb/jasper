@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	restService = "rest"
-	rpcService  = "rpc"
+	restService     = "rest"
+	rpcService      = "rpc"
+	combinedService = "combined"
 )
 
 // mergeBeforeFuncs returns a cli.BeforeFunc that runs all funcs and accumulates
@@ -71,7 +72,7 @@ func clientFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  serviceFlagName,
-			Usage: fmt.Sprintf("the type of Jasper service ('%s', or '%s')", restService, rpcService),
+			Usage: fmt.Sprintf("the type of Jasper service ('%s' or '%s')", restService, rpcService),
 		},
 	}
 }
@@ -103,6 +104,85 @@ func clientBefore() func(c *cli.Context) error {
 			return validatePort(portFlagName)(c)
 		},
 	)
+}
+
+func rpcServiceFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:   hostFlagName,
+			EnvVar: envVarRPCHost,
+			Usage:  "the host running the RPC service",
+			Value:  defaultLocalHostName,
+		},
+		cli.IntFlag{
+			Name:   portFlagName,
+			EnvVar: envVarRPCPort,
+			Usage:  "the port running the RPC service",
+			Value:  defaultRPCPort,
+		},
+		cli.StringFlag{
+			Name:  keyFilePathFlagName,
+			Usage: "the path to the certificate file",
+		},
+		cli.StringFlag{
+			Name:  certFilePathFlagName,
+			Usage: "the path to the key file",
+		},
+	}
+}
+
+func restServiceFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:   hostFlagName,
+			EnvVar: envVarRESTHost,
+			Usage:  "the host running the REST service",
+			Value:  defaultLocalHostName,
+		},
+		cli.IntFlag{
+			Name:   portFlagName,
+			EnvVar: envVarRESTPort,
+			Usage:  "the port running the REST service",
+			Value:  defaultRESTPort,
+		},
+	}
+}
+
+func combinedServiceFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:   restHostFlagName,
+			EnvVar: envVarRESTHost,
+			Usage:  "the host running the REST service ",
+			Value:  defaultLocalHostName,
+		},
+		cli.IntFlag{
+			Name:   restPortFlagName,
+			EnvVar: envVarRPCPort,
+			Usage:  "the port running the REST service ",
+			Value:  defaultRESTPort,
+		},
+		cli.StringFlag{
+			Name:   rpcHostFlagName,
+			EnvVar: envVarRPCHost,
+			Usage:  "the host running the RPC service ",
+			Value:  defaultLocalHostName,
+		},
+		cli.IntFlag{
+			Name:   rpcPortFlagName,
+			EnvVar: envVarRPCPort,
+			Usage:  "the port running the RPC service",
+			Value:  defaultRPCPort,
+		},
+		cli.StringFlag{
+			Name:  rpcCertFilePathFlagName,
+			Usage: "the path to the RPC certificate file",
+		},
+		cli.StringFlag{
+			Name:  rpcKeyFilePathFlagName,
+			Usage: "the path to the RPC key file",
+		},
+	}
 }
 
 // readInput reads JSON from the input and decodes it to the output.
