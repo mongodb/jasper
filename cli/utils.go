@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kardianos/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/rpc"
@@ -78,7 +79,7 @@ func clientFlags() []cli.Flag {
 }
 
 // clientBefore returns the cli.BeforeFunc used by all client commands.
-func clientBefore() func(c *cli.Context) error {
+func clientBefore() func(*cli.Context) error {
 	return mergeBeforeFuncs(
 		func(c *cli.Context) error {
 			service := c.String(serviceFlagName)
@@ -104,85 +105,6 @@ func clientBefore() func(c *cli.Context) error {
 			return validatePort(portFlagName)(c)
 		},
 	)
-}
-
-func rpcServiceFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:   hostFlagName,
-			EnvVar: envVarRPCHost,
-			Usage:  "the host running the RPC service",
-			Value:  defaultLocalHostName,
-		},
-		cli.IntFlag{
-			Name:   portFlagName,
-			EnvVar: envVarRPCPort,
-			Usage:  "the port running the RPC service",
-			Value:  defaultRPCPort,
-		},
-		cli.StringFlag{
-			Name:  keyFilePathFlagName,
-			Usage: "the path to the certificate file",
-		},
-		cli.StringFlag{
-			Name:  certFilePathFlagName,
-			Usage: "the path to the key file",
-		},
-	}
-}
-
-func restServiceFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:   hostFlagName,
-			EnvVar: envVarRESTHost,
-			Usage:  "the host running the REST service",
-			Value:  defaultLocalHostName,
-		},
-		cli.IntFlag{
-			Name:   portFlagName,
-			EnvVar: envVarRESTPort,
-			Usage:  "the port running the REST service",
-			Value:  defaultRESTPort,
-		},
-	}
-}
-
-func combinedServiceFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:   restHostFlagName,
-			EnvVar: envVarRESTHost,
-			Usage:  "the host running the REST service ",
-			Value:  defaultLocalHostName,
-		},
-		cli.IntFlag{
-			Name:   restPortFlagName,
-			EnvVar: envVarRPCPort,
-			Usage:  "the port running the REST service ",
-			Value:  defaultRESTPort,
-		},
-		cli.StringFlag{
-			Name:   rpcHostFlagName,
-			EnvVar: envVarRPCHost,
-			Usage:  "the host running the RPC service ",
-			Value:  defaultLocalHostName,
-		},
-		cli.IntFlag{
-			Name:   rpcPortFlagName,
-			EnvVar: envVarRPCPort,
-			Usage:  "the port running the RPC service",
-			Value:  defaultRPCPort,
-		},
-		cli.StringFlag{
-			Name:  rpcCertFilePathFlagName,
-			Usage: "the path to the RPC certificate file",
-		},
-		cli.StringFlag{
-			Name:  rpcKeyFilePathFlagName,
-			Usage: "the path to the RPC key file",
-		},
-	}
 }
 
 // readInput reads JSON from the input and decodes it to the output.
@@ -272,4 +194,13 @@ func withConnection(ctx context.Context, c *cli.Context, operation func(jasper.R
 	catcher.Add(client.CloseConnection())
 
 	return catcher.Resolve()
+}
+
+// withService runs the operation with a new service.
+func withService(daemon service.Interface, config *service.Config, operation func(service.Service) error) error {
+	svc, err := service.New(daemon, config)
+	if err != nil {
+		return errors.Wrap(err, "error initializing new service")
+	}
+	return operation(svc)
 }
