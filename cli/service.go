@@ -15,7 +15,7 @@ import (
 )
 
 // Service encapsulates the functionality to set up Jasper services. Except for
-// run, the subcommands will generally require elevated privileges to run.
+// run, the subcommands will generally require elevated privileges to execute.
 func Service() cli.Command {
 	return cli.Command{
 		Name:  "service",
