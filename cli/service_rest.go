@@ -43,7 +43,8 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 			}
 
 			daemon := makeRESTDaemon(c.String(hostFlagName), c.Int(portFlagName), manager)
-			config := serviceConfig(restService, []string{"jasper", "service", "run", restService})
+
+			config := serviceConfig(restService, buildRunCommand(c, restService))
 
 			return operation(daemon, config)
 		},

@@ -43,21 +43,23 @@ func joinFlagNames(names ...string) string {
 	return strings.Join(names, ", ")
 }
 
+// unparseFlagSet returns all flags set in the given context in the form
+// --flag=value.
+func unparseFlagSet(c *cli.Context) []string {
+	args := []string{}
+	for _, flagName := range c.FlagNames() {
+		if !c.IsSet(flagName) {
+			continue
+		}
+		args = append(args, fmt.Sprintf("--%s=%s", flagName, c.String(flagName)))
+	}
+	return args
+}
+
 const (
 	minPort = 1 << 10
 	maxPort = math.MaxUint16 - 1
 )
-
-// validatePort validates that the flag given by the name is a valid port value.
-func validatePort(flagName string) func(*cli.Context) error {
-	return func(c *cli.Context) error {
-		port := c.Int(flagName)
-		if port < minPort || port > maxPort {
-			return errors.Errorf("port must be between %d-%d exclusive", minPort, maxPort)
-		}
-		return nil
-	}
-}
 
 // clientFlags returns flags used by all client commands.
 func clientFlags() []cli.Flag {
@@ -105,6 +107,17 @@ func clientBefore() func(*cli.Context) error {
 			return validatePort(portFlagName)(c)
 		},
 	)
+}
+
+// validatePort validates that the flag given by the name is a valid port value.
+func validatePort(flagName string) func(*cli.Context) error {
+	return func(c *cli.Context) error {
+		port := c.Int(flagName)
+		if port < minPort || port > maxPort {
+			return errors.Errorf("port must be between %d-%d exclusive", minPort, maxPort)
+		}
+		return nil
+	}
 }
 
 // readInput reads JSON from the input and decodes it to the output.
@@ -203,4 +216,31 @@ func withService(daemon service.Interface, config *service.Config, operation fun
 		return errors.Wrap(err, "error initializing new service")
 	}
 	return operation(svc)
+}
+
+// runServices starts the given services, waits until the context is done, and
+// closes all the running services.
+func runServices(ctx context.Context, makeServices ...func(context.Context) (jasper.CloseFunc, error)) error {
+	closeServices := []jasper.CloseFunc{}
+	closeAllServices := func(closeServices []jasper.CloseFunc) error {
+		catcher := grip.NewBasicCatcher()
+		for _, closeService := range closeServices {
+			catcher.Add(errors.Wrap(closeService(), "error closing service"))
+		}
+		return catcher.Resolve()
+	}
+
+	for _, makeService := range makeServices {
+		closeService, err := makeService(ctx)
+		if err != nil {
+			catcher := grip.NewBasicCatcher()
+			catcher.Wrap(err, "failed to create service")
+			catcher.Add(closeAllServices(closeServices))
+			return catcher.Resolve()
+		}
+		closeServices = append(closeServices, closeService)
+	}
+
+	<-ctx.Done()
+	return closeAllServices(closeServices)
 }

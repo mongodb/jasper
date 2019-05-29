@@ -55,7 +55,8 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 			}
 
 			daemon := makeRPCDaemon(c.String(hostFlagName), c.Int(portFlagName), c.String(certFilePathFlagName), c.String(keyFilePathFlagName), manager)
-			config := serviceConfig(rpcService, []string{"jasper", "service", "run", rpcService})
+
+			config := serviceConfig(rpcService, buildRunCommand(c, rpcService))
 
 			return operation(daemon, config)
 		},

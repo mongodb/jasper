@@ -10,7 +10,6 @@ import (
 	"github.com/kardianos/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/recovery"
-	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -40,8 +39,8 @@ func Service() cli.Command {
 func handleDaemonSignals(ctx context.Context, cancel context.CancelFunc, exit chan struct{}) {
 	defer recovery.LogStackTraceAndContinue("graceful shutdown")
 	defer cancel()
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM)
+	sig := make(chan os.Signal, 2)
+	signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
 
 	select {
 	case <-sig:
@@ -53,49 +52,20 @@ func handleDaemonSignals(ctx context.Context, cancel context.CancelFunc, exit ch
 	}
 }
 
-// runServices starts the given services, waits until the context is done, and
-// closes all the running services.
-func runServices(ctx context.Context, makeServices ...func(context.Context) (jasper.CloseFunc, error)) error {
-	closeServices := []jasper.CloseFunc{}
-	closeAllServices := func(closeServices []jasper.CloseFunc) error {
-		catcher := grip.NewBasicCatcher()
-		for _, closeService := range closeServices {
-			catcher.Add(errors.Wrap(closeService(), "error closing service"))
-		}
-		return catcher.Resolve()
-	}
-
-	for _, makeService := range makeServices {
-		closeService, err := makeService(ctx)
-		if err != nil {
-			catcher := grip.NewBasicCatcher()
-			catcher.Wrap(err, "failed to create service")
-			catcher.Add(closeAllServices(closeServices))
-			return catcher.Resolve()
-		}
-		closeServices = append(closeServices, closeService)
-	}
-
-	<-ctx.Done()
-	return closeAllServices(closeServices)
+// buildRunCommand builds the command arguments to run the Jasper service with
+// the flags set in the current cli.Context.
+func buildRunCommand(c *cli.Context, serviceType string) []string {
+	args := unparseFlagSet(c)
+	subCmd := []string{"jasper", "service", "run", serviceType}
+	return append(subCmd, args...)
 }
 
-// serviceOptions returns all the service options, including all options
-// specific to particular service management systems.
+// serviceOptions returns all options specific to particular service management
+// systems.
 func serviceOptions() service.KeyValue {
 	return service.KeyValue{
-		// sysv-specific options
-
-		// upstart-specific options
-
-		// systemd-specific options
-		"Restart":         "always",
-		"RestartSec":      30,
-		"TimeoutStartSec": 10,
-
 		// launchd-specific options
-		// TODO: uncomment once testing is done.
-		// "RunAtLoad": true,
+		"RunAtLoad": true,
 	}
 }
 
@@ -112,7 +82,7 @@ func serviceConfig(serviceType string, args []string) *service.Config {
 	return &service.Config{
 		Name:         fmt.Sprintf("%s_jasperd", serviceType),
 		DisplayName:  fmt.Sprintf("Jasper %s service", serviceType),
-		Description:  "Jasper is a process management service",
+		Description:  "Jasper is a service for process management",
 		Executable:   "", // No executable refers to the current executable.
 		Arguments:    args,
 		Dependencies: serviceDependencies(),

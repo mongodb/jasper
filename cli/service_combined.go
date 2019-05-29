@@ -72,7 +72,8 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 				makeRESTDaemon(c.String(restHostFlagName), c.Int(restPortFlagName), manager),
 				makeRPCDaemon(c.String(rpcHostFlagName), c.Int(rpcPortFlagName), c.String(rpcCertFilePathFlagName), c.String(rpcKeyFilePathFlagName), manager),
 			)
-			config := serviceConfig(combinedService, []string{"jasper", "service", "run", combinedService})
+
+			config := serviceConfig(combinedService, buildRunCommand(c, combinedService))
 
 			return operation(daemon, config)
 		},
