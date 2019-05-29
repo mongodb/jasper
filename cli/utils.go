@@ -142,10 +142,10 @@ func writeOutput(output io.Writer, input interface{}) error {
 	return nil
 }
 
-// makeRemoteClient returns a remote client that connects to the service at the
+// newRemoteClient returns a remote client that connects to the service at the
 // given host and port, with the optional SSL/TLS credentials file specified at
 // the given location.
-func makeRemoteClient(ctx context.Context, service, host string, port int, certFilePath string) (jasper.RemoteClient, error) {
+func newRemoteClient(ctx context.Context, service, host string, port int, certFilePath string) (jasper.RemoteClient, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to resolve address")
@@ -197,7 +197,7 @@ func withConnection(ctx context.Context, c *cli.Context, operation func(jasper.R
 	service := c.String(serviceFlagName)
 	certFilePath := c.String(certFilePathFlagName)
 
-	client, err := makeRemoteClient(ctx, service, host, port, certFilePath)
+	client, err := newRemoteClient(ctx, service, host, port, certFilePath)
 	if err != nil {
 		return errors.Wrap(err, "error setting up remote client")
 	}

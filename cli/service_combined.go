@@ -68,9 +68,9 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 				return errors.Wrap(err, "error creating combined manager")
 			}
 
-			daemon := makeCombinedDaemon(
-				makeRESTDaemon(c.String(restHostFlagName), c.Int(restPortFlagName), manager),
-				makeRPCDaemon(c.String(rpcHostFlagName), c.Int(rpcPortFlagName), c.String(rpcCertFilePathFlagName), c.String(rpcKeyFilePathFlagName), manager),
+			daemon := newCombinedDaemon(
+				newRESTDaemon(c.String(restHostFlagName), c.Int(restPortFlagName), manager),
+				newRPCDaemon(c.String(rpcHostFlagName), c.Int(rpcPortFlagName), c.String(rpcCertFilePathFlagName), c.String(rpcKeyFilePathFlagName), manager),
 			)
 
 			config := serviceConfig(combinedService, buildRunCommand(c, combinedService))
@@ -85,7 +85,7 @@ type combinedDaemon struct {
 	RPCDaemon  *rpcDaemon
 }
 
-func makeCombinedDaemon(rest *restDaemon, rpc *rpcDaemon) *combinedDaemon {
+func newCombinedDaemon(rest *restDaemon, rpc *rpcDaemon) *combinedDaemon {
 	return &combinedDaemon{
 		RESTDaemon: rest,
 		RPCDaemon:  rpc,

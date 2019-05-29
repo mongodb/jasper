@@ -42,7 +42,7 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 				return errors.Wrap(err, "error creating REST manager")
 			}
 
-			daemon := makeRESTDaemon(c.String(hostFlagName), c.Int(portFlagName), manager)
+			daemon := newRESTDaemon(c.String(hostFlagName), c.Int(portFlagName), manager)
 
 			config := serviceConfig(restService, buildRunCommand(c, restService))
 
@@ -55,23 +55,25 @@ type restDaemon struct {
 	Host string
 	Port int
 
-	manager jasper.Manager
+	Manager jasper.Manager
 	exit    chan struct{}
 }
 
-func makeRESTDaemon(host string, port int, manager jasper.Manager) *restDaemon {
+func newRESTDaemon(host string, port int, manager jasper.Manager) *restDaemon {
 	return &restDaemon{
 		Host:    host,
 		Port:    port,
-		manager: manager,
+		Manager: manager,
 	}
 }
 
 func (d *restDaemon) Start(s service.Service) error {
 	d.exit = make(chan struct{})
-	var err error
-	if d.manager, err = jasper.NewLocalManager(false); err != nil {
-		return errors.Wrap(err, "failed to construct REST manager")
+	if d.Manager == nil {
+		var err error
+		if d.Manager, err = jasper.NewLocalManager(false); err != nil {
+			return errors.Wrap(err, "failed to construct REST manager")
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,20 +92,20 @@ func (d *restDaemon) Stop(s service.Service) error {
 }
 
 func (d *restDaemon) run(ctx context.Context) error {
-	return errors.Wrap(runServices(ctx, d.makeService), "error running REST service")
+	return errors.Wrap(runServices(ctx, d.newService), "error running REST service")
 }
 
-func (d *restDaemon) makeService(ctx context.Context) (jasper.CloseFunc, error) {
-	if d.manager == nil {
+func (d *restDaemon) newService(ctx context.Context) (jasper.CloseFunc, error) {
+	if d.Manager == nil {
 		return nil, errors.New("manager is not set on REST service")
 	}
 	grip.Infof("starting REST service at '%s:%d'", d.Host, d.Port)
-	return makeRESTService(ctx, d.Host, d.Port, d.manager)
+	return newRESTService(ctx, d.Host, d.Port, d.Manager)
 }
 
-// makeRESTService creates a REST service around the manager serving requests on
+// newRESTService creates a REST service around the manager serving requests on
 // the host and port.
-func makeRESTService(ctx context.Context, host string, port int, manager jasper.Manager) (jasper.CloseFunc, error) {
+func newRESTService(ctx context.Context, host string, port int, manager jasper.Manager) (jasper.CloseFunc, error) {
 	service := jasper.NewManagerService(manager)
 	app := service.App(ctx)
 	app.SetPrefix("jasper")
