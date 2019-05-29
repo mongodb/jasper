@@ -14,8 +14,8 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Service encapsulates the functionality to set up Jasper services. These will
-// generally require elevated privileges to run.
+// Service encapsulates the functionality to set up Jasper services. Except for
+// run, the subcommands will generally require elevated privileges to run.
 func Service() cli.Command {
 	return cli.Command{
 		Name:  "service",
@@ -53,7 +53,7 @@ func handleDaemonSignals(ctx context.Context, cancel context.CancelFunc, exit ch
 }
 
 // buildRunCommand builds the command arguments to run the Jasper service with
-// the flags set in the current cli.Context.
+// the flags set in the cli.Context.
 func buildRunCommand(c *cli.Context, serviceType string) []string {
 	args := unparseFlagSet(c)
 	subCmd := []string{"jasper", "service", "run", serviceType}
@@ -69,29 +69,22 @@ func serviceOptions() service.KeyValue {
 	}
 }
 
-// serviceDependencies returns the list of service dependencies.
-func serviceDependencies() []string {
-	return []string{
-		"Requires=network.target",
-		"After=network-online.target",
-	}
-}
-
 // serviceConfig returns the daemon service configuration.
 func serviceConfig(serviceType string, args []string) *service.Config {
 	return &service.Config{
-		Name:         fmt.Sprintf("%s_jasperd", serviceType),
-		DisplayName:  fmt.Sprintf("Jasper %s service", serviceType),
-		Description:  "Jasper is a service for process management",
-		Executable:   "", // No executable refers to the current executable.
-		Arguments:    args,
-		Dependencies: serviceDependencies(),
-		Option:       serviceOptions(),
+		Name:        fmt.Sprintf("%s_jasperd", serviceType),
+		DisplayName: fmt.Sprintf("Jasper %s service", serviceType),
+		Description: "Jasper is a service for process management",
+		Executable:  "", // No executable refers to the current executable.
+		Arguments:   args,
+		Option:      serviceOptions(),
 	}
 }
 
 type serviceOperation func(daemon service.Interface, config *service.Config) error
 
+// serviceCommand creates a cli.Command from a service operation supported by
+// REST, RPC, and combined services.
 func serviceCommand(cmd string, operation serviceOperation) cli.Command {
 	return cli.Command{
 		Name:  cmd,
@@ -104,42 +97,50 @@ func serviceCommand(cmd string, operation serviceOperation) cli.Command {
 	}
 }
 
+// install registers the service with the given configuration in the service
+// manager.
 func install(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		return svc.Install()
 	}), "error installing service")
 }
 
+// uninstall removes the service from the service manager.
 func uninstall(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		return svc.Uninstall()
 	}), "error uninstalling service")
 }
 
+// start begins the service if it has not already started.
 func start(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		return svc.Start()
 	}), "error starting service")
 }
 
+// stop ends the running service.
 func stop(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		return svc.Stop()
 	}), "error stopping service")
 }
 
+// restart stops the existing service and starts it again.
 func restart(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		return svc.Restart()
 	}), "error restarting service")
 }
 
+// run runs the service in the foreground.
 func run(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		return svc.Run()
 	}), "error running service")
 }
 
+// status gets the current status of the running service.
 func status(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
 		status, err := svc.Status()
