@@ -77,9 +77,8 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.Lock()
 		defer p.Unlock()
 		defer close(p.initialized)
-		p.info.IsRunning = true
-		p.info.PID = p.cmd.Process.Pid
 		p.cmd = cmd
+		p.info.PID = p.cmd.Process.Pid
 	}
 	initialize()
 
@@ -103,9 +102,6 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 }
 
 func (p *basicProcess) ID() string {
-	p.RLock()
-	defer p.RUnlock()
-
 	return p.id
 }
 func (p *basicProcess) Info(_ context.Context) ProcessInfo {
@@ -132,15 +128,15 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 	p.RLock()
 	defer p.RUnlock()
 
-	if p.Running(nil) {
-		if skipSignal := p.signalTriggers.Run(p.Info(nil), sig); !skipSignal {
-			sig = makeCompatible(sig)
-			return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
-		}
-		return nil
+	if p.info.Complete {
+		return errors.New("cannot signal a process that has terminated")
 	}
 
-	return errors.New("cannot signal a process that has terminated")
+	if skipSignal := p.signalTriggers.Run(p.info, sig); !skipSignal {
+		sig = makeCompatible(sig)
+		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
+	}
+	return nil
 }
 
 func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
@@ -153,7 +149,7 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 }
 
 func (p *basicProcess) Wait(ctx context.Context) (int, error) {
-	if !p.Running(ctx) {
+	if p.Complete(ctx) {
 		p.RLock()
 		defer p.RUnlock()
 
@@ -174,12 +170,12 @@ func (p *basicProcess) RegisterTrigger(_ context.Context, trigger ProcessTrigger
 		return errors.New("cannot register nil trigger")
 	}
 
+	if p.Complete(nil) {
+		return errors.New("cannot register nil trigger")
+	}
+
 	p.Lock()
 	defer p.Unlock()
-
-	if p.info.Complete {
-		return errors.New("cannot register trigger after process exits")
-	}
 
 	p.triggers = append(p.triggers, trigger)
 
@@ -191,12 +187,12 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 		return errors.New("cannot register nil trigger")
 	}
 
-	p.Lock()
-	defer p.Unlock()
-
-	if p.info.Complete {
+	if p.Complete(nil) {
 		return errors.New("cannot register trigger after process exits")
 	}
+
+	p.Lock()
+	defer p.Unlock()
 
 	p.signalTriggers = append(p.signalTriggers, trigger)
 
