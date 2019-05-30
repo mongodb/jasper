@@ -77,8 +77,9 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 		p.Lock()
 		defer p.Unlock()
 		defer close(p.initialized)
+		p.info.IsRunning = true
+		p.info.PID = cmd.Process.Pid
 		p.cmd = cmd
-		p.info.PID = p.cmd.Process.Pid
 	}
 	initialize()
 
@@ -102,6 +103,8 @@ func (p *basicProcess) transition(ctx context.Context, cmd *exec.Cmd) {
 }
 
 func (p *basicProcess) ID() string {
+	p.RLock()
+	defer p.RUnlock()
 	return p.id
 }
 func (p *basicProcess) Info(_ context.Context) ProcessInfo {
@@ -170,12 +173,12 @@ func (p *basicProcess) RegisterTrigger(_ context.Context, trigger ProcessTrigger
 		return errors.New("cannot register nil trigger")
 	}
 
-	if p.Complete(nil) {
-		return errors.New("cannot register nil trigger")
-	}
-
 	p.Lock()
 	defer p.Unlock()
+
+	if p.info.Complete {
+		return errors.New("cannot register trigger after process exits")
+	}
 
 	p.triggers = append(p.triggers, trigger)
 
@@ -187,12 +190,12 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 		return errors.New("cannot register nil trigger")
 	}
 
-	if p.Complete(nil) {
-		return errors.New("cannot register trigger after process exits")
-	}
-
 	p.Lock()
 	defer p.Unlock()
+
+	if p.info.Complete {
+		return errors.New("cannot register signal trigger after process exits")
+	}
 
 	p.signalTriggers = append(p.signalTriggers, trigger)
 
