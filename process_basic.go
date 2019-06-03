@@ -124,15 +124,15 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 	p.RLock()
 	defer p.RUnlock()
 
-	if p.Running(nil) {
-		if skipSignal := p.signalTriggers.Run(p.Info(nil), sig); !skipSignal {
-			sig = makeCompatible(sig)
-			return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
-		}
-		return nil
+	if p.info.Complete {
+		return errors.New("cannot signal a process that has terminated")
 	}
 
-	return errors.New("cannot signal a process that has terminated")
+	if skipSignal := p.signalTriggers.Run(p.info, sig); !skipSignal {
+		sig = makeCompatible(sig)
+		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
+	}
+	return nil
 }
 
 func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
@@ -144,7 +144,7 @@ func (p *basicProcess) Respawn(ctx context.Context) (Process, error) {
 }
 
 func (p *basicProcess) Wait(ctx context.Context) (int, error) {
-	if !p.Running(ctx) {
+	if p.Complete(ctx) {
 		p.RLock()
 		defer p.RUnlock()
 
@@ -186,7 +186,7 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 	defer p.Unlock()
 
 	if p.info.Complete {
-		return errors.New("cannot register trigger after process exits")
+		return errors.New("cannot register signal trigger after process exits")
 	}
 
 	p.signalTriggers = append(p.signalTriggers, trigger)

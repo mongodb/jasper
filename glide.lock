@@ -25,6 +25,8 @@ imports:
     version: 6f45313302b9c56850fc17f99e40caebce98c716
   - name: github.com/urfave/cli
     version: 693af58b4d51b8fcc7f9d89576da170765980581
+  - name: github.com/kardianos/service
+    version: fffe6c52ed0fd8653543bbe72432dbf6ea02f300
 
   # cgroup requirements
   - name: github.com/containerd/cgroups
