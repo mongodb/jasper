@@ -111,7 +111,7 @@ func forceReinstall(daemon service.Interface, config *service.Config) error {
 		catcher.Wrap(svc.Install(), "error installing service")
 		catcher.Wrap(svc.Start(), "error starting service")
 		return catcher.Resolve()
-	}), "error installing service")
+	}), "error force reinstalling service")
 }
 
 // install registers the service with the given configuration in the service
