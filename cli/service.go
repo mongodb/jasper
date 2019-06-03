@@ -9,6 +9,7 @@ import (
 
 	"github.com/kardianos/service"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -104,8 +105,16 @@ func serviceCommand(cmd string, operation serviceOperation) cli.Command {
 // service.
 func forceReinstall(daemon service.Interface, config *service.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc service.Service) error {
-		grip.Debug(errors.Wrap(svc.Stop(), "error stopping service"))
-		grip.Debug(errors.Wrap(svc.Uninstall(), "error uninstalling service"))
+		grip.Debug(message.WrapError(svc.Stop(), message.Fields{
+			"msg":    "error stopping service",
+			"cmd":    "force-reinstall",
+			"config": *config,
+		}))
+		grip.Debug(message.WrapError(svc.Uninstall(), message.Fields{
+			"msg":    "error uninstalling service",
+			"cmd":    "force-reinstall",
+			"config": *config,
+		}))
 
 		catcher := grip.NewBasicCatcher()
 		catcher.Wrap(svc.Install(), "error installing service")
