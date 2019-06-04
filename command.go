@@ -229,8 +229,43 @@ func (c *Command) Prerequisite(chk func() bool) *Command { c.prerequisite = chk;
 // Add adds on a sub-command.
 func (c *Command) Add(args []string) *Command { c.cmds = append(c.cmds, args); return c }
 
+// SudoAdd is the same as Add but runs the sub-command with superuser
+// privileges. This will not work on Windows.
+func (c *Command) SudoAdd(args []string) *Command {
+	return c.Add(append([]string{"sudo"}, args...))
+}
+
 // Extend adds on multiple sub-commands.
 func (c *Command) Extend(cmds [][]string) *Command { c.cmds = append(c.cmds, cmds...); return c }
+
+// SudoExtend is the same as Extend but runs each sub-command with superuser
+// privileges. This will not work on Windows.
+func (c *Command) SudoExtend(cmds [][]string) *Command {
+	sudoCmds := make([][]string, 0, len(cmds))
+	for _, cmd := range cmds {
+		sudoCmds = append(sudoCmds, append([]string{"sudo"}, cmd...))
+	}
+	return c.Extend(sudoCmds)
+}
+
+// Append takes a series of strings and splits them into sub-commands and adds
+// them to the Command.
+func (c *Command) Append(cmds ...string) *Command {
+	for _, cmd := range cmds {
+		c.cmds = append(c.cmds, splitCmdToArgs(cmd))
+	}
+	return c
+}
+
+// SudoAppend is the same as Append but runs each sub-command with superuser
+// privileges. This will not work on Windows.
+func (c *Command) SudoAppend(cmds ...string) *Command {
+	sudoCmds := make([]string, 0, len(cmds))
+	for _, cmd := range cmds {
+		sudoCmds = append(sudoCmds, "sudo "+cmd)
+	}
+	return c.Append(sudoCmds...)
+}
 
 // ShellScript adds an operation to the command that runs a shell script, using
 // the shell's "-c" option).
@@ -246,15 +281,6 @@ func (c *Command) Bash(script string) *Command { return c.ShellScript("bash", sc
 // Sh adds a script using "sh -c", as syntactic sugar for the ShellScript
 // method.
 func (c *Command) Sh(script string) *Command { return c.ShellScript("sh", script) }
-
-// Append takes a series of strings and splits them into sub-commands and adds
-// them to the Command.
-func (c *Command) Append(cmds ...string) *Command {
-	for _, cmd := range cmds {
-		c.cmds = append(c.cmds, splitCmdToArgs(cmd))
-	}
-	return c
-}
 
 // AppendArgs is the variadic equivalent of Add, which adds a command
 // in the form of arguments.
@@ -465,7 +491,7 @@ func (c *Command) Enqueue(ctx context.Context, q amboy.Queue) error {
 	return catcher.Resolve()
 }
 
-// JobseForeground returns a slice of jobs for every operation
+// JobsForeground returns a slice of jobs for every operation
 // captured in the command. The output of the commands are logged,
 // using the default grip sender in the foreground.
 func (c *Command) JobsForeground(ctx context.Context) ([]amboy.Job, error) {

@@ -101,6 +101,26 @@ func TestCommandImplementation(t *testing.T) {
 							assert.Error(t, err)
 							assert.True(t, strings.Contains(err.Error(), "exit status"))
 						},
+						"SudoFunctionsPrependSudo": func(ctx context.Context, t *testing.T, cmd Command) {
+							for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, cmd Command){
+								"Add": func(ctx context.Context, t *testing.T, cmd Command) {
+									cmd.SudoAdd([]string{echo, arg1})
+									assert.Contains(t, cmd.cmds, []string{"sudo", echo, arg1})
+								},
+								"Extend": func(ctx context.Context, t *testing.T, cmd Command) {
+									cmd.SudoExtend([][]string{[]string{echo, arg2}})
+									assert.Contains(t, cmd.cmds, []string{"sudo", echo, arg2})
+								},
+								"Append": func(ctx context.Context, t *testing.T, cmd Command) {
+									cmd.SudoAppend(strings.Join([]string{echo, arg3}, " "))
+									assert.Contains(t, cmd.cmds, []string{"sudo", echo, arg3})
+								},
+							} {
+								t.Run(subTestName, func(t *testing.T) {
+									subTestCase(ctx, t, cmd)
+								})
+							}
+						},
 						"InvalidArgsCommandErrors": func(ctx context.Context, t *testing.T, cmd Command) {
 							cmd.Add([]string{})
 							assert.EqualError(t, runFunc(&cmd, ctx), "cannot have empty args")
