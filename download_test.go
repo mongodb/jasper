@@ -168,6 +168,9 @@ func TestProcessDownloadJobs(t *testing.T) {
 
 	downloadDir, err := ioutil.TempDir("build", "download_test")
 	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, os.RemoveAll(downloadDir))
+	}()
 
 	serverDir, err := ioutil.TempDir("build", "download_test_server")
 	require.NoError(t, err)

@@ -18,27 +18,32 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 	return errors.WithStack(internal.AttachService(manager, s))
 }
 
-// StartService starts an RPC server with the specified address. If certFile
-// and keyFile are non-empty, the credentials will be read from the files to
-// start a TLS service; otherwise it will start an insecure service. The caller
-// is responsible for closing the connection using the returned
-// jasper.CloseFunc.
-func StartService(ctx context.Context, manager jasper.Manager, address net.Addr, certFile string, keyFile string) (jasper.CloseFunc, error) {
+// StartService starts and RPC server with the specified address. If path is
+// non-empty, the credentials will be read from the file to start a secure TLS
+// service requiring client and server credentials; otherwise, it will start an
+// insecure service. The credentials file should contain the exported
+// ServerCredentials. The caller is responsible for closing the connection using
+// the return jasper.CloseFunc.
+func StartService(ctx context.Context, manager jasper.Manager, address net.Addr, path string) (jasper.CloseFunc, error) {
 	lis, err := net.Listen(address.Network(), address.String())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "error listening on %s", address.String())
 	}
 
-	var service *grpc.Server
-	if certFile != "" && keyFile != "" {
-		creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
+	opts := []grpc.ServerOption{}
+	if path != "" {
+		creds, err := NewServerCredentialsFromFile(path)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get server credentials from cert file '%s' and key file '%s'", certFile, keyFile)
+			return nil, errors.Wrapf(err, "error getting server credentials from file '%s'", path)
 		}
-		service = grpc.NewServer(grpc.Creds(creds))
-	} else {
-		service = grpc.NewServer()
+		tlsCreds, err := creds.Resolve()
+		if err != nil {
+			return nil, errors.Wrap(err, "error generating TLS config from server credentials")
+		}
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsCreds)))
 	}
+
+	service := grpc.NewServer(opts...)
 
 	if err := AttachService(manager, service); err != nil {
 		return nil, errors.Wrap(err, "could not attach manager to service")
