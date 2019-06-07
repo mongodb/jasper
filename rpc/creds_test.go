@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestServerCredentials(t *testing.T) {
+func TestCredentials(t *testing.T) {
 	pemRootCert := []byte(`
 -----BEGIN CERTIFICATE-----
 MIIEBDCCAuygAwIBAgIDAjppMA0GCSqGSIb3DQEBBQUAMEIxCzAJBgNVBAYTAlVT
@@ -75,50 +75,50 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 	}
 
 	for testName, testCase := range map[string]func(t *testing.T){
-		"NewServerCredeentialsNonexistentFile": func(t *testing.T) {
-			creds, err := NewServerCredentialsFromFile("nonexistent_file")
+		"NewCredeentialsNonexistentFile": func(t *testing.T) {
+			creds, err := NewCredentialsFromFile("nonexistent_file")
 			assert.Error(t, err)
 			assert.Nil(t, creds)
 		},
-		"NewServerCredentialsEmptyFile": func(t *testing.T) {
+		"NewCredentialsEmptyFile": func(t *testing.T) {
 			file := makeFile(t)
 			defer os.Remove(file.Name())
-			creds, err := NewServerCredentialsFromFile(file.Name())
+			creds, err := NewCredentialsFromFile(file.Name())
 			assert.Error(t, err)
 			assert.Nil(t, creds)
 		},
-		"NewServerCredentialsMissingFields": func(t *testing.T) {
+		"NewCredentialsMissingFields": func(t *testing.T) {
 			file := makeFile(t)
 			defer os.Remove(file.Name())
 			_, err := file.Write([]byte(fmt.Sprintf(`{
 				"ca_cert": %s,
-				"server_cert": %s
+				"cert": %s
 			}`, jsonRootCert, jsonCert)))
 			require.NoError(t, err)
-			_, err = NewServerCredentialsFromFile(file.Name())
+			_, err = NewCredentialsFromFile(file.Name())
 			assert.Error(t, err)
 		},
-		"NewServerCredentialsSucceeds": func(t *testing.T) {
+		"NewCredentialsSucceeds": func(t *testing.T) {
 			file := makeFile(t)
 			defer os.Remove(file.Name())
 			_, err := file.Write([]byte(fmt.Sprintf(`{
 				"ca_cert": %s,
-				"server_cert": %s,
-				"server_key": %s
+				"cert": %s,
+				"key": %s
 			}`, jsonRootCert, jsonCert, jsonKey)))
 			require.NoError(t, err)
-			creds, err := NewServerCredentialsFromFile(file.Name())
+			creds, err := NewCredentialsFromFile(file.Name())
 			require.NoError(t, err)
 			require.NotNil(t, creds)
 			assert.Equal(t, pemRootCert, creds.CACert)
-			assert.Equal(t, pemCert, creds.ServerCert)
-			assert.Equal(t, pemKey, creds.ServerKey)
+			assert.Equal(t, pemCert, creds.Cert)
+			assert.Equal(t, pemKey, creds.Key)
 		},
 		"Export": func(t *testing.T) {
-			creds := ServerCredentials{
-				CACert:     pemRootCert,
-				ServerCert: pemCert,
-				ServerKey:  pemKey,
+			creds := &Credentials{
+				CACert: pemRootCert,
+				Cert:   pemCert,
+				Key:    pemKey,
 			}
 			credBytes, err := creds.Export()
 			require.NoError(t, err)
@@ -127,29 +127,29 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 			assert.True(t, bytes.Contains(credBytes, jsonKey))
 		},
 		"ResolveInvalidCert": func(t *testing.T) {
-			creds := &ServerCredentials{
-				CACert:     []byte("foo"),
-				ServerCert: pemCert,
-				ServerKey:  pemKey,
+			creds := &Credentials{
+				CACert: []byte("foo"),
+				Cert:   pemCert,
+				Key:    pemKey,
 			}
 			config, err := creds.Resolve()
 			assert.Error(t, err)
 			assert.Nil(t, config)
 		},
 		"ResolveMissingFields": func(t *testing.T) {
-			creds := &ServerCredentials{
-				CACert:     pemRootCert,
-				ServerCert: pemCert,
+			creds := &Credentials{
+				CACert: pemRootCert,
+				Cert:   pemCert,
 			}
 			config, err := creds.Resolve()
 			assert.Error(t, err)
 			assert.Nil(t, config)
 		},
 		"Resolve": func(t *testing.T) {
-			creds := &ServerCredentials{
-				CACert:     pemRootCert,
-				ServerCert: pemCert,
-				ServerKey:  pemKey,
+			creds := &Credentials{
+				CACert: pemRootCert,
+				Cert:   pemCert,
+				Key:    pemKey,
 			}
 			config, err := creds.Resolve()
 			require.NoError(t, err)

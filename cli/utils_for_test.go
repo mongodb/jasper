@@ -76,7 +76,7 @@ func mockCLIContext(service string, port int) *cli.Context {
 	_ = flags.String(serviceFlagName, service, "")
 	_ = flags.Int(portFlagName, port, "")
 	_ = flags.String(hostFlagName, "localhost", "")
-	_ = flags.String(certFilePathFlagName, "", "")
+	_ = flags.String(credsFilePathFlagName, "", "")
 	return cli.NewContext(nil, flags, nil)
 }
 

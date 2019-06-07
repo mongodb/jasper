@@ -70,7 +70,7 @@ func createProcs(ctx context.Context, opts *jasper.CreateOptions, manager jasper
 // startTestService creates a server for testing purposes that terminates when
 // the context is done.
 func startTestService(ctx context.Context, mngr jasper.Manager, addr net.Addr) error {
-	closeService, err := StartService(ctx, mngr, addr, "")
+	closeService, err := StartService(ctx, mngr, addr, nil)
 	if err != nil {
 		return errors.Wrap(err, "could not start server")
 	}
@@ -86,7 +86,7 @@ func startTestService(ctx context.Context, mngr jasper.Manager, addr net.Addr) e
 // newTestClient establishes a client for testing purposes that closes when
 // the context is done.
 func newTestClient(ctx context.Context, addr net.Addr) (jasper.RemoteClient, error) {
-	client, err := NewClient(ctx, addr, "")
+	client, err := NewClient(ctx, addr, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get client")
 	}

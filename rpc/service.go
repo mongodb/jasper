@@ -18,24 +18,19 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 	return errors.WithStack(internal.AttachService(manager, s))
 }
 
-// StartService starts and RPC server with the specified address. If path is
-// non-empty, the credentials will be read from the file to start a secure TLS
-// service requiring client and server credentials; otherwise, it will start an
-// insecure service. The credentials file should contain the exported
-// ServerCredentials. The caller is responsible for closing the connection using
-// the return jasper.CloseFunc.
-func StartService(ctx context.Context, manager jasper.Manager, address net.Addr, path string) (jasper.CloseFunc, error) {
-	lis, err := net.Listen(address.Network(), address.String())
+// StartService starts an RPC server with the specified address addr around the
+// given manager. If creds is non-nil, the credentials will be used to establish
+// a secure TLS connection with clients; otherwise, it will start an insecure
+// service. The caller is responsible for closing the connection using the
+// return jasper.CloseFunc.
+func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *Credentials) (jasper.CloseFunc, error) {
+	lis, err := net.Listen(addr.Network(), addr.String())
 	if err != nil {
-		return nil, errors.Wrapf(err, "error listening on %s", address.String())
+		return nil, errors.Wrapf(err, "error listening on %s", addr.String())
 	}
 
 	opts := []grpc.ServerOption{}
-	if path != "" {
-		creds, err := NewServerCredentialsFromFile(path)
-		if err != nil {
-			return nil, errors.Wrapf(err, "error getting server credentials from file '%s'", path)
-		}
+	if creds != nil {
 		tlsCreds, err := creds.Resolve()
 		if err != nil {
 			return nil, errors.Wrap(err, "error generating TLS config from server credentials")
@@ -51,4 +46,21 @@ func StartService(ctx context.Context, manager jasper.Manager, address net.Addr,
 	go service.Serve(lis)
 
 	return func() error { service.Stop(); return nil }, nil
+}
+
+// StartServiceWithFile is the same as StartService, but the credentials will be
+// read from the file given by filePath if the filePath is non-empty. The
+// credentials file should contain the JSON-encoded bytes from
+// (*Credentials).Export().
+func StartServiceWithFile(ctx context.Context, manager jasper.Manager, addr net.Addr, filePath string) (jasper.CloseFunc, error) {
+	var creds *Credentials
+	if filePath != "" {
+		var err error
+		creds, err = NewCredentialsFromFile(filePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting credentials from file")
+		}
+	}
+
+	return StartService(ctx, manager, addr, creds)
 }
