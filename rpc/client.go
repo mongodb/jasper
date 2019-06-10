@@ -25,7 +25,7 @@ type rpcClient struct {
 // connection. The caller is responsible for closing the connection using the
 // returned jasper.CloseFunc.
 func NewClient(ctx context.Context, addr net.Addr, creds *Credentials) (jasper.RemoteClient, error) {
-	opts := []grpc.DialOption{}
+	opts := []grpc.DialOption{grpc.WithBlock()}
 	if creds != nil {
 		tlsConf, err := creds.Resolve()
 		if err != nil {
