@@ -99,12 +99,12 @@ func (c *Credentials) Resolve() (*tls.Config, error) {
 	return &tls.Config{
 		Certificates: []tls.Certificate{cert},
 
-		// Client-specific options
-		RootCAs: caCerts,
-
 		// Server-specific options
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  caCerts,
+
+		// Client-specific options
+		RootCAs: caCerts,
 	}, nil
 }
 

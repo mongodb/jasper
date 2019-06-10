@@ -145,7 +145,7 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 			assert.Error(t, err)
 			assert.Nil(t, config)
 		},
-		"Resolve": func(t *testing.T) {
+		"ResolveSucceeds": func(t *testing.T) {
 			creds := &Credentials{
 				CACert: pemRootCert,
 				Cert:   pemCert,

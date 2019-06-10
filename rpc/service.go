@@ -31,11 +31,11 @@ func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, cr
 
 	opts := []grpc.ServerOption{}
 	if creds != nil {
-		tlsCreds, err := creds.Resolve()
+		tlsConf, err := creds.Resolve()
 		if err != nil {
 			return nil, errors.Wrap(err, "error generating TLS config from server credentials")
 		}
-		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsCreds)))
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConf)))
 	}
 
 	service := grpc.NewServer(opts...)
