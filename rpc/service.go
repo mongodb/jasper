@@ -4,6 +4,9 @@ import (
 	"context"
 	"net"
 
+	"github.com/evergreen-ci/aviation"
+	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/logging"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/rpc/internal"
 	"github.com/pkg/errors"
@@ -29,7 +32,10 @@ func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, cr
 		return nil, errors.Wrapf(err, "error listening on %s", addr.String())
 	}
 
-	opts := []grpc.ServerOption{}
+	opts := []grpc.ServerOption{
+		grpc.UnaryInterceptor(aviation.MakeGripUnaryInterceptor(logging.MakeGrip(grip.GetSender()))),
+		grpc.StreamInterceptor(aviation.MakeGripStreamInterceptor(logging.MakeGrip(grip.GetSender()))),
+	}
 	if creds != nil {
 		tlsConf, err := creds.Resolve()
 		if err != nil {

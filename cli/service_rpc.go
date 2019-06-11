@@ -41,9 +41,7 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 				Usage: "the path to the file containing the RPC service credentials",
 			},
 		},
-		Before: mergeBeforeFuncs(
-			validatePort(portFlagName),
-		),
+		Before: validatePort(portFlagName),
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewLocalManager(false)
 			if err != nil {
