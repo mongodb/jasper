@@ -18,11 +18,11 @@ type Credentials struct {
 	// the server certificate. If the credentials are used by a server, this
 	// should be the certificate of the root CA to verify the client
 	// certificate.
-	CACert []byte `json:"ca_cert"`
+	CACert []byte `bson:"ca_cert" json:"ca_cert"`
 	// Cert is the PEM-encoded certificate.
-	Cert []byte `json:"cert"`
+	Cert []byte `bson:"cert" json:"cert"`
 	// Key is the PEM-encoded private key.
-	Key []byte `json:"key"`
+	Key []byte `bson:"key" json:"key"`
 }
 
 // NewCredentials initializes a new Credential struct.
