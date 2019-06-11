@@ -27,7 +27,6 @@ type rpcClient struct {
 func NewClient(ctx context.Context, addr net.Addr, creds *Credentials) (jasper.RemoteClient, error) {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
-		grpc.FailOnNonTempDialError(true),
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	}
 	if creds != nil {
