@@ -8,10 +8,9 @@ const (
 	// JasperCommand represents the Jasper interface as a CLI command.
 	JasperCommand = "jasper"
 
-	hostFlagName         = "host"
-	portFlagName         = "port"
-	serviceFlagName      = "service"
-	certFilePathFlagName = "cert_path"
+	hostFlagName          = "host"
+	portFlagName          = "port"
+	credsFilePathFlagName = "creds_path"
 
 	defaultLocalHostName = "localhost"
 )
