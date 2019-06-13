@@ -41,6 +41,9 @@ func JasperCMD() cli.Command {
 		Subcommands: []cli.Command{
 			Service(),
 			RunCMD(),
+			ListCMD(),
+			KillCMD(),
+			KillAllCMD(),
 		},
 	}
 }
