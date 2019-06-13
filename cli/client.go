@@ -10,6 +10,8 @@ const (
 	// ClientCommand represents the Jasper client interface as a CLI command.
 	ClientCommand = "client"
 
+	serviceFlagName = "service"
+
 	// clientConnectionTimeout is the max time an operation can run before being
 	// cancelled.
 	clientConnectionTimeout = 30 * time.Second
