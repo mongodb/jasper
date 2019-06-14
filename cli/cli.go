@@ -31,7 +31,7 @@ func Jasper() cli.Command {
 }
 
 // JasperCMD is a user-facing set of commands for exploring and
-// running operations with Japser on a local or remote system, and is
+// running operations with Jasper on a local or remote system, and is
 // designed to support human users.
 func JasperCMD() cli.Command {
 	return cli.Command{
@@ -41,6 +41,7 @@ func JasperCMD() cli.Command {
 			Service(),
 			RunCMD(),
 			ListCMD(),
+			ClearCMD(),
 			KillCMD(),
 			KillAllCMD(),
 		},

@@ -19,9 +19,9 @@ func RunCMD() cli.Command {
 		commandFlagName = "command"
 		envFlagName     = "env"
 		sudoFlagName    = "sudo"
-		sudoAsFlagName  = "sudoAs"
+		sudoAsFlagName  = "sudo_as"
 		idFlagName      = "id"
-		noShellFlagName = "noShell"
+		execFlagName    = "exec"
 		tagFlagName     = "tag"
 		waitFlagName    = "wait"
 	)
@@ -50,8 +50,8 @@ func RunCMD() cli.Command {
 				Name:  idFlagName,
 				Usage: "specify an id for this process (optional)",
 			},
-			cli.BoolTFlag{
-				Name:  noShellFlagName,
+			cli.BoolFlag{
+				Name:  execFlagName,
 				Usage: "when specified execute commands directly without shell. If multiple commands are specified they do not share a shell environment",
 			},
 			cli.StringSliceFlag{
@@ -60,7 +60,7 @@ func RunCMD() cli.Command {
 			},
 			cli.BoolFlag{
 				Name:  waitFlagName,
-				Usage: "specify to block until the process returns (subject to service timeouts), propogating the exit code from process",
+				Usage: "specify to block until the process returns (subject to service timeouts), propagating the exit code from process",
 			},
 		),
 		Before: mergeBeforeFuncs(clientBefore(),
@@ -69,7 +69,7 @@ func RunCMD() cli.Command {
 					if c.NArg() == 0 {
 						return errors.New("must specify a command")
 					}
-					return errors.Wrap(c.Set(commandFlagName, strings.Join(c.Args().Tail(), " ")), "problem setting command")
+					return errors.Wrap(c.Set(commandFlagName, strings.Join(c.Args(), " ")), "problem setting command")
 				}
 				return nil
 			}),
@@ -78,7 +78,7 @@ func RunCMD() cli.Command {
 			cmds := c.StringSlice(commandFlagName)
 			useSudo := c.Bool(sudoFlagName)
 			sudoAs := c.String(sudoAsFlagName)
-			useShell := c.BoolT(noShellFlagName)
+			useExec := c.Bool(execFlagName)
 			cmdID := c.String(idFlagName)
 			tags := c.StringSlice(tagFlagName)
 			wait := c.Bool(waitFlagName)
@@ -86,13 +86,13 @@ func RunCMD() cli.Command {
 			defer cancel()
 
 			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
-				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags)
+				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags).Background(!wait)
 
 				for _, cmdStr := range cmds {
-					if useShell {
-						cmd.Bash(cmdStr)
-					} else {
+					if useExec {
 						cmd.Append(cmdStr)
+					} else {
+						cmd.Bash(cmdStr)
 					}
 				}
 
@@ -155,7 +155,7 @@ func ListCMD() cli.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			filter := jasper.Filter("all")
+			filter := jasper.All
 
 			switch {
 			case c.Bool("running"):
@@ -202,7 +202,10 @@ func ListCMD() cli.Command {
 
 // KillCMD terminates a single process by id, sending either TERM or KILL.
 func KillCMD() cli.Command {
-	const idFlagName = "id"
+	const (
+		idFlagName   = "id"
+		killFlagName = "kill"
+	)
 	return cli.Command{
 		Name:  "kill",
 		Usage: "terminate processes",
@@ -212,7 +215,7 @@ func KillCMD() cli.Command {
 				Usage: "specify the id of the process to kill",
 			},
 			cli.BoolFlag{
-				Name:  "kill",
+				Name:  killFlagName,
 				Usage: "send KILL (9) rather than term (15)",
 			},
 		),
@@ -231,7 +234,7 @@ func KillCMD() cli.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			sendKill := c.Bool("kill")
+			sendKill := c.Bool(killFlagName)
 			procID := c.String(idFlagName)
 			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
 				proc, err := client.Get(ctx, procID)
@@ -248,9 +251,32 @@ func KillCMD() cli.Command {
 	}
 }
 
-// KillALlCMD terminates all processes with a given tag, sending either TERM or KILL.
+// ClearCMD removes all terminated/exited tracked processes from
+// jasper Manger.
+func ClearCMD() cli.Command {
+	return cli.Command{
+		Name:   "clear",
+		Usage:  "terminate processes",
+		Flags:  clientFlags(),
+		Before: clientBefore(),
+		Action: func(c *cli.Context) error {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
+				client.Clear(ctx)
+				return nil
+			})
+		},
+	}
+}
+
+// KillAllCMD terminates all processes with a given tag, sending either TERM or KILL.
 func KillAllCMD() cli.Command {
-	const groupFlagName = "group"
+	const (
+		groupFlagName = "group"
+		killFlagName  = "kill"
+	)
 
 	return cli.Command{
 		Name:  "kill",
@@ -277,7 +303,7 @@ func KillAllCMD() cli.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			sendKill := c.Bool("kill")
+			sendKill := c.Bool(killFlagName)
 			group := c.String(groupFlagName)
 			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
 				procs, err := client.Group(ctx, group)
