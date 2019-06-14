@@ -277,7 +277,7 @@ func (c *Command) ShellScript(shell, script string) *Command {
 	return c
 }
 
-// Bash adds a script using "bash -c", as syntactic sugar for the ShellScript
+// Bash adds a script using "bash -c", as syntactic sugar for the ShellScript2
 // method.
 func (c *Command) Bash(script string) *Command { return c.ShellScript("bash", script) }
 
