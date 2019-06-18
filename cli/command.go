@@ -98,7 +98,7 @@ func RunCMD() cli.Command {
 				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags)
 
 				if wait {
-					cmd.Background(true).AppendLoggers(jasper.NewInMemoryLogger())
+					cmd.Background(true).AppendLoggers(jasper.NewInMemoryLogger()).RedirectErrorToOutput(true)
 				}
 
 				for _, cmdStr := range cmds {
