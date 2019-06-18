@@ -94,11 +94,13 @@ func RunCMD() cli.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			logger := jasper.NewInMemoryLogger()
+
 			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
 				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags)
 
 				if wait {
-					cmd.Background(true).AppendLoggers(jasper.NewInMemoryLogger()).RedirectErrorToOutput(true)
+					cmd.Background(true).AppendLoggers(logger).RedirectErrorToOutput(true)
 				}
 
 				for _, cmdStr := range cmds {
@@ -136,7 +138,7 @@ func RunCMD() cli.Command {
 								grip.Notice("operation canceled")
 								return
 							case <-timer.C:
-								logLines, err := client.GetLogStream(ctx, cmdID, 1000)
+								logLines, err := client.GetLogStream(ctx, cmdID, logger.Options.InMemoryCap)
 								if err != nil {
 									grip.Error(message.WrapError(err, "problem polling for log lines, aborting log following"))
 									return
