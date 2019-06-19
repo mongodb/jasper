@@ -58,6 +58,15 @@ func unparseFlagSet(c *cli.Context) []string {
 	return args
 }
 
+func requireStringFlag(name string) cli.BeforeFunc {
+	return func(c *cli.Context) error {
+		if c.String(name) == "" {
+			return errors.Errorf("must specify string for flag '--%s'", name)
+		}
+		return nil
+	}
+}
+
 const (
 	minPort = 1 << 10
 	maxPort = math.MaxUint16 - 1
