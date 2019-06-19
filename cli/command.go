@@ -4,11 +4,15 @@ import (
 	"context"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cheynewallace/tabby"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 )
 
@@ -24,7 +28,11 @@ func RunCMD() cli.Command {
 		execFlagName    = "exec"
 		tagFlagName     = "tag"
 		waitFlagName    = "wait"
+
+		logPollInterval = 100 * time.Millisecond
 	)
+
+	defaultID := uuid.Must(uuid.NewV4())
 
 	return cli.Command{
 		Name:  "run",
@@ -49,6 +57,7 @@ func RunCMD() cli.Command {
 			cli.StringFlag{
 				Name:  idFlagName,
 				Usage: "specify an id for this process (optional)",
+				Value: defaultID.String(),
 			},
 			cli.BoolFlag{
 				Name:  execFlagName,
@@ -85,8 +94,14 @@ func RunCMD() cli.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			logger := jasper.NewInMemoryLogger()
+
 			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
-				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags).Background(!wait)
+				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags)
+
+				if wait {
+					cmd.Background(true).AppendLoggers(logger).RedirectErrorToOutput(true)
+				}
 
 				for _, cmdStr := range cmds {
 					if useExec {
@@ -110,8 +125,42 @@ func RunCMD() cli.Command {
 				}
 
 				if wait {
+					logDone := make(chan struct{})
+					go func() {
+						defer recovery.LogStackTraceAndContinue("log handling thread")
+						defer close(logDone)
+						timer := time.NewTimer(0)
+						defer timer.Stop()
+
+						for {
+							select {
+							case <-ctx.Done():
+								grip.Notice("operation canceled")
+								return
+							case <-timer.C:
+								logLines, err := client.GetLogStream(ctx, cmdID, logger.Options.InMemoryCap)
+								if err != nil {
+									grip.Error(message.WrapError(err, "problem polling for log lines, aborting log following"))
+									return
+								}
+
+								for _, ln := range logLines.Logs {
+									grip.Info(ln)
+								}
+
+								if !logLines.Done {
+									timer.Reset(0)
+									continue
+								}
+
+								timer.Reset(randDur(logPollInterval))
+							}
+						}
+					}()
+
 					exit, err := cmd.Wait(ctx)
 					grip.Notice(err)
+					<-logDone
 					os.Exit(exit)
 				}
 
