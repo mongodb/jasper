@@ -26,19 +26,6 @@ func Jasper() cli.Command {
 		Subcommands: []cli.Command{
 			Client(),
 			Service(),
-		},
-	}
-}
-
-// JasperCMD is a user-facing set of commands for exploring and
-// running operations with Jasper on a local or remote system, and is
-// designed to support human users.
-func JasperCMD() cli.Command {
-	return cli.Command{
-		Name:  JasperCommand,
-		Usage: "Jasper Command CLI to create and manage Jasper processes",
-		Subcommands: []cli.Command{
-			Service(),
 			RunCMD(),
 			ListCMD(),
 			ClearCMD(),
