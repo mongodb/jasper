@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"os"
 	"strings"
 	"time"
 
@@ -134,7 +133,7 @@ func RunCMD() cli.Command {
 						// lines.
 						grip.Error(errors.Wrap(err, "problem encountered while running commands"))
 					} else {
-						os.Exit(1)
+						return errors.Wrap(err, "problem running command")
 					}
 				}
 
