@@ -229,6 +229,10 @@ func ListCMD() cli.Command {
 					return nil
 				}
 				filter := jasper.Filter(c.String(filterFlagName))
+				if filter == "" {
+					filter = jasper.All
+					return errors.Wrap(c.Set(filterFlagName, string(filter)), "problem setting default filter")
+				}
 				return errors.Wrapf(filter.Validate(), "invalid filter '%s'", filter)
 			}),
 		Action: func(c *cli.Context) error {
