@@ -294,7 +294,7 @@ func KillCMD() cli.Command {
 		Before: mergeBeforeFuncs(
 			clientBefore(),
 			func(c *cli.Context) error {
-				if len(c.StringSlice(idFlagName)) == 0 {
+				if len(c.String(idFlagName)) == 0 {
 					if c.NArg() != 1 {
 						return errors.New("must specify a process ID")
 					}
