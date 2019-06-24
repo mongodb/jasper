@@ -383,11 +383,11 @@ func DownloadCMD() cli.Command {
 		Flags: append(clientFlags(),
 			cli.StringFlag{
 				Name:  joinFlagNames(urlFlagName, "p"),
-				Usage: "specify the path (URL) of the file to download on the remote.",
+				Usage: "specify the url of the file to download on the remote.",
 			},
 			cli.StringFlag{
 				Name:  extractPathFlagName,
-				Usage: "if specified, attempt to extract the downloaded artifact",
+				Usage: "if specified, attempt to extract the downloaded artifact to the given path.",
 			},
 			cli.StringFlag{
 				Name:  pathFlagName,
@@ -399,9 +399,9 @@ func DownloadCMD() cli.Command {
 			func(c *cli.Context) error {
 				if c.String(urlFlagName) == "" {
 					if c.NArg() != 1 {
-						return errors.New("must specify a path")
+						return errors.New("must specify a URL")
 					}
-					return errors.Wrap(c.Set(urlFlagName, c.Args().First()), "problem setting path from positional flags")
+					return errors.Wrap(c.Set(urlFlagName, c.Args().First()), "problem setting URL from positional flags")
 				}
 				return nil
 			}),
