@@ -22,12 +22,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-const (
-	restService     = "rest"
-	rpcService      = "rpc"
-	combinedService = "combined"
-)
-
 // mergeBeforeFuncs returns a cli.BeforeFunc that runs all funcs and accumulates
 // the errors.
 func mergeBeforeFuncs(funcs ...cli.BeforeFunc) cli.BeforeFunc {
@@ -73,11 +67,11 @@ func clientFlags() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:  portFlagName,
-			Usage: fmt.Sprintf("the port running the Jasper service (if service is '%s', default port is %d; if service is '%s', default port is %d)", restService, defaultRESTPort, rpcService, defaultRPCPort),
+			Usage: fmt.Sprintf("the port running the Jasper service (if service is '%s', default port is %d; if service is '%s', default port is %d)", RESTService, defaultRESTPort, RPCService, defaultRPCPort),
 		},
 		cli.StringFlag{
 			Name:  serviceFlagName,
-			Usage: fmt.Sprintf("the type of Jasper service ('%s' or '%s')", restService, rpcService),
+			Usage: fmt.Sprintf("the type of Jasper service ('%s' or '%s')", RESTService, RPCService),
 		},
 		cli.StringFlag{
 			Name:  credsFilePathFlagName,
@@ -91,8 +85,8 @@ func clientBefore() func(*cli.Context) error {
 	return mergeBeforeFuncs(
 		func(c *cli.Context) error {
 			service := c.String(serviceFlagName)
-			if service != restService && service != rpcService {
-				return errors.Errorf("service must be '%s' or '%s'", restService, rpcService)
+			if service != RESTService && service != RPCService {
+				return errors.Errorf("service must be '%s' or '%s'", RESTService, RPCService)
 			}
 			return nil
 		},
@@ -101,11 +95,11 @@ func clientBefore() func(*cli.Context) error {
 				return nil
 			}
 			switch c.String(serviceFlagName) {
-			case restService:
+			case RESTService:
 				if err := c.Set(portFlagName, strconv.Itoa(defaultRESTPort)); err != nil {
 					return err
 				}
-			case rpcService:
+			case RPCService:
 				if err := c.Set(portFlagName, strconv.Itoa(defaultRPCPort)); err != nil {
 					return err
 				}
@@ -157,9 +151,9 @@ func newRemoteClient(ctx context.Context, service, host string, port int, credsF
 		return nil, errors.Wrap(err, "failed to resolve address")
 	}
 
-	if service == restService {
+	if service == RESTService {
 		return jasper.NewRESTClient(addr), nil
-	} else if service == rpcService {
+	} else if service == RPCService {
 		return rpc.NewClientWithFile(ctx, addr, credsFilePath)
 	}
 	return nil, errors.Errorf("unrecognized service type '%s'", service)
@@ -253,4 +247,9 @@ func runServices(ctx context.Context, makeServices ...func(context.Context) (jas
 
 func randDur(window time.Duration) time.Duration {
 	return window + time.Duration(rand.Int63n(int64(window)))
+}
+
+// validCommand checks that a command is a recognized CLI command.
+func validateCLIArgs(args []string) {
+	// Ignore first args
 }

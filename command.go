@@ -34,24 +34,25 @@ type Command struct {
 
 	cmds   [][]string
 	id     string
-	remote remoteCommandOptions
+	remote RemoteOptions
 	makep  ProcessConstructor
 
 	procs []Process
 }
 
-type remoteCommandOptions struct {
-	host string
-	user string
-	args []string
+// RemoteOptions represents options to SSH into a remote machine.
+type RemoteOptions struct {
+	Host string
+	User string
+	Args []string
 }
 
-func (rco *remoteCommandOptions) hostString() string {
-	if rco.user == "" {
-		return rco.host
+func (opts *RemoteOptions) hostString() string {
+	if opts.User == "" {
+		return opts.Host
 	}
 
-	return fmt.Sprintf("%s@%s", rco.user, rco.host)
+	return fmt.Sprintf("%s@%s", opts.User, opts.Host)
 }
 
 func (c *Command) sudoCmd() []string {
@@ -93,7 +94,7 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*Creat
 		remoteCmd += strings.Join(args, " ")
 	}
 
-	opts.Args = append(append([]string{"ssh"}, c.remote.args...), c.remote.hostString(), remoteCmd)
+	opts.Args = append(append([]string{"ssh"}, c.remote.Args...), c.remote.hostString(), remoteCmd)
 	return opts, nil
 }
 
@@ -157,20 +158,20 @@ func (c *Command) Directory(d string) *Command { c.opts.WorkingDirectory = d; re
 
 // Host sets the hostname. A blank hostname implies local execution of the
 // command, a non-blank hostname is treated as a remotely executed command.
-func (c *Command) Host(h string) *Command { c.remote.host = h; return c }
+func (c *Command) Host(h string) *Command { c.remote.Host = h; return c }
 
 // User sets the username for remote operations. Host name must be set
 // to execute as a remote command.
-func (c *Command) User(u string) *Command { c.remote.user = u; return c }
+func (c *Command) User(u string) *Command { c.remote.User = u; return c }
 
 // SetSSHArgs sets the arguments, if any, that are passed to the
 // underlying ssh command, for remote commands.
-func (c *Command) SetSSHArgs(args []string) *Command { c.remote.args = args; return c }
+func (c *Command) SetSSHArgs(args []string) *Command { c.remote.Args = args; return c }
 
-// ExtendSSHArgs allows you to add arguments, when needed, to the
+// ExtendRemoteArgs allows you to add arguments, when needed, to the
 // underlying ssh command, for remote commands.
-func (c *Command) ExtendSSHArgs(a ...string) *Command {
-	c.remote.args = append(c.remote.args, a...)
+func (c *Command) ExtendRemoteArgs(args ...string) *Command {
+	c.remote.Args = append(c.remote.Args, args...)
 	return c
 }
 
@@ -422,6 +423,10 @@ func (c *Command) Close() error {
 	return c.opts.Close()
 }
 
+func (c *Command) SetInput(r io.Reader) {
+	c.opts.StandardInput = r
+}
+
 // SetErrorSender sets a Sender to be used by this Command for its output to
 // stderr.
 func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
@@ -598,7 +603,7 @@ func (c *Command) getCreateOpt(ctx context.Context, args []string) (*CreateOptio
 func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
 	out := []*CreateOptions{}
 	catcher := grip.NewBasicCatcher()
-	if c.remote.host != "" {
+	if c.remote.Host != "" {
 		for _, args := range c.cmds {
 			cmd, err := c.getRemoteCreateOpt(ctx, args)
 			if err != nil {
