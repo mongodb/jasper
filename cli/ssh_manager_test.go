@@ -12,23 +12,23 @@ func TestNewSSHManager(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions){
 		"NewSSHManagerFailsWithEmptyRemoteOptions": func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) {
 			remoteOpts = jasper.RemoteOptions{}
-			_, err := NewSSHManager(remoteOpts, clientOpts)
+			_, err := NewSSHManager(remoteOpts, clientOpts, false)
 			assert.Error(t, err)
 		},
 		"NewSSHManagerFailsWithEmptyClientOptions": func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) {
 			clientOpts = ClientOptions{}
-			_, err := NewSSHManager(remoteOpts, clientOpts)
+			_, err := NewSSHManager(remoteOpts, clientOpts, false)
 			assert.Error(t, err)
 		},
 		"NewSSHManagerSucceedsWithPopulatedOptions": func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) {
-			manager, err := NewSSHManager(remoteOpts, clientOpts)
+			manager, err := NewSSHManager(remoteOpts, clientOpts, false)
 			require.NoError(t, err)
 			assert.NotNil(t, manager)
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
 			remoteOpts := jasper.RemoteOptions{
-				User: "kim",
+				User: "user",
 				Host: "localhost",
 			}
 

@@ -13,23 +13,29 @@ import (
 // sshManager uses SSH to access a remote machine's Jasper CLI, which has access to
 // methods in the Manager interface.
 type sshManager struct {
-	opts sshClientOptions
+	manager jasper.Manager
+	opts    sshClientOptions
 }
 
 // NewSSHManager creates a new Jasper manager that connects to a remote
 // machine's Jasper service over SSH using the remote machine's Jasper CLI.
-func NewSSHManager(remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) (jasper.Manager, error) {
+func NewSSHManager(remoteOpts jasper.RemoteOptions, clientOpts ClientOptions, trackProcs bool) (jasper.Manager, error) {
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
 	if err := clientOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating client options")
 	}
+	manager, err := jasper.NewLocalManager(trackProcs)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem creating underlying manager")
+	}
 	m := sshManager{
 		opts: sshClientOptions{
 			Machine: remoteOpts,
 			Client:  clientOpts,
 		},
+		manager: manager,
 	}
 	return &m, nil
 }
@@ -43,10 +49,7 @@ func (m *sshManager) CreateProcess(ctx context.Context, opts *jasper.CreateOptio
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &sshProcess{
-		opts: m.opts,
-		info: resp.Info,
-	}, nil
+	return newSSHProcess(m.runClientCommand, resp.Info)
 }
 
 func (m *sshManager) CreateCommand(ctx context.Context) *jasper.Command {
@@ -68,9 +71,8 @@ func (m *sshManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Proces
 	}
 	procs := make([]jasper.Process, 0, len(resp.Infos))
 	for i := range resp.Infos {
-		procs[i] = &sshProcess{
-			opts: m.opts,
-			info: resp.Infos[i],
+		if procs[i], err = newSSHProcess(m.runClientCommand, resp.Infos[i]); err != nil {
+			return nil, errors.Wrap(err, "problem creating SSH process")
 		}
 	}
 	return procs, nil
@@ -87,9 +89,8 @@ func (m *sshManager) Group(ctx context.Context, tag string) ([]jasper.Process, e
 	}
 	procs := make([]jasper.Process, 0, len(resp.Infos))
 	for i := range resp.Infos {
-		procs[i] = &sshProcess{
-			opts: m.opts,
-			info: resp.Infos[i],
+		if procs[i], err = newSSHProcess(m.runClientCommand, resp.Infos[i]); err != nil {
+			return nil, errors.Wrap(err, "problem creating SSH process")
 		}
 	}
 	return procs, nil
@@ -104,10 +105,7 @@ func (m *sshManager) Get(ctx context.Context, id string) (jasper.Process, error)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &sshProcess{
-		opts: m.opts,
-		info: resp.Info,
-	}, nil
+	return newSSHProcess(m.runClientCommand, resp.Info)
 }
 
 func (m *sshManager) Clear(ctx context.Context) {
@@ -126,18 +124,20 @@ func (m *sshManager) Close(ctx context.Context) error {
 }
 
 func (m *sshManager) runCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) ([]byte, error) {
-	var input io.Reader
-	if subcommandInput != nil {
-		inputBytes, err := json.MarshalIndent(subcommandInput, "", "    ")
-		if err != nil {
-			return nil, errors.Wrap(err, "could not encode input")
-		}
-		input = bytes.NewBuffer(inputBytes)
-	}
-	output := sshOutput()
-	subcommand := []string{ManagerCommand, managerSubcommand}
+	return m.runClientCommand(ctx, []string{ManagerCommand, managerSubcommand}, subcommandInput)
+}
 
-	cmd := m.opts.newCommand(subcommand, input, io.WriteCloser(output))
+// runClientCommand creates a command that runs the given CLI client subcommand
+// over SSH with the given input to be sent as JSON to standard input. If
+// subcommandInput is nil, it does not use standard input.
+func (m *sshManager) runClientCommand(ctx context.Context, subcommand []string, subcommandInput interface{}) ([]byte, error) {
+	input, err := clientInput(subcommandInput)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem creating client input")
+	}
+	output := clientOutput()
+
+	cmd := m.newClientCommand(ctx, subcommand, input, output)
 	if err := cmd.Run(ctx); err != nil {
 		return nil, errors.Wrapf(err, "problem running command '%s' over SSH", m.opts.args(subcommand))
 	}
@@ -145,9 +145,38 @@ func (m *sshManager) runCommand(ctx context.Context, managerSubcommand string, s
 	return output.Bytes(), nil
 }
 
-func sshOutput() *CappedWriter {
+// newClientCommand creates the command that runs the Jasper CLI client command
+// over SSH.
+func (m *sshManager) newClientCommand(ctx context.Context, clientSubcommand []string, input io.Reader, output io.WriteCloser) *jasper.Command {
+	cmd := m.manager.CreateCommand(ctx).Host(m.opts.Machine.Host).User(m.opts.Machine.User).ExtendRemoteArgs(m.opts.Machine.Args...).
+		Add(m.opts.args(clientSubcommand))
+	if input != nil {
+		cmd.SetInput(input)
+	}
+	if output != nil {
+		cmd.SetCombinedWriter(output)
+	}
+	return cmd
+}
+
+// clientOutput constructs the buffer to write the CLI output.
+func clientOutput() *CappedWriter {
 	return &CappedWriter{
 		Buffer:   &bytes.Buffer{},
 		MaxBytes: 1024 * 1024, // 1 MB
 	}
+}
+
+// clientInput constructs the JSON input to the CLI from the struct.
+func clientInput(input interface{}) (*bytes.Buffer, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	inputBytes, err := json.MarshalIndent(input, "", "    ")
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encode input as JSON")
+	}
+
+	return bytes.NewBuffer(inputBytes), nil
 }

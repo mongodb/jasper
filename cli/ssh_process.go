@@ -1,41 +1,35 @@
 package cli
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
 	"syscall"
 
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
 
+// clientFunc is a function that runs the given Jasper CLI command with the
+// given input.
+type clientFunc func(ctx context.Context, subcommand []string, input interface{}) ([]byte, error)
+
 // sshProcess uses SSH to access a remote machine's Jasper CLI, which has access
 // to methods in the Process interface.
 type sshProcess struct {
-	opts sshClientOptions
-	info jasper.ProcessInfo
+	runClientCommand clientFunc
+	info             jasper.ProcessInfo
 }
 
-func (p *sshProcess) runCommand(ctx context.Context, processSubcommand string, subcommandInput interface{}) ([]byte, error) {
-	var input io.Reader
-	if subcommandInput != nil {
-		inputBytes, err := json.MarshalIndent(subcommandInput, "", "    ")
-		if err != nil {
-			return nil, errors.Wrap(err, "could not encode input")
-		}
-		input = bytes.NewBuffer(inputBytes)
+// newSSHProcess creates a new process that runs using a Jasper CLI over SSH.
+// The caller should pass in the function that will run CLI client commands over
+// SSH.
+func newSSHProcess(runClientCommand clientFunc, info jasper.ProcessInfo) (jasper.Process, error) {
+	if runClientCommand == nil {
+		return nil, errors.New("SSH process needs a function to run the client command over SSH")
 	}
-	output := sshOutput()
-	cmdArgs := []string{ProcessCommand, processSubcommand}
-
-	cmd := p.opts.newCommand(cmdArgs, input, io.WriteCloser(output))
-	if err := cmd.Run(ctx); err != nil {
-		return nil, errors.Wrap(err, "problem running command over SSH")
-	}
-
-	return output.Bytes(), nil
+	return &sshProcess{
+		runClientCommand: runClientCommand,
+		info:             info,
+	}, nil
 }
 
 func (p *sshProcess) ID() string {
@@ -129,10 +123,7 @@ func (p *sshProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return &sshProcess{
-		opts: p.opts,
-		info: resp.Info,
-	}, nil
+	return newSSHProcess(p.runClientCommand, resp.Info)
 }
 
 func (p *sshProcess) RegisterTrigger(ctx context.Context, t jasper.ProcessTrigger) error {
@@ -188,4 +179,8 @@ func (p *sshProcess) ResetTags() {
 	_, _ = p.runCommand(ctx, ResetTagsCommand, &IDInput{
 		ID: p.info.ID,
 	})
+}
+
+func (p *sshProcess) runCommand(ctx context.Context, processSubcommand string, subcommandInput interface{}) ([]byte, error) {
+	return p.runClientCommand(ctx, []string{ProcessCommand, processSubcommand}, subcommandInput)
 }
