@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -170,11 +171,10 @@ func RunCMD() cli.Command {
 
 									if logLines.Done {
 										timer.Reset(0)
-										continue
+										break LOG_SINGLE_PROCESS
 									}
 
 									timer.Reset(randDur(logPollInterval))
-									break LOG_SINGLE_PROCESS
 								}
 							}
 							t.AddLine()
@@ -183,6 +183,9 @@ func RunCMD() cli.Command {
 					}()
 
 					<-logDone
+					exitCode, err := cmd.Wait(ctx)
+					grip.Error(err)
+					os.Exit(exitCode)
 				} else {
 					t := tabby.New()
 					t.AddHeader("ID")
@@ -216,7 +219,7 @@ func ListCMD() cli.Command {
 				Usage: "filter processes by status (all, running, successful, failed, terminated)",
 			},
 			cli.StringFlag{
-				Name:  "group",
+				Name:  groupFlagName,
 				Usage: "return a list of processes with a tag",
 			},
 		),
