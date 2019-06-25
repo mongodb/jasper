@@ -54,7 +54,7 @@ func (m *sshManager) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (m *sshManager) Register(ctx context.Context, proc jasper.Process) error {
-	return errors.New("cannot register existing processes on remote process manager")
+	return errors.New("cannot register existing processes on remote manager")
 }
 
 func (m *sshManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Process, error) {
