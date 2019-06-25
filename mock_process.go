@@ -3,8 +3,6 @@ package jasper
 import (
 	"context"
 	"syscall"
-
-	"github.com/mongodb/grip"
 )
 
 // MockProcess implements the Process interface with exported fields to
@@ -87,9 +85,7 @@ func (p *MockProcess) Respawn(ctx context.Context) (Process, error) {
 }
 
 func (p *MockProcess) RegisterTrigger(ctx context.Context, t ProcessTrigger) error {
-	grip.Infof("kim: FailRegisterTrigger = %t", p.FailRegisterTrigger)
 	if p.FailRegisterTrigger {
-		grip.Infof("FailRegisterTrigger")
 		return mockFail()
 	}
 

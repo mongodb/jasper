@@ -1,12 +1,9 @@
 package jasper
 
 import (
-	"context"
 	"testing"
 
-	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMockInterfaces(t *testing.T) {
@@ -21,11 +18,4 @@ func TestMockInterfaces(t *testing.T) {
 	remoteClient := &MockRemoteClient{}
 	_, ok = interface{}(remoteClient).(RemoteClient)
 	assert.True(t, ok)
-}
-
-func TestFoo(t *testing.T) {
-	manager := &MockManager{FailCreate: true}
-	_, err := manager.CreateProcess(context.Background(), &CreateOptions{})
-	grip.Infof("err = %s", err.Error())
-	require.Error(t, err)
 }
