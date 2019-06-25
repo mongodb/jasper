@@ -267,13 +267,10 @@ func TestRestService(t *testing.T) {
 		},
 		"CreateFailsForTriggerReasons": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &MockManager{
-				FailCreate: false,
-				Procs: []Process{
-					&MockProcess{FailRegisterTrigger: true},
-				},
+				CreateProcessConfig: MockProcess{FailRegisterTrigger: true},
 			}
 			proc, err := client.CreateProcess(ctx, trueCreateOpts())
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem managing resources")
 		},
@@ -337,9 +334,14 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, http.StatusOK, res.StatusCode)
 		},
 		"AddTagsWithNoTagsSpecifiedShouldError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			srv.manager = &MockManager{}
+			id := "foo"
+			srv.manager = &MockManager{
+				Procs: []Process{
+					&MockProcess{ProcInfo: ProcessInfo{ID: id}},
+				},
+			}
 
-			req, err := http.NewRequest(http.MethodPost, client.getURL("/process/%s/tags", "foo"), nil)
+			req, err := http.NewRequest(http.MethodPost, client.getURL("/process/%s/tags", id), nil)
 			require.NoError(t, err)
 			req = req.WithContext(ctx)
 			res, err := httpClient.Do(req)

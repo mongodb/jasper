@@ -4,19 +4,21 @@ import (
 	"context"
 	"runtime"
 
+	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
 // MockManager implements the Manager interface with exported fields to
 // configure and introspect the mock's behavior.
 type MockManager struct {
-	FailCreate   bool
-	FailRegister bool
-	FailList     bool
-	FailGroup    bool
-	FailGet      bool
-	FailClose    bool
-	Procs        []Process
+	FailCreate          bool
+	CreateProcessConfig MockProcess
+	FailRegister        bool
+	FailList            bool
+	FailGroup           bool
+	FailGet             bool
+	FailClose           bool
+	Procs               []Process
 }
 
 func mockFail() error {
@@ -32,7 +34,9 @@ func (m *MockManager) CreateProcess(ctx context.Context, opts *CreateOptions) (P
 		return nil, mockFail()
 	}
 
-	proc := MockProcess{ProcInfo: ProcessInfo{Options: *opts}}
+	proc := MockProcess(m.CreateProcessConfig)
+	proc.ProcInfo.Options = *opts
+	grip.Infof("mock proc = %+v", proc)
 
 	m.Procs = append(m.Procs, &proc)
 
