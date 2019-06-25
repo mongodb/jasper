@@ -40,21 +40,6 @@ type Command struct {
 	procs []Process
 }
 
-// RemoteOptions represents options to SSH into a remote machine.
-type RemoteOptions struct {
-	Host string
-	User string
-	Args []string
-}
-
-func (opts *RemoteOptions) hostString() string {
-	if opts.User == "" {
-		return opts.Host
-	}
-
-	return fmt.Sprintf("%s@%s", opts.User, opts.Host)
-}
-
 func (c *Command) sudoCmd() []string {
 	sudoCmd := []string{}
 	if c.sudo {
