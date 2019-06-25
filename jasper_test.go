@@ -102,7 +102,9 @@ outerRetry:
 			app.SetPrefix("jasper")
 			if err := app.SetPort(port); err != nil {
 				continue outerRetry
-
+			}
+			if err := app.SetHost("localhost"); err != nil {
+				continue outerRetry
 			}
 			go func() {
 				app.Run(ctx)
