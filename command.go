@@ -137,6 +137,16 @@ func (c *Command) String() string {
 	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.id, c.remote.hostString(), c.getCmd())
 }
 
+// Export returns all of the CreateOptions that will be used to spawn the
+// processes that run all subcommands.
+func (c *Command) Export(ctx context.Context) ([]*CreateOptions, error) {
+	opts, err := c.getCreateOpts(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem getting create options")
+	}
+	return opts, nil
+}
+
 // Directory sets the working directory. If this is a remote command, it sets
 // the working directory of the command being run remotely.
 func (c *Command) Directory(d string) *Command { c.opts.WorkingDirectory = d; return c }
