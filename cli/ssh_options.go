@@ -37,11 +37,13 @@ type sshClientOptions struct {
 }
 
 // args returns the Jasper CLI command that will be run over SSH.
-func (opts *sshClientOptions) args(clientSubcommand []string) []string {
-	args := append([]string{
-		opts.Client.BinaryPath,
-		JasperCommand,
-		ClientCommand},
+func (opts *sshClientOptions) args(clientSubcommand ...string) []string {
+	args := append(
+		[]string{
+			opts.Client.BinaryPath,
+			JasperCommand,
+			ClientCommand,
+		},
 		clientSubcommand...,
 	)
 	args = append(args, fmt.Sprintf("--%s=%s", serviceFlagName, opts.Client.Type))

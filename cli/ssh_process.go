@@ -41,10 +41,11 @@ func (p *sshProcess) Info(ctx context.Context) jasper.ProcessInfo {
 		return p.info
 	}
 
-	output, err := p.runCommand(ctx, InfoCommand, nil)
+	output, err := p.runCommand(ctx, InfoCommand, &IDInput{ID: p.info.ID})
 	if err != nil {
 		return jasper.ProcessInfo{}
 	}
+
 	resp, err := ExtractInfoResponse(output)
 	if err != nil {
 		return jasper.ProcessInfo{}
@@ -63,6 +64,7 @@ func (p *sshProcess) Running(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
+
 	resp, err := ExtractRunningResponse(output)
 	if err != nil {
 		return false
@@ -81,6 +83,7 @@ func (p *sshProcess) Complete(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
+
 	resp, err := ExtractCompleteResponse(output)
 	if err != nil {
 		return false
@@ -95,9 +98,11 @@ func (p *sshProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if _, err = ExtractOutcomeResponse(output); err != nil {
 		return errors.WithStack(err)
 	}
+
 	return nil
 }
 
@@ -106,11 +111,13 @@ func (p *sshProcess) Wait(ctx context.Context) (int, error) {
 	if err != nil {
 		return -1, errors.WithStack(err)
 	}
+
 	resp, err := ExtractWaitResponse(output)
 	if err != nil {
-		return -1, errors.WithStack(err)
+		return resp.ExitCode, errors.WithStack(err)
 	}
-	return resp.ExitCode, nil
+
+	return resp.ExitCode, errors.New(resp.Error)
 }
 
 func (p *sshProcess) Respawn(ctx context.Context) (jasper.Process, error) {
@@ -118,6 +125,7 @@ func (p *sshProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	resp, err := ExtractInfoResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -142,9 +150,11 @@ func (p *sshProcess) RegisterSignalTriggerID(ctx context.Context, sigID jasper.S
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if _, err = ExtractOutcomeResponse(output); err != nil {
 		return errors.WithStack(err)
 	}
+
 	return nil
 }
 

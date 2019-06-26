@@ -23,21 +23,23 @@ func NewSSHManager(remoteOpts jasper.RemoteOptions, clientOpts ClientOptions, tr
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
+
 	if err := clientOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating client options")
 	}
+
 	manager, err := jasper.NewLocalManager(trackProcs)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem creating underlying manager")
 	}
-	m := sshManager{
+
+	return &sshManager{
 		opts: sshClientOptions{
 			Machine: remoteOpts,
 			Client:  clientOpts,
 		},
 		manager: manager,
-	}
-	return &m, nil
+	}, nil
 }
 
 func (m *sshManager) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
@@ -45,15 +47,22 @@ func (m *sshManager) CreateProcess(ctx context.Context, opts *jasper.CreateOptio
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	resp, err := ExtractInfoResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	return newSSHProcess(m.runClientCommand, resp.Info)
 }
 
+// CreateCommand creates an in-memory command whose subcommands run over SSH.
+// However, the desired semantics would be to actually send CommandInput to the
+// Jasper CLI over SSH.
+// TODO: this can likely be fixed by serializing the command inputs, which
+// requires MAKE-841.
 func (m *sshManager) CreateCommand(ctx context.Context) *jasper.Command {
-	return jasper.NewCommand().ProcConstructor(m.CreateProcess)
+	return m.manager.CreateCommand(ctx).ProcConstructor(m.CreateProcess)
 }
 
 func (m *sshManager) Register(ctx context.Context, proc jasper.Process) error {
@@ -65,16 +74,19 @@ func (m *sshManager) List(ctx context.Context, f jasper.Filter) ([]jasper.Proces
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	resp, err := ExtractInfosResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	procs := make([]jasper.Process, 0, len(resp.Infos))
+
+	procs := make([]jasper.Process, len(resp.Infos))
 	for i := range resp.Infos {
 		if procs[i], err = newSSHProcess(m.runClientCommand, resp.Infos[i]); err != nil {
 			return nil, errors.Wrap(err, "problem creating SSH process")
 		}
 	}
+
 	return procs, nil
 }
 
@@ -83,16 +95,19 @@ func (m *sshManager) Group(ctx context.Context, tag string) ([]jasper.Process, e
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	resp, err := ExtractInfosResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	procs := make([]jasper.Process, 0, len(resp.Infos))
+
+	procs := make([]jasper.Process, len(resp.Infos))
 	for i := range resp.Infos {
 		if procs[i], err = newSSHProcess(m.runClientCommand, resp.Infos[i]); err != nil {
 			return nil, errors.Wrap(err, "problem creating SSH process")
 		}
 	}
+
 	return procs, nil
 }
 
@@ -101,10 +116,12 @@ func (m *sshManager) Get(ctx context.Context, id string) (jasper.Process, error)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	resp, err := ExtractInfoResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	return newSSHProcess(m.runClientCommand, resp.Info)
 }
 
@@ -117,9 +134,11 @@ func (m *sshManager) Close(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if _, err = ExtractOutcomeResponse(output); err != nil {
 		return errors.WithStack(err)
 	}
+
 	return nil
 }
 
@@ -139,7 +158,7 @@ func (m *sshManager) runClientCommand(ctx context.Context, subcommand []string, 
 
 	cmd := m.newClientCommand(ctx, subcommand, input, output)
 	if err := cmd.Run(ctx); err != nil {
-		return nil, errors.Wrapf(err, "problem running command '%s' over SSH", m.opts.args(subcommand))
+		return nil, errors.Wrapf(err, "problem running command '%s' over SSH", m.opts.args(subcommand...))
 	}
 
 	return output.Bytes(), nil
@@ -149,13 +168,16 @@ func (m *sshManager) runClientCommand(ctx context.Context, subcommand []string, 
 // over SSH.
 func (m *sshManager) newClientCommand(ctx context.Context, clientSubcommand []string, input io.Reader, output io.WriteCloser) *jasper.Command {
 	cmd := m.manager.CreateCommand(ctx).Host(m.opts.Machine.Host).User(m.opts.Machine.User).ExtendRemoteArgs(m.opts.Machine.Args...).
-		Add(m.opts.args(clientSubcommand))
+		Add(m.opts.args(clientSubcommand...))
+
 	if input != nil {
 		cmd.SetInput(input)
 	}
+
 	if output != nil {
 		cmd.SetCombinedWriter(output)
 	}
+
 	return cmd
 }
 

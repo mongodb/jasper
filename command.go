@@ -159,9 +159,9 @@ func (c *Command) Host(h string) *Command { c.remote.Host = h; return c }
 // to execute as a remote command.
 func (c *Command) User(u string) *Command { c.remote.User = u; return c }
 
-// SetSSHArgs sets the arguments, if any, that are passed to the
+// SetRemoteArgs sets the arguments, if any, that are passed to the
 // underlying ssh command, for remote commands.
-func (c *Command) SetSSHArgs(args []string) *Command { c.remote.Args = args; return c }
+func (c *Command) SetRemoteArgs(args []string) *Command { c.remote.Args = args; return c }
 
 // ExtendRemoteArgs allows you to add arguments, when needed, to the
 // underlying ssh command, for remote commands.
@@ -173,7 +173,8 @@ func (c *Command) ExtendRemoteArgs(args ...string) *Command {
 // Priority sets the logging priority.
 func (c *Command) Priority(l level.Priority) *Command { c.priority = l; return c }
 
-// ID sets the ID.
+// ID sets the ID of the Command, which is independent of the IDs of the
+// subcommands that are executed.
 func (c *Command) ID(id string) *Command { c.id = id; return c }
 
 // SetTags overrides any existing tags for a process with the

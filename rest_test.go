@@ -267,7 +267,7 @@ func TestRestService(t *testing.T) {
 		},
 		"CreateFailsForTriggerReasons": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &MockManager{
-				CreateProcessConfig: MockProcess{FailRegisterTrigger: true},
+				CreateConfig: MockProcess{FailRegisterTrigger: true},
 			}
 			proc, err := client.CreateProcess(ctx, trueCreateOpts())
 			require.Error(t, err)
