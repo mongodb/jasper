@@ -4,7 +4,6 @@ import (
 	"context"
 	"runtime"
 
-	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
@@ -29,6 +28,9 @@ func mockFail() error {
 	return errors.Errorf("function failed: %s", frame.Function)
 }
 
+// CreateProcess creates a new MockProcess using the CreateProcessConfig to
+// configure the MockProcess. The new MockProcess is put in Procs. If FailCreate
+// is set, it returns an error.
 func (m *MockManager) CreateProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
 	if m.FailCreate {
 		return nil, mockFail()
@@ -36,17 +38,20 @@ func (m *MockManager) CreateProcess(ctx context.Context, opts *CreateOptions) (P
 
 	proc := MockProcess(m.CreateProcessConfig)
 	proc.ProcInfo.Options = *opts
-	grip.Infof("mock proc = %+v", proc)
 
 	m.Procs = append(m.Procs, &proc)
 
 	return &proc, nil
 }
 
+// CreateCommand creates a Command that constructs MockProcesses when being run.
+// The created MockProcesses are recorded in Procs.
 func (m *MockManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
+// Register adds the process to Procs. If FailRegister is set, it returns an
+// error.
 func (m *MockManager) Register(ctx context.Context, proc Process) error {
 	if m.FailRegister {
 		return mockFail()
@@ -57,6 +62,8 @@ func (m *MockManager) Register(ctx context.Context, proc Process) error {
 	return nil
 }
 
+// List returns all processes that match the given filter. If FailList is set,
+// it returns an error.
 func (m *MockManager) List(ctx context.Context, f Filter) ([]Process, error) {
 	if m.FailList {
 		return nil, mockFail()
@@ -93,6 +100,8 @@ func (m *MockManager) List(ctx context.Context, f Filter) ([]Process, error) {
 	return filteredProcs, nil
 }
 
+// Group returns all processses that have the given tag. If FailGroup is set, it
+// returns an error.
 func (m *MockManager) Group(ctx context.Context, tag string) ([]Process, error) {
 	if m.FailGroup {
 		return nil, mockFail()
@@ -110,6 +119,8 @@ func (m *MockManager) Group(ctx context.Context, tag string) ([]Process, error) 
 	return matchingProcs, nil
 }
 
+// Get returns a process given by ID from Procs. If a matching process is not
+// found in Procs or if FailGet is set, it returns an error.
 func (m *MockManager) Get(ctx context.Context, id string) (Process, error) {
 	if m.FailGet {
 		return nil, mockFail()
@@ -124,10 +135,13 @@ func (m *MockManager) Get(ctx context.Context, id string) (Process, error) {
 	return nil, errors.Errorf("proc with id '%s' not found", id)
 }
 
+// Clear removes all processes from Procs.
 func (m *MockManager) Clear(ctx context.Context) {
 	m.Procs = []Process{}
 }
 
+// Close clears all processes in Procs. If FailClose is set, it returns an
+// error.
 func (m *MockManager) Close(ctx context.Context) error {
 	if m.FailClose {
 		return mockFail()

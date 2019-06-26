@@ -89,7 +89,7 @@ outerRetry:
 	for {
 		select {
 		case <-ctx.Done():
-			grip.Warning("timed out starting test service service")
+			grip.Warning("timed out starting test service")
 			return nil, -1
 		default:
 			port := getPortNumber()
@@ -123,7 +123,6 @@ outerRetry:
 
 				select {
 				case <-ctx.Done():
-					fmt.Println("HAPPENS")
 					return nil, -1
 				case <-timer.C:
 					req, err := http.NewRequest(http.MethodGet, url, nil)
