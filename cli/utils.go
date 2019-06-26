@@ -53,6 +53,15 @@ func unparseFlagSet(c *cli.Context) []string {
 	return args
 }
 
+func requireStringFlag(name string) cli.BeforeFunc {
+	return func(c *cli.Context) error {
+		if c.String(name) == "" {
+			return errors.Errorf("must specify string for flag '--%s'", name)
+		}
+		return nil
+	}
+}
+
 const (
 	minPort = 1 << 10
 	maxPort = math.MaxUint16 - 1
@@ -71,7 +80,7 @@ func clientFlags() []cli.Flag {
 			Usage: fmt.Sprintf("the port running the Jasper service (if service is '%s', default port is %d; if service is '%s', default port is %d)", RESTService, defaultRESTPort, RPCService, defaultRPCPort),
 		},
 		cli.StringFlag{
-			Name:  serviceFlagName,
+			Name:  joinFlagNames(serviceFlagName, "s"),
 			Usage: fmt.Sprintf("the type of Jasper service ('%s' or '%s')", RESTService, RPCService),
 		},
 		cli.StringFlag{

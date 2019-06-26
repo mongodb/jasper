@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -170,11 +171,10 @@ func RunCMD() cli.Command {
 
 									if logLines.Done {
 										timer.Reset(0)
-										continue
+										break LOG_SINGLE_PROCESS
 									}
 
 									timer.Reset(randDur(logPollInterval))
-									break LOG_SINGLE_PROCESS
 								}
 							}
 							t.AddLine()
@@ -183,6 +183,9 @@ func RunCMD() cli.Command {
 					}()
 
 					<-logDone
+					exitCode, err := cmd.Wait(ctx)
+					grip.Error(err)
+					os.Exit(exitCode)
 				} else {
 					t := tabby.New()
 					t.AddHeader("ID")
@@ -216,7 +219,7 @@ func ListCMD() cli.Command {
 				Usage: "filter processes by status (all, running, successful, failed, terminated)",
 			},
 			cli.StringFlag{
-				Name:  "group",
+				Name:  groupFlagName,
 				Usage: "return a list of processes with a tag",
 			},
 		),
@@ -390,4 +393,65 @@ func KillAllCMD() cli.Command {
 			})
 		},
 	}
+}
+
+// DownloadCMD exposes a simple interface for using jasper to download
+// files on the remote jasper.Manager.
+func DownloadCMD() cli.Command {
+	const (
+		urlFlagName         = "url"
+		pathFlagName        = "path"
+		extractPathFlagName = "extract_to"
+	)
+
+	return cli.Command{
+		Name: "download",
+		Flags: append(clientFlags(),
+			cli.StringFlag{
+				Name:  joinFlagNames(urlFlagName, "p"),
+				Usage: "specify the url of the file to download on the remote.",
+			},
+			cli.StringFlag{
+				Name:  extractPathFlagName,
+				Usage: "if specified, attempt to extract the downloaded artifact to the given path.",
+			},
+			cli.StringFlag{
+				Name:  pathFlagName,
+				Usage: "specify the remote path to download the file to on the managed system. Required.",
+			}),
+		Before: mergeBeforeFuncs(
+			clientBefore(),
+			requireStringFlag(pathFlagName),
+			func(c *cli.Context) error {
+				if c.String(urlFlagName) == "" {
+					if c.NArg() != 1 {
+						return errors.New("must specify a URL")
+					}
+					return errors.Wrap(c.Set(urlFlagName, c.Args().First()), "problem setting URL from positional flags")
+				}
+				return nil
+			}),
+		Action: func(c *cli.Context) error {
+			info := jasper.DownloadInfo{
+				URL:  c.String(urlFlagName),
+				Path: c.String(pathFlagName),
+			}
+
+			if path := c.String(extractPathFlagName); path != "" {
+				info.ArchiveOpts = jasper.ArchiveOptions{
+					ShouldExtract: true,
+					Format:        jasper.ArchiveAuto,
+					TargetPath:    path,
+				}
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
+				return errors.WithStack(client.DownloadFile(ctx, info))
+			})
+		},
+	}
+
 }

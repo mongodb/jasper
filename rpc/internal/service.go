@@ -203,7 +203,7 @@ func (s *jasperService) Wait(ctx context.Context, id *JasperProcessID) (*Operati
 	}
 
 	exitCode, err := proc.Wait(ctx)
-	if err != nil && exitCode == -1 {
+	if err != nil {
 		err = errors.Wrap(err, "problem encountered while waiting")
 		return &OperationOutcome{
 			Success:  false,
