@@ -316,7 +316,7 @@ func makeCreateFunc(t *testing.T, manager *sshManager, expectedClientSubcommand 
 			require.NoError(t, json.Unmarshal(input, inputChecker))
 		}
 
-		cliCommand := manager.opts.args(expectedClientSubcommand...)
+		cliCommand := manager.opts.buildCommand(expectedClientSubcommand...)
 		cliCommandFound := false
 		for _, arg := range opts.Args {
 			if stringsEqualIgnoreWhitespace(arg, strings.Join(cliCommand, " ")) {
