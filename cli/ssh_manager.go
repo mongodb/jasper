@@ -158,7 +158,7 @@ func (m *sshManager) runClientCommand(ctx context.Context, subcommand []string, 
 
 	cmd := m.newClientCommand(ctx, subcommand, input, output)
 	if err := cmd.Run(ctx); err != nil {
-		return nil, errors.Wrapf(err, "problem running command '%s' over SSH", m.opts.args(subcommand...))
+		return nil, errors.Wrapf(err, "problem running command '%s' over SSH", m.opts.buildCommand(subcommand...))
 	}
 
 	return output.Bytes(), nil
@@ -168,7 +168,7 @@ func (m *sshManager) runClientCommand(ctx context.Context, subcommand []string, 
 // over SSH.
 func (m *sshManager) newClientCommand(ctx context.Context, clientSubcommand []string, input io.Reader, output io.WriteCloser) *jasper.Command {
 	cmd := m.manager.CreateCommand(ctx).Host(m.opts.Machine.Host).User(m.opts.Machine.User).ExtendRemoteArgs(m.opts.Machine.Args...).
-		Add(m.opts.args(clientSubcommand...))
+		Add(m.opts.buildCommand(clientSubcommand...))
 
 	if input != nil {
 		cmd.SetInput(input)

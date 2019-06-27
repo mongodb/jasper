@@ -10,10 +10,11 @@ import (
 // ClientOptions represents the options to connect the CLI client to the Jasper
 // service.
 type ClientOptions struct {
-	BinaryPath string
-	Type       string
-	Host       string
-	Port       int
+	BinaryPath          string
+	Type                string
+	Host                string
+	Port                int
+	CredentialsFilePath string
 }
 
 // Validate checks that the binary path is set and it is a recognized Jasper
@@ -37,7 +38,7 @@ type sshClientOptions struct {
 }
 
 // args returns the Jasper CLI command that will be run over SSH.
-func (opts *sshClientOptions) args(clientSubcommand ...string) []string {
+func (opts *sshClientOptions) buildCommand(clientSubcommand ...string) []string {
 	args := append(
 		[]string{
 			opts.Client.BinaryPath,
@@ -54,6 +55,10 @@ func (opts *sshClientOptions) args(clientSubcommand ...string) []string {
 
 	if opts.Client.Port != 0 {
 		args = append(args, fmt.Sprintf("--%s=%d", portFlagName, opts.Client.Port))
+	}
+
+	if opts.Client.CredentialsFilePath != "" {
+		args = append(args, fmt.Sprintf("--%s=%s", credsFilePathFlagName, opts.Client.CredentialsFilePath))
 	}
 
 	return args

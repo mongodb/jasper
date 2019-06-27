@@ -30,10 +30,11 @@ func TestClientOptions(t *testing.T) {
 	} {
 		t.Run(testName, func(t *testing.T) {
 			opts := ClientOptions{
-				BinaryPath: "binary",
-				Type:       RPCService,
-				Host:       "localhost",
-				Port:       12345,
+				BinaryPath:          "binary",
+				Type:                RPCService,
+				Host:                "localhost",
+				Port:                12345,
+				CredentialsFilePath: "/path/to/credentials",
 			}
 			testCase(t, &opts)
 		})
