@@ -10,14 +10,15 @@ import (
 // MockManager implements the Manager interface with exported fields to
 // configure and introspect the mock's behavior.
 type MockManager struct {
-	FailCreate          bool
-	CreateProcessConfig MockProcess
-	FailRegister        bool
-	FailList            bool
-	FailGroup           bool
-	FailGet             bool
-	FailClose           bool
-	Procs               []Process
+	FailCreate   bool
+	Create       func(*CreateOptions) MockProcess
+	CreateConfig MockProcess
+	FailRegister bool
+	FailList     bool
+	FailGroup    bool
+	FailGet      bool
+	FailClose    bool
+	Procs        []Process
 }
 
 func mockFail() error {
@@ -28,24 +29,30 @@ func mockFail() error {
 	return errors.Errorf("function failed: %s", frame.Function)
 }
 
-// CreateProcess creates a new MockProcess using the CreateProcessConfig to
-// configure the MockProcess. The new MockProcess is put in Procs. If FailCreate
-// is set, it returns an error.
+// CreateProcess creates a new MockProcess. If Create is set, it is
+// invoked to create the MockProcess. Otherwise, CreateConfig is used as a
+// template to create the MockProcess. The new MockProcess is put in Procs. If
+// FailCreate is set, it returns an error.
 func (m *MockManager) CreateProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
 	if m.FailCreate {
 		return nil, mockFail()
 	}
 
-	proc := MockProcess(m.CreateProcessConfig)
-	proc.ProcInfo.Options = *opts
+	var proc MockProcess
+	if m.Create != nil {
+		proc = m.Create(opts)
+	} else {
+		proc = MockProcess(m.CreateConfig)
+		proc.ProcInfo.Options = *opts
+	}
 
 	m.Procs = append(m.Procs, &proc)
 
 	return &proc, nil
 }
 
-// CreateCommand creates a Command that constructs MockProcesses when being run.
-// The created MockProcesses are recorded in Procs.
+// CreateCommand creates a Command that invokes CreateProcess to create the
+// underlying processes.
 func (m *MockManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)
 }
