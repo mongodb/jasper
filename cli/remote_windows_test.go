@@ -31,7 +31,7 @@ func TestCLIRemoteWindows(t *testing.T) {
 					input, err := json.Marshal(EventInput{Name: eventName})
 					require.NoError(t, err)
 					resp := &OutcomeResponse{}
-					require.NoError(t, execCLICommandInputOutput(t, c, remoteGetLogStream(), input, resp))
+					require.NoError(t, execCLICommandInputOutput(t, c, remoteSignalEvent(), input, resp))
 					assert.True(t, resp.Successful())
 				},
 			} {
