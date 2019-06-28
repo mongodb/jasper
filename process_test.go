@@ -21,7 +21,6 @@ func TestProcessImplementations(t *testing.T) {
 	defer cancel()
 
 	httpClient := &http.Client{}
-	srv, port := makeAndStartService(ctx, httpClient)
 
 	for cname, makeProc := range map[string]ProcessConstructor{
 		"BlockingNoLock":   newBlockingProcess,
@@ -29,8 +28,9 @@ func TestProcessImplementations(t *testing.T) {
 		"BasicNoLock":      newBasicProcess,
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
-			if port < 100 || srv == nil {
-				return nil, errors.New("fixture creation failure")
+			port := getPortNumber()
+			if _, err := startRESTService(ctx, httpClient, port); err != nil {
+				return nil, errors.WithStack(err)
 			}
 
 			client := &restClient{
@@ -57,7 +57,7 @@ func TestProcessImplementations(t *testing.T) {
 				},
 				"WithCanceledContextProcessCreationFails": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
 					if cname == "REST" {
-						t.Skip("context cancellation test also stops REST service")
+						t.Skip("context cancellation in test also stops REST service")
 					}
 					pctx, pcancel := context.WithCancel(ctx)
 					pcancel()

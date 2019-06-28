@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mongodb/grip"
+	"github.com/pkg/errors"
 )
 
 var intSource <-chan int
@@ -84,18 +85,17 @@ func createProcs(ctx context.Context, opts *CreateOptions, manager Manager, num 
 	return out, catcher.Resolve()
 }
 
-func makeAndStartService(ctx context.Context, client *http.Client) (*Service, int) {
+func startRESTService(ctx context.Context, client *http.Client, port int) (*Service, error) {
 outerRetry:
 	for {
 		select {
 		case <-ctx.Done():
 			grip.Warning("timed out starting test service")
-			return nil, -1
+			return nil, errors.WithStack(ctx.Err())
 		default:
-			port := getPortNumber()
 			localManager, err := NewLocalManager(false)
 			if err != nil {
-				return nil, -1
+				return nil, errors.WithStack(err)
 			}
 			srv := NewManagerService(localManager)
 			app := srv.App(ctx)
@@ -123,7 +123,7 @@ outerRetry:
 
 				select {
 				case <-ctx.Done():
-					return nil, -1
+					return nil, errors.WithStack(ctx.Err())
 				case <-timer.C:
 					req, err := http.NewRequest(http.MethodGet, url, nil)
 					if err != nil {
@@ -144,7 +144,7 @@ outerRetry:
 						continue checkLoop
 					}
 
-					return srv, port
+					return srv, nil
 				}
 			}
 		}
