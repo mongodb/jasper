@@ -110,7 +110,7 @@ func TestProcessImplementations(t *testing.T) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 
-					for i := 0; i < 100; i++ {
+					for i := 0; i < 10; i++ {
 						proc.Tag("foo")
 					}
 

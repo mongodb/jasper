@@ -135,7 +135,7 @@ outerRetry:
 						trials++
 						continue checkLoop
 					}
-					rctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+					rctx, cancel := context.WithTimeout(ctx, time.Second)
 					defer cancel()
 					req = req.WithContext(rctx)
 					resp, err := client.Do(req)
