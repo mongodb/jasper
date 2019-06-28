@@ -117,13 +117,6 @@ func TestCLIRemote(t *testing.T) {
 
 					assert.True(t, resp.Successful())
 				},
-				"SignalEventPasses": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					input, err := json.Marshal(EventInput{Name: "id"})
-					require.NoError(t, err)
-					resp := &OutcomeResponse{}
-					require.NoError(t, execCLICommandInputOutput(t, c, remoteSignalEvent(), input, resp))
-					assert.True(t, resp.Successful())
-				},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
