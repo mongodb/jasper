@@ -2,7 +2,7 @@ buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
 
-_testPackages := ./ ./cli ./rpc ./rpc/internal
+_testPackages := ./ ./cli ./rpc
 
 testArgs := -v
 ifneq (,$(RUN_TEST))
