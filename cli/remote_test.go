@@ -104,7 +104,7 @@ func TestCLIRemote(t *testing.T) {
 				},
 				"GetLogStreamPasses": func(ctx context.Context, t *testing.T, c *cli.Context) {
 					opts := trueCreateOpts()
-					opts.Output.Loggers = []jasper.Logger{jasper.NewInMemoryLogger()}
+					opts.Output.Loggers = []jasper.Logger{jasper.NewInMemoryLogger(10)}
 					createInput, err := json.Marshal(opts)
 					require.NoError(t, err)
 					createResp := &InfoResponse{}

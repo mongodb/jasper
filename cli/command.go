@@ -99,7 +99,7 @@ func RunCMD() cli.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			logger := jasper.NewInMemoryLogger()
+			logger := jasper.NewInMemoryLogger(1000)
 
 			return withConnection(ctx, c, func(client jasper.RemoteClient) error {
 				cmd := client.CreateCommand(ctx).Sudo(useSudo).ID(cmdID).SetTags(tags)

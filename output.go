@@ -107,13 +107,13 @@ type Logger struct {
 
 // NewInMemoryLogger is a basic constructor that constructs a logger
 // configuration for plain formatted in-memory buffered logger. The
-// logger will capture up to 1000 lines.
-func NewInMemoryLogger() Logger {
+// logger will capture up to maxSize messages.
+func NewInMemoryLogger(maxSize int) Logger {
 	return Logger{
 		Type: LogInMemory,
 		Options: LogOptions{
 			Format:      LogFormatPlain,
-			InMemoryCap: 1000,
+			InMemoryCap: maxSize,
 		},
 	}
 
