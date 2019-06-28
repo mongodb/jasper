@@ -178,7 +178,7 @@ func TestManagerInterface(t *testing.T) {
 					procs, err := manager.Group(cctx, "foo")
 					require.Error(t, err)
 					assert.Len(t, procs, 0)
-					assert.Contains(t, err.Error(), context.Canceled)
+					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, manager Manager) {
 					proc, err := manager.CreateProcess(ctx, trueCreateOpts())
@@ -203,7 +203,7 @@ func TestManagerInterface(t *testing.T) {
 
 					err = manager.Close(cctx)
 					require.Error(t, err)
-					assert.Contains(t, err.Error(), context.Canceled)
+					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 				"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
 					procs, err := createProcs(ctx, trueCreateOpts(), manager, 10)
@@ -275,7 +275,7 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, err)
 					err = manager.Register(cctx, proc)
 					require.Error(t, err)
-					assert.Contains(t, err.Error(), context.Canceled)
+					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 				"RegisterProcessErrorsWhenMissingID": func(ctx context.Context, t *testing.T, manager Manager) {
 					if mname == "REST" {
