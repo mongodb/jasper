@@ -35,7 +35,9 @@ func TestWindowsRESTService(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
 			defer cancel()
 
-			srv, port := makeAndStartService(ctx, httpClient)
+			port := getPortNumber()
+			srv, err := startRESTService(ctx, httpClient, port)
+			require.NoError(t, err)
 			require.NotNil(t, srv)
 
 			client := &restClient{
