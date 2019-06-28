@@ -28,8 +28,8 @@ func TestProcessImplementations(t *testing.T) {
 		"BasicNoLock":      newBasicProcess,
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
-			port := getPortNumber()
-			if _, err := startRESTService(ctx, httpClient, port); err != nil {
+			_, port, err := startRESTService(ctx, httpClient)
+			if err != nil {
 				return nil, errors.WithStack(err)
 			}
 

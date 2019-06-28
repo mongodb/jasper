@@ -748,8 +748,7 @@ func TestRestService(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
 			defer cancel()
 
-			port := getPortNumber()
-			srv, err := startRESTService(ctx, httpClient, port)
+			srv, port, err := startRESTService(ctx, httpClient)
 			require.NoError(t, err)
 			require.NotNil(t, srv)
 

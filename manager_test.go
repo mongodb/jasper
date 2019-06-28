@@ -54,8 +54,7 @@ func TestManagerInterface(t *testing.T) {
 			return selfClearingBlockingManager
 		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
-			port := getPortNumber()
-			srv, err := startRESTService(ctx, httpClient, port)
+			srv, port, err := startRESTService(ctx, httpClient)
 			require.NoError(t, err)
 			require.NotNil(t, srv)
 
