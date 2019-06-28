@@ -24,7 +24,9 @@ const (
 	WaitCommand                    = "wait"
 )
 
-// Process creates a cli.Command that interfaces with a Jasper process.
+// Process creates a cli.Command that interfaces with a Jasper process. Due to
+// it being a remote process, there is no CLI equivalent of of RegisterTrigger
+// or RegisterSignalTrigger.
 func Process() cli.Command {
 	return cli.Command{
 		Name: ProcessCommand,
