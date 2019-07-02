@@ -34,13 +34,13 @@ func Process() cli.Command {
 			processInfo(),
 			processRunning(),
 			processComplete(),
-			processSignal(),
-			processWait(),
-			processRespawn(),
-			processRegisterSignalTriggerID(),
 			processTag(),
 			processGetTags(),
 			processResetTags(),
+			processRespawn(),
+			processRegisterSignalTriggerID(),
+			processSignal(),
+			processWait(),
 		},
 	}
 }
