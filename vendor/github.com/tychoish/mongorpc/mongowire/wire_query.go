@@ -51,7 +51,7 @@ func (m *queryMessage) Serialize() []byte {
 	return buf
 }
 
-func (m *queryMessage) convertToCommand() *commandMessage {
+func (m *queryMessage) convertToCommand() *CommandMessage {
 	if !NamespaceIsCommand(m.Namespace) {
 		return nil
 	}
@@ -65,7 +65,7 @@ func (m *queryMessage) convertToCommand() *commandMessage {
 		return nil
 	}
 
-	return &commandMessage{
+	return &CommandMessage{
 		header: MessageHeader{
 			OpCode:    OP_COMMAND,
 			RequestID: 19,

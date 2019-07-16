@@ -5,7 +5,7 @@ import (
 	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewReply(cursorID int64, flags, startingFrom, numReturned int32) Message {
+func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []bson.Simple) Message {
 	return &replyMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -15,6 +15,7 @@ func NewReply(cursorID int64, flags, startingFrom, numReturned int32) Message {
 		CursorId:       cursorID,
 		StartingFrom:   startingFrom,
 		NumberReturned: numReturned,
+		Docs:           docs,
 	}
 }
 

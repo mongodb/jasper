@@ -69,21 +69,23 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 		grip.Debugf("ssl connection to %s", c.ConnectionState().ServerName)
 	}
 
-	m, err := mongowire.ReadMessage(conn)
-	if err != nil {
-		if err == io.EOF {
+	for {
+		m, err := mongowire.ReadMessage(conn)
+		if err != nil {
+			if err == io.EOF {
+				return
+			}
+			grip.Warning("problem reading message")
+		}
+
+		scope := m.Scope()
+
+		handler, ok := s.registry.Get(scope)
+		if !ok {
+			grip.Warningf("undefined command scope: %+v", scope)
 			return
 		}
-		grip.Warning("problem reading message")
+
+		handler(ctx, conn, m)
 	}
-
-	scope := m.Scope()
-
-	handler, ok := s.registry.Get(scope)
-	if !ok {
-		grip.Warningf("undefined command scope: %+v", scope)
-		return
-	}
-
-	handler(ctx, conn, m)
 }

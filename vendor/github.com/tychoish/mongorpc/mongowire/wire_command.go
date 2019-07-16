@@ -6,7 +6,7 @@ import (
 )
 
 func NewCommand(db, name string, args, metadata bson.Simple, inputs []bson.Simple) Message {
-	return &commandMessage{
+	return &CommandMessage{
 		header: MessageHeader{
 			OpCode:    OP_COMMAND,
 			RequestID: 19,
@@ -19,10 +19,10 @@ func NewCommand(db, name string, args, metadata bson.Simple, inputs []bson.Simpl
 	}
 }
 
-func (m *commandMessage) HasResponse() bool     { return true }
-func (m *commandMessage) Header() MessageHeader { return m.header }
+func (m *CommandMessage) HasResponse() bool     { return true }
+func (m *CommandMessage) Header() MessageHeader { return m.header }
 
-func (m *commandMessage) Scope() *OpScope {
+func (m *CommandMessage) Scope() *OpScope {
 	return &OpScope{
 		Type:    m.header.OpCode,
 		Context: m.DB,
@@ -30,7 +30,7 @@ func (m *commandMessage) Scope() *OpScope {
 	}
 }
 
-func (m *commandMessage) Serialize() []byte {
+func (m *CommandMessage) Serialize() []byte {
 	size := 16 /* header */
 	size += len(m.DB) + 1
 	size += len(m.CmdName) + 1
@@ -61,7 +61,7 @@ func (m *commandMessage) Serialize() []byte {
 func (h *MessageHeader) parseCommandMessage(buf []byte) (Message, error) {
 	var err error
 
-	cmd := &commandMessage{
+	cmd := &CommandMessage{
 		header: *h,
 	}
 

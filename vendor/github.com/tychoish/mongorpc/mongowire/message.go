@@ -90,7 +90,7 @@ type killCursorsMessage struct {
 }
 
 // OP_COMMAND
-type commandMessage struct {
+type CommandMessage struct {
 	header MessageHeader
 
 	DB          string
@@ -114,7 +114,7 @@ type commandReplyMessage struct {
 
 func GetModel(m Message) (interface{}, OpType) {
 	switch m := m.(type) {
-	case *commandMessage:
+	case *CommandMessage:
 		return &model.Command{
 			DB:                 m.DB,
 			Command:            m.CmdName,

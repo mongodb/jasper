@@ -36,7 +36,7 @@ imports:
   - name: github.com/mongodb/ftdc
     version: eeb5961cc7aa1f079ec806839964e66d3c4c4569
   - name: github.com/tychoish/mongorpc
-    version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
+    version: f15d7e9ecc2225611ab96d9b27cd5ab787940f5f
   - name: github.com/evergreen-ci/timber
     version: 1cdd00ad2f2eaf6fb1cb9dedacaddbc3b0e03149
   - name: github.com/evergreen-ci/poplar
