@@ -388,7 +388,7 @@ func TestRestService(t *testing.T) {
 			proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 			require.Error(t, err)
 			assert.Nil(t, proc)
-			assert.Contains(t, err.Error(), "problem managing resources")
+			assert.Contains(t, err.Error(), "problem registering trigger")
 		},
 		"MetricsPopulatedForValidProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			id := "foo"
