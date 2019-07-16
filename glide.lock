@@ -33,10 +33,12 @@ imports:
     version: d74791c0d819b6f7908cced0dd37e6ab3fb9eeae
   - name: github.com/evergreen-ci/certdepot
     version: d2c7b2f7c9c7af6311d211fe7fb127d99bdc5d43
+  - name: github.com/evergreen-ci/mrpc
+    version: c4d9beadb6cf4ad6ebef8a41bc899f55e65ea6e8
+  - name: github.com/evergreen-ci/birch
+    version: 5b054047680765b089c1e6f77d0896803d1fd73d
   - name: github.com/mongodb/ftdc
-    version: eeb5961cc7aa1f079ec806839964e66d3c4c4569
-  - name: github.com/tychoish/mongorpc
-    version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
+    version: 7e505d9a86240264dd35b1d900c2e88ce74f6066
   - name: github.com/evergreen-ci/timber
     version: 1cdd00ad2f2eaf6fb1cb9dedacaddbc3b0e03149
   - name: github.com/evergreen-ci/poplar
@@ -70,6 +72,8 @@ imports:
   - name: github.com/golang/protobuf
     version: c823c79ea1570fb5ff454033735a8e68575d1d0f
 
-  # vendoring mongo-go-driver because many dependencies use it
+  # vendoring mongo-go-driver and mgo.v2 because many dependencies use it
   - name: go.mongodb.org/mongo-driver
     version: 305bc4a5e4131420fe8ba5628e6faa9e6ade4e86
+  - name: gopkg.in/mgo.v2
+    version: a6b53ec6cb22a3699387a57a161566f9402ee85b

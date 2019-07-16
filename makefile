@@ -2,7 +2,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest options
+packages := $(name) cli rpc rest options wire testutil
 testPackages := $(packages) mock
 
 _testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
@@ -29,13 +29,13 @@ build:compile
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
 test-%:$(buildDir)/output.%.test
-	@grep -s -q -e "^PASS" $<
+	
 coverage-%:$(buildDir)/output.%.coverage
-	@grep -s -q -e "^PASS" $(buildDir)/output.$*.test
+	
 html-coverage-%:$(buildDir)/output.%.coverage.html
-	@grep -s -q -e "^PASS" $(buildDir)/output.$*.test
+	
 lint-%:$(buildDir)/output.%.lint
-	@grep -v -s -q "^--- FAIL" $<
+	
 # end convienence targets
 
 
@@ -89,14 +89,11 @@ endif
 ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
-ifneq (,$(DISABLE_COVERAGE))
+ifeq (,$(DISABLE_COVERAGE))
 testArgs += -cover
 endif
 ifneq (,$(RACE_DETECTOR))
 testArgs += -race
-endif
-ifneq (,$(SKIP_LONG))
-testArgs += -short
 endif
 # test execution and output handlers
 $(buildDir)/:
@@ -104,7 +101,7 @@ $(buildDir)/:
 
 $(buildDir)/output.%.test:$(buildDir)/ .FORCE
 	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
-	@! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@
+	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
 $(buildDir)/output.test:$(buildDir)/ .FORCE
 	go test $(testArgs) ./... | tee $@
 	@! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@
@@ -132,7 +129,8 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir)/ .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
-phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
+phony += lint build race test coverage coverage-html
+.PHONY: $(phony)
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
@@ -153,7 +151,6 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/google.golang.org/grpc/
-	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/mgo_depot.go
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/go.mongodb.org/mongo-driver/
@@ -164,14 +161,18 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/evergreen-ci/gimlet/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/golang.org/x/tools/
-	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/urfave/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/urfave/cli/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/satori/go.uuid/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/montanaflynn/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
@@ -222,5 +223,8 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/text/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/gopkg.in/mgo.v2/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
-	find vendor -type d -empty | xargs rm -rf
+	find vendor/ -type d -empty | xargs rm -rf
+	find vendor/ -type d -name '.git' | xargs rm -rf
