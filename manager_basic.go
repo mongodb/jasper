@@ -173,8 +173,6 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 	termCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	defer m.Clear(ctx)
-
 	if m.tracker != nil {
 		if err := m.tracker.Cleanup(); err != nil {
 			grip.Warning(message.WrapError(err, "process tracker did not clean up all processes successfully"))
