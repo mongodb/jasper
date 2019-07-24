@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/mholt/archiver"
 	"github.com/mongodb/amboy/queue"
@@ -173,28 +172,26 @@ func TestProcessDownloadJobs(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(downloadDir)
 
-	serverDir, err := ioutil.TempDir("build", "download_test_server")
+	fileServerDir, err := ioutil.TempDir("build", "download_test_server")
 	require.NoError(t, err)
-	defer os.RemoveAll(serverDir)
+	defer os.RemoveAll(fileServerDir)
 
 	fileName := "foo.zip"
 	fileContents := "foo"
-	require.NoError(t, addFileToDirectory(serverDir, fileName, fileContents))
+	require.NoError(t, addFileToDirectory(fileServerDir, fileName, fileContents))
 
 	port := getPortNumber()
-	serverAddr := fmt.Sprintf("localhost:%d", port)
-	server := &http.Server{Addr: serverAddr, Handler: http.FileServer(http.Dir(serverDir))}
+	fileServerAddr := fmt.Sprintf("localhost:%d", port)
+	fileServer := &http.Server{Addr: fileServerAddr, Handler: http.FileServer(http.Dir(fileServerDir))}
 	defer func() {
-		assert.NoError(t, server.Close())
+		assert.NoError(t, fileServer.Close())
 	}()
 	go func() {
-		server.ListenAndServe()
+		fileServer.ListenAndServe()
 	}()
 
-	job, err := recall.NewDownloadJob(fmt.Sprintf("http://%s/%s", serverAddr, fileName), downloadDir, true)
+	job, err := recall.NewDownloadJob(fmt.Sprintf("http://%s/%s", fileServerAddr, fileName), downloadDir, true)
 	require.NoError(t, err)
-
-	time.Sleep(100 * time.Millisecond)
 
 	q := queue.NewLocalUnordered(2)
 	require.NoError(t, q.Start(ctx))
