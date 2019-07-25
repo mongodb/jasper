@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -186,11 +187,16 @@ func TestProcessDownloadJobs(t *testing.T) {
 	defer func() {
 		assert.NoError(t, fileServer.Close())
 	}()
+	listener, err := net.Listen("tcp", fileServerAddr)
+	require.NoError(t, err)
 	go func() {
-		fileServer.ListenAndServe()
+		fileServer.Serve(listener)
 	}()
 
-	job, err := recall.NewDownloadJob(fmt.Sprintf("http://%s/%s", fileServerAddr, fileName), downloadDir, true)
+	baseURL := fmt.Sprintf("http://%s", fileServerAddr)
+	require.NoError(t, waitForRESTService(ctx, baseURL))
+
+	job, err := recall.NewDownloadJob(fmt.Sprintf("%s/%s", baseURL, fileName), downloadDir, true)
 	require.NoError(t, err)
 
 	q := queue.NewLocalUnordered(2)

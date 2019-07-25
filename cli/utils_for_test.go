@@ -143,6 +143,7 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 // waitForRESTService waits until the REST service becomes available to serve
 // requests or the context times out.
 func waitForRESTService(ctx context.Context, t *testing.T, url string) {
+	client := &http.Client{}
 	// Block until the service comes up
 	timeoutInterval := 10 * time.Millisecond
 	timer := time.NewTimer(timeoutInterval)
@@ -158,7 +159,7 @@ func waitForRESTService(ctx context.Context, t *testing.T, url string) {
 				continue
 			}
 			req = req.WithContext(ctx)
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := client.Do(req)
 			if err != nil {
 				timer.Reset(timeoutInterval)
 				continue

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -413,12 +414,17 @@ func TestRestService(t *testing.T) {
 			defer func() {
 				assert.NoError(t, fileServer.Close())
 			}()
+			listener, err := net.Listen("tcp", fileServerAddr)
+			require.NoError(t, err)
 			go func() {
-				fileServer.ListenAndServe()
+				fileServer.Serve(listener)
 			}()
 
+			baseURL := fmt.Sprintf("http://%s", fileServerAddr)
+			require.NoError(t, waitForRESTService(ctx, baseURL))
+
 			info := DownloadInfo{
-				URL:  fmt.Sprintf("http://%s/%s", fileServerAddr, fileName),
+				URL:  fmt.Sprintf("%s/%s", baseURL, fileName),
 				Path: destFilePath,
 				ArchiveOpts: ArchiveOptions{
 					ShouldExtract: true,

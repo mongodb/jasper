@@ -38,6 +38,6 @@ func init() {
 
 func GetHTTPClient() *http.Client { return httpClientPool.Get().(*http.Client) }
 func PutHTTPClient(c *http.Client) {
-	c.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = false
+	// c.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = false
 	httpClientPool.Put(c)
 }
