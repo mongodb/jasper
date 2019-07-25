@@ -419,8 +419,9 @@ func (c *Command) Close() error {
 	return c.opts.Close()
 }
 
-func (c *Command) SetInput(r io.Reader) {
+func (c *Command) SetInput(r io.Reader) *Command {
 	c.opts.StandardInput = r
+	return c
 }
 
 // SetErrorSender sets a Sender to be used by this Command for its output to
