@@ -283,6 +283,11 @@ func (opts *CreateOptions) Copy() *CreateOptions {
 		_ = copy(optsCopy.OnTimeout, opts.OnTimeout)
 	}
 
+	if opts.StandardInputBytes != nil {
+		optsCopy.StandardInputBytes = make([]byte, len(opts.StandardInputBytes))
+		_ = copy(optsCopy.StandardInputBytes, opts.StandardInputBytes)
+	}
+
 	optsCopy.Output = *opts.Output.Copy()
 
 	optsCopy.closers = nil

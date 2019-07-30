@@ -22,8 +22,10 @@ func (opts *CreateOptions) Export() *jasper.CreateOptions {
 		TimeoutSecs:        int(opts.TimeoutSeconds),
 		OverrideEnviron:    opts.OverrideEnviron,
 		Tags:               opts.Tags,
-		StandardInput:      bytes.NewBuffer(opts.StandardInputBytes),
 		StandardInputBytes: opts.StandardInputBytes,
+	}
+	if len(opts.StandardInputBytes) != 0 {
+		out.StandardInput = bytes.NewBuffer(opts.StandardInputBytes)
 	}
 
 	if opts.Output != nil {

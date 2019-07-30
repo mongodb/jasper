@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -274,26 +275,76 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem managing resources")
 		},
-		"StandardInputBytesSetsStandardInput": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			expectedRes := "foo bar"
-			opts := &CreateOptions{
-				Args: []string{"bash", "-s"},
-				Output: OutputOptions{
-					Loggers: []Logger{NewInMemoryLogger(100)},
+		"StandardInput": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *CreateOptions, expectedOutput string, stdin []byte){
+				"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *CreateOptions, expectedOutput string, stdin []byte) {
+					opts.StandardInput = bytes.NewBuffer(stdin)
+
+					proc, err := client.CreateProcess(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+					require.NoError(t, err)
+					assert.Empty(t, logs.Logs)
 				},
-				StandardInputBytes: []byte("echo " + expectedRes),
+				"BytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *CreateOptions, expectedOutput string, stdin []byte) {
+					opts.StandardInputBytes = stdin
+
+					proc, err := client.CreateProcess(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+					require.NoError(t, err)
+
+					require.Len(t, logs.Logs, 1)
+					assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
+				},
+				"BytesCopiedByRespawnedProcess": func(ctx context.Context, t *testing.T, opts *CreateOptions, expectedOutput string, stdin []byte) {
+					opts.StandardInputBytes = stdin
+
+					proc, err := client.CreateProcess(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+					require.NoError(t, err)
+
+					require.Len(t, logs.Logs, 1)
+					assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
+
+					newProc, err := proc.Respawn(ctx)
+					require.NoError(t, err)
+
+					_, err = newProc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err = client.GetLogStream(ctx, newProc.ID(), 1)
+					require.NoError(t, err)
+
+					require.Len(t, logs.Logs, 1)
+					assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
+				},
+			} {
+				t.Run(subTestName, func(t *testing.T) {
+					opts := &CreateOptions{
+						Args: []string{"bash", "-s"},
+						Output: OutputOptions{
+							Loggers: []Logger{NewInMemoryLogger(1)},
+						},
+					}
+					expectedOutput := "foobar"
+					stdin := []byte("echo " + expectedOutput)
+					subTestCase(ctx, t, opts, expectedOutput, stdin)
+				})
 			}
-
-			proc, err := client.CreateProcess(ctx, opts)
-			require.NoError(t, err)
-
-			_, err = proc.Wait(ctx)
-			require.NoError(t, err)
-
-			logs, err := client.GetLogStream(ctx, proc.ID(), 1)
-			require.NoError(t, err)
-			require.Len(t, logs.Logs, 1)
-			assert.Equal(t, expectedRes, strings.TrimSpace(logs.Logs[0]))
 		},
 		"InvalidFilterReturnsError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			procs, err := client.List(ctx, Filter("foo"))

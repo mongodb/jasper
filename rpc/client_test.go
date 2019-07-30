@@ -320,47 +320,6 @@ func TestRPCClient(t *testing.T) {
 							assert.Nil(t, nilProc)
 							require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
 						},
-						"StandardInputBytesSetsStandardInput": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							expectedRes := "foo bar"
-							opts := &jasper.CreateOptions{
-								Args: []string{"bash", "-s"},
-								Output: jasper.OutputOptions{
-									Loggers: []jasper.Logger{jasper.NewInMemoryLogger(100)},
-								},
-								StandardInputBytes: []byte("echo " + expectedRes),
-							}
-
-							proc, err := client.CreateProcess(ctx, opts)
-							require.NoError(t, err)
-
-							_, err = proc.Wait(ctx)
-							require.NoError(t, err)
-
-							logs, err := client.GetLogStream(ctx, proc.ID(), 1)
-							require.NoError(t, err)
-							require.Len(t, logs.Logs, 1)
-							assert.Equal(t, expectedRes, strings.TrimSpace(logs.Logs[0]))
-						},
-						"StandardInputIsIgnored": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							expectedRes := "foo bar"
-							opts := &jasper.CreateOptions{
-								Args: []string{"bash", "-s"},
-								Output: jasper.OutputOptions{
-									Loggers: []jasper.Logger{jasper.NewInMemoryLogger(100)},
-								},
-								StandardInput: bytes.NewBufferString("echo " + expectedRes),
-							}
-
-							proc, err := client.CreateProcess(ctx, opts)
-							require.NoError(t, err)
-
-							_, err = proc.Wait(ctx)
-							require.NoError(t, err)
-
-							logs, err := client.GetLogStream(ctx, proc.ID(), 1)
-							require.NoError(t, err)
-							assert.Empty(t, logs.Logs)
-						},
 
 						// The following test cases are added specifically for the
 						// RemoteClient.
@@ -462,6 +421,77 @@ func TestRPCClient(t *testing.T) {
 								assert.Equal(t, 1, exitCode)
 							} else {
 								assert.Equal(t, 9, exitCode)
+							}
+						},
+						"StandardInput": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte){
+								"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+									opts.StandardInput = bytes.NewBuffer(stdin)
+
+									proc, err := client.CreateProcess(ctx, opts)
+									require.NoError(t, err)
+
+									_, err = proc.Wait(ctx)
+									require.NoError(t, err)
+
+									logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+									require.NoError(t, err)
+									assert.Empty(t, logs.Logs)
+								},
+								"BytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+									opts.StandardInputBytes = stdin
+
+									proc, err := client.CreateProcess(ctx, opts)
+									require.NoError(t, err)
+
+									_, err = proc.Wait(ctx)
+									require.NoError(t, err)
+
+									logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+									require.NoError(t, err)
+
+									require.Len(t, logs.Logs, 1)
+									assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
+								},
+								"BytesCopiedByRespawnedProcess": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+									opts.StandardInputBytes = stdin
+
+									proc, err := client.CreateProcess(ctx, opts)
+									require.NoError(t, err)
+
+									_, err = proc.Wait(ctx)
+									require.NoError(t, err)
+
+									logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+									require.NoError(t, err)
+
+									require.Len(t, logs.Logs, 1)
+									assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
+
+									newProc, err := proc.Respawn(ctx)
+									require.NoError(t, err)
+
+									_, err = newProc.Wait(ctx)
+									require.NoError(t, err)
+
+									logs, err = client.GetLogStream(ctx, newProc.ID(), 1)
+									require.NoError(t, err)
+
+									require.Len(t, logs.Logs, 1)
+									assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
+								},
+							} {
+								t.Run(subTestName, func(t *testing.T) {
+									opts := &jasper.CreateOptions{
+										Args: []string{"bash", "-s"},
+										Output: jasper.OutputOptions{
+											Loggers: []jasper.Logger{jasper.NewInMemoryLogger(1)},
+										},
+									}
+									expectedOutput := "foobar"
+									stdin := []byte("echo " + expectedOutput)
+									subTestCase(ctx, t, opts, expectedOutput, stdin)
+								})
 							}
 						},
 						// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
