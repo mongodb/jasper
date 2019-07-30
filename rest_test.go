@@ -274,6 +274,27 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem managing resources")
 		},
+		"StandardInputBytesSetsStandardInput": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			expectedRes := "foo bar"
+			opts := &CreateOptions{
+				Args: []string{"bash", "-s"},
+				Output: OutputOptions{
+					Loggers: []Logger{NewInMemoryLogger(100)},
+				},
+				StandardInputBytes: []byte("echo " + expectedRes),
+			}
+
+			proc, err := client.CreateProcess(ctx, opts)
+			require.NoError(t, err)
+
+			_, err = proc.Wait(ctx)
+			require.NoError(t, err)
+
+			logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+			require.NoError(t, err)
+			require.Len(t, logs.Logs, 1)
+			assert.Equal(t, expectedRes, strings.TrimSpace(logs.Logs[0]))
+		},
 		"InvalidFilterReturnsError": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			procs, err := client.List(ctx, Filter("foo"))
 			assert.Error(t, err)

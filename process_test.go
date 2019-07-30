@@ -1,12 +1,14 @@
 package jasper
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -553,6 +555,57 @@ func TestProcessImplementations(t *testing.T) {
 						assert.Equal(t, int(syscall.SIGKILL), exitCode)
 					}
 					assert.True(t, proc.Info(ctx).Timeout)
+				},
+				"CallingSignalOnDeadProcessDoesError": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					assert.NoError(t, err)
+
+					err = proc.Signal(ctx, syscall.SIGTERM)
+					require.Error(t, err)
+					assert.True(t, strings.Contains(err.Error(), "cannot signal a process that has terminated"))
+				},
+				"StandardInputIsSet": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
+					if cname == "REST" {
+						t.Skip("standard input reader is not used in REST interfaces")
+					}
+					output := &bytes.Buffer{}
+					opts.Output.Output = output
+
+					expectedRes := "foo bar"
+					opts.StandardInput = bytes.NewBufferString("echo " + expectedRes)
+					opts.Args = []string{"bash", "-s"}
+
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					assert.Equal(t, expectedRes, strings.TrimSpace(output.String()))
+				},
+				"StandardInputBytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
+					if cname == "REST" {
+						t.Skip("cannot check logs in REST interface")
+					}
+					opts.Output.Loggers = []Logger{NewInMemoryLogger(1)}
+
+					expectedRes := "foo bar"
+					opts.StandardInputBytes = []byte("echo " + expectedRes)
+					opts.Args = []string{"bash", "-s"}
+
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
+
+					logs, err := GetInMemoryLogStream(ctx, proc, 1)
+					require.NoError(t, err)
+					require.Len(t, logs, 1)
+					assert.Equal(t, expectedRes, strings.TrimSpace(logs[0]))
 				},
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {},
 			} {

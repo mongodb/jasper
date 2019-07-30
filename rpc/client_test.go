@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -318,6 +319,47 @@ func TestRPCClient(t *testing.T) {
 							require.Error(t, err)
 							assert.Nil(t, nilProc)
 							require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
+						},
+						"StandardInputBytesSetsStandardInput": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							expectedRes := "foo bar"
+							opts := &jasper.CreateOptions{
+								Args: []string{"bash", "-s"},
+								Output: jasper.OutputOptions{
+									Loggers: []jasper.Logger{jasper.NewInMemoryLogger(100)},
+								},
+								StandardInputBytes: []byte("echo " + expectedRes),
+							}
+
+							proc, err := client.CreateProcess(ctx, opts)
+							require.NoError(t, err)
+
+							_, err = proc.Wait(ctx)
+							require.NoError(t, err)
+
+							logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+							require.NoError(t, err)
+							require.Len(t, logs.Logs, 1)
+							assert.Equal(t, expectedRes, strings.TrimSpace(logs.Logs[0]))
+						},
+						"StandardInputIsIgnored": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							expectedRes := "foo bar"
+							opts := &jasper.CreateOptions{
+								Args: []string{"bash", "-s"},
+								Output: jasper.OutputOptions{
+									Loggers: []jasper.Logger{jasper.NewInMemoryLogger(100)},
+								},
+								StandardInput: bytes.NewBufferString("echo " + expectedRes),
+							}
+
+							proc, err := client.CreateProcess(ctx, opts)
+							require.NoError(t, err)
+
+							_, err = proc.Wait(ctx)
+							require.NoError(t, err)
+
+							logs, err := client.GetLogStream(ctx, proc.ID(), 1)
+							require.NoError(t, err)
+							assert.Empty(t, logs.Logs)
 						},
 
 						// The following test cases are added specifically for the
@@ -710,6 +752,23 @@ func TestRPCProcess(t *testing.T) {
 								assert.Fail(t, "call to Wait() took too long to finish")
 							}
 							require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
+						},
+						"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+							opts = sleepCreateOpts(100)
+							opts.Timeout = time.Second
+							opts.TimeoutSecs = 1
+							proc, err := makep(ctx, opts)
+							require.NoError(t, err)
+
+							exitCode, err := proc.Wait(ctx)
+							assert.Error(t, err)
+							if runtime.GOOS == "windows" {
+								assert.Equal(t, 1, exitCode)
+							} else {
+								assert.Equal(t, int(syscall.SIGKILL), exitCode)
+							}
+							info := proc.Info(ctx)
+							assert.True(t, info.Timeout)
 						},
 						"CallingSignalOnDeadProcessDoesError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
 							proc, err := makep(ctx, opts)
