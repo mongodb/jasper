@@ -22,7 +22,7 @@ type selfClearingProcessManager struct {
 // local process manager for multithreaded use.
 // TODO: MAKE-803: allow local process manager to wrap other managers.
 func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
-	pm, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
+	pm, err := newBasicProcessManager(map[string]Process{}, false, trackProcs)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -45,7 +45,7 @@ func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, erro
 // local process manager for multithreaded use.
 // TODO: MAKE-803: allow local process manager to wrap other managers.
 func NewSelfClearingProcessManagerBlockingProcesses(maxProcs int, trackProcs bool) (Manager, error) {
-	pm, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
+	pm, err := newBasicProcessManager(map[string]Process{}, true, trackProcs)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
