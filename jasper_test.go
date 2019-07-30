@@ -160,7 +160,9 @@ outerRetry:
 // waitForRESTService waits until the REST service becomes available to serve
 // requests or the context times out.
 func waitForRESTService(ctx context.Context, url string) error {
-	client := &http.Client{}
+	client := GetHTTPClient()
+	defer PutHTTPClient(client)
+
 	// Block until the service comes up
 	timeoutInterval := 10 * time.Millisecond
 	timer := time.NewTimer(timeoutInterval)

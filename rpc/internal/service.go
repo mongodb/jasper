@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -71,7 +70,6 @@ func getProcInfoNoHang(ctx context.Context, p jasper.Process) *ProcessInfo {
 type jasperService struct {
 	hostID     string
 	manager    jasper.Manager
-	client     http.Client
 	cache      *lru.Cache
 	cacheOpts  jasper.CacheOptions
 	cacheMutex sync.RWMutex

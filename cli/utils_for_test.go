@@ -143,7 +143,9 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 // waitForRESTService waits until the REST service becomes available to serve
 // requests or the context times out.
 func waitForRESTService(ctx context.Context, t *testing.T, url string) {
-	client := &http.Client{}
+	client := jasper.GetHTTPClient()
+	defer jasper.PutHTTPClient(client)
+
 	// Block until the service comes up
 	timeoutInterval := 10 * time.Millisecond
 	timer := time.NewTimer(timeoutInterval)
