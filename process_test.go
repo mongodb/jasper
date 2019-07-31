@@ -488,68 +488,6 @@ func TestProcessImplementations(t *testing.T) {
 					require.NoError(t, err)
 					assert.True(t, newProc.Complete(ctx))
 				},
-				// "RespawnDoesNotCopyStandardInput": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
-				//     if cname == "REST" {
-				//         t.Skip("standard input reader is not used in REST interfaces")
-				//     }
-				//     output := &bytes.Buffer{}
-				//     expectedOutput := "foobar"
-				//     opts = &CreateOptions{
-				//         Args:          []string{"bash", "-s"},
-				//         StandardInput: bytes.NewBufferString("echo " + expectedOutput),
-				//         Output: OutputOptions{
-				//             Output: output,
-				//         },
-				//     }
-				//     proc, err := makep(ctx, opts)
-				//     require.NoError(t, err)
-				//
-				//     _, err = proc.Wait(ctx)
-				//     require.NoError(t, err)
-				//
-				//     assert.Equal(t, expectedOutput, strings.TrimSpace(output.String()))
-				//
-				//     output.Reset()
-				//
-				//     newProc, err := proc.Respawn(ctx)
-				//     require.NoError(t, err)
-				//
-				//     _, err = newProc.Wait(ctx)
-				//     require.NoError(t, err)
-				//
-				//     assert.Empty(t, output.String())
-				// },
-				"RespawnCopiesStandardInputBytes": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
-					if cname == "REST" {
-						t.Skip("cannot check logs in REST interface")
-					}
-					output := &bytes.Buffer{}
-					expectedOutput := "foobar"
-					opts = &CreateOptions{
-						Args:               []string{"bash", "-s"},
-						StandardInputBytes: []byte("echo " + expectedOutput),
-						Output: OutputOptions{
-							Output: output,
-						},
-					}
-					proc, err := makep(ctx, opts)
-					require.NoError(t, err)
-
-					_, err = proc.Wait(ctx)
-					require.NoError(t, err)
-
-					assert.Equal(t, expectedOutput, strings.TrimSpace(output.String()))
-
-					output.Reset()
-
-					newProc, err := proc.Respawn(ctx)
-					require.NoError(t, err)
-
-					_, err = newProc.Wait(ctx)
-					require.NoError(t, err)
-
-					assert.Equal(t, expectedOutput, strings.TrimSpace(output.String()))
-				},
 				"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
 					proc, err := makep(ctx, trueCreateOpts())
 					require.NoError(t, err)
@@ -715,46 +653,6 @@ func TestProcessImplementations(t *testing.T) {
 						})
 					}
 				},
-				// "StandardInputIsSet": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
-				//     if cname == "REST" {
-				//         t.Skip("standard input reader is not used in REST interfaces")
-				//     }
-				//     output := &bytes.Buffer{}
-				//     opts.Output.Output = output
-				//
-				//     expectedOutput := "foobar"
-				//     opts.StandardInput = bytes.NewBufferString("echo " + expectedOutput)
-				//     opts.Args = []string{"bash", "-s"}
-				//
-				//     proc, err := makep(ctx, opts)
-				//     require.NoError(t, err)
-				//
-				//     _, err = proc.Wait(ctx)
-				//     require.NoError(t, err)
-				//
-				//     assert.Equal(t, expectedOutput, strings.TrimSpace(output.String()))
-				// },
-				// "StandardInputBytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {
-				//     if cname == "REST" {
-				//         t.Skip("cannot check logs in REST interface")
-				//     }
-				//     opts.Output.Loggers = []Logger{NewInMemoryLogger(1)}
-				//
-				//     expectedOutput := "foobar"
-				//     opts.StandardInputBytes = []byte("echo " + expectedOutput)
-				//     opts.Args = []string{"bash", "-s"}
-				//
-				//     proc, err := makep(ctx, opts)
-				//     require.NoError(t, err)
-				//
-				//     _, err = proc.Wait(ctx)
-				//     require.NoError(t, err)
-				//
-				//     logs, err := GetInMemoryLogStream(ctx, proc, 1)
-				//     require.NoError(t, err)
-				//     require.Len(t, logs, 1)
-				//     assert.Equal(t, expectedOutput, strings.TrimSpace(logs[0]))
-				// },
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {
