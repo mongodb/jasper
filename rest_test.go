@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tychoish/bond"
 )
 
 type neverJSON struct{}
@@ -28,7 +28,8 @@ func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("alway
 func (n *neverJSON) Close() error                  { return errors.New("always error") }
 
 func TestRestService(t *testing.T) {
-	httpClient := &http.Client{}
+	httpClient := GetHTTPClient()
+	defer PutHTTPClient(httpClient)
 
 	for name, test := range map[string]func(context.Context, *testing.T, *Service, *restClient){
 		"VerifyFixtures": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
@@ -390,55 +391,58 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotEqual(t, 0, info.Size())
 		},
-		// TODO: fix this flaky test. It occasionally this receives 400 Bad Request instead of OK on Evergreen.
 		"DownloadFileCreatesResourceAndExtracts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			if testing.Short() {
-				t.Skip("skipping download and extract test in short mode")
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
-			defer cancel()
+			downloadDir, err := ioutil.TempDir("build", "rest_test")
+			require.NoError(t, err)
+			defer os.RemoveAll(downloadDir)
 
-			tempDir, err := ioutil.TempDir("build", "out")
+			fileServerDir, err := ioutil.TempDir("build", "rest_test_server")
 			require.NoError(t, err)
-			defer os.RemoveAll(tempDir)
-			file, err := ioutil.TempFile(tempDir, "mongodb.tar.gz")
+			defer os.RemoveAll(fileServerDir)
+
+			fileName := "foo.zip"
+			fileContents := "foo"
+			require.NoError(t, addFileToDirectory(fileServerDir, fileName, fileContents))
+
+			absDownloadDir, err := filepath.Abs(downloadDir)
 			require.NoError(t, err)
-			extractDir, err := ioutil.TempDir(tempDir, "mongodb")
+			destFilePath := filepath.Join(absDownloadDir, fileName)
+			destExtractDir := filepath.Join(absDownloadDir, "extracted")
+
+			port := getPortNumber()
+			fileServerAddr := fmt.Sprintf("localhost:%d", port)
+			fileServer := &http.Server{Addr: fileServerAddr, Handler: http.FileServer(http.Dir(fileServerDir))}
+			defer func() {
+				assert.NoError(t, fileServer.Close())
+			}()
+			listener, err := net.Listen("tcp", fileServerAddr)
 			require.NoError(t, err)
-			absFilePath, err := filepath.Abs(file.Name())
+			go func() {
+				fileServer.Serve(listener)
+			}()
+
+			baseURL := fmt.Sprintf("http://%s", fileServerAddr)
+			require.NoError(t, waitForRESTService(ctx, baseURL))
+
+			info := DownloadInfo{
+				URL:  fmt.Sprintf("%s/%s", baseURL, fileName),
+				Path: destFilePath,
+				ArchiveOpts: ArchiveOptions{
+					ShouldExtract: true,
+					Format:        ArchiveZip,
+					TargetPath:    destExtractDir,
+				},
+			}
+			require.NoError(t, client.DownloadFile(ctx, info))
+
+			fileInfo, err := os.Stat(destFilePath)
 			require.NoError(t, err)
-			absExtractDir, err := filepath.Abs(extractDir)
+			assert.NotZero(t, fileInfo.Size())
+
+			dirContents, err := ioutil.ReadDir(destExtractDir)
 			require.NoError(t, err)
 
-			feed, err := bond.GetArtifactsFeed(ctx, tempDir)
-			require.NoError(t, err)
-
-			opts := validMongoDBDownloadOptions()
-			urls, errs := feed.GetArchives(opts.Releases, opts.BuildOpts)
-			numUrls := 0
-			for url := range urls {
-				numUrls++
-				info := DownloadInfo{
-					URL:  url,
-					Path: absFilePath,
-					ArchiveOpts: ArchiveOptions{
-						ShouldExtract: true,
-						Format:        ArchiveAuto,
-						TargetPath:    absExtractDir,
-					},
-				}
-				assert.NoError(t, client.DownloadFile(ctx, info))
-				fileInfo, err := os.Stat(file.Name())
-				assert.NoError(t, err)
-				assert.NotEqual(t, 0, fileInfo.Size())
-				dirContents, err := ioutil.ReadDir(extractDir)
-				require.NoError(t, err)
-				assert.NotEqual(t, 0, len(dirContents))
-			}
-			assert.NotZero(t, numUrls)
-			for err := range errs {
-				assert.Fail(t, err.Error())
-			}
+			assert.NotZero(t, len(dirContents))
 		},
 		"DownloadFileFailsExtractionWithInvalidArchiveFormat": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			fileName := filepath.Join("build", "out.txt")
