@@ -328,9 +328,8 @@ func (c *restClient) SignalEvent(ctx context.Context, name string) error {
 }
 
 type restProcess struct {
-	id              string
-	client          *restClient
-	buildloggerURLs []string
+	id     string
+	client *restClient
 }
 
 func (p *restProcess) ID() string { return p.id }
