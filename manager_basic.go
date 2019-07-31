@@ -55,7 +55,9 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *CreateOpt
 		return nil, errors.Wrap(err, "problem constructing local process")
 	}
 
-	// TODO this will race because it runs later
+	// This trigger is not guaranteed to be registered since the process may
+	// have already completed. One way to guarantee it runs could be to add this
+	// as a closer to CreateOptions.
 	_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 
 	if m.tracker != nil {
