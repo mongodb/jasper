@@ -22,7 +22,7 @@ import (
 func NewRESTClient(addr net.Addr) RemoteClient {
 	return &restClient{
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr.String()),
-		client: http.DefaultClient,
+		client: GetHTTPClient(),
 	}
 }
 
@@ -32,6 +32,7 @@ type restClient struct {
 }
 
 func (c *restClient) CloseConnection() error {
+	PutHTTPClient(c.client)
 	return nil
 }
 
