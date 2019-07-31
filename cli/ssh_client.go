@@ -23,6 +23,10 @@ func NewSSHClient(remoteOpts jasper.RemoteOptions, clientOpts ClientOptions, tra
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
+	// We have to suppress logs from SSH, because it will prevent the JSON
+	// output from the Jasper CLI from being parsed correctly (e.g. adding a
+	// host to the known hosts file generates a warning).
+	remoteOpts.Args = append([]string{"-o", "LogLevel=QUIET"}, remoteOpts.Args...)
 
 	if err := clientOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating client options")
