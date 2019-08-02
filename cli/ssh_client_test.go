@@ -268,8 +268,8 @@ func TestSSHClient(t *testing.T) {
 			)
 			assert.Error(t, client.Close(ctx))
 		},
-		"CloseConnectionFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {
-			assert.Error(t, client.CloseConnection())
+		"CloseConnectionPasses": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {
+			assert.NoError(t, client.CloseConnection())
 		},
 		"ConfigureCachePassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {
 			inputChecker := jasper.CacheOptions{}
