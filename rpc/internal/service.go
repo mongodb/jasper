@@ -367,9 +367,8 @@ func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*
 	}
 
 	return &OperationOutcome{
-		Success:  true,
-		Text:     fmt.Sprintf("downloaded file %s to path %s", jinfo.URL, jinfo.Path),
-		ExitCode: 0,
+		Success: true,
+		Text:    fmt.Sprintf("downloaded file %s to path %s", jinfo.URL, jinfo.Path),
 	}, nil
 }
 
@@ -463,5 +462,30 @@ func (s *jasperService) SignalEvent(ctx context.Context, name *EventName) (*Oper
 		Success:  true,
 		Text:     fmt.Sprintf("signaled event named '%s'", eventName),
 		ExitCode: 0,
+	}, nil
+}
+
+func (s *jasperService) WriteFile(ctx context.Context, info *WriteFileInfo) (*OperationOutcome, error) {
+	jinfo := info.Export()
+
+	if err := jinfo.Validate(); err != nil {
+		return &OperationOutcome{
+			Success:  false,
+			Text:     errors.Wrap(err, "problem validating file write info").Error(),
+			ExitCode: -2,
+		}, nil
+	}
+
+	if err := jinfo.DoWrite(); err != nil {
+		return &OperationOutcome{
+			Success:  false,
+			Text:     errors.Wrapf(err, "problem occurred during file write to %s", jinfo.Path).Error(),
+			ExitCode: -3,
+		}, nil
+	}
+
+	return &OperationOutcome{
+		Success: true,
+		Text:    fmt.Sprintf("file %s written", jinfo.Path),
 	}, nil
 }

@@ -190,6 +190,12 @@ message DownloadInfo {
     ArchiveOptions archive_opts = 3;
 }
 
+message WriteFileInfo {
+    string path = 1;
+    bytes data = 2;
+    uint32 perm = 3;
+}
+
 message BuildloggerURLs {
     repeated string urls = 1;
 }
@@ -239,6 +245,7 @@ service JasperProcessManager {
   // RPC-specific functions
   rpc Status(google.protobuf.Empty) returns (StatusResponse);
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
+  rpc WriteFile(WriteFileInfo) returns (OperationOutcome);
   rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
   rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
   rpc GetLogStream(LogRequest) returns (LogStream);

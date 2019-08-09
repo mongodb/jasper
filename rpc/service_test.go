@@ -177,10 +177,7 @@ func TestRPCService(t *testing.T) {
 						conn.Close()
 					}()
 
-					cwd, err := os.Getwd()
-					require.NoError(t, err)
-					buildDir := filepath.Join(filepath.Dir(cwd), "build")
-					absBuildDir, err := filepath.Abs(buildDir)
+					absBuildDir, err := filepath.Abs(buildDir(t))
 					require.NoError(t, err)
 
 					testCase(ctx, t, opts, client, output, absBuildDir)

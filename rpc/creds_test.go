@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,10 +65,7 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 	require.NoError(t, err)
 
 	makeFile := func(t *testing.T) *os.File {
-		dir, err := os.Getwd()
-		require.NoError(t, err)
-
-		file, err := ioutil.TempFile(filepath.Join(filepath.Dir(dir), "build"), "creds")
+		file, err := ioutil.TempFile(buildDir(t), "creds")
 		require.NoError(t, err)
 		return file
 	}

@@ -602,7 +602,7 @@ func TestRestService(t *testing.T) {
 			rw := httptest.NewRecorder()
 
 			srv.downloadFile(rw, req)
-			assert.Equal(t, http.StatusBadRequest, rw.Code)
+			assert.Equal(t, http.StatusInternalServerError, rw.Code)
 		},
 		"WithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			output := "foo"
@@ -786,6 +786,40 @@ func TestRestService(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotZero(t, info.Size())
 
+		},
+		"WriteFileSucceeds": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			tmpFile, err := ioutil.TempFile("build", "write_file")
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+			}()
+
+			info := WriteFileInfo{Path: tmpFile.Name(), Data: []byte("foo")}
+			require.NoError(t, client.WriteFile(ctx, info))
+
+			data, err := ioutil.ReadFile(tmpFile.Name())
+			require.NoError(t, err)
+
+			assert.Equal(t, info.Data, data)
+		},
+		"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			info := WriteFileInfo{Data: []byte("foo")}
+			assert.Error(t, client.WriteFile(ctx, info))
+		},
+		"WriteFileSucceedsWithNoData": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			path := filepath.Join("build", "write_file")
+			require.NoError(t, os.RemoveAll(path))
+			defer func() {
+				assert.NoError(t, os.RemoveAll(path))
+			}()
+
+			info := WriteFileInfo{Path: path}
+			require.NoError(t, client.WriteFile(ctx, info))
+
+			stat, err := os.Stat(path)
+			require.NoError(t, err)
+
+			assert.Zero(t, stat.Size())
 		},
 		"ServiceRegisterSignalTriggerIDChecksForExistingProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/trigger/signal/%s", "foo", CleanTerminationSignalTrigger), nil)

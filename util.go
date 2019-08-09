@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,6 +30,37 @@ func GetHTTPClient() *http.Client {
 // PutHTTPClient returns the given HTTP client back to the pool.
 func PutHTTPClient(client *http.Client) {
 	httpClientPool.Put(client)
+}
+
+// WriteFileInfo represents the information necessary to write to a file.
+type WriteFileInfo struct {
+	Path string      `json:"path"`
+	Data []byte      `json:"data"`
+	Perm os.FileMode `json:"perm"`
+}
+
+// Validate ensure that all the parameters to write to a file are valid and sets
+// default permissions if necessary.
+func (info *WriteFileInfo) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	if info.Path == "" {
+		catcher.New("path to file must be specified")
+	}
+
+	if info.Perm == 0 {
+		info.Perm = 0666
+	}
+	return catcher.Resolve()
+}
+
+// DoWrite writes the data to the given path, creating the directory hierarchy as
+// needed.
+func (info WriteFileInfo) DoWrite() error {
+	if err := makeEnclosingDirectories(filepath.Dir(info.Path)); err != nil {
+		return errors.Wrap(err, "problem making enclosing directories")
+	}
+
+	return errors.Wrap(ioutil.WriteFile(info.Path, info.Data, info.Perm), "problem writing file")
 }
 
 func sliceContains(group []string, name string) bool {
