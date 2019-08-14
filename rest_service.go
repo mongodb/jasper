@@ -612,6 +612,14 @@ func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := info.SetPerm(); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
+			Message:    errors.Wrapf(err, "problem occurred while setting permissions on file %s", info.Path).Error(),
+		})
+		return
+	}
+
 	gimlet.WriteJSON(rw, struct{}{})
 }
 

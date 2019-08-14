@@ -9,6 +9,7 @@ import (
 	"time"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"github.com/k0kubun/pp"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
@@ -465,27 +466,67 @@ func (s *jasperService) SignalEvent(ctx context.Context, name *EventName) (*Oper
 	}, nil
 }
 
-func (s *jasperService) WriteFile(ctx context.Context, info *WriteFileInfo) (*OperationOutcome, error) {
-	jinfo := info.Export()
+func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) error {
+	// kim: TODO: handle receiving all stream messages, first append/truncate,
+	// then append.
+	var jinfo jasper.WriteFileInfo
 
-	if err := jinfo.Validate(); err != nil {
-		return &OperationOutcome{
+	numRecvs := 0
+	for info, err := stream.Recv(); err == nil; info, err = stream.Recv() {
+		numRecvs++
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			if sendErr := stream.SendAndClose(&OperationOutcome{
+				Success:  false,
+				Text:     errors.Wrap(err, "error receiving from client stream").Error(),
+				ExitCode: -2,
+			}); sendErr != nil {
+				return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
+			}
+			return nil
+		}
+
+		jinfo = info.Export()
+
+		if err := jinfo.Validate(); err != nil {
+			if sendErr := stream.SendAndClose(&OperationOutcome{
+				Success:  false,
+				Text:     errors.Wrap(err, "problem validating file write info").Error(),
+				ExitCode: -3,
+			}); sendErr != nil {
+				return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
+			}
+			return nil
+		}
+
+		if err := jinfo.DoWrite(); err != nil {
+			if sendErr := stream.SendAndClose(&OperationOutcome{
+				Success:  false,
+				Text:     errors.Wrap(err, "problem validating file write info").Error(),
+				ExitCode: -4,
+			}); sendErr != nil {
+				return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
+			}
+			return nil
+		}
+	}
+	pp.Println("done writing, num recvs:", numRecvs)
+
+	if err := jinfo.SetPerm(); err != nil {
+		if sendErr := stream.SendAndClose(&OperationOutcome{
 			Success:  false,
-			Text:     errors.Wrap(err, "problem validating file write info").Error(),
-			ExitCode: -2,
-		}, nil
+			Text:     errors.Wrapf(err, "problem setting permissions for file %s", jinfo.Path).Error(),
+			ExitCode: -5,
+		}); sendErr != nil {
+			return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
+		}
+		return nil
 	}
 
-	if err := jinfo.DoWrite(); err != nil {
-		return &OperationOutcome{
-			Success:  false,
-			Text:     errors.Wrapf(err, "problem occurred during file write to %s", jinfo.Path).Error(),
-			ExitCode: -3,
-		}, nil
-	}
-
-	return &OperationOutcome{
+	return errors.Wrap(stream.SendAndClose(&OperationOutcome{
 		Success: true,
-		Text:    fmt.Sprintf("file %s written", jinfo.Path),
-	}, nil
+		Text:    fmt.Sprintf("file %s successfully written", jinfo.Path),
+	}), "could not send success response to client")
 }

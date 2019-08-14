@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -34,12 +35,30 @@ func PutHTTPClient(client *http.Client) {
 
 // WriteFileInfo represents the information necessary to write to a file.
 type WriteFileInfo struct {
-	Path string      `json:"path"`
-	Data []byte      `json:"data"`
-	Perm os.FileMode `json:"perm"`
+	Path string `json:"path"`
+	// File content can come from either Content or Reader, but not both.
+	// TODO: rename
+	Content []byte      `json:"content"`
+	Reader  io.Reader   `json:"-"`
+	Append  bool        `json:"append"`
+	Perm    os.FileMode `json:"perm"`
 }
 
-// Validate ensure that all the parameters to write to a file are valid and sets
+// validateContent ensures that there is at most one source of content for
+// the file.
+func (info *WriteFileInfo) validateContent() error {
+	if len(info.Content) > 0 && info.Reader != nil {
+		return errors.New("cannot have both data and reader set as file content")
+	}
+	// If neither is set, ensure that Content is empty rather than nil to
+	// prevent potential writes with a nil slice.
+	if len(info.Content) == 0 && info.Reader == nil {
+		info.Content = []byte{}
+	}
+	return nil
+}
+
+// Validate ensures that all the parameters to write to a file are valid and sets
 // default permissions if necessary.
 func (info *WriteFileInfo) Validate() error {
 	catcher := grip.NewBasicCatcher()
@@ -50,17 +69,96 @@ func (info *WriteFileInfo) Validate() error {
 	if info.Perm == 0 {
 		info.Perm = 0666
 	}
+
+	catcher.Add(info.validateContent())
+
 	return catcher.Resolve()
 }
 
 // DoWrite writes the data to the given path, creating the directory hierarchy as
-// needed.
-func (info WriteFileInfo) DoWrite() error {
+// needed and the file if it does not exist yet.
+func (info *WriteFileInfo) DoWrite() error {
 	if err := makeEnclosingDirectories(filepath.Dir(info.Path)); err != nil {
 		return errors.Wrap(err, "problem making enclosing directories")
 	}
 
-	return errors.Wrap(ioutil.WriteFile(info.Path, info.Data, info.Perm), "problem writing file")
+	openFlags := os.O_RDWR | os.O_CREATE
+	if info.Append {
+		openFlags |= os.O_APPEND
+	} else {
+		openFlags |= os.O_TRUNC
+	}
+
+	file, err := os.OpenFile(info.Path, openFlags, 0666)
+	if err != nil {
+		return errors.Wrapf(err, "error opening file %s", info.Path)
+	}
+
+	catcher := grip.NewBasicCatcher()
+
+	reader, err := info.ContentReader()
+	if err != nil {
+		catcher.Wrap(file.Close(), "error closing file")
+		catcher.Wrap(err, "error getting file content as bytes")
+		return catcher.Resolve()
+	}
+
+	const mb = 1024 * 1024
+	buf := make([]byte, mb)
+	for n, err := reader.Read(buf); n > 0; n, err = reader.Read(buf) {
+		if err != nil && err != io.EOF {
+			catcher.Wrap(file.Close(), "error closing file")
+			catcher.Wrap(err, "error reading content to write to file")
+			return catcher.Resolve()
+		}
+		if _, err := file.Write(buf[:n]); err != nil {
+			catcher.Wrap(file.Close(), "error closing file")
+			catcher.Wrap(err, "error writing content to file")
+			return catcher.Resolve()
+		}
+	}
+
+	return errors.Wrap(file.Close(), "error closing file")
+}
+
+// SetPerm sets the file permissions on the file. This should be called after
+// DoWrite. If no file exists at (WriteFileInfo).Path, it will error.
+func (info *WriteFileInfo) SetPerm() error {
+	return errors.Wrap(os.Chmod(info.Path, info.Perm), "error setting permissions")
+}
+
+// ContentBytes returns the contents to be written to the file as a byte slice.
+func (info *WriteFileInfo) ContentBytes() ([]byte, error) {
+	if err := info.validateContent(); err != nil {
+		return nil, errors.Wrap(err, "could not validate file content source")
+	}
+
+	if info.Reader != nil {
+		content, err := ioutil.ReadAll(info.Reader)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read from reader content source")
+		}
+		info.Content = content
+		info.Reader = nil
+	}
+
+	return info.Content, nil
+}
+
+// ContentReader returns the contents to be written to the file as an io.Reader.
+func (info *WriteFileInfo) ContentReader() (io.Reader, error) {
+	if err := info.validateContent(); err != nil {
+		return nil, errors.Wrap(err, "could not validate file content source")
+	}
+
+	if info.Reader != nil {
+		return info.Reader, nil
+	}
+
+	info.Reader = bytes.NewBuffer(info.Content)
+	info.Content = nil
+
+	return info.Reader, nil
 }
 
 func sliceContains(group []string, name string) bool {

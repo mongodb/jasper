@@ -192,7 +192,8 @@ message DownloadInfo {
 
 message WriteFileInfo {
     string path = 1;
-    bytes data = 2;
+    bytes content = 2;
+    bool append = 4;
     uint32 perm = 3;
 }
 
@@ -245,10 +246,10 @@ service JasperProcessManager {
   // RPC-specific functions
   rpc Status(google.protobuf.Empty) returns (StatusResponse);
   rpc ConfigureCache(CacheOptions) returns (OperationOutcome);
-  rpc WriteFile(WriteFileInfo) returns (OperationOutcome);
   rpc DownloadFile(DownloadInfo) returns (OperationOutcome);
   rpc DownloadMongoDB(MongoDBDownloadOptions) returns (OperationOutcome);
   rpc GetLogStream(LogRequest) returns (LogStream);
   rpc GetBuildloggerURLs(JasperProcessID) returns (BuildloggerURLs);
   rpc SignalEvent(EventName) returns (OperationOutcome);
+  rpc WriteFile(stream WriteFileInfo) returns (OperationOutcome);
 }

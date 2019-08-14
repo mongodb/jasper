@@ -115,7 +115,7 @@ func TestCLIRemote(t *testing.T) {
 						assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 					}()
 
-					info := jasper.WriteFileInfo{Path: tmpFile.Name(), Data: []byte("foo")}
+					info := jasper.WriteFileInfo{Path: tmpFile.Name(), Content: []byte("foo")}
 					input, err := json.Marshal(info)
 					require.NoError(t, err)
 					resp := &OutcomeResponse{}
@@ -126,7 +126,7 @@ func TestCLIRemote(t *testing.T) {
 
 					data, err := ioutil.ReadFile(info.Path)
 					require.NoError(t, err)
-					assert.Equal(t, info.Data, data)
+					assert.Equal(t, info.Content, data)
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {

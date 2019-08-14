@@ -461,9 +461,10 @@ func TestSSHClient(t *testing.T) {
 				makeOutcomeResponse(nil),
 			)
 
-			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Data: []byte("foo")}
+			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
 			require.NoError(t, client.WriteFile(ctx, info))
 		},
+		// kim: TODO: test with Reader should fail.
 		"WriteFileFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {
 			baseManager.Create = makeCreateFunc(
 				t, client,
@@ -471,12 +472,12 @@ func TestSSHClient(t *testing.T) {
 				nil,
 				invalidResponse(),
 			)
-			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Data: []byte("foo")}
+			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
 			assert.Error(t, client.WriteFile(ctx, info))
 		},
 		"WriteFileFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {
 			baseManager.FailCreate = true
-			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Data: []byte("foo")}
+			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
 			assert.Error(t, client.WriteFile(ctx, info))
 		},
 		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {},

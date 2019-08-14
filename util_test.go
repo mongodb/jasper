@@ -2,7 +2,9 @@ package jasper
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -108,6 +110,239 @@ func TestWriteFile(t *testing.T) {
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestWriteFileInfo(t *testing.T) {
+	for opName, opCases := range map[string]func(t *testing.T){
+		"Validate": func(t *testing.T) {
+			for testName, testCase := range map[string]func(t *testing.T){
+				"FailsForZeroValue": func(t *testing.T) {
+					info := WriteFileInfo{}
+					assert.Error(t, info.Validate())
+				},
+				"OnlyDefaultsPermForZeroValue": func(t *testing.T) {
+					info := WriteFileInfo{Path: "/foo", Perm: 0777}
+					assert.NoError(t, info.Validate())
+					assert.EqualValues(t, 0777, info.Perm)
+				},
+				"PassesAndDefaults": func(t *testing.T) {
+					info := WriteFileInfo{Path: "/foo"}
+					assert.NoError(t, info.Validate())
+					assert.NotEqual(t, os.FileMode(0000), info.Perm)
+				},
+				"PassesWithContent": func(t *testing.T) {
+					info := WriteFileInfo{
+						Path:    "/foo",
+						Content: []byte("foo"),
+					}
+					assert.NoError(t, info.Validate())
+				},
+				"PassesWithReader": func(t *testing.T) {
+					info := WriteFileInfo{
+						Path:   "/foo",
+						Reader: bytes.NewBufferString("foo"),
+					}
+					assert.NoError(t, info.Validate())
+				},
+				"FailsWithMultipleContentSources": func(t *testing.T) {
+					info := WriteFileInfo{
+						Path:    "/foo",
+						Content: []byte("foo"),
+						Reader:  bytes.NewBufferString("bar"),
+					}
+					assert.Error(t, info.Validate())
+				},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					testCase(t)
+				})
+			}
+		},
+		"ContentReader": func(t *testing.T) {
+			for testName, testCase := range map[string]func(t *testing.T, info WriteFileInfo){
+				"RequiresOneContentSource": func(t *testing.T, info WriteFileInfo) {
+					info.Content = []byte("foo")
+					info.Reader = bytes.NewBufferString("bar")
+					_, err := info.ContentReader()
+					assert.Error(t, err)
+				},
+				"PreservesReaderIfSet": func(t *testing.T, info WriteFileInfo) {
+					expected := []byte("foo")
+					info.Reader = bytes.NewBuffer(expected)
+					reader, err := info.ContentReader()
+					require.NoError(t, err)
+					assert.Equal(t, info.Reader, reader)
+
+					content, err := ioutil.ReadAll(reader)
+					require.NoError(t, err)
+					assert.Equal(t, expected, content)
+				},
+				"SetsReaderIfContentSet": func(t *testing.T, info WriteFileInfo) {
+					expected := []byte("foo")
+					info.Content = expected
+					reader, err := info.ContentReader()
+					require.NoError(t, err)
+					assert.Equal(t, reader, info.Reader)
+					assert.Empty(t, info.Content)
+
+					content, err := ioutil.ReadAll(reader)
+					require.NoError(t, err)
+					assert.Equal(t, expected, content)
+				},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					info := WriteFileInfo{Path: "/path"}
+					testCase(t, info)
+				})
+			}
+		},
+		"ContentBytes": func(t *testing.T) {
+			for testName, testCase := range map[string]func(t *testing.T, info WriteFileInfo){
+				"RequiresOneContentSource": func(t *testing.T, info WriteFileInfo) {
+					info.Content = []byte("foo")
+					info.Reader = bytes.NewBufferString("bar")
+					_, err := info.ContentBytes()
+					assert.Error(t, err)
+				},
+				"PreservesContentIfSet": func(t *testing.T, info WriteFileInfo) {
+					expected := []byte("foo")
+					info.Content = expected
+					content, err := info.ContentBytes()
+					require.NoError(t, err)
+					assert.Equal(t, content, info.Content)
+					assert.Equal(t, expected, content)
+				},
+				"SetsContentIfReaderSet": func(t *testing.T, info WriteFileInfo) {
+					expected := []byte("foo")
+					info.Reader = bytes.NewBuffer(expected)
+					content, err := info.ContentBytes()
+					require.NoError(t, err)
+					assert.Equal(t, content, info.Content)
+					assert.Nil(t, info.Reader)
+					assert.Equal(t, expected, content)
+				},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					info := WriteFileInfo{Path: "/path"}
+					testCase(t, info)
+				})
+			}
+		},
+		"DoWrite": func(t *testing.T) {
+			content := []byte("foo")
+			for testName, testCase := range map[string]func(t *testing.T, info WriteFileInfo){
+				"AllowsEmptyWriteToCreateFile": func(t *testing.T, info WriteFileInfo) {
+					require.NoError(t, info.DoWrite())
+
+					stat, err := os.Stat(info.Path)
+					require.NoError(t, err)
+					assert.Zero(t, stat.Size())
+				},
+				"FailsForInsufficientPermissions": func(t *testing.T, info WriteFileInfo) {
+					f, err := os.OpenFile(info.Path, os.O_RDONLY|os.O_CREATE, 0444)
+					require.NoError(t, err)
+					require.NoError(t, f.Close())
+
+					assert.Error(t, info.DoWrite())
+				},
+				"WritesWithReader": func(t *testing.T, info WriteFileInfo) {
+					info.Reader = bytes.NewBuffer(content)
+
+					require.NoError(t, info.DoWrite())
+
+					fileContent, err := ioutil.ReadFile(info.Path)
+					require.NoError(t, err)
+					assert.Equal(t, content, fileContent)
+				},
+				"WritesWithContent": func(t *testing.T, info WriteFileInfo) {
+					info.Content = content
+
+					require.NoError(t, info.DoWrite())
+
+					fileContent, err := ioutil.ReadFile(info.Path)
+					require.NoError(t, err)
+					assert.Equal(t, content, fileContent)
+				},
+				"AppendsToFile": func(t *testing.T, info WriteFileInfo) {
+					f, err := os.OpenFile(info.Path, os.O_WRONLY|os.O_CREATE, 0666)
+					initialContent := []byte("bar")
+					require.NoError(t, err)
+					_, err = f.Write(initialContent)
+					require.NoError(t, err)
+					require.NoError(t, f.Close())
+
+					info.Append = true
+					info.Content = []byte(content)
+
+					require.NoError(t, info.DoWrite())
+
+					fileContent, err := ioutil.ReadFile(info.Path)
+					require.NoError(t, err)
+					assert.Equal(t, initialContent, fileContent[:len(initialContent)])
+					assert.Equal(t, content, fileContent[len(fileContent)-len(content):])
+				},
+				"TruncatesExistingFile": func(t *testing.T, info WriteFileInfo) {
+					f, err := os.OpenFile(info.Path, os.O_WRONLY|os.O_CREATE, 0666)
+					initialContent := []byte("bar")
+					require.NoError(t, err)
+					_, err = f.Write(initialContent)
+					require.NoError(t, err)
+					require.NoError(t, f.Close())
+
+					info.Content = []byte(content)
+
+					require.NoError(t, info.DoWrite())
+
+					fileContent, err := ioutil.ReadFile(info.Path)
+					require.NoError(t, err)
+					assert.Equal(t, content, fileContent)
+				},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					info := WriteFileInfo{Path: filepath.Join("build", filepath.Base(t.Name()))}
+					defer func() {
+						assert.NoError(t, os.RemoveAll(info.Path))
+					}()
+					testCase(t, info)
+				})
+			}
+		},
+		"SetPerm": func(t *testing.T) {
+			if runtime.GOOS == "windows" {
+				t.Skip("permission tests are not relevant to Windows")
+			}
+			for testName, testCase := range map[string]func(t *testing.T, info WriteFileInfo){
+				"SetsPermissions": func(t *testing.T, info WriteFileInfo) {
+					f, err := os.OpenFile(info.Path, os.O_RDWR|os.O_CREATE, 0666)
+					require.NoError(t, err)
+					require.NoError(t, f.Close())
+
+					info.Perm = 0444
+					require.NoError(t, info.SetPerm())
+
+					stat, err := os.Stat(info.Path)
+					require.NoError(t, err)
+					assert.Equal(t, info.Perm, stat.Mode())
+				},
+				"FailsWithoutFile": func(t *testing.T, info WriteFileInfo) {
+					info.Perm = 0444
+					assert.Error(t, info.SetPerm())
+				},
+			} {
+				t.Run(testName, func(t *testing.T) {
+					info := WriteFileInfo{Path: filepath.Join("build", filepath.Base(t.Name()))}
+					defer func() {
+						assert.NoError(t, os.RemoveAll(info.Path))
+					}()
+					testCase(t, info)
+				})
+			}
+		},
+	} {
+		t.Run(opName, func(t *testing.T) {
+			opCases(t)
 		})
 	}
 }

@@ -522,9 +522,10 @@ func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
 // Jasper WriteFileInfo struct.
 func (info *WriteFileInfo) Export() jasper.WriteFileInfo {
 	return jasper.WriteFileInfo{
-		Path: info.Path,
-		Data: info.Data,
-		Perm: os.FileMode(info.Perm),
+		Path:    info.Path,
+		Content: info.Content,
+		Append:  info.Append,
+		Perm:    os.FileMode(info.Perm),
 	}
 }
 
@@ -533,9 +534,10 @@ func (info *WriteFileInfo) Export() jasper.WriteFileInfo {
 // inverse of (*WriteFileInfo) Export().
 func ConvertWriteFileInfo(info jasper.WriteFileInfo) *WriteFileInfo {
 	return &WriteFileInfo{
-		Path: info.Path,
-		Data: info.Data,
-		Perm: uint32(info.Perm),
+		Path:    info.Path,
+		Content: info.Content,
+		Append:  info.Append,
+		Perm:    uint32(info.Perm),
 	}
 }
 

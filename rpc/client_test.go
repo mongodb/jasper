@@ -385,40 +385,6 @@ func TestRPCClient(t *testing.T) {
 							assert.Error(t, err)
 							assert.Zero(t, stream)
 						},
-						"WriteFileSucceeds": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							tmpFile, err := ioutil.TempFile(buildDir(t), "write_file")
-							require.NoError(t, err)
-							defer func() {
-								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
-							}()
-
-							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Data: []byte("foo")}
-							require.NoError(t, client.WriteFile(ctx, info))
-
-							data, err := ioutil.ReadFile(tmpFile.Name())
-							require.NoError(t, err)
-
-							assert.Equal(t, info.Data, data)
-						},
-						"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							info := jasper.WriteFileInfo{Data: []byte("foo")}
-							assert.Error(t, client.WriteFile(ctx, info))
-						},
-						"WriteFileSucceedsWithNoData": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							path := filepath.Join(buildDir(t), "write_file")
-							require.NoError(t, os.RemoveAll(path))
-							defer func() {
-								assert.NoError(t, os.RemoveAll(path))
-							}()
-
-							info := jasper.WriteFileInfo{Path: path}
-							require.NoError(t, client.WriteFile(ctx, info))
-
-							stat, err := os.Stat(path)
-							require.NoError(t, err)
-
-							assert.Zero(t, stat.Size())
-						},
 						// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
 
 						///////////////////////////////////
@@ -528,6 +494,72 @@ func TestRPCClient(t *testing.T) {
 									subTestCase(ctx, t, opts, expectedOutput, stdin)
 								})
 							}
+						},
+						"WriteFileSucceeds": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+							require.NoError(t, err)
+							defer func() {
+								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+							}()
+
+							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Content: []byte("foo")}
+							require.NoError(t, client.WriteFile(ctx, info))
+
+							content, err := ioutil.ReadFile(tmpFile.Name())
+							require.NoError(t, err)
+
+							assert.Equal(t, info.Content, content)
+						},
+						"WriteFileAcceptsContentFromReader": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+							require.NoError(t, err)
+							defer func() {
+								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+							}()
+
+							buf := []byte("foo")
+							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
+							require.NoError(t, client.WriteFile(ctx, info))
+
+							content, err := ioutil.ReadFile(tmpFile.Name())
+							require.NoError(t, err)
+
+							assert.Equal(t, buf, content)
+						},
+						"WriteFileSucceedsWithLargeContent": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+							require.NoError(t, err)
+							defer func() {
+								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+							}()
+
+							const mb = 1024 * 1024
+							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
+							require.NoError(t, client.WriteFile(ctx, info))
+
+							content, err := ioutil.ReadFile(tmpFile.Name())
+							require.NoError(t, err)
+
+							assert.Equal(t, info.Content, content)
+						},
+						"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							info := jasper.WriteFileInfo{Content: []byte("foo")}
+							assert.Error(t, client.WriteFile(ctx, info))
+						},
+						"WriteFileSucceedsWithNoContent": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+							path := filepath.Join(buildDir(t), filepath.Base(t.Name()))
+							require.NoError(t, os.RemoveAll(path))
+							defer func() {
+								assert.NoError(t, os.RemoveAll(path))
+							}()
+
+							info := jasper.WriteFileInfo{Path: path}
+							require.NoError(t, client.WriteFile(ctx, info))
+
+							stat, err := os.Stat(path)
+							require.NoError(t, err)
+
+							assert.Zero(t, stat.Size())
 						},
 						// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
 					} {

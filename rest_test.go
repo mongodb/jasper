@@ -788,25 +788,57 @@ func TestRestService(t *testing.T) {
 
 		},
 		"WriteFileSucceeds": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			tmpFile, err := ioutil.TempFile("build", "write_file")
+			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 			}()
 
-			info := WriteFileInfo{Path: tmpFile.Name(), Data: []byte("foo")}
+			info := WriteFileInfo{Path: tmpFile.Name(), Content: []byte("foo")}
 			require.NoError(t, client.WriteFile(ctx, info))
 
-			data, err := ioutil.ReadFile(tmpFile.Name())
+			content, err := ioutil.ReadFile(tmpFile.Name())
 			require.NoError(t, err)
 
-			assert.Equal(t, info.Data, data)
+			assert.Equal(t, info.Content, content)
+		},
+		"WriteFileIgnoresContentFromReader": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+			}()
+
+			buf := []byte("foo")
+			info := WriteFileInfo{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
+			require.NoError(t, client.WriteFile(ctx, info))
+
+			content, err := ioutil.ReadFile(tmpFile.Name())
+			require.NoError(t, err)
+
+			assert.Empty(t, content)
+		},
+		"WriteFileSucceedsWithLargeContent": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+			}()
+
+			const mb = 1024 * 1024
+			info := WriteFileInfo{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
+			require.NoError(t, client.WriteFile(ctx, info))
+
+			content, err := ioutil.ReadFile(tmpFile.Name())
+			require.NoError(t, err)
+
+			assert.Equal(t, info.Content, content)
 		},
 		"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			info := WriteFileInfo{Data: []byte("foo")}
+			info := WriteFileInfo{Content: []byte("foo")}
 			assert.Error(t, client.WriteFile(ctx, info))
 		},
-		"WriteFileSucceedsWithNoData": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"WriteFileSucceedsWithNoContent": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			path := filepath.Join("build", "write_file")
 			require.NoError(t, os.RemoveAll(path))
 			defer func() {
