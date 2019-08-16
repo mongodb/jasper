@@ -68,8 +68,8 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 			}
 
 			daemon := newCombinedDaemon(
-				newRESTDaemon(c.String(restHostFlagName), c.Int(restPortFlagName), manager),
-				newRPCDaemon(c.String(rpcHostFlagName), c.Int(rpcPortFlagName), manager, c.String(rpcCredsFilePathFlagName)),
+				newRESTDaemon(c.String(restHostFlagName), c.Int(restPortFlagName), manager, makeLogger(c)),
+				newRPCDaemon(c.String(rpcHostFlagName), c.Int(rpcPortFlagName), manager, c.String(rpcCredsFilePathFlagName), makeLogger(c)),
 			)
 
 			config := serviceConfig(CombinedService, buildRunCommand(c, CombinedService))
