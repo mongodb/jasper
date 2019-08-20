@@ -1,10 +1,10 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"bytes"
 	"strings"
 	"testing"
 
