@@ -23,7 +23,7 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 	return cli.Command{
 		Name:  RPCService,
 		Usage: fmt.Sprintf("%s an RPC service", cmd),
-		Flags: []cli.Flag{
+		Flags: append(serviceLoggingFlags(),
 			cli.StringFlag{
 				Name:   hostFlagName,
 				EnvVar: rpcHostEnvVar,
@@ -44,7 +44,7 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 				Name:  userFlagName,
 				Usage: "the user who will run the RPC service",
 			},
-		},
+		),
 		Before: validatePort(portFlagName),
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewLocalManager(false)

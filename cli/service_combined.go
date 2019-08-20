@@ -23,7 +23,7 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 	return cli.Command{
 		Name:  CombinedService,
 		Usage: fmt.Sprintf("%s a combined service", cmd),
-		Flags: []cli.Flag{
+		Flags: append(serviceLoggingFlags(),
 			cli.StringFlag{
 				Name:   restHostFlagName,
 				EnvVar: restHostEnvVar,
@@ -56,7 +56,7 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 				Name:  userFlagName,
 				Usage: "the user who will run the services",
 			},
-		},
+		),
 		Before: mergeBeforeFuncs(
 			validatePort(restPortFlagName),
 			validatePort(rpcPortFlagName),
