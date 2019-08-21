@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
-	"github.com/k0kubun/pp"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	internal "github.com/mongodb/jasper/rpc/internal"
@@ -257,7 +256,6 @@ func (c *rpcClient) WriteFile(ctx context.Context, jinfo jasper.WriteFileInfo) e
 		return errors.Wrap(err, "error getting client stream to write file")
 	}
 
-	pp.Println("getting reader for serialization")
 	reader, err := jinfo.ContentReader()
 	if err != nil {
 		return errors.Wrap(err, "error getting file content to read")
@@ -286,7 +284,6 @@ func (c *rpcClient) WriteFile(ctx context.Context, jinfo jasper.WriteFileInfo) e
 
 		info := internal.ConvertWriteFileInfo(jinfo)
 		info.Content = buf[:n]
-		pp.Println("info content:", buf[:3])
 		if fileWritten {
 			info.Append = true
 		}

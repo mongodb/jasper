@@ -467,8 +467,6 @@ func (s *jasperService) SignalEvent(ctx context.Context, name *EventName) (*Oper
 }
 
 func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) error {
-	// kim: TODO: handle receiving all stream messages, first append/truncate,
-	// then append.
 	var jinfo jasper.WriteFileInfo
 
 	numRecvs := 0

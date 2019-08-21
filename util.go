@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"io/ioutil"
@@ -103,19 +104,11 @@ func (info *WriteFileInfo) DoWrite() error {
 		return catcher.Resolve()
 	}
 
-	const mb = 1024 * 1024
-	buf := make([]byte, mb)
-	for n, err := reader.Read(buf); n > 0; n, err = reader.Read(buf) {
-		if err != nil && err != io.EOF {
-			catcher.Wrap(file.Close(), "error closing file")
-			catcher.Wrap(err, "error reading content to write to file")
-			return catcher.Resolve()
-		}
-		if _, err := file.Write(buf[:n]); err != nil {
-			catcher.Wrap(file.Close(), "error closing file")
-			catcher.Wrap(err, "error writing content to file")
-			return catcher.Resolve()
-		}
+	bufReader := bufio.NewReader(reader)
+	if _, err = io.Copy(file, bufReader); err != nil {
+		catcher.Wrap(file.Close(), "error closing file")
+		catcher.Wrap(err, "error writing content to file")
+		return catcher.Resolve()
 	}
 
 	return errors.Wrap(file.Close(), "error closing file")
