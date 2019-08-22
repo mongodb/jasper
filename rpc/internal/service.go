@@ -9,7 +9,6 @@ import (
 	"time"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
-	"github.com/k0kubun/pp"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
@@ -510,7 +509,6 @@ func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) e
 			return nil
 		}
 	}
-	pp.Println("done writing, num recvs:", numRecvs)
 
 	if err := jinfo.SetPerm(); err != nil {
 		if sendErr := stream.SendAndClose(&OperationOutcome{

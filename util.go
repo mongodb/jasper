@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,7 +37,8 @@ func PutHTTPClient(client *http.Client) {
 type WriteFileInfo struct {
 	Path string `json:"path"`
 	// File content can come from either Content or Reader, but not both.
-	// TODO: rename
+	// Content should only be used if the entire file's contents can be held in
+	// memory.
 	Content []byte      `json:"content"`
 	Reader  io.Reader   `json:"-"`
 	Append  bool        `json:"append"`
@@ -114,28 +114,66 @@ func (info *WriteFileInfo) DoWrite() error {
 	return errors.Wrap(file.Close(), "error closing file")
 }
 
+// WriteBufferedContent writes the content to a file by repeatedly calling
+// doWrite with a buffered portion of the content. doWrite processes the
+// WriteFileInfo containing the next content to write to the file.
+func (info *WriteFileInfo) WriteBufferedContent(doWrite func(bufInfo WriteFileInfo) error) error {
+	if err := info.validateContent(); err != nil {
+		return errors.Wrap(err, "could not validate file content source")
+	}
+	didWrite := false
+	for buf, err := info.contentBytes(); len(buf) != 0; buf, err = info.contentBytes() {
+		if err != nil && err != io.EOF {
+			return errors.Wrap(err, "error getting content bytes")
+		}
+
+		bufInfo := *info
+		bufInfo.Content = buf
+		if didWrite {
+			bufInfo.Append = true
+		}
+
+		if err := doWrite(bufInfo); err != nil {
+			return errors.Wrap(err, "could not write info")
+		}
+
+		didWrite = true
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	if didWrite {
+		return nil
+	}
+
+	return errors.Wrap(doWrite(*info), "could not write info")
+
+}
+
 // SetPerm sets the file permissions on the file. This should be called after
 // DoWrite. If no file exists at (WriteFileInfo).Path, it will error.
 func (info *WriteFileInfo) SetPerm() error {
 	return errors.Wrap(os.Chmod(info.Path, info.Perm), "error setting permissions")
 }
 
-// ContentBytes returns the contents to be written to the file as a byte slice.
-func (info *WriteFileInfo) ContentBytes() ([]byte, error) {
+// contentBytes returns the contents to be written to the file as a byte slice.
+// and will return io.EOF when all the file content has been received. Callers
+// should process the byte slice before checking for the io.EOF condition.
+func (info *WriteFileInfo) contentBytes() ([]byte, error) {
 	if err := info.validateContent(); err != nil {
 		return nil, errors.Wrap(err, "could not validate file content source")
 	}
 
 	if info.Reader != nil {
-		content, err := ioutil.ReadAll(info.Reader)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read from reader content source")
-		}
-		info.Content = content
-		info.Reader = nil
+		const mb = 1024 * 1024
+		buf := make([]byte, mb)
+		n, err := info.Reader.Read(buf)
+		return buf[:n], err
 	}
 
-	return info.Content, nil
+	return info.Content, io.EOF
 }
 
 // ContentReader returns the contents to be written to the file as an io.Reader.

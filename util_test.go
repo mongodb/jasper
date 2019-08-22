@@ -198,29 +198,39 @@ func TestWriteFileInfo(t *testing.T) {
 				})
 			}
 		},
-		"ContentBytes": func(t *testing.T) {
+		"WriteBufferedContent": func(t *testing.T) {
 			for testName, testCase := range map[string]func(t *testing.T, info WriteFileInfo){
-				"RequiresOneContentSource": func(t *testing.T, info WriteFileInfo) {
+				"DoesNotErrorWithoutContentSource": func(t *testing.T, info WriteFileInfo) {
+					didWrite := false
+					assert.NoError(t, info.WriteBufferedContent(func(WriteFileInfo) error {
+						didWrite = true
+						return nil
+					}))
+					assert.True(t, didWrite)
+				},
+				"FailsForMultipleContentSources": func(t *testing.T, info WriteFileInfo) {
 					info.Content = []byte("foo")
 					info.Reader = bytes.NewBufferString("bar")
-					_, err := info.ContentBytes()
-					assert.Error(t, err)
+					assert.Error(t, info.WriteBufferedContent(func(WriteFileInfo) error { return nil }))
 				},
-				"PreservesContentIfSet": func(t *testing.T, info WriteFileInfo) {
+				"ReadsFromContent": func(t *testing.T, info WriteFileInfo) {
 					expected := []byte("foo")
 					info.Content = expected
-					content, err := info.ContentBytes()
-					require.NoError(t, err)
-					assert.Equal(t, content, info.Content)
+					content := []byte{}
+					require.NoError(t, info.WriteBufferedContent(func(info WriteFileInfo) error {
+						content = append(content, info.Content...)
+						return nil
+					}))
 					assert.Equal(t, expected, content)
 				},
-				"SetsContentIfReaderSet": func(t *testing.T, info WriteFileInfo) {
+				"ReadsFromReader": func(t *testing.T, info WriteFileInfo) {
 					expected := []byte("foo")
 					info.Reader = bytes.NewBuffer(expected)
-					content, err := info.ContentBytes()
-					require.NoError(t, err)
-					assert.Equal(t, content, info.Content)
-					assert.Nil(t, info.Reader)
+					content := []byte{}
+					require.NoError(t, info.WriteBufferedContent(func(info WriteFileInfo) error {
+						content = append(content, info.Content...)
+						return nil
+					}))
 					assert.Equal(t, expected, content)
 				},
 			} {

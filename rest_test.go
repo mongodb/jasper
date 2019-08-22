@@ -802,7 +802,7 @@ func TestRestService(t *testing.T) {
 
 			assert.Equal(t, info.Content, content)
 		},
-		"WriteFileIgnoresContentFromReader": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"WriteFileAcceptsContentFromReader": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
@@ -816,7 +816,7 @@ func TestRestService(t *testing.T) {
 			content, err := ioutil.ReadFile(tmpFile.Name())
 			require.NoError(t, err)
 
-			assert.Empty(t, content)
+			assert.Equal(t, buf, content)
 		},
 		"WriteFileSucceedsWithLargeContent": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))

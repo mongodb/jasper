@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -479,22 +478,6 @@ func TestSSHClient(t *testing.T) {
 			baseManager.FailCreate = true
 			info := jasper.WriteFileInfo{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
 			assert.Error(t, client.WriteFile(ctx, info))
-		},
-		"WriteFileIgnoresContentFromReader": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {
-			tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
-			require.NoError(t, err)
-			defer func() {
-				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
-			}()
-
-			buf := []byte("foo")
-			info := jasper.WriteFileInfo{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
-			require.NoError(t, client.WriteFile(ctx, info))
-
-			content, err := ioutil.ReadFile(tmpFile.Name())
-			require.NoError(t, err)
-
-			assert.Empty(t, content)
 		},
 		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *jasper.MockManager) {},
 	} {

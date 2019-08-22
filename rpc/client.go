@@ -256,50 +256,16 @@ func (c *rpcClient) WriteFile(ctx context.Context, jinfo jasper.WriteFileInfo) e
 		return errors.Wrap(err, "error getting client stream to write file")
 	}
 
-	reader, err := jinfo.ContentReader()
-	if err != nil {
-		return errors.Wrap(err, "error getting file content to read")
+	sendInfo := func(jinfo jasper.WriteFileInfo) error {
+		info := internal.ConvertWriteFileInfo(jinfo)
+		return stream.Send(info)
 	}
 
-	sendInfo := func(stream internal.JasperProcessManager_WriteFileClient, info *internal.WriteFileInfo) error {
+	if err := jinfo.WriteBufferedContent(sendInfo); err != nil {
 		catcher := grip.NewBasicCatcher()
-		catcher.Wrap(stream.Send(info), "error sending content to write to file")
-		if catcher.HasErrors() {
-			catcher.Wrap(stream.CloseSend(), "error closing send stream")
-		}
+		catcher.Wrapf(err, "error reading from content source")
+		catcher.Wrapf(stream.CloseSend(), "error closing send stream after error during read: %s", err.Error())
 		return catcher.Resolve()
-	}
-
-	const mb = 1024 * 1024
-	buf := make([]byte, mb)
-	fileWritten := false
-
-	for n, err := reader.Read(buf); n > 0; n, err = reader.Read(buf) {
-		if err != nil && err != io.EOF {
-			if closeErr := stream.CloseSend(); closeErr != nil {
-				return errors.Wrapf(closeErr, "error closing send stream after error during read: %s", err.Error())
-			}
-			return errors.Wrapf(err, "error reading from content source")
-		}
-
-		info := internal.ConvertWriteFileInfo(jinfo)
-		info.Content = buf[:n]
-		if fileWritten {
-			info.Append = true
-		}
-
-		if err := sendInfo(stream, info); err != nil {
-			return errors.WithStack(err)
-		}
-
-		fileWritten = true
-	}
-
-	if !fileWritten {
-		info := internal.ConvertWriteFileInfo(jinfo)
-		if err := sendInfo(stream, info); err != nil {
-			return errors.WithStack(err)
-		}
 	}
 
 	resp, err := stream.CloseAndRecv()

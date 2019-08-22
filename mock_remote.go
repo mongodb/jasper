@@ -18,16 +18,16 @@ type MockRemoteClient struct {
 	FailWriteFile          bool
 
 	// ConfigureCache input
-	CacheOptions
+	CacheOptions CacheOptions
 
 	// DownloadFile input
-	DownloadInfo
+	DownloadInfo DownloadInfo
 
 	// WriteFile input
-	WriteFileInfo
+	WriteFileInfo WriteFileInfo
 
 	// DownloadMongoDB input
-	MongoDBDownloadOptions
+	MongoDBDownloadOptions MongoDBDownloadOptions
 
 	// LogStream input/output
 	LogStreamID    string
