@@ -190,6 +190,13 @@ message DownloadInfo {
     ArchiveOptions archive_opts = 3;
 }
 
+message WriteFileInfo {
+    string path = 1;
+    bytes content = 2;
+    bool append = 4;
+    uint32 perm = 3;
+}
+
 message BuildloggerURLs {
     repeated string urls = 1;
 }
@@ -244,4 +251,5 @@ service JasperProcessManager {
   rpc GetLogStream(LogRequest) returns (LogStream);
   rpc GetBuildloggerURLs(JasperProcessID) returns (BuildloggerURLs);
   rpc SignalEvent(EventName) returns (OperationOutcome);
+  rpc WriteFile(stream WriteFileInfo) returns (OperationOutcome);
 }

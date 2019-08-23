@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"os"
 	"syscall"
 	"time"
 
@@ -514,6 +515,29 @@ func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
 		Path:        info.Path,
 		Url:         info.URL,
 		ArchiveOpts: ConvertArchiveOptions(info.ArchiveOpts),
+	}
+}
+
+// Export takes a protobuf RPC WriteFileInfo struct and returns the analogous
+// Jasper WriteFileInfo struct.
+func (info *WriteFileInfo) Export() jasper.WriteFileInfo {
+	return jasper.WriteFileInfo{
+		Path:    info.Path,
+		Content: info.Content,
+		Append:  info.Append,
+		Perm:    os.FileMode(info.Perm),
+	}
+}
+
+// ConvertWriteFileInfo takes a Jasper WriteFileInfo struct and returns an
+// equivalent protobuf RPC WriteFileInfo struct. ConvertWriteFileInfo is the
+// inverse of (*WriteFileInfo) Export().
+func ConvertWriteFileInfo(info jasper.WriteFileInfo) *WriteFileInfo {
+	return &WriteFileInfo{
+		Path:    info.Path,
+		Content: info.Content,
+		Append:  info.Append,
+		Perm:    uint32(info.Perm),
 	}
 }
 
