@@ -55,8 +55,8 @@ func TestCLIRemote(t *testing.T) {
 					tmpFile, err := ioutil.TempFile(buildDir(t), "out.txt")
 					require.NoError(t, err)
 					defer func() {
-						require.NoError(t, tmpFile.Close())
-						os.Remove(tmpFile.Name())
+						assert.NoError(t, tmpFile.Close())
+						assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 					}()
 
 					input, err := json.Marshal(jasper.DownloadInfo{
@@ -112,6 +112,7 @@ func TestCLIRemote(t *testing.T) {
 					tmpFile, err := ioutil.TempFile(buildDir(t), "write_file")
 					require.NoError(t, err)
 					defer func() {
+						assert.NoError(t, tmpFile.Close())
 						assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 					}()
 

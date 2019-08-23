@@ -499,6 +499,7 @@ func TestRPCClient(t *testing.T) {
 							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, err)
 							defer func() {
+								assert.NoError(t, tmpFile.Close())
 								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 							}()
 
@@ -514,6 +515,7 @@ func TestRPCClient(t *testing.T) {
 							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, err)
 							defer func() {
+								assert.NoError(t, tmpFile.Close())
 								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 							}()
 
@@ -530,6 +532,7 @@ func TestRPCClient(t *testing.T) {
 							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, err)
 							defer func() {
+								assert.NoError(t, tmpFile.Close())
 								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 							}()
 

@@ -78,14 +78,20 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		},
 		"NewCredentialsEmptyFile": func(t *testing.T) {
 			file := makeFile(t)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 			creds, err := NewCredentialsFromFile(file.Name())
 			assert.Error(t, err)
 			assert.Nil(t, creds)
 		},
 		"NewCredentialsMissingFields": func(t *testing.T) {
 			file := makeFile(t)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 			_, err := file.Write([]byte(fmt.Sprintf(`{
 				"ca_cert": %s,
 				"cert": %s
@@ -96,7 +102,10 @@ EKTcWGekdmdDPsHloRNtsiCa697B2O9IFA==
 		},
 		"NewCredentialsSucceeds": func(t *testing.T) {
 			file := makeFile(t)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 			_, err := file.Write([]byte(fmt.Sprintf(`{
 				"ca_cert": %s,
 				"cert": %s,

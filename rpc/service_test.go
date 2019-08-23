@@ -27,7 +27,10 @@ func TestRPCService(t *testing.T) {
 				"CreateWithLogFile": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					file, err := ioutil.TempFile(buildDir(t), "out.txt")
 					require.NoError(t, err)
-					defer os.Remove(file.Name())
+					require.NoError(t, file.Close())
+					defer func() {
+						assert.NoError(t, os.RemoveAll(file.Name()))
+					}()
 
 					logger := jasper.Logger{
 						Type: jasper.LogFile,
@@ -63,7 +66,10 @@ func TestRPCService(t *testing.T) {
 				"DownloadFileCreatesResource": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					file, err := ioutil.TempFile(buildDir(t), "out.txt")
 					require.NoError(t, err)
-					defer os.Remove(file.Name())
+					require.NoError(t, file.Close())
+					defer func() {
+						assert.NoError(t, os.RemoveAll(file.Name()))
+					}()
 
 					info := jasper.DownloadInfo{
 						URL:  "http://example.com",

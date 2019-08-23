@@ -250,13 +250,6 @@ func TestWriteFileInfo(t *testing.T) {
 					require.NoError(t, err)
 					assert.Zero(t, stat.Size())
 				},
-				"FailsForInsufficientPermissions": func(t *testing.T, info WriteFileInfo) {
-					f, err := os.OpenFile(info.Path, os.O_RDONLY|os.O_CREATE, 0444)
-					require.NoError(t, err)
-					require.NoError(t, f.Close())
-
-					assert.Error(t, info.DoWrite())
-				},
 				"WritesWithReader": func(t *testing.T, info WriteFileInfo) {
 					info.Reader = bytes.NewBuffer(content)
 
@@ -329,7 +322,7 @@ func TestWriteFileInfo(t *testing.T) {
 					require.NoError(t, err)
 					require.NoError(t, f.Close())
 
-					info.Perm = 0444
+					info.Perm = 0400
 					require.NoError(t, info.SetPerm())
 
 					stat, err := os.Stat(info.Path)
@@ -337,7 +330,7 @@ func TestWriteFileInfo(t *testing.T) {
 					assert.Equal(t, info.Perm, stat.Mode())
 				},
 				"FailsWithoutFile": func(t *testing.T, info WriteFileInfo) {
-					info.Perm = 0444
+					info.Perm = 0400
 					assert.Error(t, info.SetPerm())
 				},
 			} {

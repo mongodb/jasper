@@ -453,7 +453,10 @@ func TestRestService(t *testing.T) {
 		"DownloadFileCreatesResource": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 			absPath, err := filepath.Abs(file.Name())
 			require.NoError(t, err)
 
@@ -466,11 +469,15 @@ func TestRestService(t *testing.T) {
 		"DownloadFileCreatesResourceAndExtracts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			downloadDir, err := ioutil.TempDir("build", "rest_test")
 			require.NoError(t, err)
-			defer os.RemoveAll(downloadDir)
+			defer func() {
+				assert.NoError(t, os.RemoveAll(downloadDir))
+			}()
 
 			fileServerDir, err := ioutil.TempDir("build", "rest_test_server")
 			require.NoError(t, err)
-			defer os.RemoveAll(fileServerDir)
+			defer func() {
+				assert.NoError(t, os.RemoveAll(fileServerDir))
+			}()
 
 			fileName := "foo.zip"
 			fileContents := "foo"
@@ -537,10 +544,15 @@ func TestRestService(t *testing.T) {
 		"DownloadFileFailsForUnarchivedFile": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 			extractDir, err := ioutil.TempDir("build", "out")
 			require.NoError(t, err)
-			defer os.RemoveAll(extractDir)
+			defer func() {
+				assert.NoError(t, os.RemoveAll(extractDir))
+			}()
 
 			info := DownloadInfo{
 				URL:  "https://example.com",
@@ -563,7 +575,10 @@ func TestRestService(t *testing.T) {
 		"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 			assert.Error(t, client.DownloadFile(ctx, DownloadInfo{URL: "https://example.com/foo", Path: file.Name()}))
 		},
 		"DownloadFileFailsForInsufficientPermissions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
@@ -752,7 +767,10 @@ func TestRestService(t *testing.T) {
 		"CreateWithMultipleLoggers": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			file, err := ioutil.TempFile("build", "out.txt")
 			require.NoError(t, err)
-			defer os.Remove(file.Name())
+			defer func() {
+				assert.NoError(t, file.Close())
+				assert.NoError(t, os.RemoveAll(file.Name()))
+			}()
 
 			fileLogger := Logger{
 				Type: LogFile,
@@ -791,6 +809,7 @@ func TestRestService(t *testing.T) {
 			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
+				assert.NoError(t, tmpFile.Close())
 				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 			}()
 
@@ -806,6 +825,7 @@ func TestRestService(t *testing.T) {
 			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
+				assert.NoError(t, tmpFile.Close())
 				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 			}()
 
@@ -818,21 +838,23 @@ func TestRestService(t *testing.T) {
 
 			assert.Equal(t, buf, content)
 		},
-		"WriteFileSucceedsWithLargeContent": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"WriteFileSucceedsWithLargeContentReader": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
+				assert.NoError(t, tmpFile.Close())
 				assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 			}()
 
 			const mb = 1024 * 1024
-			info := WriteFileInfo{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
+			buf := bytes.Repeat([]byte("foo"), 2*mb)
+			info := WriteFileInfo{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
 			require.NoError(t, client.WriteFile(ctx, info))
 
 			content, err := ioutil.ReadFile(tmpFile.Name())
 			require.NoError(t, err)
 
-			assert.Equal(t, info.Content, content)
+			assert.Equal(t, buf, content)
 		},
 		"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			info := WriteFileInfo{Content: []byte("foo")}
