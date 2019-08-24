@@ -183,6 +183,11 @@ func (l *Logger) Configure() (send.Sender, error) {
 	var sender send.Sender
 	var err error
 
+	if l.Options.Level.Threshold == 0 && l.Options.Level.Default == 0 {
+		l.Options.Level.Threshold = level.Trace
+		l.Options.Level.Default = level.Trace
+	}
+
 	switch l.Type {
 	case LogBuildloggerV2, LogBuildloggerV3:
 		if l.Options.BuildloggerOptions.Local == nil {
@@ -357,7 +362,7 @@ func (o OutputOptions) errorIsNull() bool {
 
 // Validate ensures that the OutputOptions it is called on has reasonable
 // values.
-func (o OutputOptions) Validate() error {
+func (o *OutputOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
 	if o.SuppressOutput && (!o.outputIsNull() || o.outputLogging()) {
