@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 type adaptiveLocalOrdering struct {
@@ -18,6 +20,7 @@ type adaptiveLocalOrdering struct {
 	operations chan func(context.Context, *adaptiveOrderItems, *fixedStorage)
 	capacity   int
 	starter    sync.Once
+	id         string
 	runner     amboy.Runner
 }
 
@@ -33,8 +36,11 @@ func NewAdaptiveOrderedLocalQueue(workers, capacity int) amboy.Queue {
 	r := pool.NewLocalWorkers(workers, q)
 	q.capacity = capacity
 	q.runner = r
+	q.id = fmt.Sprintf("queue.local.ordered.adaptive.%s", uuid.NewV4().String())
 	return q
 }
+
+func (q *adaptiveLocalOrdering) ID() string { return q.id }
 
 func (q *adaptiveLocalOrdering) Start(ctx context.Context) error {
 	if q.runner == nil {
@@ -82,11 +88,41 @@ func (q *adaptiveLocalOrdering) Put(ctx context.Context, j amboy.Job) error {
 
 	out := make(chan error)
 	op := func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
+		defer close(out)
 		j.UpdateTimeInfo(amboy.JobTimeInfo{
 			Created: time.Now(),
 		})
+		if err := j.TimeInfo().Validate(); err != nil {
+			out <- err
+			return
+		}
+
 		out <- items.add(j)
-		close(out)
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case q.operations <- op:
+		return <-out
+	}
+}
+
+func (q *adaptiveLocalOrdering) Save(ctx context.Context, j amboy.Job) error {
+	if !q.Started() {
+		return errors.New("cannot add job to unopened queue")
+	}
+
+	name := j.ID()
+	out := make(chan error)
+	op := func(ctx context.Context, items *adaptiveOrderItems, fixed *fixedStorage) {
+		defer close(out)
+		if _, ok := items.jobs[name]; !ok {
+			out <- errors.New("cannot save job that does not exist")
+			return
+		}
+
+		items.jobs[name] = j
 	}
 
 	select {
