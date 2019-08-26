@@ -46,7 +46,6 @@ const (
 	defaultLogName  = "jasper"
 
 	logLevelFlagName = "log_level"
-	defaultLogLevel  = "info"
 
 	splunkURLFlagName     = "splunk_url"
 	splunkTokenFlagName   = "splunk_token"
