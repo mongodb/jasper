@@ -46,6 +46,7 @@ message LogOptions {
     int64 in_memory_cap = 6;
     SplunkOptions splunk_options = 7;
     string sumo_endpoint = 8;
+    LogLevel level = 9;
 }
 
 message BufferOptions {
@@ -68,6 +69,11 @@ message SplunkOptions {
     string url = 1;
     string token = 2;
     string channel = 3;
+}
+
+message LogLevel {
+    int32 threshold = 1;
+    int32 default = 2;
 }
 
 message CreateOptions {

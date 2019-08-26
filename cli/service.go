@@ -46,7 +46,6 @@ const (
 	defaultLogName  = "jasper"
 
 	logLevelFlagName = "log_level"
-	defaultLogLevel  = "info"
 
 	splunkURLFlagName     = "splunk_url"
 	splunkTokenFlagName   = "splunk_token"
@@ -101,7 +100,7 @@ func serviceLoggingFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  logLevelFlagName,
 			Usage: "the threshold visible logging level",
-			Value: level.Info.String(),
+			Value: level.Error.String(),
 		},
 		cli.StringFlag{
 			Name:   splunkURLFlagName,
@@ -121,6 +120,24 @@ func serviceLoggingFlags() []cli.Flag {
 	}
 }
 
+func serviceBefore() func(*cli.Context) error {
+	return mergeBeforeFuncs(
+		validatePort(portFlagName),
+		validateLogLevel(logLevelFlagName),
+	)
+}
+
+func validateLogLevel(flagName string) func(*cli.Context) error {
+	return func(c *cli.Context) error {
+		l := c.String(logLevelFlagName)
+		priority := level.FromString(l)
+		if !level.IsValidPriority(priority) {
+			return errors.Errorf("%s is not a valid log level", l)
+		}
+		return nil
+	}
+}
+
 // makeLogger creates a splunk logger. It may return nil if the splunk flags are
 // not populated.
 func makeLogger(c *cli.Context) *jasper.Logger {
@@ -133,10 +150,17 @@ func makeLogger(c *cli.Context) *jasper.Logger {
 		return nil
 	}
 
+	l := c.String(logLevelFlagName)
+	priority := level.FromString(l)
+	if !level.IsValidPriority(priority) {
+		return nil
+	}
+
 	return &jasper.Logger{
 		Type: jasper.LogSplunk,
 		Options: jasper.LogOptions{
 			Format:        jasper.LogFormatDefault,
+			Level:         send.LevelInfo{Default: priority, Threshold: priority},
 			SplunkOptions: info,
 		},
 	}
