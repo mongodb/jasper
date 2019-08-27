@@ -36,6 +36,10 @@ func TestRestService(t *testing.T) {
 	httpClient := jasper.GetHTTPClient()
 	defer jasper.PutHTTPClient(httpClient)
 
+	tempDir, err := ioutil.TempDir("./", "jasper-rest-service-test")
+	require.NoError(t, err)
+	defer func() { require.NoError(t, os.RemoveAll(tempDir)) }()
+
 	for name, test := range map[string]func(context.Context, *testing.T, *Service, *restClient){
 		"VerifyFixtures": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			assert.NotNil(t, srv)
@@ -521,7 +525,7 @@ func TestRestService(t *testing.T) {
 			assert.NotZero(t, len(dirContents))
 		},
 		"DownloadFileFailsExtractionWithInvalidArchiveFormat": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			fileName := filepath.Join("build", "out.txt")
+			fileName := filepath.Join(tempDir, "out.txt")
 			_, err := os.Stat(fileName)
 			require.True(t, os.IsNotExist(err))
 
@@ -539,13 +543,13 @@ func TestRestService(t *testing.T) {
 			assert.True(t, os.IsNotExist(err))
 		},
 		"DownloadFileFailsForUnarchivedFile": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			file, err := ioutil.TempFile("build", "out.txt")
+			file, err := ioutil.TempFile(tempDir, "out.txt")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, file.Close())
 				assert.NoError(t, os.RemoveAll(file.Name()))
 			}()
-			extractDir, err := ioutil.TempDir("build", "out")
+			extractDir, err := ioutil.TempDir(tempDir, "out")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, os.RemoveAll(extractDir))
@@ -570,7 +574,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 		},
 		"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			file, err := ioutil.TempFile("build", "out.txt")
+			file, err := ioutil.TempFile(tempDir, "out.txt")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, file.Close())
