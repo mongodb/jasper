@@ -452,7 +452,7 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, handleError(resp).Error(), "problem converting signal 'f'")
 		},
 		"DownloadFileCreatesResource": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			file, err := ioutil.TempFile("build", "out.txt")
+			file, err := ioutil.TempFile(tempDir, "out.txt")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, file.Close())
@@ -468,13 +468,13 @@ func TestRestService(t *testing.T) {
 			assert.NotEqual(t, 0, info.Size())
 		},
 		"DownloadFileCreatesResourceAndExtracts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			downloadDir, err := ioutil.TempDir("build", "rest_test")
+			downloadDir, err := ioutil.TempDir(tempDir, "rest_test")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, os.RemoveAll(downloadDir))
 			}()
 
-			fileServerDir, err := ioutil.TempDir("build", "rest_test_server")
+			fileServerDir, err := ioutil.TempDir(tempDir, "rest_test_server")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, os.RemoveAll(fileServerDir))
@@ -603,7 +603,7 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
 		"ServiceDownloadFileFailsWithInvalidURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			fileName := filepath.Join("build", "out.txt")
+			fileName := filepath.Join(tempDir, "out.txt")
 			absPath, err := filepath.Abs(fileName)
 			require.NoError(t, err)
 
@@ -736,7 +736,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 		},
 		"DownloadMongoDBPassesWithValidOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			dir, err := ioutil.TempDir("build", "mongodb")
+			dir, err := ioutil.TempDir(tempDir, "mongodb")
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 			absDir, err := filepath.Abs(dir)
@@ -766,7 +766,7 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, urls)
 		},
 		"CreateWithMultipleLoggers": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			file, err := ioutil.TempFile("build", "out.txt")
+			file, err := ioutil.TempFile(tempDir, "out.txt")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, file.Close())
@@ -807,7 +807,7 @@ func TestRestService(t *testing.T) {
 
 		},
 		"WriteFileSucceeds": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
+			tmpFile, err := ioutil.TempFile(tempDir, filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, tmpFile.Close())
@@ -823,7 +823,7 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, info.Content, content)
 		},
 		"WriteFileAcceptsContentFromReader": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
+			tmpFile, err := ioutil.TempFile(tempDir, filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, tmpFile.Close())
@@ -840,7 +840,7 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, buf, content)
 		},
 		"WriteFileSucceedsWithLargeContentReader": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			tmpFile, err := ioutil.TempFile("build", filepath.Base(t.Name()))
+			tmpFile, err := ioutil.TempFile(tempDir, filepath.Base(t.Name()))
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, tmpFile.Close())
@@ -862,7 +862,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, client.WriteFile(ctx, info))
 		},
 		"WriteFileSucceedsWithNoContent": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			path := filepath.Join("build", "write_file")
+			path := filepath.Join(tempDir, "write_file")
 			require.NoError(t, os.RemoveAll(path))
 			defer func() {
 				assert.NoError(t, os.RemoveAll(path))
