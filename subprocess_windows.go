@@ -121,7 +121,7 @@ func NewWindowsJobObject(name string) (*JobObject, error) {
 		return nil, NewWindowsError("SetInformationJobObject", err)
 	}
 
-	return &Job{handle: hJob}, nil
+	return &JobObject{handle: hJob}, nil
 }
 
 func (j *JobObject) AssignProcess(pid uint) error {
