@@ -33,8 +33,8 @@ func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("alway
 func (n *neverJSON) Close() error                  { return errors.New("always error") }
 
 func TestRestService(t *testing.T) {
-	httpClient := jasper.GetHTTPClient()
-	defer jasper.PutHTTPClient(httpClient)
+	httpClient := testutil.GetHTTPClient()
+	defer testutil.PutHTTPClient(httpClient)
 
 	tempDir, err := ioutil.TempDir("./", "jasper-rest-service-test")
 	require.NoError(t, err)

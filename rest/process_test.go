@@ -21,8 +21,8 @@ func TestProcessImplementations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	httpClient := jasper.GetHTTPClient()
-	defer jasper.PutHTTPClient(httpClient)
+	httpClient := testutil.GetHTTPClient()
+	defer testutil.PutHTTPClient(httpClient)
 
 	for cname, makeProc := range map[string]jasper.ProcessConstructor{
 		"REST": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
