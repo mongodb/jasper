@@ -81,10 +81,6 @@ tasks:
     name: compile-base
 
   - <<: *run-build
-    tags: ["race"]
-    name: race
-
-  - <<: *run-build
     tags: ["bench"]
     name: benchmark
 
@@ -95,12 +91,12 @@ buildvariants:
   - name: race-detector
     display_name: Race Detector (Arch Linux)
     expansions:
-      build_env: "DISABLE_COVERAGE=true"
+      build_env: "DISABLE_COVERAGE=true RACE_DETECTOR=true"
     run_on:
       - archlinux-test
       - archlinux-build
     tasks: 
-      - name: ".race"
+      - name: ".test"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -40,7 +41,7 @@ func TestCLIRemoteWindows(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 					defer cancel()
 
-					port := getNextPort()
+					port := testutil.GetPortNumber()
 					c := mockCLIContext(remoteType, port)
 					manager, err := jasper.NewLocalManager(false)
 					require.NoError(t, err)
