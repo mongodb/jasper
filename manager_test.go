@@ -15,9 +15,6 @@ var echoSubCmd = []string{"echo", "foo"}
 func TestManagerInterface(t *testing.T) {
 	t.Parallel()
 
-	httpClient := GetHTTPClient()
-	defer PutHTTPClient(httpClient)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -224,10 +221,6 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, manager.Close(ctx))
 				},
 				"CloseExecutesClosersForProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("not supported on rest interfaces")
-					}
-
 					if runtime.GOOS == "windows" {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
@@ -255,19 +248,11 @@ func TestManagerInterface(t *testing.T) {
 					}
 				},
 				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("not supported on rest interfaces")
-					}
-
 					err := manager.Register(ctx, nil)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "not defined")
 				},
 				"RegisterProcessErrorsForCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("not supported on rest interfaces")
-					}
-
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 					proc, err := newBlockingProcess(ctx, trueCreateOpts())
@@ -277,10 +262,6 @@ func TestManagerInterface(t *testing.T) {
 					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 				"RegisterProcessErrorsWhenMissingID": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("not supported on rest interfaces")
-					}
-
 					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
 					err := manager.Register(ctx, proc)
@@ -288,10 +269,6 @@ func TestManagerInterface(t *testing.T) {
 					assert.Contains(t, err.Error(), "malformed")
 				},
 				"RegisterProcessModifiesManagerState": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("not supported on rest interfaces")
-					}
-
 					proc, err := newBlockingProcess(ctx, trueCreateOpts())
 					require.NoError(t, err)
 					err = manager.Register(ctx, proc)
@@ -304,10 +281,6 @@ func TestManagerInterface(t *testing.T) {
 					assert.Equal(t, procs[0].ID(), proc.ID())
 				},
 				"RegisterProcessErrorsForDuplicateProcess": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("not supported on rest interfaces")
-					}
-
 					proc, err := newBlockingProcess(ctx, trueCreateOpts())
 					require.NoError(t, err)
 					assert.NotEmpty(t, proc)
@@ -317,10 +290,6 @@ func TestManagerInterface(t *testing.T) {
 					assert.Error(t, err)
 				},
 				"ManagerCallsOptionsCloseByDefault": func(ctx context.Context, t *testing.T, manager Manager) {
-					if mname == "REST" {
-						t.Skip("cannot register trigger on rest interfaces")
-					}
-
 					opts := &CreateOptions{}
 					opts.Args = []string{"echo", "foobar"}
 					count := 0

@@ -26,6 +26,7 @@ func NewClient(addr net.Addr) jasper.RemoteClient {
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr.String()),
 		client: bond.GetHTTPClient(),
 	}
+	C
 }
 
 type restClient struct {
