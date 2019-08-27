@@ -3,16 +3,8 @@ package jasper
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/mongodb/grip"
-)
-
-const (
-	taskTimeout        = 5 * time.Second
-	processTestTimeout = 15 * time.Second
-	managerTestTimeout = 5 * taskTimeout
-	longTaskTimeout    = 100 * time.Second
 )
 
 func makeLockingProcess(pmake ProcessConstructor) ProcessConstructor {
