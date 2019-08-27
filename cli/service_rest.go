@@ -7,6 +7,7 @@ import (
 	"github.com/kardianos/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/rest"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -121,7 +122,7 @@ func (d *restDaemon) newService(ctx context.Context) (jasper.CloseFunc, error) {
 // newRESTService creates a REST service around the manager serving requests on
 // the host and port.
 func newRESTService(ctx context.Context, host string, port int, manager jasper.Manager) (jasper.CloseFunc, error) {
-	service := jasper.NewManagerService(manager)
+	service := rest.NewManagerService(manager)
 	app := service.App(ctx)
 	app.SetPrefix("jasper")
 	if err := app.SetHost(host); err != nil {

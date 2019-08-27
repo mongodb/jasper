@@ -3,7 +3,6 @@ package jasper
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -12,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,19 +28,6 @@ func TestProcessImplementations(t *testing.T) {
 		"BlockingWithLock": makeLockingProcess(newBlockingProcess),
 		"BasicNoLock":      newBasicProcess,
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
-		"REST": func(ctx context.Context, opts *CreateOptions) (Process, error) {
-			_, port, err := startRESTService(ctx, httpClient)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			client := &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
-				client: httpClient,
-			}
-
-			return client.CreateProcess(ctx, opts)
-		},
 	} {
 		t.Run(cname, func(t *testing.T) {
 			for name, testCase := range map[string]func(context.Context, *testing.T, *CreateOptions, ProcessConstructor){
@@ -665,7 +651,7 @@ func TestProcessImplementations(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, opts *CreateOptions, makep ProcessConstructor) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, processTestTimeout)
+					tctx, cancel := context.WithTimeout(ctx, testutil.ProcessTestTimeout)
 					defer cancel()
 
 					opts := &CreateOptions{Args: []string{"ls"}}

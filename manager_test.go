@@ -2,10 +2,10 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 	"testing"
 
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,16 +55,6 @@ func TestManagerInterface(t *testing.T) {
 			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, false)
 			require.NoError(t, err)
 			return selfClearingBlockingManager
-		},
-		"REST": func(ctx context.Context, t *testing.T) Manager {
-			srv, port, err := startRESTService(ctx, httpClient)
-			require.NoError(t, err)
-			require.NotNil(t, srv)
-
-			return &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
-				client: httpClient,
-			}
 		},
 	} {
 		t.Run(mname, func(t *testing.T) {
@@ -442,7 +432,7 @@ func TestManagerInterface(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, managerTestTimeout)
+					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 					defer cancel()
 					test(tctx, t, factory(tctx, t))
 				})
@@ -558,9 +548,9 @@ func TestTrackedManager(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, managerTestTimeout)
+					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 					defer cancel()
-					opts := yesCreateOpts(managerTestTimeout)
+					opts := yesCreateOpts(testutil.ManagerTestTimeout)
 					test(tctx, t, makeManager(), &opts)
 				})
 			}

@@ -1,4 +1,4 @@
-package jasper
+package rest
 
 import (
 	"context"
@@ -6,13 +6,15 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWindowsRESTService(t *testing.T) {
-	httpClient := GetHTTPClient()
-	defer PutHTTPClient(httpClient)
+	httpClient := jasper.GetHTTPClient()
+	defer jasper.PutHTTPClient(httpClient)
 
 	for testName, testCase := range map[string]func(context.Context, *testing.T, *Service, *restClient){
 		"SignalEventWithNonexistentEvent": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
@@ -32,7 +34,7 @@ func TestWindowsRESTService(t *testing.T) {
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), longTaskTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTaskTimeout)
 			defer cancel()
 
 			srv, port, err := startRESTService(ctx, httpClient)
