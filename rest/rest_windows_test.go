@@ -25,9 +25,9 @@ func TestWindowsRESTService(t *testing.T) {
 			utf16EventName, err := syscall.UTF16PtrFromString(eventName)
 			require.NoError(t, err)
 
-			event, err := CreateEvent(utf16EventName)
+			event, err := jasepr.CreateEvent(utf16EventName)
 			require.NoError(t, err)
-			defer CloseHandle(event)
+			defer jasper.CloseHandle(event)
 
 			assert.NoError(t, client.SignalEvent(ctx, eventName))
 		},
