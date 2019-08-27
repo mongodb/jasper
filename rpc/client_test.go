@@ -569,7 +569,7 @@ func TestRPCClient(t *testing.T) {
 						// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
 					} {
 						t.Run(name, func(t *testing.T) {
-							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTaskTimeout)
+							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 							defer cancel()
 							test(tctx, t, factory(tctx, t))
 						})
@@ -936,7 +936,7 @@ func TestRPCProcess(t *testing.T) {
 						// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
 					} {
 						t.Run(name, func(t *testing.T) {
-							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTaskTimeout)
+							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 							defer cancel()
 
 							opts := &jasper.CreateOptions{Args: []string{"ls"}}

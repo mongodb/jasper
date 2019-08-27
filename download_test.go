@@ -47,7 +47,7 @@ func validMongoDBDownloadOptions() MongoDBDownloadOptions {
 }
 
 func TestSetupDownloadMongoDBReleasesFailsWithZeroOptions(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testutil.TaskTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 	defer cancel()
 
 	opts := MongoDBDownloadOptions{}
@@ -57,7 +57,7 @@ func TestSetupDownloadMongoDBReleasesFailsWithZeroOptions(t *testing.T) {
 }
 
 func TestSetupDownloadMongoDBReleasesWithInvalidPath(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testutil.TaskTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 	defer cancel()
 
 	opts := validMongoDBDownloadOptions()
@@ -73,7 +73,7 @@ func TestSetupDownloadMongoDBReleasesWithInvalidPath(t *testing.T) {
 }
 
 func TestSetupDownloadMongoDBReleasesWithInvalidArtifactsFeed(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testutil.TaskTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 	defer cancel()
 
 	dir, err := ioutil.TempDir("build", "out")
@@ -136,7 +136,7 @@ func TestCreateDownloadJobsWithInvalidPath(t *testing.T) {
 }
 
 func TestProcessDownloadJobs(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTaskTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTestTimeout)
 	defer cancel()
 
 	downloadDir, err := ioutil.TempDir("build", "download_test")

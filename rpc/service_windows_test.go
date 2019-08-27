@@ -43,7 +43,7 @@ func TestWindowsRPCService(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), testutil.TaskTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 
 					manager, err := makeManager(false)

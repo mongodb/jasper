@@ -910,7 +910,7 @@ func TestRestService(t *testing.T) {
 		// "": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {},
 	} {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTaskTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTestTimeout)
 			defer cancel()
 
 			srv, port, err := startRESTService(ctx, httpClient)

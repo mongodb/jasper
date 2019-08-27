@@ -136,10 +136,10 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 				},
 			} {
 				t.Run(name, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), testutil.TaskTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 
-					opts := yesCreateOpts(testutil.TaskTimeout)
+					opts := yesCreateOpts(testutil.TestTimeout)
 					proc, err := makeProc(ctx, &opts)
 					require.NoError(t, err)
 
@@ -205,12 +205,12 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 				// "": func(ctx, context.Context, t *testing.T, tracker *linuxProcessTracker, envVarName string, envVarValue string) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), testutil.TaskTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 
 					envVarValue := "bar"
 
-					opts := yesCreateOpts(testutil.TaskTimeout)
+					opts := yesCreateOpts(testutil.TestTimeout)
 
 					tracker, err := NewProcessTracker(envVarValue)
 					require.NoError(t, err)
