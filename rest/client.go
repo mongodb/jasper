@@ -16,6 +16,7 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
+	"github.com/tychoish/bond"
 )
 
 // NewClient creates a REST client that connecst to the given address
@@ -23,7 +24,7 @@ import (
 func NewClient(addr net.Addr) jasper.RemoteClient {
 	return &restClient{
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr.String()),
-		client: jasper.GetHTTPClient(),
+		client: bond.GetHTTPClient(),
 	}
 }
 
@@ -33,7 +34,7 @@ type restClient struct {
 }
 
 func (c *restClient) CloseConnection() error {
-	jasper.PutHTTPClient(c.client)
+	bond.PutHTTPClient(c.client)
 	return nil
 }
 
