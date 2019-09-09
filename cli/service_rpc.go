@@ -23,7 +23,7 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 	return cli.Command{
 		Name:  RPCService,
 		Usage: fmt.Sprintf("%s an RPC service", cmd),
-		Flags: append(serviceLoggingFlags(),
+		Flags: append(serviceFlags(),
 			cli.StringFlag{
 				Name:   hostFlagName,
 				EnvVar: rpcHostEnvVar,
@@ -40,12 +40,11 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 				Name:  credsFilePathFlagName,
 				Usage: "the path to the file containing the RPC service credentials",
 			},
-			cli.StringFlag{
-				Name:  userFlagName,
-				Usage: "the user who will run the RPC service",
-			},
 		),
-		Before: validatePort(portFlagName),
+		Before: mergeBeforeFuncs(
+			validatePort(portFlagName),
+			validateLogLevel(logLevelFlagName),
+		),
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewLocalManager(false)
 			if err != nil {
@@ -57,7 +56,11 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 			config := serviceConfig(RPCService, buildRunCommand(c, RPCService))
 			config.UserName = c.String(userFlagName)
 
-			return operation(daemon, config)
+			err = operation(daemon, config)
+			if !c.Bool(quietFlagName) {
+				return err
+			}
+			return nil
 		},
 	}
 }

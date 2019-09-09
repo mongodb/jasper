@@ -133,7 +133,7 @@ func TestCLIManager(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 					port := testutil.GetPortNumber()
 					c := mockCLIContext(remoteType, port)

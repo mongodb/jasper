@@ -493,7 +493,7 @@ func TestSSHClient(t *testing.T) {
 			mockManager := &mock.Manager{}
 			sshClient.manager = jasper.Manager(mockManager)
 
-			tctx, cancel := context.WithTimeout(ctx, testTimeout)
+			tctx, cancel := context.WithTimeout(ctx, testutil.TestTimeout)
 			defer cancel()
 
 			testCase(tctx, t, sshClient, mockManager)

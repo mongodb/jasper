@@ -98,7 +98,7 @@ func TestMakeRemoteClient(t *testing.T) {
 		RPCService:  makeTestRPCServiceAndClient,
 	} {
 		t.Run(remoteType, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 			defer cancel()
 			manager, err := jasper.NewLocalManager(false)
 			require.NoError(t, err)
@@ -198,7 +198,7 @@ func TestCLICommon(t *testing.T) {
 				// "": func(ctx context.Context, t *testing.T, c *cli.Context, client jasper.RemoteClient) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 					port := testutil.GetPortNumber()
 					c := mockCLIContext(remoteType, port)

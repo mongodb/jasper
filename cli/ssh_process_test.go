@@ -7,6 +7,7 @@ import (
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -334,7 +335,7 @@ func TestSSHProcess(t *testing.T) {
 			mockManager := &mock.Manager{}
 			sshClient.manager = jasper.Manager(mockManager)
 
-			tctx, cancel := context.WithTimeout(ctx, testTimeout)
+			tctx, cancel := context.WithTimeout(ctx, testutil.TestTimeout)
 			defer cancel()
 
 			proc, err := newSSHProcess(sshClient.runClientCommand, jasper.ProcessInfo{ID: "foo"})

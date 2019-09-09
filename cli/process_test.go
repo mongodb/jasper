@@ -173,7 +173,7 @@ func TestCLIProcess(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 					port := testutil.GetPortNumber()
 					c := mockCLIContext(remoteType, port)
@@ -186,7 +186,7 @@ func TestCLIProcess(t *testing.T) {
 					}()
 
 					resp := &InfoResponse{}
-					input, err := json.Marshal(jasperutil.SleepCreateOpts(int(testTimeout.Seconds()) - 1))
+					input, err := json.Marshal(jasperutil.SleepCreateOpts(1))
 					require.NoError(t, err)
 					require.NoError(t, execCLICommandInputOutput(t, c, managerCreateProcess(), input, resp))
 					require.True(t, resp.Successful())
