@@ -72,8 +72,7 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 			config := serviceConfig(CombinedService, buildRunCommand(c, CombinedService))
 			config.UserName = c.String(userFlagName)
 
-			err = operation(daemon, config)
-			if !c.Bool(quietFlagName) {
+			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err
 			}
 			return nil

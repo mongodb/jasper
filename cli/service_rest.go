@@ -51,8 +51,7 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 			config := serviceConfig(RESTService, buildRunCommand(c, RESTService))
 			config.UserName = c.String(userFlagName)
 
-			err = operation(daemon, config)
-			if !c.Bool(quietFlagName) {
+			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err
 			}
 			return nil
@@ -82,9 +81,11 @@ func (d *restDaemon) Start(s service.Service) error {
 	if d.Logger != nil {
 		sender, err := d.Logger.Configure()
 		if err != nil {
-			return errors.Wrap(err, "could not set up logging")
+			return errors.Wrap(err, "could not configure logging")
 		}
-		grip.SetSender(sender)
+		if err := grip.SetSender(sender); err != nil {
+			return errors.Wrap(err, "could not set logging sender")
+		}
 	}
 
 	d.exit = make(chan struct{})
