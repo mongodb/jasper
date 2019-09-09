@@ -22,7 +22,7 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 	return cli.Command{
 		Name:  RESTService,
 		Usage: fmt.Sprintf("%s a REST service", cmd),
-		Flags: append(serviceLoggingFlags(),
+		Flags: append(serviceFlags(),
 			cli.StringFlag{
 				Name:   hostFlagName,
 				EnvVar: restHostEnvVar,
@@ -35,12 +35,11 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 				Usage:  "the port running the REST service",
 				Value:  defaultRESTPort,
 			},
-			cli.StringFlag{
-				Name:  userFlagName,
-				Usage: "the user who will run the REST service",
-			},
 		),
-		Before: validatePort(portFlagName),
+		Before: mergeBeforeFuncs(
+			validatePort(portFlagName),
+			validateLogLevel(logLevelFlagName),
+		),
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewLocalManager(false)
 			if err != nil {
@@ -52,7 +51,10 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 			config := serviceConfig(RESTService, buildRunCommand(c, RESTService))
 			config.UserName = c.String(userFlagName)
 
-			return operation(daemon, config)
+			if err := operation(daemon, config); !c.Bool(quietFlagName) {
+				return err
+			}
+			return nil
 		},
 	}
 }
@@ -79,9 +81,11 @@ func (d *restDaemon) Start(s service.Service) error {
 	if d.Logger != nil {
 		sender, err := d.Logger.Configure()
 		if err != nil {
-			return errors.Wrap(err, "could not set up logging")
+			return errors.Wrap(err, "could not configure logging")
 		}
-		grip.SetSender(sender)
+		if err := grip.SetSender(sender); err != nil {
+			return errors.Wrap(err, "could not set logging sender")
+		}
 	}
 
 	d.exit = make(chan struct{})

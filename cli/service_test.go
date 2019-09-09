@@ -78,7 +78,7 @@ func TestDaemon(t *testing.T) {
 		},
 	} {
 		t.Run(daemonAndClientName, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 			defer cancel()
 
 			manager, err := jasper.NewLocalManager(false)

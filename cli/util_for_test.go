@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/testutil"
@@ -17,8 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 )
-
-const testTimeout = 2 * time.Second
 
 // buildDir gets the Jasper build directory.
 func buildDir(t *testing.T) string {
