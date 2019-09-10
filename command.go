@@ -736,15 +736,3 @@ func BuildCommandGroup(id string, pri level.Priority, cmds [][]string, dir strin
 func BuildRemoteCommandGroup(id string, pri level.Priority, host string, cmds [][]string, dir string) *Command {
 	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir)
 }
-
-// BuildParallelCommandGroup runs the group of sub-commands in
-// parallel given the configuration of arguments.
-func BuildParallelCommandGroup(id string, pri level.Priority, cmds [][]string, dir string, env map[string]string) *Command {
-	return NewCommand().ID(id).Priority(pri).Extend(cmds).Directory(dir).Environment(env)
-}
-
-// BuildParallelRemoteCommandGroup runs the group of sub-commands
-// remotely in parallel given the configuration of arguments.
-func BuildParallelRemoteCommandGroup(id string, pri level.Priority, host string, cmds [][]string, dir string) *Command {
-	return NewCommand().ID(id).Priority(pri).Host(host).Extend(cmds).Directory(dir)
-}
