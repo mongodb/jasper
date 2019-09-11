@@ -101,6 +101,29 @@ func TestCommandImplementation(t *testing.T) {
 							assert.Error(t, err)
 							assert.True(t, strings.Contains(err.Error(), "exit status"))
 						},
+						"WaitErrorsIfNeverStarted": func(ctx context.Context, t *testing.T, cmd Command) {
+							_, err := cmd.Wait(ctx)
+							assert.Error(t, err)
+						},
+						"WaitErrorsIfProcessErrors": func(ctx context.Context, t *testing.T, cmd Command) {
+							cmd.Append("false")
+							assert.Error(t, runFunc(&cmd, ctx))
+							exitCode, err := cmd.Wait(ctx)
+							assert.Error(t, err)
+							assert.NotZero(t, exitCode)
+						},
+						"WaitOnBackgroundRunWaitsForProcessCompletion": func(ctx context.Context, t *testing.T, cmd Command) {
+							cmd.Append("sleep 1", "sleep 1").Background(true)
+							require.NoError(t, runFunc(&cmd, ctx))
+							exitCode, err := cmd.Wait(ctx)
+							assert.NoError(t, err)
+							assert.Zero(t, exitCode)
+
+							for _, proc := range cmd.procs {
+								assert.True(t, proc.Info(ctx).Complete)
+								assert.True(t, proc.Info(ctx).Successful)
+							}
+						},
 						"SudoFunctions": func(ctx context.Context, t *testing.T, cmd Command) {
 							user := "user"
 							sudoUser := "root"
