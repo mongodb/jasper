@@ -1,7 +1,6 @@
 package jasper
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -33,7 +32,7 @@ type Command struct {
 type CommandOptions struct {
 	ID              string         `json:"id,omitempty"`
 	Commands        [][]string     `json:"commands,omitempty"`
-	ProcOptions     options.Create `json:"create_opts,omitempty"`
+	ProcOptions     options.Create `json:"proc_opts,omitempty"`
 	Remote          RemoteOptions  `json:"remote_options,omitempty"`
 	ContinueOnError bool           `json:"continue_on_error,omitempty"`
 	IgnoreError     bool           `json:"ignore_error,omitempty"`
@@ -698,30 +697,15 @@ func (c *Command) getCreateOpts(ctx context.Context) ([]*options.Create, error) 
 
 func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error {
 	msg := message.Fields{
-		"id":   c.opts.ID,
-		"cmd":  strings.Join(opts.Args, " "),
-		"idx":  idx,
-		"len":  len(c.opts.Commands),
-		"bkg":  c.opts.RunBackground,
-		"tags": c.opts.ProcOptions.Tags,
+		"id":         c.opts.ID,
+		"cmd":        strings.Join(opts.Args, " "),
+		"index":      idx,
+		"len":        len(c.opts.Commands),
+		"background": c.opts.RunBackground,
+		"tags":       c.opts.ProcOptions.Tags,
 	}
 
-	var err error
-	var out bytes.Buffer
-	addOutOp := func(msg message.Fields) message.Fields { return msg }
-	if opts.Output.Output == nil || opts.Output.Error == nil {
-		if opts.Output.Output == nil {
-			opts.Output.Output = &out
-		}
-		if opts.Output.Error == nil {
-			opts.Output.Error = &out
-		}
-		addOutOp = func(msg message.Fields) message.Fields {
-			msg["out"] = out.String()
-			return msg
-		}
-	}
-
+	writeOutput := getMsgOutput(opts.Output)
 	proc, err := c.opts.MakeProc(ctx, opts)
 	if err != nil {
 		return errors.Wrap(err, "problem starting command")
@@ -735,10 +719,50 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 			waitCatcher.Add(errors.Wrapf(err, "error waiting on process '%s'", proc.ID()))
 		}
 		msg["err"] = waitCatcher.Resolve()
+		grip.Log(c.opts.Priority, writeOutput(msg))
 	}
-	grip.Log(c.opts.Priority, addOutOp(msg))
 
 	return errors.WithStack(err)
+}
+
+func getMsgOutput(opts options.Output) func(msg message.Fields) message.Fields {
+	noOutput := func(msg message.Fields) message.Fields { return msg }
+
+	if opts.Output != nil && opts.Error != nil {
+		return noOutput
+	}
+
+	logger := NewInMemoryLogger(1000)
+	sender, err := logger.Configure()
+	if err != nil {
+		return func(msg message.Fields) message.Fields {
+			msg["log_err"] = errors.Wrap(err, "could not set up in-memory sender for capturing output")
+			return msg
+		}
+	}
+
+	writer := send.NewWriterSender(sender)
+	if opts.Output == nil {
+		opts.Output = writer
+	}
+	if opts.Error == nil {
+		opts.Error = writer
+	}
+
+	return func(msg message.Fields) message.Fields {
+		inMemorySender, ok := sender.(*send.InMemorySender)
+		if !ok {
+			msg["log_err"] = err
+			return msg
+		}
+		logs, err := inMemorySender.GetString()
+		if err != nil {
+			msg["log_err"] = err
+			return msg
+		}
+		msg["output"] = strings.Join(logs, "\n")
+		return msg
+	}
 }
 
 // Wait returns the exit code and error waiting for the underlying process to

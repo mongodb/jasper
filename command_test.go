@@ -65,7 +65,6 @@ func verifyCommandAndGetOutput(ctx context.Context, t *testing.T, cmd *Command, 
 
 func checkOutput(t *testing.T, exists bool, output string, expectedOutputs ...string) {
 	for _, expected := range expectedOutputs {
-		// TODO: Maybe don't try to be so cheeky with an XOR...
 		assert.True(t, exists == strings.Contains(output, expected), "out='%s' and expected='%s'", output, expected)
 	}
 }
@@ -325,7 +324,7 @@ func TestCommandImplementation(t *testing.T) {
 								},
 							} {
 								t.Run(subName, func(t *testing.T) {
-									cmd.Extend([][]string{
+									cmd = *NewCommand().ProcConstructor(makep).Extend([][]string{
 										[]string{echo, arg1},
 										[]string{echo, arg2},
 										[]string{ls, arg3},
@@ -365,7 +364,7 @@ func TestCommandImplementation(t *testing.T) {
 								},
 							} {
 								t.Run(subName, func(t *testing.T) {
-									cmd.Extend([][]string{
+									cmd = *NewCommand().ProcConstructor(makep).Extend([][]string{
 										[]string{echo, arg1},
 										[]string{echo, arg2},
 										[]string{ls, arg3},
