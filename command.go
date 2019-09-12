@@ -31,7 +31,7 @@ type Command struct {
 // user.
 type CommandOptions struct {
 	ID              string         `json:"id,omitempty"`
-	Commands        [][]string     `json:"commands,omitempty"`
+	Commands        [][]string     `json:"commands"`
 	ProcOptions     options.Create `json:"proc_opts,omitempty"`
 	Remote          RemoteOptions  `json:"remote_options,omitempty"`
 	ContinueOnError bool           `json:"continue_on_error,omitempty"`

@@ -87,8 +87,11 @@ func managerCreateCommand() cli.Command {
 					Background(opts.RunBackground).
 					ContinueOnError(opts.ContinueOnError).
 					IgnoreError(opts.IgnoreError).
-					Sudo(opts.Sudo).SudoAs(opts.SudoUser).
+					Sudo(opts.Sudo).
 					ApplyFromOpts(&opts.ProcOptions)
+				if opts.SudoUser != "" {
+					cmd.SudoAs(opts.SudoUser)
+				}
 				if level.IsValidPriority(opts.Priority) {
 					cmd = cmd.Priority(opts.Priority)
 				}

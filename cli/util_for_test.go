@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
@@ -99,7 +98,6 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 // execCLICommandInputOutput runs the CLI command with the given input to stdin
 // and writes the result from stdout to output.
 func execCLICommandInputOutput(t *testing.T, c *cli.Context, cmd cli.Command, input []byte, output interface{}) error {
-	grip.Infof("input: %s", input)
 	return withMockStdin(t, string(input), func(*os.File) error {
 		return execCLICommandOutput(t, c, cmd, output)
 	})
