@@ -7,8 +7,8 @@ import (
 	"github.com/mongodb/jasper/options"
 )
 
-func YesCreateOpts(timeout time.Duration) options.Create {
-	return options.Create{Args: []string{"yes"}, Timeout: timeout}
+func YesCreateOpts(timeout time.Duration) *options.Create {
+	return &options.Create{Args: []string{"yes"}, Timeout: timeout}
 }
 
 func TrueCreateOpts() *options.Create {

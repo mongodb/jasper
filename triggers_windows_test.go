@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,7 +43,7 @@ func TestCleanTerminationSignalTrigger(t *testing.T) {
 					assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
 				},
 				"CleanTerminationFailsForExitedProcess": func(ctx context.Context, opts *options.Create, makep ProcessConstructor) {
-					opts = trueCreateOpts()
+					opts = testutil.TrueCreateOpts()
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 
@@ -58,8 +59,7 @@ func TestCleanTerminationSignalTrigger(t *testing.T) {
 					ctx, cancel := context.WithCancel(context.Background())
 					defer cancel()
 
-					opts := yesCreateOpts(0)
-					testCase(ctx, &opts, makeProc)
+					testCase(ctx, testutil.YesCreateOpts(0), makeProc)
 				})
 			}
 		})
