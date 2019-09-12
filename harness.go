@@ -30,18 +30,18 @@ const (
 	minIterations    = one
 )
 
-func yesCreateOpts(timeout time.Duration) CreateOptions {
-	return CreateOptions{Args: []string{"yes"}, Timeout: timeout}
+func yesCreateOpts(timeout time.Duration) options.Create {
+	return options.Create{Args: []string{"yes"}, Timeout: timeout}
 }
 
-func procMap() map[string]func(context.Context, *CreateOptions) (Process, error) {
-	return map[string]func(context.Context, *CreateOptions) (Process, error){
+func procMap() map[string]func(context.Context, *options.Create) (Process, error) {
+	return map[string]func(context.Context, *options.Create) (Process, error){
 		"Basic":    newBasicProcess,
 		"Blocking": newBlockingProcess,
 	}
 }
 
-func runIteration(ctx context.Context, makeProc func(context.Context, *CreateOptions) (Process, error), opts *CreateOptions) error {
+func runIteration(ctx context.Context, makeProc func(context.Context, *options.Create) (Process, error), opts *options.Create) error {
 	proc, err := makeProc(ctx, opts)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func runIteration(ctx context.Context, makeProc func(context.Context, *CreateOpt
 	return nil
 }
 
-func makeCreateOpts(timeout time.Duration, logger options.Logger) *CreateOptions {
+func makeCreateOpts(timeout time.Duration, logger options.Logger) *options.Create {
 	opts := yesCreateOpts(timeout)
 	opts.Output.Loggers = []options.Logger{logger}
 	return &opts

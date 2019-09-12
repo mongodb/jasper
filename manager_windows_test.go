@@ -99,8 +99,7 @@ func TestBasicManagerWithTrackedProcesses(t *testing.T) {
 					manager := makeManager(tctx, t)
 					tracker, ok := manager.tracker.(*windowsProcessTracker)
 					require.True(t, ok)
-					opts := yesCreateOpts(0)
-					testCase(tctx, t, manager, tracker, &opts)
+					testCase(tctx, t, manager, tracker, testutil.YesCreateOpts(0))
 				})
 			}
 		})

@@ -85,9 +85,9 @@ type Process interface {
 	// options and return the new, "respawned" process.
 	//
 	// However, it is not guaranteed to read the same bytes from
-	// (CreateOptions).StandardInput as the original process; if
+	// (options.Create).StandardInput as the original process; if
 	// standard input must be duplicated,
-	// (CreateOptions).StandardInputBytes should be set.
+	// (options.Create).StandardInputBytes should be set.
 	Respawn(context.Context) (Process, error)
 
 	// RegisterSignalTrigger associates triggers with a process,
@@ -114,7 +114,7 @@ type Process interface {
 }
 
 // ProcessConstructor is a function type that, given a context.Context and a
-// CreateOptions struct, returns a Process and an error.
+// options.Create struct, returns a Process and an error.
 type ProcessConstructor func(context.Context, *options.Create) (Process, error)
 
 // ProcessInfo reports on the current state of a process. It is always

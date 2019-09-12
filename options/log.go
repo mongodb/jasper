@@ -47,9 +47,9 @@ type LogFormat string
 
 const (
 	LogFormatPlain   LogFormat = "plain"   // nolint
-	LogFormatDefault           = "default" // nolint
-	LogFormatJSON              = "json"    // nolint
-	LogFormatInvalid           = "invalid" // nolint
+	LogFormatDefault LogFormat = "default" // nolint
+	LogFormatJSON    LogFormat = "json"    // nolint
+	LogFormatInvalid LogFormat = "invalid" // nolint
 )
 
 // Validate ensures that the LogFormat is valid.
