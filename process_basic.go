@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
@@ -18,7 +19,7 @@ type basicProcess struct {
 	cmd            *exec.Cmd
 	err            error
 	id             string
-	opts           CreateOptions
+	opts           options.Create
 	tags           map[string]struct{}
 	triggers       ProcessTriggerSequence
 	signalTriggers SignalTriggerSequence
@@ -26,7 +27,7 @@ type basicProcess struct {
 	sync.RWMutex
 }
 
-func newBasicProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
+func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
 

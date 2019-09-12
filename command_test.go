@@ -13,6 +13,7 @@ import (
 
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,7 +66,7 @@ func verifyCommandAndGetOutput(ctx context.Context, t *testing.T, cmd *Command, 
 func checkOutput(t *testing.T, exists bool, output string, expectedOutputs ...string) {
 	for _, expected := range expectedOutputs {
 		// TODO: Maybe don't try to be so cheeky with an XOR...
-		assert.True(t, exists == strings.Contains(output, expected))
+		assert.True(t, exists == strings.Contains(output, expected), "out='%s' and expected='%s'", output, expected)
 	}
 }
 
@@ -387,7 +388,7 @@ func TestCommandImplementation(t *testing.T) {
 							assert.Len(t, cmd.GetProcIDs(), len(subCmds))
 						},
 						"ApplyFromOptsUpdatesCmdCorrectly": func(ctx context.Context, t *testing.T, cmd Command) {
-							opts := &CreateOptions{
+							opts := &options.Create{
 								WorkingDirectory: cwd,
 							}
 							cmd.ApplyFromOpts(opts).Add([]string{ls, cwd})
@@ -395,7 +396,7 @@ func TestCommandImplementation(t *testing.T) {
 							checkOutput(t, true, output, "makefile")
 						},
 						"SetOutputOptions": func(ctx context.Context, t *testing.T, cmd Command) {
-							opts := OutputOptions{
+							opts := options.Output{
 								SendOutputToError: true,
 							}
 
@@ -410,7 +411,7 @@ func TestCommandImplementation(t *testing.T) {
 							require.Len(t, genOpts, 1)
 							assert.Equal(t, "bar", genOpts[0].WorkingDirectory)
 
-							opts := &CreateOptions{WorkingDirectory: "foo"}
+							opts := &options.Create{WorkingDirectory: "foo"}
 							_ = cmd.ApplyFromOpts(opts)
 							genOpts, err = cmd.getCreateOpts(ctx)
 							require.NoError(t, err)
@@ -418,7 +419,7 @@ func TestCommandImplementation(t *testing.T) {
 							assert.Equal(t, opts.WorkingDirectory, genOpts[0].WorkingDirectory)
 						},
 						"CreateOptionsAppliedInGetCreateOptionsForLocalCommand": func(ctx context.Context, t *testing.T, cmd Command) {
-							opts := &CreateOptions{
+							opts := &options.Create{
 								WorkingDirectory: "foo",
 								Environment:      map[string]string{"foo": "bar"},
 							}
@@ -452,7 +453,7 @@ func TestCommandImplementation(t *testing.T) {
 							assert.True(t, setsDir)
 						},
 						"EnvironmentIsSetInRemoteCommand": func(ctx context.Context, t *testing.T, cmd Command) {
-							opts := &CreateOptions{
+							opts := &options.Create{
 								Environment: map[string]string{"foo": "bar"},
 							}
 							args := []string{echo, arg1}
@@ -465,7 +466,7 @@ func TestCommandImplementation(t *testing.T) {
 							// set, not the local command.
 							assert.Empty(t, genOpts[0].Environment)
 							setsEnv := false
-							envSlice := opts.getEnvSlice()
+							envSlice := opts.ResolveEnvironment()
 							for _, args := range genOpts[0].Args {
 								for _, envVarAndValue := range envSlice {
 									if !strings.Contains(args, envVarAndValue) {

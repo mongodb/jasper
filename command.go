@@ -15,6 +15,7 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/grip/send"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +26,7 @@ import (
 type Command struct {
 	continueOnError bool
 	ignoreError     bool
-	opts            *CreateOptions
+	opts            *options.Create
 	prerequisite    func() bool
 	priority        level.Priority
 	runBackground   bool
@@ -51,7 +52,7 @@ func (c *Command) sudoCmd() []string {
 	return sudoCmd
 }
 
-func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*CreateOptions, error) {
+func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*options.Create, error) {
 	opts := c.opts.Copy()
 	opts.WorkingDirectory = ""
 	opts.Environment = nil
@@ -62,7 +63,7 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*Creat
 		remoteCmd += fmt.Sprintf("cd '%s' && ", c.opts.WorkingDirectory)
 	}
 
-	if env := c.opts.getEnvSlice(); len(env) != 0 {
+	if env := c.opts.ResolveEnvironment(); len(env) != 0 {
 		remoteCmd += strings.Join(env, " ") + " "
 	}
 
@@ -96,7 +97,7 @@ func splitCmdToArgs(cmd string) []string {
 // New blank Commands will use basicProcess as their default Process for
 // executing sub-commands unless it is changed via ProcConstructor().
 func NewCommand() *Command {
-	return &Command{opts: &CreateOptions{}, makep: newBasicProcess}
+	return &Command{opts: &options.Create{}, makep: newBasicProcess}
 }
 
 // ProcConstructor returns a blank Command that will use the process created
@@ -117,29 +118,29 @@ func (c *Command) GetProcIDs() []string {
 	return ids
 }
 
-// ApplyFromOpts uses the CreateOptions to configure the Command. If this is a
+// ApplyFromOpts uses the options.Create to configure the Command. If this is a
 // remote command (i.e. host has been set), the WorkingDirectory and Environment
 // will apply to the command being run on remote.
-// If Args is set on the CreateOptions, it will be ignored; the Args can be
+// If Args is set on the options.Create, it will be ignored; the Args can be
 // added using Add, Append, AppendArgs, or Extend.
 // This overwrites options that were previously set in the following functions:
 // AddEnv, Environment, RedirectErrorToOutput, RedirectOutputToError,
 // SetCombinedSender, SetErrorSender, SetErrorWriter, SetOutputOptions,
 // SetOutputSender, SetOutputWriter, SuppressStandardError, and
 // SuppressStandardOutput.
-func (c *Command) ApplyFromOpts(opts *CreateOptions) *Command { c.opts = opts; return c }
+func (c *Command) ApplyFromOpts(opts *options.Create) *Command { c.opts = opts; return c }
 
 // SetOutputOptions sets the output options for a command.
-func (c *Command) SetOutputOptions(opts OutputOptions) *Command { c.opts.Output = opts; return c }
+func (c *Command) SetOutputOptions(opts options.Output) *Command { c.opts.Output = opts; return c }
 
 // String returns a stringified representation.
 func (c *Command) String() string {
 	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.id, c.remote.hostString(), c.getCmd())
 }
 
-// Export returns all of the CreateOptions that will be used to spawn the
+// Export returns all of the options.Create that will be used to spawn the
 // processes that run all subcommands.
-func (c *Command) Export(ctx context.Context) ([]*CreateOptions, error) {
+func (c *Command) Export(ctx context.Context) ([]*options.Create, error) {
 	opts, err := c.getCreateOpts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem getting create options")
@@ -209,18 +210,18 @@ func (c *Command) SuppressStandardError(v bool) *Command { c.opts.Output.Suppres
 
 // SetLoggers sets the logging output on this command to the specified
 // slice. This removes any loggers previously configured.
-func (c *Command) SetLoggers(l []Logger) *Command { c.opts.Output.Loggers = l; return c }
+func (c *Command) SetLoggers(l []options.Logger) *Command { c.opts.Output.Loggers = l; return c }
 
 // AppendLoggers adds one or more loggers to the existing configured
 // loggers in the command.
-func (c *Command) AppendLoggers(l ...Logger) *Command {
+func (c *Command) AppendLoggers(l ...options.Logger) *Command {
 	c.opts.Output.Loggers = append(c.opts.Output.Loggers, l...)
 	return c
 }
 
 // ExtendLoggers takes the existing slice of loggers and adds that to any
 // existing configuration.
-func (c *Command) ExtendLoggers(l []Logger) *Command {
+func (c *Command) ExtendLoggers(l []options.Logger) *Command {
 	c.opts.Output.Loggers = append(c.opts.Output.Loggers, l...)
 	return c
 }
@@ -323,7 +324,7 @@ func (c *Command) Run(ctx context.Context) error {
 	c.finalizeWriters()
 	catcher := grip.NewBasicCatcher()
 
-	var opts []*CreateOptions
+	var opts []*options.Create
 	opts, err := c.getCreateOpts(ctx)
 	if err != nil {
 		catcher.Add(err)
@@ -364,7 +365,6 @@ func (c *Command) RunParallel(ctx context.Context) error {
 		splitCmd := *c
 		optsCopy := *(c.opts)
 		splitCmd.opts = &optsCopy
-		splitCmd.opts.closers = []func() error{}
 		splitCmd.cmds = [][]string{cmd}
 		splitCmd.procs = []Process{}
 		parallelCmds[idx] = splitCmd
@@ -436,7 +436,7 @@ func (c *Command) SetInputBytes(b []byte) *Command {
 // stderr.
 func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.RegisterCloser(writer.Close)
 	c.opts.Output.Error = writer
 	return c
 }
@@ -445,7 +445,7 @@ func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 // stdout.
 func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.RegisterCloser(writer.Close)
 	c.opts.Output.Output = writer
 	return c
 }
@@ -454,7 +454,7 @@ func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 // SetOutputSender().
 func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.RegisterCloser(writer.Close)
 	c.opts.Output.Error = writer
 	c.opts.Output.Output = writer
 	return c
@@ -463,7 +463,7 @@ func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 // SetErrorWriter sets a Writer to be used by this Command for its output to
 // stderr.
 func (c *Command) SetErrorWriter(writer io.WriteCloser) *Command {
-	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.RegisterCloser(writer.Close)
 	c.opts.Output.Error = writer
 	return c
 }
@@ -471,7 +471,7 @@ func (c *Command) SetErrorWriter(writer io.WriteCloser) *Command {
 // SetOutputWriter sets a Writer to be used by this Command for its output to
 // stdout.
 func (c *Command) SetOutputWriter(writer io.WriteCloser) *Command {
-	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.RegisterCloser(writer.Close)
 	c.opts.Output.Output = writer
 	return c
 }
@@ -479,7 +479,7 @@ func (c *Command) SetOutputWriter(writer io.WriteCloser) *Command {
 // SetCombinedWriter is the combination of SetErrorWriter() and
 // SetOutputWriter().
 func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
-	c.opts.closers = append(c.opts.closers, writer.Close)
+	c.opts.RegisterCloser(writer.Close)
 	c.opts.Output.Error = writer
 	c.opts.Output.Output = writer
 	return c
@@ -564,7 +564,7 @@ func (c *Command) finalizeWriters() {
 }
 
 func (c *Command) getCmd() string {
-	env := strings.Join(c.opts.getEnvSlice(), " ")
+	env := strings.Join(c.opts.ResolveEnvironment(), " ")
 	out := []string{}
 	for _, cmd := range c.cmds {
 		if c.sudo {
@@ -580,7 +580,7 @@ func (c *Command) getCmd() string {
 	return strings.Join(out, "\n")
 }
 
-func (c *Command) getCreateOpt(ctx context.Context, args []string) (*CreateOptions, error) {
+func (c *Command) getCreateOpt(ctx context.Context, args []string) (*options.Create, error) {
 	opts := c.opts.Copy()
 	switch len(args) {
 	case 0:
@@ -605,8 +605,8 @@ func (c *Command) getCreateOpt(ctx context.Context, args []string) (*CreateOptio
 	return opts, nil
 }
 
-func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
-	out := []*CreateOptions{}
+func (c *Command) getCreateOpts(ctx context.Context) ([]*options.Create, error) {
+	out := []*options.Create{}
 	catcher := grip.NewBasicCatcher()
 	if c.remote.Host != "" {
 		for _, args := range c.cmds {
@@ -636,7 +636,7 @@ func (c *Command) getCreateOpts(ctx context.Context) ([]*CreateOptions, error) {
 	return out, nil
 }
 
-func (c *Command) exec(ctx context.Context, opts *CreateOptions, idx int) error {
+func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error {
 	msg := message.Fields{
 		"id":   c.id,
 		"cmd":  strings.Join(opts.Args, " "),

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/mongodb/jasper/testutil/jasperutil"
 	"github.com/stretchr/testify/assert"
@@ -72,8 +73,8 @@ func TestCLIRemote(t *testing.T) {
 					assert.False(t, resp.Successful())
 				},
 				"GetLogStreamSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					opts := jasperutil.TrueCreateOpts()
-					opts.Output.Loggers = []jasper.Logger{jasper.NewInMemoryLogger(10)}
+					opts := testutil.TrueCreateOpts()
+					opts.Output.Loggers = []options.Logger{jasper.NewInMemoryLogger(10)}
 					createInput, err := json.Marshal(opts)
 					require.NoError(t, err)
 					createResp := &InfoResponse{}

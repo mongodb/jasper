@@ -13,13 +13,14 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
 type blockingProcess struct {
 	id       string
-	opts     CreateOptions
+	opts     options.Create
 	ops      chan func(*exec.Cmd)
 	complete chan struct{}
 	err      error
@@ -31,7 +32,7 @@ type blockingProcess struct {
 	info           ProcessInfo
 }
 
-func newBlockingProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
+func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	id := uuid.Must(uuid.NewV4()).String()
 	opts.AddEnvVar(EnvironID, id)
 

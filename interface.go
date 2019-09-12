@@ -4,6 +4,8 @@ import (
 	"context"
 	"syscall"
 	"time"
+
+	"github.com/mongodb/jasper/options"
 )
 
 const (
@@ -28,7 +30,7 @@ const (
 // of this interface.
 type Manager interface {
 	ID() string
-	CreateProcess(context.Context, *CreateOptions) (Process, error)
+	CreateProcess(context.Context, *options.Create) (Process, error)
 	CreateCommand(context.Context) *Command
 	Register(context.Context, Process) error
 
@@ -113,19 +115,19 @@ type Process interface {
 
 // ProcessConstructor is a function type that, given a context.Context and a
 // CreateOptions struct, returns a Process and an error.
-type ProcessConstructor func(context.Context, *CreateOptions) (Process, error)
+type ProcessConstructor func(context.Context, *options.Create) (Process, error)
 
 // ProcessInfo reports on the current state of a process. It is always
 // returned and passed by value, and reflects the state of the process
 // when it was created.
 type ProcessInfo struct {
-	ID         string        `json:"id"`
-	Host       string        `json:"host"`
-	PID        int           `json:"pid"`
-	ExitCode   int           `json:"exit_code"`
-	IsRunning  bool          `json:"is_running"`
-	Successful bool          `json:"successful"`
-	Complete   bool          `json:"complete"`
-	Timeout    bool          `json:"timeout"`
-	Options    CreateOptions `json:"options"`
+	ID         string         `json:"id"`
+	Host       string         `json:"host"`
+	PID        int            `json:"pid"`
+	ExitCode   int            `json:"exit_code"`
+	IsRunning  bool           `json:"is_running"`
+	Successful bool           `json:"successful"`
+	Complete   bool           `json:"complete"`
+	Timeout    bool           `json:"timeout"`
+	Options    options.Create `json:"options"`
 }

@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,7 +125,7 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					require.NoError(t, tracker.Add(proc.Info(ctx)))
 					require.NoError(t, tracker.Cleanup())
 
-					opts := yesCreateOpts(0)
+					opts := testutil.YesCreateOpts(0)
 					newProc, err := makeProc(ctx, &opts)
 					require.NoError(t, err)
 
@@ -139,7 +140,7 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 
-					opts := yesCreateOpts(testutil.TestTimeout)
+					opts := testutil.YesCreateOpts(testutil.TestTimeout)
 					proc, err := makeProc(ctx, &opts)
 					require.NoError(t, err)
 
@@ -166,8 +167,8 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 		"Basic":    newBasicProcess,
 	} {
 		t.Run(procName, func(t *testing.T) {
-			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string){
-				"CleanupFindsProcessesByEnvironmentVariable": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
+			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *options.Create, envVarName string, envVarValue string){
+				"CleanupFindsProcessesByEnvironmentVariable": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *options.Create, envVarName string, envVarValue string) {
 					opts.AddEnvVar(envVarName, envVarValue)
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
@@ -189,7 +190,7 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 						assert.Fail(t, "context timed out before process was complete")
 					}
 				},
-				"CleanupIgnoresAddedProcessesWithoutEnvironmentVariable": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *CreateOptions, envVarName string, envVarValue string) {
+				"CleanupIgnoresAddedProcessesWithoutEnvironmentVariable": func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *options.Create, envVarName string, envVarValue string) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 					_, ok := proc.Info(ctx).Options.Environment[envVarName]
@@ -210,7 +211,7 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 
 					envVarValue := "bar"
 
-					opts := yesCreateOpts(testutil.TestTimeout)
+					opts := testutil.YesCreateOpts(testutil.TestTimeout)
 
 					tracker, err := NewProcessTracker(envVarValue)
 					require.NoError(t, err)
@@ -256,7 +257,7 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(context.Context, *testing.T, *basicProcessManager){
 				"CreateProcessSetsManagerEnvironmentVariables": func(ctx context.Context, t *testing.T, manager *basicProcessManager) {
-					opts := yesCreateOpts(testutil.ManagerTestTimeout)
+					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
 					proc, err := manager.CreateProcess(ctx, &opts)
 					require.NoError(t, err)
 

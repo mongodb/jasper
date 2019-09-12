@@ -9,6 +9,7 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	internal "github.com/mongodb/jasper/rpc/internal"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
@@ -81,7 +82,7 @@ func (c *rpcClient) ID() string {
 	return resp.Value
 }
 
-func (c *rpcClient) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (c *rpcClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	proc, err := c.client.Create(ctx, internal.ConvertCreateOptions(opts))
 	if err != nil {
 		return nil, errors.WithStack(err)

@@ -6,6 +6,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -293,12 +294,12 @@ func (in *SignalTriggerIDInput) Validate() error {
 
 // CommandInput represents CLI-specific input to create a jasper.Command.
 type CommandInput struct {
-	Commands        [][]string           `json:"commands"`
-	Background      bool                 `json:"background,omitempty"`
-	CreateOptions   jasper.CreateOptions `json:"create_options,omitempty"`
-	Priority        level.Priority       `json:"priority,omitempty"`
-	ContinueOnError bool                 `json:"continue_on_error,omitempty"`
-	IgnoreError     bool                 `json:"ignore_error,omitempty"`
+	Commands        [][]string     `json:"commands"`
+	Background      bool           `json:"background,omitempty"`
+	CreateOptions   options.Create `json:"create_options,omitempty"`
+	Priority        level.Priority `json:"priority,omitempty"`
+	ContinueOnError bool           `json:"continue_on_error,omitempty"`
+	IgnoreError     bool           `json:"ignore_error,omitempty"`
 }
 
 // Validate checks that the input to the jasper.Command is valid.

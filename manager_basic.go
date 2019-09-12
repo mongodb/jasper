@@ -6,6 +6,7 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
@@ -39,7 +40,7 @@ func (m *basicProcessManager) ID() string {
 	return m.id
 }
 
-func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *CreateOptions) (Process, error) {
+func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.AddEnvVar(ManagerEnvironID, m.id)
 
 	var (

@@ -11,6 +11,7 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
 	context "golang.org/x/net/context"
@@ -398,7 +399,7 @@ func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProces
 
 	urls := []string{}
 	for _, logger := range getProcInfoNoHang(ctx, proc).Export().Options.Output.Loggers {
-		if logger.Type == jasper.LogBuildloggerV2 || logger.Type == jasper.LogBuildloggerV3 {
+		if logger.Type == options.LogBuildloggerV2 || logger.Type == options.LogBuildloggerV3 {
 			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
 		}
 	}

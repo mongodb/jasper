@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -13,7 +14,7 @@ import (
 type Manager struct {
 	ManagerID    string
 	FailCreate   bool
-	Create       func(*jasper.CreateOptions) Process
+	Create       func(*options.Create) Process
 	CreateConfig Process
 	FailRegister bool
 	FailList     bool
@@ -39,7 +40,7 @@ func (m *Manager) ID() string {
 // invoked to create the mock Process. Otherwise, CreateConfig is used as a
 // template to create the mock Process. The new mock Process is put in Procs. If
 // FailCreate is set, it returns an error.
-func (m *Manager) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (m *Manager) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	if m.FailCreate {
 		return nil, mockFail()
 	}
