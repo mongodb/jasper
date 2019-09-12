@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/jasper/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +30,7 @@ func TestMongodShutdownEvent(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			var opts CreateOptions
+			var opts options.Create
 			dir, mongodPath := downloadMongoDB(t)
 			defer os.RemoveAll(dir)
 
