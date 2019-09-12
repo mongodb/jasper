@@ -31,6 +31,7 @@ func Manager() cli.Command {
 	return cli.Command{
 		Name: ManagerCommand,
 		Subcommands: []cli.Command{
+			managerID(),
 			managerCreateProcess(),
 			managerCreateCommand(),
 			managerGet(),
@@ -80,13 +81,14 @@ func managerCreateCommand() cli.Command {
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
-			opts := &CommandInput{}
+			opts := &jasper.CommandOptions{}
 			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				cmd := client.CreateCommand(ctx).Extend(opts.Commands).
-					Background(opts.Background).
+					Background(opts.RunBackground).
 					ContinueOnError(opts.ContinueOnError).
 					IgnoreError(opts.IgnoreError).
-					ApplyFromOpts(&opts.CreateOptions)
+					Sudo(opts.Sudo).SudoAs(opts.SudoUser).
+					ApplyFromOpts(&opts.ProcOptions)
 				if level.IsValidPriority(opts.Priority) {
 					cmd = cmd.Priority(opts.Priority)
 				}

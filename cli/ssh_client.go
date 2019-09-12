@@ -75,13 +75,22 @@ func (c *sshClient) CreateProcess(ctx context.Context, opts *options.Create) (ja
 	return newSSHProcess(c.runClientCommand, resp.Info)
 }
 
-// CreateCommand creates an in-memory command whose subcommands run over SSH.
-// However, the desired semantics would be to actually send CommandInput to the
-// Jasper CLI over SSH.
-// TODO: this can likely be fixed by serializing the command inputs, which
-// requires MAKE-841.
+// CreateCommand creates a command that logically will execute via the remote
+// CLI. Users should not use (*jasper.Command).SetRunFunc().
 func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
-	return c.manager.CreateCommand(ctx).ProcConstructor(c.CreateProcess)
+	return c.manager.CreateCommand(ctx).SetRunFunc(func(opts jasper.CommandOptions) error {
+		opts.Remote = jasper.RemoteOptions{}
+		output, err := c.runManagerCommand(ctx, CreateCommand, &opts)
+		if err != nil {
+			return errors.Wrap(err, "could not run command from given input")
+		}
+
+		if _, err := ExtractOutcomeResponse(output); err != nil {
+			return errors.WithStack(err)
+		}
+
+		return nil
+	})
 }
 
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {

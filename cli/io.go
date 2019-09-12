@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/level"
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -290,34 +288,6 @@ func (in *SignalTriggerIDInput) Validate() error {
 		return errors.Errorf("could not find signal trigger with id '%s'", in.SignalTriggerID)
 	}
 	return nil
-}
-
-// CommandInput represents CLI-specific input to create a jasper.Command.
-type CommandInput struct {
-	Commands        [][]string     `json:"commands"`
-	Background      bool           `json:"background,omitempty"`
-	CreateOptions   options.Create `json:"create_options,omitempty"`
-	Priority        level.Priority `json:"priority,omitempty"`
-	ContinueOnError bool           `json:"continue_on_error,omitempty"`
-	IgnoreError     bool           `json:"ignore_error,omitempty"`
-}
-
-// Validate checks that the input to the jasper.Command is valid.
-func (in *CommandInput) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	// The semantics of CreateOptions expects Args to be non-empty, but
-	// jasper.Command ignores (CreateOptions).Args.
-	if len(in.CreateOptions.Args) == 0 {
-		in.CreateOptions.Args = []string{""}
-	}
-	catcher.Add(in.CreateOptions.Validate())
-	if in.Priority != 0 && !level.IsValidPriority(in.Priority) {
-		catcher.Add(errors.New("priority is not in the valid range of values"))
-	}
-	if len(in.Commands) == 0 {
-		catcher.Add(errors.New("must specify at least one command"))
-	}
-	return catcher.Resolve()
 }
 
 // TagIDInput represents the CLI-specific input for a process with a given tag.

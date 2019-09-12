@@ -53,7 +53,7 @@ func TestCLIManager(t *testing.T) {
 					require.True(t, resp.Successful())
 				},
 				"CreateCommandPasses": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					input, err := json.Marshal(CommandInput{
+					input, err := json.Marshal(jasper.CommandOptions{
 						Commands: [][]string{[]string{"echo", "hello", "world"}},
 					})
 					require.NoError(t, err)

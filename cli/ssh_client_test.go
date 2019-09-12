@@ -105,6 +105,34 @@ func TestSSHClient(t *testing.T) {
 			_, err := client.CreateProcess(ctx, &opts)
 			assert.Error(t, err)
 		},
+		"RunCommandPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			inputChecker := jasper.CommandOptions{}
+
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{ManagerCommand, CreateCommand},
+				&inputChecker,
+				makeOutcomeResponse(nil),
+			)
+			cmd := []string{"echo", "foo"}
+			require.NoError(t, client.CreateCommand(ctx).Add(cmd).Run(ctx))
+
+			require.Len(t, inputChecker.Commands, 1)
+			assert.Equal(t, cmd, inputChecker.Commands[0])
+		},
+		"RunCommandFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.FailCreate = true
+			assert.Error(t, client.CreateCommand(ctx).Add([]string{"echo", "foo"}).Run(ctx))
+		},
+		"RunCommandFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{ManagerCommand, CreateCommand},
+				nil,
+				invalidResponse(),
+			)
+			assert.Error(t, client.CreateCommand(ctx).Add([]string{"echo", "foo"}).Run(ctx))
+		},
 		"RegisterFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			assert.Error(t, client.Register(ctx, &mock.Process{}))
 		},
