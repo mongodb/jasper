@@ -17,7 +17,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
-	"github.com/mongodb/jasper/testutil/jasperutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,7 +141,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Equal(t, client.ID(), info.Options.Environment[jasper.ManagerEnvironID])
 						},
 						"ListDoesNotErrorWhenEmpty": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							all, err := client.List(ctx, jasper.All)
+							all, err := client.List(ctx, options.All)
 							require.NoError(t, err)
 							assert.Len(t, all, 0)
 						},
@@ -153,28 +152,28 @@ func TestRPCClient(t *testing.T) {
 						},
 						"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 							cctx, cancel := context.WithCancel(ctx)
-							created, err := jasperutil.CreateProcs(ctx, testutil.TrueCreateOpts(), client, 10)
+							created, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							require.NoError(t, err)
 							assert.Len(t, created, 10)
 							cancel()
-							output, err := client.List(cctx, jasper.All)
+							output, err := client.List(cctx, options.All)
 							require.Error(t, err)
 							assert.Nil(t, output)
 						},
 						"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							procs, err := jasperutil.CreateProcs(ctx, testutil.SleepCreateOpts(20), client, 10)
+							procs, err := createProcs(ctx, testutil.SleepCreateOpts(20), client, 10)
 							require.NoError(t, err)
 							assert.Len(t, procs, 10)
 
-							procs, err = client.List(ctx, jasper.All)
+							procs, err = client.List(ctx, options.All)
 							require.NoError(t, err)
 							assert.Len(t, procs, 10)
 
-							procs, err = client.List(ctx, jasper.Running)
+							procs, err = client.List(ctx, options.Running)
 							require.NoError(t, err)
 							assert.Len(t, procs, 10)
 
-							procs, err = client.List(ctx, jasper.Successful)
+							procs, err = client.List(ctx, options.Successful)
 							require.NoError(t, err)
 							assert.Len(t, procs, 0)
 						},
@@ -185,7 +184,7 @@ func TestRPCClient(t *testing.T) {
 							_, err = proc.Wait(ctx)
 							require.NoError(t, err)
 
-							listOut, err := client.List(ctx, jasper.Successful)
+							listOut, err := client.List(ctx, options.Successful)
 							require.NoError(t, err)
 
 							if assert.Len(t, listOut, 1) {
@@ -240,12 +239,12 @@ func TestRPCClient(t *testing.T) {
 								t.Skip("the sleep tests don't block correctly on windows")
 							}
 
-							_, err := jasperutil.CreateProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
+							_, err := createProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
 							require.NoError(t, err)
 							assert.NoError(t, client.Close(ctx))
 						},
 						"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							_, err := jasperutil.CreateProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
+							_, err := createProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
 							require.NoError(t, err)
 
 							cctx, cancel := context.WithCancel(ctx)
@@ -256,7 +255,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Contains(t, err.Error(), "canceled")
 						},
 						"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							procs, err := jasperutil.CreateProcs(ctx, testutil.TrueCreateOpts(), client, 10)
+							procs, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							for _, p := range procs {
 								_, err := p.Wait(ctx)
 								require.NoError(t, err)
@@ -506,7 +505,7 @@ func TestRPCClient(t *testing.T) {
 								assert.NoError(t, os.RemoveAll(tmpFile.Name()))
 							}()
 
-							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Content: []byte("foo")}
+							info := options.WriteFile{Path: tmpFile.Name(), Content: []byte("foo")}
 							require.NoError(t, client.WriteFile(ctx, info))
 
 							content, err := ioutil.ReadFile(tmpFile.Name())
@@ -523,7 +522,7 @@ func TestRPCClient(t *testing.T) {
 							}()
 
 							buf := []byte("foo")
-							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
+							info := options.WriteFile{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
 							require.NoError(t, client.WriteFile(ctx, info))
 
 							content, err := ioutil.ReadFile(tmpFile.Name())
@@ -540,7 +539,7 @@ func TestRPCClient(t *testing.T) {
 							}()
 
 							const mb = 1024 * 1024
-							info := jasper.WriteFileInfo{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
+							info := options.WriteFile{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
 							require.NoError(t, client.WriteFile(ctx, info))
 
 							content, err := ioutil.ReadFile(tmpFile.Name())
@@ -549,7 +548,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Equal(t, info.Content, content)
 						},
 						"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							info := jasper.WriteFileInfo{Content: []byte("foo")}
+							info := options.WriteFile{Content: []byte("foo")}
 							assert.Error(t, client.WriteFile(ctx, info))
 						},
 						"WriteFileSucceedsWithNoContent": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
@@ -559,7 +558,7 @@ func TestRPCClient(t *testing.T) {
 								assert.NoError(t, os.RemoveAll(path))
 							}()
 
-							info := jasper.WriteFileInfo{Path: path}
+							info := options.WriteFile{Path: path}
 							require.NoError(t, client.WriteFile(ctx, info))
 
 							stat, err := os.Stat(path)

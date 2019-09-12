@@ -41,8 +41,7 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	arch := bond.MongoDBArch("x86_64")
 	release := "4.0-stable"
 
-	require.NoError(t, makeEnclosingDirectories("build"))
-	dir, err := ioutil.TempDir("build", "mongodb")
+	dir, err := ioutil.TempDir("", "mongodb")
 	require.NoError(t, err)
 
 	opts := bond.BuildOptions{

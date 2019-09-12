@@ -73,7 +73,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Equal(t, manager.ID(), info.Options.Environment[ManagerEnvironID])
 				},
 				"ListDoesNotErrorWhenEmpty": func(ctx context.Context, t *testing.T, manager Manager) {
-					all, err := manager.List(ctx, All)
+					all, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 					assert.Len(t, all, 0)
 				},
@@ -94,7 +94,7 @@ func TestManagerInterface(t *testing.T) {
 					created, err := createProcs(ctx, testutil.TrueCreateOpts(), manager, 10)
 					require.NoError(t, err)
 					assert.Len(t, created, 10)
-					output, err := manager.List(ctx, All)
+					output, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 					assert.Len(t, output, 10)
 				},
@@ -104,7 +104,7 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, err)
 					assert.Len(t, created, 10)
 					cancel()
-					output, err := manager.List(cctx, All)
+					output, err := manager.List(cctx, options.All)
 					require.Error(t, err)
 					assert.Nil(t, output)
 				},
@@ -113,11 +113,11 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, err)
 					assert.Len(t, procs, 10)
 
-					procs, err = manager.List(ctx, Running)
+					procs, err = manager.List(ctx, options.Running)
 					require.NoError(t, err)
 					assert.Len(t, procs, 10)
 
-					procs, err = manager.List(ctx, Successful)
+					procs, err = manager.List(ctx, options.Successful)
 					require.NoError(t, err)
 					assert.Len(t, procs, 0)
 				},
@@ -128,7 +128,7 @@ func TestManagerInterface(t *testing.T) {
 					_, err = proc.Wait(ctx)
 					require.NoError(t, err)
 
-					listOut, err := manager.List(ctx, Successful)
+					listOut, err := manager.List(ctx, options.Successful)
 					require.NoError(t, err)
 
 					if assert.Len(t, listOut, 1) {
@@ -141,7 +141,7 @@ func TestManagerInterface(t *testing.T) {
 					_, err = proc.Wait(ctx)
 					require.Error(t, err)
 
-					listOut, err := manager.List(ctx, Failed)
+					listOut, err := manager.List(ctx, options.Failed)
 					require.NoError(t, err)
 
 					if assert.Len(t, listOut, 1) {
@@ -275,7 +275,7 @@ func TestManagerInterface(t *testing.T) {
 					err = manager.Register(ctx, proc)
 					require.NoError(t, err)
 
-					procs, err := manager.List(ctx, All)
+					procs, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 					require.True(t, len(procs) >= 1)
 
@@ -367,14 +367,14 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, cmd.Run(ctx))
 				},
 				"RunningCommandCreatesNewProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					procList, err := manager.List(ctx, All)
+					procList, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 					originalProcCount := len(procList) // zero
 					cmd := manager.CreateCommand(ctx)
 					subCmds := [][]string{echoSubCmd, echoSubCmd, echoSubCmd}
 					cmd.Extend(subCmds)
 					require.NoError(t, cmd.Run(ctx))
-					newProcList, err := manager.List(ctx, All)
+					newProcList, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 
 					assert.Len(t, newProcList, originalProcCount+len(subCmds))
@@ -383,7 +383,7 @@ func TestManagerInterface(t *testing.T) {
 					cmd := manager.CreateCommand(ctx)
 					cmd.Extend([][]string{echoSubCmd, echoSubCmd, echoSubCmd})
 					require.NoError(t, cmd.Run(ctx))
-					newProcList, err := manager.List(ctx, All)
+					newProcList, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 
 					findIDInProcList := func(procID string) bool {

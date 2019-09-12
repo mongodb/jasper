@@ -353,7 +353,7 @@ func (in *TagInput) Validate() error {
 
 // FilterInput represents the CLI-specific input to filter processes.
 type FilterInput struct {
-	Filter jasper.Filter
+	Filter options.Filter
 }
 
 // Validate checks that the jasper.Filter is a recognized filter.
