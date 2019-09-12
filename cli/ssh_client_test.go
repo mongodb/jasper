@@ -11,6 +11,7 @@ import (
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/mongodb/jasper/testutil/jasperutil"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,7 @@ func TestSSHClient(t *testing.T) {
 
 	for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager){
 		"VerifyBaseFixtureFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			opts := jasper.CreateOptions{
+			opts := options.Create{
 				Args: []string{"foo", "bar"},
 			}
 			proc, err := client.CreateProcess(ctx, &opts)
@@ -55,7 +56,7 @@ func TestSSHClient(t *testing.T) {
 			assert.Nil(t, proc)
 		},
 		"CreateProcessPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			opts := jasper.CreateOptions{
+			opts := options.Create{
 				Args: []string{"foo", "bar"},
 			}
 			info := jasper.ProcessInfo{
@@ -64,7 +65,7 @@ func TestSSHClient(t *testing.T) {
 				Options:   opts,
 			}
 
-			inputChecker := jasper.CreateOptions{}
+			inputChecker := options.Create{}
 			baseManager.Create = makeCreateFunc(
 				t, client,
 				[]string{ManagerCommand, CreateProcessCommand},
@@ -87,7 +88,7 @@ func TestSSHClient(t *testing.T) {
 		},
 		"CreateProcessFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.FailCreate = true
-			opts := jasper.CreateOptions{Args: []string{"foo", "bar"}}
+			opts := options.Create{Args: []string{"foo", "bar"}}
 			_, err := client.CreateProcess(ctx, &opts)
 			assert.Error(t, err)
 		},
@@ -98,7 +99,7 @@ func TestSSHClient(t *testing.T) {
 				nil,
 				invalidResponse(),
 			)
-			opts := jasper.CreateOptions{
+			opts := options.Create{
 				Args: []string{"foo", "bar"},
 			}
 			_, err := client.CreateProcess(ctx, &opts)
@@ -507,8 +508,8 @@ func TestSSHClient(t *testing.T) {
 // inputChecker for verification by the caller, verifies that the
 // expectedClientSubcommand is the CLI command that is being run, and writes the
 // expectedResponse back to the user.
-func makeCreateFunc(t *testing.T, client *sshClient, expectedClientSubcommand []string, inputChecker interface{}, expectedResponse interface{}) func(*jasper.CreateOptions) mock.Process {
-	return func(opts *jasper.CreateOptions) mock.Process {
+func makeCreateFunc(t *testing.T, client *sshClient, expectedClientSubcommand []string, inputChecker interface{}, expectedResponse interface{}) func(*options.Create) mock.Process {
+	return func(opts *options.Create) mock.Process {
 		if opts.StandardInputBytes != nil && inputChecker != nil {
 			input, err := ioutil.ReadAll(bytes.NewBuffer(opts.StandardInputBytes))
 			require.NoError(t, err)

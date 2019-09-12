@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,9 +72,9 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	return dir, mongodPath
 }
 
-func setupMongods(numProcs int, mongodPath string) ([]CreateOptions, []string, error) {
+func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, error) {
 	dbPaths := make([]string, numProcs)
-	optslist := make([]CreateOptions, numProcs)
+	optslist := make([]options.Create, numProcs)
 	for i := 0; i < numProcs; i++ {
 		procName := "mongod"
 		port := testutil.GetPortNumber()
@@ -84,7 +85,7 @@ func setupMongods(numProcs int, mongodPath string) ([]CreateOptions, []string, e
 		}
 		dbPaths[i] = dbPath
 
-		opts := CreateOptions{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
+		opts := options.Create{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
 		optslist[i] = opts
 	}
 

@@ -18,6 +18,7 @@ import (
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/mongodb/jasper/testutil/jasperutil"
 	"github.com/pkg/errors"
@@ -56,12 +57,12 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, handleError(&http.Response{Body: &neverJSON{}, StatusCode: http.StatusTeapot}))
 		},
 		"EmptyCreateOpts": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := client.CreateProcess(ctx, &jasper.CreateOptions{})
+			proc, err := client.CreateProcess(ctx, &options.Create{})
 			assert.Error(t, err)
 			assert.Nil(t, proc)
 		},
 		"WithOnlyTimeoutValue": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := client.CreateProcess(ctx, &jasper.CreateOptions{Args: []string{"ls"}, TimeoutSecs: 300})
+			proc, err := client.CreateProcess(ctx, &options.Create{Args: []string{"ls"}, TimeoutSecs: 300})
 			assert.NoError(t, err)
 			assert.NotNil(t, proc)
 		},
@@ -71,7 +72,7 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, list)
 		},
 		"RegisterAlwaysErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := client.CreateProcess(ctx, &jasper.CreateOptions{Args: []string{"ls"}})
+			proc, err := client.CreateProcess(ctx, &options.Create{Args: []string{"ls"}})
 			assert.NotNil(t, proc)
 			require.NoError(t, err)
 
@@ -264,8 +265,8 @@ func TestRestService(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
 		},
 		"StandardInput": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte){
-				"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+			for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte){
+				"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 					opts.StandardInput = bytes.NewBuffer(stdin)
 
 					proc, err := client.CreateProcess(ctx, opts)
@@ -278,7 +279,7 @@ func TestRestService(t *testing.T) {
 					require.NoError(t, err)
 					assert.Empty(t, logs.Logs)
 				},
-				"BytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+				"BytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 					opts.StandardInputBytes = stdin
 
 					proc, err := client.CreateProcess(ctx, opts)
@@ -293,7 +294,7 @@ func TestRestService(t *testing.T) {
 					require.Len(t, logs.Logs, 1)
 					assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
 				},
-				"BytesCopiedByRespawnedProcess": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+				"BytesCopiedByRespawnedProcess": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 					opts.StandardInputBytes = stdin
 
 					proc, err := client.CreateProcess(ctx, opts)
@@ -322,10 +323,10 @@ func TestRestService(t *testing.T) {
 				},
 			} {
 				t.Run(subTestName, func(t *testing.T) {
-					opts := &jasper.CreateOptions{
+					opts := &options.Create{
 						Args: []string{"bash", "-s"},
-						Output: jasper.OutputOptions{
-							Loggers: []jasper.Logger{jasper.NewInMemoryLogger(1)},
+						Output: options.Output{
+							Loggers: []options.Logger{jasper.NewInMemoryLogger(1)},
 						},
 					}
 					expectedOutput := "foobar"
@@ -357,7 +358,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
 		},
 		"SignalErrorsWithInvalidSyscall": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := client.CreateProcess(ctx, jasperutil.SleepCreateOpts(10))
+			proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(10))
 			require.NoError(t, err)
 
 			assert.Error(t, proc.Signal(ctx, syscall.Signal(-1)))
@@ -377,7 +378,7 @@ func TestRestService(t *testing.T) {
 		},
 		"CreateFailPropagatesErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &mock.Manager{FailCreate: true}
-			proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+			proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 			assert.Error(t, err)
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem submitting request")
@@ -386,7 +387,7 @@ func TestRestService(t *testing.T) {
 			srv.manager = &mock.Manager{
 				CreateConfig: mock.Process{FailRegisterTrigger: true},
 			}
-			proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+			proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 			require.Error(t, err)
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem managing resources")
@@ -622,13 +623,13 @@ func TestRestService(t *testing.T) {
 		},
 		"WithInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			output := "foo"
-			opts := &jasper.CreateOptions{
+			opts := &options.Create{
 				Args: []string{"echo", output},
-				Output: jasper.OutputOptions{
-					Loggers: []jasper.Logger{
+				Output: options.Output{
+					Loggers: []options.Logger{
 						{
-							Type:    jasper.LogInMemory,
-							Options: jasper.LogOptions{InMemoryCap: 100, Format: jasper.LogFormatPlain},
+							Type:    options.LogInMemory,
+							Options: options.Log{InMemoryCap: 100, Format: options.LogFormatPlain},
 						},
 					},
 				},
@@ -667,7 +668,7 @@ func TestRestService(t *testing.T) {
 			assert.Zero(t, stream)
 		},
 		"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := &jasper.CreateOptions{Args: []string{"echo", "foo"}}
+			opts := &options.Create{Args: []string{"echo", "foo"}}
 
 			proc, err := client.CreateProcess(ctx, opts)
 			require.NoError(t, err)
@@ -754,8 +755,8 @@ func TestRestService(t *testing.T) {
 			assert.Nil(t, urls)
 		},
 		"GetBuildloggerURLsFailsWithoutBuildlogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := &jasper.CreateOptions{Args: []string{"echo", "foo"}}
-			opts.Output.Loggers = []jasper.Logger{{Type: jasper.LogDefault, Options: jasper.LogOptions{Format: jasper.LogFormatPlain}}}
+			opts := &options.Create{Args: []string{"echo", "foo"}}
+			opts.Output.Loggers = []options.Logger{{Type: options.LogDefault, Options: options.Log{Format: options.LogFormatPlain}}}
 
 			proc, err := client.CreateProcess(ctx, opts)
 			assert.NoError(t, err)
@@ -773,23 +774,23 @@ func TestRestService(t *testing.T) {
 				assert.NoError(t, os.RemoveAll(file.Name()))
 			}()
 
-			fileLogger := jasper.Logger{
-				Type: jasper.LogFile,
-				Options: jasper.LogOptions{
+			fileLogger := options.Logger{
+				Type: options.LogFile,
+				Options: options.Log{
 					FileName: file.Name(),
-					Format:   jasper.LogFormatPlain,
+					Format:   options.LogFormatPlain,
 				},
 			}
 
-			inMemoryLogger := jasper.Logger{
-				Type: jasper.LogInMemory,
-				Options: jasper.LogOptions{
-					Format:      jasper.LogFormatPlain,
+			inMemoryLogger := options.Logger{
+				Type: options.LogInMemory,
+				Options: options.Log{
+					Format:      options.LogFormatPlain,
 					InMemoryCap: 100,
 				},
 			}
 
-			opts := &jasper.CreateOptions{Output: jasper.OutputOptions{Loggers: []jasper.Logger{inMemoryLogger, fileLogger}}}
+			opts := &options.Create{Output: options.Output{Loggers: []options.Logger{inMemoryLogger, fileLogger}}}
 			opts.Args = []string{"echo", "foobar"}
 			proc, err := client.CreateProcess(ctx, opts)
 			require.NoError(t, err)
@@ -888,7 +889,7 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, handleError(resp).Error(), "no process 'foo' found")
 		},
 		"ServiceRegisterSignalTriggerIDChecksForInvalidTriggerID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := jasperutil.YesCreateOpts(0)
+			opts := testutil.YesCreateOpts(0)
 			proc, err := client.CreateProcess(ctx, &opts)
 			require.NoError(t, err)
 			assert.True(t, proc.Running(ctx))
@@ -898,7 +899,7 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, proc.Signal(ctx, syscall.SIGTERM))
 		},
 		"ServiceRegisterSignalTriggerIDPassesWithValidArgs": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := jasperutil.YesCreateOpts(0)
+			opts := testutil.YesCreateOpts(0)
 			proc, err := client.CreateProcess(ctx, &opts)
 			require.NoError(t, err)
 			assert.True(t, proc.Running(ctx))

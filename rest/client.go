@@ -15,6 +15,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	"github.com/tychoish/bond"
 )
@@ -107,7 +108,7 @@ func (c *restClient) ID() string {
 	return id
 }
 
-func (c *restClient) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (c *restClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	body, err := makeBody(opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem building request for job create")

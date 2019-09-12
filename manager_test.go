@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +65,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.NotEmpty(t, manager.ID())
 				},
 				"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := trueCreateOpts()
+					opts := testutil.TrueCreateOpts()
 					proc, err := manager.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					info := proc.Info(ctx)
@@ -77,7 +78,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Len(t, all, 0)
 				},
 				"CreateSimpleProcess": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := trueCreateOpts()
+					opts := testutil.TrueCreateOpts()
 					proc, err := manager.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					assert.NotNil(t, proc)
@@ -85,12 +86,12 @@ func TestManagerInterface(t *testing.T) {
 					assert.True(t, info.IsRunning || info.Complete)
 				},
 				"CreateProcessFails": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := manager.CreateProcess(ctx, &CreateOptions{})
+					proc, err := manager.CreateProcess(ctx, &options.Create{})
 					require.Error(t, err)
 					assert.Nil(t, proc)
 				},
 				"ListAllOperations": func(ctx context.Context, t *testing.T, manager Manager) {
-					created, err := createProcs(ctx, trueCreateOpts(), manager, 10)
+					created, err := createProcs(ctx, testutil.TrueCreateOpts(), manager, 10)
 					require.NoError(t, err)
 					assert.Len(t, created, 10)
 					output, err := manager.List(ctx, All)
@@ -99,7 +100,7 @@ func TestManagerInterface(t *testing.T) {
 				},
 				"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
 					cctx, cancel := context.WithCancel(ctx)
-					created, err := createProcs(ctx, trueCreateOpts(), manager, 10)
+					created, err := createProcs(ctx, testutil.TrueCreateOpts(), manager, 10)
 					require.NoError(t, err)
 					assert.Len(t, created, 10)
 					cancel()
@@ -108,7 +109,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Nil(t, output)
 				},
 				"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, manager Manager) {
-					procs, err := createProcs(ctx, sleepCreateOpts(10), manager, 10)
+					procs, err := createProcs(ctx, testutil.SleepCreateOpts(10), manager, 10)
 					require.NoError(t, err)
 					assert.Len(t, procs, 10)
 
@@ -121,7 +122,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Len(t, procs, 0)
 				},
 				"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := manager.CreateProcess(ctx, trueCreateOpts())
+					proc, err := manager.CreateProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 
 					_, err = proc.Wait(ctx)
@@ -135,7 +136,7 @@ func TestManagerInterface(t *testing.T) {
 					}
 				},
 				"ListReturnsOneFailedCommand": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := manager.CreateProcess(ctx, falseCreateOpts())
+					proc, err := manager.CreateProcess(ctx, testutil.FalseCreateOpts())
 					require.NoError(t, err)
 					_, err = proc.Wait(ctx)
 					require.Error(t, err)
@@ -153,7 +154,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Nil(t, proc)
 				},
 				"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := manager.CreateProcess(ctx, trueCreateOpts())
+					proc, err := manager.CreateProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 
 					ret, err := manager.Get(ctx, proc.ID())
@@ -166,7 +167,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Len(t, procs, 0)
 				},
 				"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, manager Manager) {
-					_, err := manager.CreateProcess(ctx, trueCreateOpts())
+					_, err := manager.CreateProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 
 					cctx, cancel := context.WithCancel(ctx)
@@ -177,7 +178,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := manager.CreateProcess(ctx, trueCreateOpts())
+					proc, err := manager.CreateProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 
 					proc.Tag("foo")
@@ -191,7 +192,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.NoError(t, manager.Close(ctx))
 				},
 				"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
-					_, err := createProcs(ctx, sleepCreateOpts(100), manager, 10)
+					_, err := createProcs(ctx, testutil.SleepCreateOpts(100), manager, 10)
 					require.NoError(t, err)
 
 					cctx, cancel := context.WithCancel(ctx)
@@ -202,7 +203,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 				"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					procs, err := createProcs(ctx, trueCreateOpts(), manager, 10)
+					procs, err := createProcs(ctx, testutil.TrueCreateOpts(), manager, 10)
 					for _, p := range procs {
 						_, err := p.Wait(ctx)
 						require.NoError(t, err)
@@ -216,7 +217,7 @@ func TestManagerInterface(t *testing.T) {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
 
-					_, err := createProcs(ctx, sleepCreateOpts(100), manager, 10)
+					_, err := createProcs(ctx, testutil.SleepCreateOpts(100), manager, 10)
 					require.NoError(t, err)
 					assert.NoError(t, manager.Close(ctx))
 				},
@@ -225,10 +226,10 @@ func TestManagerInterface(t *testing.T) {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
 
-					opts := sleepCreateOpts(5)
+					opts := testutil.SleepCreateOpts(5)
 					count := 0
 					countIncremented := make(chan bool, 1)
-					opts.closers = append(opts.closers, func() (_ error) {
+					opts.RegisterCloser(func() (_ error) {
 						count++
 						countIncremented <- true
 						close(countIncremented)
@@ -255,7 +256,7 @@ func TestManagerInterface(t *testing.T) {
 				"RegisterProcessErrorsForCanceledContext": func(ctx context.Context, t *testing.T, manager Manager) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
-					proc, err := newBlockingProcess(ctx, trueCreateOpts())
+					proc, err := newBlockingProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 					err = manager.Register(cctx, proc)
 					require.Error(t, err)
@@ -269,7 +270,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Contains(t, err.Error(), "malformed")
 				},
 				"RegisterProcessModifiesManagerState": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := newBlockingProcess(ctx, trueCreateOpts())
+					proc, err := newBlockingProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 					err = manager.Register(ctx, proc)
 					require.NoError(t, err)
@@ -281,7 +282,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Equal(t, procs[0].ID(), proc.ID())
 				},
 				"RegisterProcessErrorsForDuplicateProcess": func(ctx context.Context, t *testing.T, manager Manager) {
-					proc, err := newBlockingProcess(ctx, trueCreateOpts())
+					proc, err := newBlockingProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 					assert.NotEmpty(t, proc)
 					err = manager.Register(ctx, proc)
@@ -290,11 +291,11 @@ func TestManagerInterface(t *testing.T) {
 					assert.Error(t, err)
 				},
 				"ManagerCallsOptionsCloseByDefault": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := &CreateOptions{}
+					opts := &options.Create{}
 					opts.Args = []string{"echo", "foobar"}
 					count := 0
 					countIncremented := make(chan bool, 1)
-					opts.closers = append(opts.closers, func() (_ error) {
+					opts.RegisterCloser(func() (_ error) {
 						count++
 						countIncremented <- true
 						close(countIncremented)
@@ -314,7 +315,7 @@ func TestManagerInterface(t *testing.T) {
 					}
 				},
 				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := trueCreateOpts()
+					opts := testutil.TrueCreateOpts()
 					proc, err := manager.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					sameProc, err := manager.Get(ctx, proc.ID())
@@ -328,7 +329,7 @@ func TestManagerInterface(t *testing.T) {
 					assert.Nil(t, nilProc)
 				},
 				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					opts := sleepCreateOpts(20)
+					opts := testutil.SleepCreateOpts(20)
 					proc, err := manager.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					manager.Clear(ctx)
@@ -338,11 +339,11 @@ func TestManagerInterface(t *testing.T) {
 					require.NoError(t, Terminate(ctx, proc)) // Clean up
 				},
 				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
-					trueOpts := trueCreateOpts()
+					trueOpts := testutil.TrueCreateOpts()
 					lsProc, err := manager.CreateProcess(ctx, trueOpts)
 					require.NoError(t, err)
 
-					sleepOpts := sleepCreateOpts(20)
+					sleepOpts := testutil.SleepCreateOpts(20)
 					sleepProc, err := manager.CreateProcess(ctx, sleepOpts)
 					require.NoError(t, err)
 
@@ -433,12 +434,12 @@ func TestTrackedManager(t *testing.T) {
 		},
 	} {
 		t.Run(managerName, func(t *testing.T) {
-			for name, test := range map[string]func(context.Context, *testing.T, *basicProcessManager, *CreateOptions){
-				"ValidateFixtureSetup": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+			for name, test := range map[string]func(context.Context, *testing.T, *basicProcessManager, *options.Create){
+				"ValidateFixtureSetup": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					assert.NotNil(t, manager.tracker)
 					assert.Len(t, manager.procs, 0)
 				},
-				"CreateProcessTracksProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"CreateProcessTracksProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					proc, err := manager.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					assert.Len(t, manager.procs, 1)
@@ -448,7 +449,7 @@ func TestTrackedManager(t *testing.T) {
 					require.Len(t, mockTracker.Infos, 1)
 					assert.Equal(t, proc.Info(ctx), mockTracker.Infos[0])
 				},
-				"CreateCommandTracksCommandAfterRun": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"CreateCommandTracksCommandAfterRun": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
 					require.NoError(t, err)
 					assert.Len(t, manager.procs, 1)
@@ -458,7 +459,7 @@ func TestTrackedManager(t *testing.T) {
 					require.Len(t, mockTracker.Infos, 1)
 					assert.NotZero(t, mockTracker.Infos[0])
 				},
-				"DoNotTrackProcessIfCreateProcessDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"DoNotTrackProcessIfCreateProcessDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					opts.Args = []string{"foo"}
 					_, err := manager.CreateProcess(ctx, opts)
 					require.Error(t, err)
@@ -468,7 +469,7 @@ func TestTrackedManager(t *testing.T) {
 					require.True(t, ok)
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					opts.Args = []string{"foo"}
 					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
 					require.Error(t, err)
@@ -478,7 +479,7 @@ func TestTrackedManager(t *testing.T) {
 					require.True(t, ok)
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
 					assert.Len(t, manager.procs, 1)
 
@@ -491,7 +492,7 @@ func TestTrackedManager(t *testing.T) {
 					assert.Len(t, mockTracker.Infos, 0)
 					require.NoError(t, manager.Close(ctx))
 				},
-				"CloseWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"CloseWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 
@@ -500,7 +501,7 @@ func TestTrackedManager(t *testing.T) {
 					require.NoError(t, manager.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *CreateOptions) {
+				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
 					assert.Len(t, manager.procs, 1)
 
@@ -519,7 +520,7 @@ func TestTrackedManager(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 					defer cancel()
-					opts := yesCreateOpts(testutil.ManagerTestTimeout)
+					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
 					test(tctx, t, makeManager(), &opts)
 				})
 			}

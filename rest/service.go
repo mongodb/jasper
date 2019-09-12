@@ -15,6 +15,7 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
 )
@@ -159,7 +160,7 @@ func (s *Service) id(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
-	opts := &jasper.CreateOptions{}
+	opts := &options.Create{}
 	if err := gimlet.GetJSON(r.Body, opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -224,7 +225,7 @@ func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
 	info := getProcInfoNoHang(ctx, proc)
 	urls := []string{}
 	for _, logger := range info.Options.Output.Loggers {
-		if logger.Type == jasper.LogBuildloggerV2 || logger.Type == jasper.LogBuildloggerV3 {
+		if logger.Type == options.LogBuildloggerV2 || logger.Type == options.LogBuildloggerV3 {
 			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
 		}
 	}

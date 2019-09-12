@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/mongodb/jasper/testutil/jasperutil"
 	"github.com/pkg/errors"
@@ -133,7 +134,7 @@ func TestRPCClient(t *testing.T) {
 							assert.NotEmpty(t, client.ID())
 						},
 						"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							opts := jasperutil.TrueCreateOpts()
+							opts := testutil.TrueCreateOpts()
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
 							info := proc.Info(ctx)
@@ -146,13 +147,13 @@ func TestRPCClient(t *testing.T) {
 							assert.Len(t, all, 0)
 						},
 						"CreateProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, &jasper.CreateOptions{})
+							proc, err := client.CreateProcess(ctx, &options.Create{})
 							require.Error(t, err)
 							assert.Nil(t, proc)
 						},
 						"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 							cctx, cancel := context.WithCancel(ctx)
-							created, err := jasperutil.CreateProcs(ctx, jasperutil.TrueCreateOpts(), client, 10)
+							created, err := jasperutil.CreateProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							require.NoError(t, err)
 							assert.Len(t, created, 10)
 							cancel()
@@ -161,7 +162,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Nil(t, output)
 						},
 						"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							procs, err := jasperutil.CreateProcs(ctx, jasperutil.SleepCreateOpts(20), client, 10)
+							procs, err := jasperutil.CreateProcs(ctx, testutil.SleepCreateOpts(20), client, 10)
 							require.NoError(t, err)
 							assert.Len(t, procs, 10)
 
@@ -178,7 +179,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Len(t, procs, 0)
 						},
 						"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
 							_, err = proc.Wait(ctx)
@@ -197,7 +198,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Nil(t, proc)
 						},
 						"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
 							ret, err := client.Get(ctx, proc.ID())
@@ -210,7 +211,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Len(t, procs, 0)
 						},
 						"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							_, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+							_, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
 							cctx, cancel := context.WithCancel(ctx)
@@ -221,7 +222,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Contains(t, err.Error(), "canceled")
 						},
 						"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
 							proc.Tag("foo")
@@ -239,12 +240,12 @@ func TestRPCClient(t *testing.T) {
 								t.Skip("the sleep tests don't block correctly on windows")
 							}
 
-							_, err := jasperutil.CreateProcs(ctx, jasperutil.SleepCreateOpts(100), client, 10)
+							_, err := jasperutil.CreateProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
 							require.NoError(t, err)
 							assert.NoError(t, client.Close(ctx))
 						},
 						"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							_, err := jasperutil.CreateProcs(ctx, jasperutil.SleepCreateOpts(100), client, 10)
+							_, err := jasperutil.CreateProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
 							require.NoError(t, err)
 
 							cctx, cancel := context.WithCancel(ctx)
@@ -255,7 +256,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Contains(t, err.Error(), "canceled")
 						},
 						"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							procs, err := jasperutil.CreateProcs(ctx, jasperutil.TrueCreateOpts(), client, 10)
+							procs, err := jasperutil.CreateProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							for _, p := range procs {
 								_, err := p.Wait(ctx)
 								require.NoError(t, err)
@@ -265,7 +266,7 @@ func TestRPCClient(t *testing.T) {
 							assert.NoError(t, client.Close(ctx))
 						},
 						"WaitingOnNonExistentProcessErrors": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 
 							_, err = proc.Wait(ctx)
 							require.NoError(t, err)
@@ -277,7 +278,7 @@ func TestRPCClient(t *testing.T) {
 							assert.True(t, strings.Contains(err.Error(), "problem finding process"))
 						},
 						"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							opts := jasperutil.TrueCreateOpts()
+							opts := testutil.TrueCreateOpts()
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
 							sameProc, err := client.Get(ctx, proc.ID())
@@ -291,7 +292,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Nil(t, nilProc)
 						},
 						"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							opts := jasperutil.SleepCreateOpts(20)
+							opts := testutil.SleepCreateOpts(20)
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
 							client.Clear(ctx)
@@ -301,11 +302,11 @@ func TestRPCClient(t *testing.T) {
 							require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up
 						},
 						"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							trueOpts := jasperutil.TrueCreateOpts()
+							trueOpts := testutil.TrueCreateOpts()
 							lsProc, err := client.CreateProcess(ctx, trueOpts)
 							require.NoError(t, err)
 
-							sleepOpts := jasperutil.SleepCreateOpts(20)
+							sleepOpts := testutil.SleepCreateOpts(20)
 							sleepProc, err := client.CreateProcess(ctx, sleepOpts)
 							require.NoError(t, err)
 
@@ -329,13 +330,13 @@ func TestRPCClient(t *testing.T) {
 
 						"WithInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 							output := "foo"
-							opts := &jasper.CreateOptions{
+							opts := &options.Create{
 								Args: []string{"echo", output},
-								Output: jasper.OutputOptions{
-									Loggers: []jasper.Logger{
-										jasper.Logger{
-											Type:    jasper.LogInMemory,
-											Options: jasper.LogOptions{InMemoryCap: 100, Format: jasper.LogFormatPlain},
+								Output: options.Output{
+									Loggers: []options.Logger{
+										{
+											Type:    options.LogInMemory,
+											Options: options.Log{InMemoryCap: 100, Format: options.LogFormatPlain},
 										},
 									},
 								},
@@ -374,7 +375,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Zero(t, stream)
 						},
 						"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							opts := &jasper.CreateOptions{Args: []string{"echo", "foo"}}
+							opts := &options.Create{Args: []string{"echo", "foo"}}
 
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
@@ -400,7 +401,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Contains(t, err.Error(), "cannot register")
 						},
 						"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, jasperutil.TrueCreateOpts())
+							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 							assert.NotNil(t, proc)
 							assert.NotZero(t, proc.ID())
@@ -411,7 +412,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Equal(t, proc.ID(), fetched.ID())
 						},
 						"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							proc, err := client.CreateProcess(ctx, jasperutil.SleepCreateOpts(100))
+							proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(100))
 							require.NoError(t, err)
 							require.NotNil(t, proc)
 							require.NotZero(t, proc.ID())
@@ -427,8 +428,8 @@ func TestRPCClient(t *testing.T) {
 							}
 						},
 						"StandardInput": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-							for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte){
-								"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+							for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte){
+								"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 									opts.StandardInput = bytes.NewBuffer(stdin)
 
 									proc, err := client.CreateProcess(ctx, opts)
@@ -441,7 +442,7 @@ func TestRPCClient(t *testing.T) {
 									require.NoError(t, err)
 									assert.Empty(t, logs.Logs)
 								},
-								"BytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+								"BytesSetsStandardInput": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 									opts.StandardInputBytes = stdin
 
 									proc, err := client.CreateProcess(ctx, opts)
@@ -456,7 +457,7 @@ func TestRPCClient(t *testing.T) {
 									require.Len(t, logs.Logs, 1)
 									assert.Equal(t, expectedOutput, strings.TrimSpace(logs.Logs[0]))
 								},
-								"BytesCopiedByRespawnedProcess": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, expectedOutput string, stdin []byte) {
+								"BytesCopiedByRespawnedProcess": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 									opts.StandardInputBytes = stdin
 
 									proc, err := client.CreateProcess(ctx, opts)
@@ -485,10 +486,10 @@ func TestRPCClient(t *testing.T) {
 								},
 							} {
 								t.Run(subTestName, func(t *testing.T) {
-									opts := &jasper.CreateOptions{
+									opts := &options.Create{
 										Args: []string{"bash", "-s"},
-										Output: jasper.OutputOptions{
-											Loggers: []jasper.Logger{jasper.NewInMemoryLogger(1)},
+										Output: options.Output{
+											Loggers: []options.Logger{jasper.NewInMemoryLogger(1)},
 										},
 									}
 									expectedOutput := "foobar"
@@ -580,7 +581,7 @@ func TestRPCClient(t *testing.T) {
 	}
 }
 
-type processConstructor func(context.Context, *jasper.CreateOptions) (jasper.Process, error)
+type processConstructor func(context.Context, *options.Create) (jasper.Process, error)
 
 func TestRPCProcess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -592,7 +593,7 @@ func TestRPCProcess(t *testing.T) {
 	} {
 		t.Run(setupMethod, func(t *testing.T) {
 			for cname, makeProc := range map[string]processConstructor{
-				"Basic": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+				"Basic": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 					mngr, err := jasper.NewLocalManager(false)
 					if err != nil {
 						return nil, errors.WithStack(err)
@@ -605,7 +606,7 @@ func TestRPCProcess(t *testing.T) {
 
 					return client.CreateProcess(ctx, opts)
 				},
-				"Blocking": func(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+				"Blocking": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 					mngr, err := jasper.NewLocalManagerBlockingProcesses(false)
 					if err != nil {
 						return nil, errors.WithStack(err)
@@ -620,31 +621,31 @@ func TestRPCProcess(t *testing.T) {
 				},
 			} {
 				t.Run(cname, func(t *testing.T) {
-					for name, testCase := range map[string]func(context.Context, *testing.T, *jasper.CreateOptions, processConstructor){
-						"WithPopulatedArgsCommandCreationPasses": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+					for name, testCase := range map[string]func(context.Context, *testing.T, *options.Create, processConstructor){
+						"WithPopulatedArgsCommandCreationPasses": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							assert.NotZero(t, opts.Args)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							assert.NotNil(t, proc)
 						},
-						"ErrorToCreateWithInvalidArgs": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"ErrorToCreateWithInvalidArgs": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							opts.Args = []string{}
 							proc, err := makep(ctx, opts)
 							require.Error(t, err)
 							assert.Nil(t, proc)
 						},
-						"WithCanceledContextProcessCreationFails": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"WithCanceledContextProcessCreationFails": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							pctx, pcancel := context.WithCancel(ctx)
 							pcancel()
 							proc, err := makep(pctx, opts)
 							require.Error(t, err)
 							assert.Nil(t, proc)
 						},
-						"CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							pctx, pcancel := context.WithTimeout(ctx, 5*time.Second)
 							defer pcancel()
 							startAt := time.Now()
-							opts = jasperutil.SleepCreateOpts(20)
+							opts = testutil.SleepCreateOpts(20)
 							proc, err := makep(pctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -653,27 +654,27 @@ func TestRPCProcess(t *testing.T) {
 							assert.False(t, proc.Info(ctx).Successful)
 							assert.True(t, time.Since(startAt) < 20*time.Second)
 						},
-						"ProcessLacksTagsByDefault": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"ProcessLacksTagsByDefault": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							tags := proc.GetTags()
 							assert.Empty(t, tags)
 						},
-						"ProcessTagsPersist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"ProcessTagsPersist": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							opts.Tags = []string{"foo"}
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							tags := proc.GetTags()
 							assert.Contains(t, tags, "foo")
 						},
-						"InfoHasMatchingID": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"InfoHasMatchingID": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							_, err = proc.Wait(ctx)
 							require.NoError(t, err)
 							assert.Equal(t, proc.ID(), proc.Info(ctx).ID)
 						},
-						"ResetTags": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"ResetTags": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							proc.Tag("foo")
@@ -681,7 +682,7 @@ func TestRPCProcess(t *testing.T) {
 							proc.ResetTags()
 							assert.Len(t, proc.GetTags(), 0)
 						},
-						"TagsAreSetLike": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"TagsAreSetLike": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 
@@ -693,7 +694,7 @@ func TestRPCProcess(t *testing.T) {
 							proc.Tag("bar")
 							assert.Len(t, proc.GetTags(), 2)
 						},
-						"CompleteIsTrueAfterWait": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"CompleteIsTrueAfterWait": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							time.Sleep(10 * time.Millisecond) // give the process time to start background machinery
@@ -701,7 +702,7 @@ func TestRPCProcess(t *testing.T) {
 							assert.NoError(t, err)
 							assert.True(t, proc.Complete(ctx))
 						},
-						"WaitReturnsWithCanceledContext": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"WaitReturnsWithCanceledContext": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							opts.Args = []string{"sleep", "10"}
 							pctx, pcancel := context.WithCancel(ctx)
 							proc, err := makep(ctx, opts)
@@ -712,31 +713,31 @@ func TestRPCProcess(t *testing.T) {
 							_, err = proc.Wait(pctx)
 							assert.Error(t, err)
 						},
-						"RegisterTriggerErrorsForNil": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"RegisterTriggerErrorsForNil": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							assert.Error(t, proc.RegisterTrigger(ctx, nil))
 						},
-						"RegisterSignalTriggerIDErrorsForExitedProcess": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"RegisterSignalTriggerIDErrorsForExitedProcess": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							_, err = proc.Wait(ctx)
 							assert.NoError(t, err)
 							assert.Error(t, proc.RegisterSignalTriggerID(ctx, jasper.CleanTerminationSignalTrigger))
 						},
-						"RegisterSignalTriggerIDFailsWithInvalidTriggerID": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							opts = jasperutil.SleepCreateOpts(3)
+						"RegisterSignalTriggerIDFailsWithInvalidTriggerID": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							opts = testutil.SleepCreateOpts(3)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							assert.Error(t, proc.RegisterSignalTriggerID(ctx, jasper.SignalTriggerID(-1)))
 						},
-						"RegisterSignalTriggerIDPassesWithValidTriggerID": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							opts = jasperutil.SleepCreateOpts(3)
+						"RegisterSignalTriggerIDPassesWithValidTriggerID": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							opts = testutil.SleepCreateOpts(3)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							assert.NoError(t, proc.RegisterSignalTriggerID(ctx, jasper.CleanTerminationSignalTrigger))
 						},
-						"WaitOnRespawnedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"WaitOnRespawnedProcessDoesNotError": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -748,7 +749,7 @@ func TestRPCProcess(t *testing.T) {
 							_, err = newProc.Wait(ctx)
 							assert.NoError(t, err)
 						},
-						"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"RespawnedProcessGivesSameResult": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -763,7 +764,7 @@ func TestRPCProcess(t *testing.T) {
 							require.NoError(t, err)
 							assert.Equal(t, procExitCode, newProc.Info(ctx).ExitCode)
 						},
-						"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"RespawningFinishedProcessIsOK": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -776,8 +777,8 @@ func TestRPCProcess(t *testing.T) {
 							require.NoError(t, err)
 							assert.True(t, newProc.Info(ctx).Successful)
 						},
-						"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							opts = jasperutil.SleepCreateOpts(2)
+						"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							opts = testutil.SleepCreateOpts(2)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -788,8 +789,8 @@ func TestRPCProcess(t *testing.T) {
 							require.NoError(t, err)
 							assert.True(t, newProc.Info(ctx).Successful)
 						},
-						"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							opts = jasperutil.SleepCreateOpts(3)
+						"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							opts = testutil.SleepCreateOpts(3)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -803,24 +804,24 @@ func TestRPCProcess(t *testing.T) {
 							require.NoError(t, err)
 							assert.True(t, proc.Complete(ctx))
 						},
-						"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							proc, err := makep(ctx, jasperutil.TrueCreateOpts())
+						"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							proc, err := makep(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 							require.NotNil(t, proc)
 							exitCode, err := proc.Wait(ctx)
 							assert.NoError(t, err)
 							assert.Equal(t, 0, exitCode)
 						},
-						"WaitGivesFailureExitCode": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							proc, err := makep(ctx, jasperutil.FalseCreateOpts())
+						"WaitGivesFailureExitCode": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							proc, err := makep(ctx, testutil.FalseCreateOpts())
 							require.NoError(t, err)
 							require.NotNil(t, proc)
 							exitCode, err := proc.Wait(ctx)
 							require.Error(t, err)
 							assert.Equal(t, 1, exitCode)
 						},
-						"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							proc, err := makep(ctx, jasperutil.SleepCreateOpts(100))
+						"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							proc, err := makep(ctx, testutil.SleepCreateOpts(100))
 							require.NoError(t, err)
 							require.NotNil(t, proc)
 							sig := syscall.SIGTERM
@@ -833,9 +834,9 @@ func TestRPCProcess(t *testing.T) {
 								assert.Equal(t, int(sig), exitCode)
 							}
 						},
-						"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							cctx, cancel := context.WithCancel(ctx)
-							proc, err := makep(ctx, jasperutil.SleepCreateOpts(100))
+							proc, err := makep(ctx, testutil.SleepCreateOpts(100))
 							require.NoError(t, err)
 							require.NotNil(t, proc)
 
@@ -855,8 +856,8 @@ func TestRPCProcess(t *testing.T) {
 							}
 							require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
 						},
-						"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							opts = jasperutil.SleepCreateOpts(100)
+						"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							opts = testutil.SleepCreateOpts(100)
 							opts.Timeout = time.Second
 							opts.TimeoutSecs = 1
 							proc, err := makep(ctx, opts)
@@ -872,7 +873,7 @@ func TestRPCProcess(t *testing.T) {
 							info := proc.Info(ctx)
 							assert.True(t, info.Timeout)
 						},
-						"CallingSignalOnDeadProcessDoesError": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"CallingSignalOnDeadProcessDoesError": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 
@@ -884,14 +885,14 @@ func TestRPCProcess(t *testing.T) {
 							assert.True(t, strings.Contains(err.Error(), "cannot signal a process that has terminated"))
 						},
 
-						// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
+						// "": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {},
 
 						///////////////////////////////////
 						//
 						// The following test cases are added
 						// specifically for the rpc case
 
-						"CompleteReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"CompleteReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 
@@ -904,7 +905,7 @@ func TestRPCProcess(t *testing.T) {
 							require.NotEqual(t, firstID, proc.ID())
 							assert.False(t, proc.Complete(ctx), proc.ID())
 						},
-						"RunningReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"RunningReturnsFalseForProcessThatDoesntExist": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 
@@ -916,7 +917,7 @@ func TestRPCProcess(t *testing.T) {
 							require.NotEqual(t, firstID, proc.ID())
 							assert.False(t, proc.Running(ctx), proc.ID())
 						},
-						"CompleteAlwaysReturnsTrueWhenProcessIsComplete": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
+						"CompleteAlwaysReturnsTrueWhenProcessIsComplete": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 
@@ -925,21 +926,21 @@ func TestRPCProcess(t *testing.T) {
 
 							assert.True(t, proc.Complete(ctx))
 						},
-						"RegisterSignalTriggerFails": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {
-							opts = jasperutil.SleepCreateOpts(3)
+						"RegisterSignalTriggerFails": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {
+							opts = testutil.SleepCreateOpts(3)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ jasper.ProcessInfo, _ syscall.Signal) bool {
 								return false
 							}))
 						},
-						// "": func(ctx context.Context, t *testing.T, opts *jasper.CreateOptions, makep processConstructor) {},
+						// "": func(ctx context.Context, t *testing.T, opts *options.Create, makep processConstructor) {},
 					} {
 						t.Run(name, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 							defer cancel()
 
-							opts := &jasper.CreateOptions{Args: []string{"ls"}}
+							opts := &options.Create{Args: []string{"ls"}}
 							testCase(tctx, t, opts, makeProc)
 						})
 					}

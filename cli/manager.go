@@ -5,6 +5,7 @@ import (
 
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -61,7 +62,7 @@ func managerCreateProcess() cli.Command {
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
-			opts := &jasper.CreateOptions{}
+			opts := &options.Create{}
 			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				proc, err := client.CreateProcess(ctx, opts)
 				if err != nil {

@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -60,7 +61,7 @@ func (c *sshClient) ID() string {
 	return resp.ID
 }
 
-func (c *sshClient) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (c *sshClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	output, err := c.runManagerCommand(ctx, CreateProcessCommand, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)

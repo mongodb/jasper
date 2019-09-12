@@ -9,14 +9,15 @@ import (
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/tychoish/bond"
 )
 
 // Export takes a protobuf RPC CreateOptions struct and returns the analogous
 // Jasper CreateOptions struct. It is not safe to concurrently access the
 // exported RPC CreateOptions and the returned Jasper CreateOptions.
-func (opts *CreateOptions) Export() *jasper.CreateOptions {
-	out := &jasper.CreateOptions{
+func (opts *CreateOptions) Export() *options.Create {
+	out := &options.Create{
 		Args:               opts.Args,
 		Environment:        opts.Environment,
 		WorkingDirectory:   opts.WorkingDirectory,
@@ -52,7 +53,7 @@ func (opts *CreateOptions) Export() *jasper.CreateOptions {
 // inverse of (*CreateOptions) Export(). It is not safe to concurrently
 // access the converted Jasper CreateOptions and the returned RPC
 // CreateOptions.
-func ConvertCreateOptions(opts *jasper.CreateOptions) *CreateOptions {
+func ConvertCreateOptions(opts *options.Create) *CreateOptions {
 	if opts.TimeoutSecs == 0 && opts.Timeout != 0 {
 		opts.TimeoutSecs = int(opts.Timeout.Seconds())
 	}
@@ -170,49 +171,49 @@ func ConvertFilter(f jasper.Filter) *Filter {
 
 // Export takes a protobuf RPC LogType struct and returns the analogous
 // Jasper LogType struct.
-func (lt LogType) Export() jasper.LogType {
+func (lt LogType) Export() options.LogType {
 	switch lt {
 	case LogType_LOGBUILDLOGGERV2:
-		return jasper.LogBuildloggerV2
+		return options.LogBuildloggerV2
 	case LogType_LOGBUILDLOGGERV3:
-		return jasper.LogBuildloggerV3
+		return options.LogBuildloggerV3
 	case LogType_LOGDEFAULT:
-		return jasper.LogDefault
+		return options.LogDefault
 	case LogType_LOGFILE:
-		return jasper.LogFile
+		return options.LogFile
 	case LogType_LOGINHERIT:
-		return jasper.LogInherit
+		return options.LogInherit
 	case LogType_LOGSPLUNK:
-		return jasper.LogSplunk
+		return options.LogSplunk
 	case LogType_LOGSUMOLOGIC:
-		return jasper.LogSumologic
+		return options.LogSumologic
 	case LogType_LOGINMEMORY:
-		return jasper.LogInMemory
+		return options.LogInMemory
 	default:
-		return jasper.LogType("")
+		return options.LogType("")
 	}
 }
 
 // ConvertLogType takes a Jasper LogType struct and returns an
 // equivalent protobuf RPC LogType struct. ConvertLogType is the
 // inverse of (LogType) Export().
-func ConvertLogType(lt jasper.LogType) LogType {
+func ConvertLogType(lt options.LogType) LogType {
 	switch lt {
-	case jasper.LogBuildloggerV2:
+	case options.LogBuildloggerV2:
 		return LogType_LOGBUILDLOGGERV2
-	case jasper.LogBuildloggerV3:
+	case options.LogBuildloggerV3:
 		return LogType_LOGBUILDLOGGERV3
-	case jasper.LogDefault:
+	case options.LogDefault:
 		return LogType_LOGDEFAULT
-	case jasper.LogFile:
+	case options.LogFile:
 		return LogType_LOGFILE
-	case jasper.LogInherit:
+	case options.LogInherit:
 		return LogType_LOGINHERIT
-	case jasper.LogSplunk:
+	case options.LogSplunk:
 		return LogType_LOGSPLUNK
-	case jasper.LogSumologic:
+	case options.LogSumologic:
 		return LogType_LOGSUMOLOGIC
-	case jasper.LogInMemory:
+	case options.LogInMemory:
 		return LogType_LOGINMEMORY
 	default:
 		return LogType_LOGUNKNOWN
@@ -221,12 +222,12 @@ func ConvertLogType(lt jasper.LogType) LogType {
 
 // Export takes a protobuf RPC OutputOptions struct and returns the analogous
 // Jasper OutputOptions struct.
-func (opts OutputOptions) Export() jasper.OutputOptions {
-	loggers := []jasper.Logger{}
+func (opts OutputOptions) Export() options.Output {
+	loggers := []options.Logger{}
 	for _, logger := range opts.Loggers {
 		loggers = append(loggers, logger.Export())
 	}
-	return jasper.OutputOptions{
+	return options.Output{
 		SuppressOutput:    opts.SuppressOutput,
 		SuppressError:     opts.SuppressError,
 		SendOutputToError: opts.RedirectOutputToError,
@@ -238,7 +239,7 @@ func (opts OutputOptions) Export() jasper.OutputOptions {
 // ConvertOutputOptions takes a Jasper OutputOptions struct and returns an
 // equivalent protobuf RPC OutputOptions struct. ConvertOutputOptions is the
 // inverse of (OutputOptions) Export().
-func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
+func ConvertOutputOptions(opts options.Output) OutputOptions {
 	loggers := []*Logger{}
 	for _, logger := range opts.Loggers {
 		loggers = append(loggers, ConvertLogger(logger))
@@ -254,8 +255,8 @@ func ConvertOutputOptions(opts jasper.OutputOptions) OutputOptions {
 
 // Export takes a protobuf RPC Logger struct and returns the analogous
 // Jasper Logger struct.
-func (logger Logger) Export() jasper.Logger {
-	return jasper.Logger{
+func (logger Logger) Export() options.Logger {
+	return options.Logger{
 		Type:    logger.LogType.Export(),
 		Options: logger.LogOptions.Export(),
 	}
@@ -264,7 +265,7 @@ func (logger Logger) Export() jasper.Logger {
 // ConvertLogger takes a Jasper Logger struct and returns an
 // equivalent protobuf RPC Logger struct. ConvertLogger is the
 // inverse of (Logger) Export().
-func ConvertLogger(logger jasper.Logger) *Logger {
+func ConvertLogger(logger options.Logger) *Logger {
 	return &Logger{
 		LogType:    ConvertLogType(logger.Type),
 		LogOptions: ConvertLogOptions(logger.Options),
@@ -273,8 +274,8 @@ func ConvertLogger(logger jasper.Logger) *Logger {
 
 // Export takes a protobuf RPC LogOptions struct and returns the analogous
 // Jasper LogOptions struct.
-func (opts LogOptions) Export() jasper.LogOptions {
-	out := jasper.LogOptions{
+func (opts LogOptions) Export() options.Log {
+	out := options.Log{
 		DefaultPrefix: opts.DefaultPrefix,
 		FileName:      opts.FileName,
 		Format:        opts.Format.Export(),
@@ -301,7 +302,7 @@ func (opts LogOptions) Export() jasper.LogOptions {
 // ConvertLogOptions takes a Jasper LogOptions struct and returns an
 // equivalent protobuf RPC LogOptions struct. ConvertLogOptions is the
 // inverse of (LogOptions) Export().
-func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
+func ConvertLogOptions(opts options.Log) *LogOptions {
 	return &LogOptions{
 		BufferOptions:      ConvertBufferOptions(opts.BufferOptions),
 		BuildloggerOptions: ConvertBuildloggerOptions(opts.BuildloggerOptions),
@@ -317,8 +318,8 @@ func ConvertLogOptions(opts jasper.LogOptions) *LogOptions {
 
 // Export takes a protobuf RPC BufferOptions struct and returns the analogous
 // Jasper BufferOptions struct.
-func (opts *BufferOptions) Export() jasper.BufferOptions {
-	return jasper.BufferOptions{
+func (opts *BufferOptions) Export() options.Buffer {
+	return options.Buffer{
 		Buffered: opts.Buffered,
 		Duration: time.Duration(opts.Duration),
 		MaxSize:  int(opts.MaxSize),
@@ -328,7 +329,7 @@ func (opts *BufferOptions) Export() jasper.BufferOptions {
 // ConvertBufferOptions takes a Jasper BufferOptions struct and returns an
 // equivalent protobuf RPC BufferOptions struct. ConvertBufferOptions is the
 // inverse of (*BufferOptions) Export().
-func ConvertBufferOptions(opts jasper.BufferOptions) *BufferOptions {
+func ConvertBufferOptions(opts options.Buffer) *BufferOptions {
 	return &BufferOptions{
 		Buffered: opts.Buffered,
 		Duration: int64(opts.Duration),
@@ -403,29 +404,29 @@ func ConvertSplunkOptions(opts send.SplunkConnectionInfo) *SplunkOptions {
 
 // Export takes a protobuf RPC LogFormat struct and returns the analogous
 // Jasper LogFormat struct.
-func (f LogFormat) Export() jasper.LogFormat {
+func (f LogFormat) Export() options.LogFormat {
 	switch f {
 	case LogFormat_LOGFORMATDEFAULT:
-		return jasper.LogFormatDefault
+		return options.LogFormatDefault
 	case LogFormat_LOGFORMATJSON:
-		return jasper.LogFormatJSON
+		return options.LogFormatJSON
 	case LogFormat_LOGFORMATPLAIN:
-		return jasper.LogFormatPlain
+		return options.LogFormatPlain
 	default:
-		return jasper.LogFormatInvalid
+		return options.LogFormatInvalid
 	}
 }
 
 // ConvertLogFormat takes a Jasper LogFormat struct and returns an
 // equivalent protobuf RPC LogFormat struct. ConvertLogFormat is the
 // inverse of (LogFormat) Export().
-func ConvertLogFormat(f jasper.LogFormat) LogFormat {
+func ConvertLogFormat(f options.LogFormat) LogFormat {
 	switch f {
-	case jasper.LogFormatDefault:
+	case options.LogFormatDefault:
 		return LogFormat_LOGFORMATDEFAULT
-	case jasper.LogFormatJSON:
+	case options.LogFormatJSON:
 		return LogFormat_LOGFORMATJSON
-	case jasper.LogFormatPlain:
+	case options.LogFormatPlain:
 		return LogFormat_LOGFORMATPLAIN
 	default:
 		return LogFormat_LOGFORMATUNKNOWN
