@@ -335,7 +335,9 @@ func TestWriteFileOptions(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					info := WriteFile{Path: filepath.Join("build", filepath.Base(t.Name()))}
+					wd, err := os.Getwd()
+					require.NoError(t, err)
+					info := WriteFile{Path: filepath.Join(filepath.Dir(wd), "build", filepath.Base(t.Name()))}
 					defer func() {
 						assert.NoError(t, os.RemoveAll(info.Path))
 					}()
