@@ -35,7 +35,7 @@ type Command struct {
 
 	cmds   [][]string
 	id     string
-	remote RemoteOptions
+	remote options.Remote
 	makep  ProcessConstructor
 
 	procs []Process
@@ -80,7 +80,7 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*optio
 		remoteCmd += strings.Join(args, " ")
 	}
 
-	opts.Args = append(append([]string{"ssh"}, c.remote.Args...), c.remote.hostString(), remoteCmd)
+	opts.Args = append(append([]string{"ssh"}, c.remote.Args...), c.remote.String(), remoteCmd)
 	return opts, nil
 }
 
@@ -135,7 +135,7 @@ func (c *Command) SetOutputOptions(opts options.Output) *Command { c.opts.Output
 
 // String returns a stringified representation.
 func (c *Command) String() string {
-	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.id, c.remote.hostString(), c.getCmd())
+	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.id, c.remote.String(), c.getCmd())
 }
 
 // Export returns all of the options.Create that will be used to spawn the

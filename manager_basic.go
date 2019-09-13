@@ -109,7 +109,7 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 	return nil
 }
 
-func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, error) {
+func (m *basicProcessManager) List(ctx context.Context, f options.Filter) ([]Process, error) {
 	out := []Process{}
 
 	for _, proc := range m.procs {
@@ -121,23 +121,23 @@ func (m *basicProcessManager) List(ctx context.Context, f Filter) ([]Process, er
 		info := proc.Info(cctx)
 		cancel()
 		switch {
-		case f == Running:
+		case f == options.Running:
 			if info.IsRunning {
 				out = append(out, proc)
 			}
-		case f == Terminated:
+		case f == options.Terminated:
 			if !info.IsRunning {
 				out = append(out, proc)
 			}
-		case f == Successful:
+		case f == options.Successful:
 			if info.Successful {
 				out = append(out, proc)
 			}
-		case f == Failed:
+		case f == options.Failed:
 			if info.Complete && !info.Successful {
 				out = append(out, proc)
 			}
-		case f == All:
+		case f == options.All:
 			out = append(out, proc)
 		}
 	}
@@ -166,7 +166,7 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 	if len(m.procs) == 0 {
 		return nil
 	}
-	procs, err := m.List(ctx, Running)
+	procs, err := m.List(ctx, options.Running)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -198,8 +198,12 @@ func (m *basicProcessManager) Group(ctx context.Context, name string) ([]Process
 			return nil, errors.WithStack(ctx.Err())
 		}
 
-		if sliceContains(proc.GetTags(), name) {
-			out = append(out, proc)
+	addTag:
+		for _, t := range proc.GetTags() {
+			if t == name {
+				out = append(out, proc)
+				break addTag
+			}
 		}
 	}
 

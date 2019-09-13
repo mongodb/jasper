@@ -152,17 +152,17 @@ func ConvertSignal(s syscall.Signal) Signals {
 
 // ConvertFilter takes a Jasper Filter struct and returns an
 // equivalent protobuf RPC *Filter struct.
-func ConvertFilter(f jasper.Filter) *Filter {
+func ConvertFilter(f options.Filter) *Filter {
 	switch f {
-	case jasper.All:
+	case options.All:
 		return &Filter{Name: FilterSpecifications_ALL}
-	case jasper.Running:
+	case options.Running:
 		return &Filter{Name: FilterSpecifications_RUNNING}
-	case jasper.Terminated:
+	case options.Terminated:
 		return &Filter{Name: FilterSpecifications_TERMINATED}
-	case jasper.Failed:
+	case options.Failed:
 		return &Filter{Name: FilterSpecifications_FAILED}
-	case jasper.Successful:
+	case options.Successful:
 		return &Filter{Name: FilterSpecifications_SUCCESSFUL}
 	default:
 		return nil
@@ -471,8 +471,8 @@ func ConvertBuildOptions(opts bond.BuildOptions) *BuildOptions {
 
 // Export takes a protobuf RPC MongoDBDownloadOptions struct and returns the
 // analogous Jasper MongoDBDownloadOptions struct.
-func (opts *MongoDBDownloadOptions) Export() jasper.MongoDBDownloadOptions {
-	jopts := jasper.MongoDBDownloadOptions{
+func (opts *MongoDBDownloadOptions) Export() options.MongoDBDownload {
+	jopts := options.MongoDBDownload{
 		BuildOpts: opts.BuildOpts.Export(),
 		Path:      opts.Path,
 		Releases:  make([]string, 0, len(opts.Releases)),
@@ -485,7 +485,7 @@ func (opts *MongoDBDownloadOptions) Export() jasper.MongoDBDownloadOptions {
 // and returns an equivalent protobuf RPC MongoDBDownloadOptions struct.
 // ConvertMongoDBDownloadOptions is the
 // inverse of (*MongoDBDownloadOptions) Export().
-func ConvertMongoDBDownloadOptions(jopts jasper.MongoDBDownloadOptions) *MongoDBDownloadOptions {
+func ConvertMongoDBDownloadOptions(jopts options.MongoDBDownload) *MongoDBDownloadOptions {
 	opts := &MongoDBDownloadOptions{
 		BuildOpts: ConvertBuildOptions(jopts.BuildOpts),
 		Path:      jopts.Path,
@@ -497,8 +497,8 @@ func ConvertMongoDBDownloadOptions(jopts jasper.MongoDBDownloadOptions) *MongoDB
 
 // Export takes a protobuf RPC CacheOptions struct and returns the analogous
 // Jasper CacheOptions struct.
-func (opts *CacheOptions) Export() jasper.CacheOptions {
-	return jasper.CacheOptions{
+func (opts *CacheOptions) Export() options.Cache {
+	return options.Cache{
 		Disabled:   opts.Disabled,
 		PruneDelay: time.Duration(opts.PruneDelaySeconds) * time.Second,
 		MaxSize:    int(opts.MaxSize),
@@ -508,7 +508,7 @@ func (opts *CacheOptions) Export() jasper.CacheOptions {
 // ConvertCacheOptions takes a Jasper CacheOptions struct and returns an
 // equivalent protobuf RPC CacheOptions struct. ConvertCacheOptions is the
 // inverse of (*CacheOptions) Export().
-func ConvertCacheOptions(jopts jasper.CacheOptions) *CacheOptions {
+func ConvertCacheOptions(jopts options.Cache) *CacheOptions {
 	return &CacheOptions{
 		Disabled:          jopts.Disabled,
 		PruneDelaySeconds: int64(jopts.PruneDelay / time.Second),
@@ -518,8 +518,8 @@ func ConvertCacheOptions(jopts jasper.CacheOptions) *CacheOptions {
 
 // Export takes a protobuf RPC DownloadInfo struct and returns the analogous
 // Jasper DownloadInfo struct.
-func (info *DownloadInfo) Export() jasper.DownloadInfo {
-	return jasper.DownloadInfo{
+func (info *DownloadInfo) Export() options.Download {
+	return options.Download{
 		Path:        info.Path,
 		URL:         info.Url,
 		ArchiveOpts: info.ArchiveOpts.Export(),
@@ -529,7 +529,7 @@ func (info *DownloadInfo) Export() jasper.DownloadInfo {
 // ConvertDownloadInfo takes a Jasper DownloadInfo struct and returns an
 // equivalent protobuf RPC DownloadInfo struct. ConvertDownloadInfo is the
 // inverse of (*DownloadInfo) Export().
-func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
+func ConvertDownloadInfo(info options.Download) *DownloadInfo {
 	return &DownloadInfo{
 		Path:        info.Path,
 		Url:         info.URL,
@@ -539,8 +539,8 @@ func ConvertDownloadInfo(info jasper.DownloadInfo) *DownloadInfo {
 
 // Export takes a protobuf RPC WriteFileInfo struct and returns the analogous
 // Jasper WriteFileInfo struct.
-func (info *WriteFileInfo) Export() jasper.WriteFileInfo {
-	return jasper.WriteFileInfo{
+func (info *WriteFileInfo) Export() options.WriteFile {
+	return options.WriteFile{
 		Path:    info.Path,
 		Content: info.Content,
 		Append:  info.Append,
@@ -551,7 +551,7 @@ func (info *WriteFileInfo) Export() jasper.WriteFileInfo {
 // ConvertWriteFileInfo takes a Jasper WriteFileInfo struct and returns an
 // equivalent protobuf RPC WriteFileInfo struct. ConvertWriteFileInfo is the
 // inverse of (*WriteFileInfo) Export().
-func ConvertWriteFileInfo(info jasper.WriteFileInfo) *WriteFileInfo {
+func ConvertWriteFileInfo(info options.WriteFile) *WriteFileInfo {
 	return &WriteFileInfo{
 		Path:    info.Path,
 		Content: info.Content,
@@ -562,29 +562,29 @@ func ConvertWriteFileInfo(info jasper.WriteFileInfo) *WriteFileInfo {
 
 // Export takes a protobuf RPC ArchiveFormat struct and returns the analogous
 // Jasper ArchiveFormat struct.
-func (format ArchiveFormat) Export() jasper.ArchiveFormat {
+func (format ArchiveFormat) Export() options.ArchiveFormat {
 	switch format {
 	case ArchiveFormat_ARCHIVEAUTO:
-		return jasper.ArchiveAuto
+		return options.ArchiveAuto
 	case ArchiveFormat_ARCHIVETARGZ:
-		return jasper.ArchiveTarGz
+		return options.ArchiveTarGz
 	case ArchiveFormat_ARCHIVEZIP:
-		return jasper.ArchiveZip
+		return options.ArchiveZip
 	default:
-		return jasper.ArchiveFormat("")
+		return options.ArchiveFormat("")
 	}
 }
 
 // ConvertArchiveFormat takes a Jasper ArchiveFormat struct and returns an
 // equivalent protobuf RPC ArchiveFormat struct. ConvertArchiveFormat is the
 // inverse of (ArchiveFormat) Export().
-func ConvertArchiveFormat(format jasper.ArchiveFormat) ArchiveFormat {
+func ConvertArchiveFormat(format options.ArchiveFormat) ArchiveFormat {
 	switch format {
-	case jasper.ArchiveAuto:
+	case options.ArchiveAuto:
 		return ArchiveFormat_ARCHIVEAUTO
-	case jasper.ArchiveTarGz:
+	case options.ArchiveTarGz:
 		return ArchiveFormat_ARCHIVETARGZ
-	case jasper.ArchiveZip:
+	case options.ArchiveZip:
 		return ArchiveFormat_ARCHIVEZIP
 	default:
 		return ArchiveFormat_ARCHIVEUNKNOWN
@@ -593,8 +593,8 @@ func ConvertArchiveFormat(format jasper.ArchiveFormat) ArchiveFormat {
 
 // Export takes a protobuf RPC ArchiveOptions struct and returns the analogous
 // Jasper ArchiveOptions struct.
-func (opts ArchiveOptions) Export() jasper.ArchiveOptions {
-	return jasper.ArchiveOptions{
+func (opts ArchiveOptions) Export() options.Archive {
+	return options.Archive{
 		ShouldExtract: opts.ShouldExtract,
 		Format:        opts.Format.Export(),
 		TargetPath:    opts.TargetPath,
@@ -604,7 +604,7 @@ func (opts ArchiveOptions) Export() jasper.ArchiveOptions {
 // ConvertArchiveOptions takes a Jasper ArchiveOptions struct and returns an
 // equivalent protobuf RPC ArchiveOptions struct. ConvertArchiveOptions is the
 // inverse of (ArchiveOptions) Export().
-func ConvertArchiveOptions(opts jasper.ArchiveOptions) *ArchiveOptions {
+func ConvertArchiveOptions(opts options.Archive) *ArchiveOptions {
 	return &ArchiveOptions{
 		ShouldExtract: opts.ShouldExtract,
 		Format:        ConvertArchiveFormat(opts.Format),
