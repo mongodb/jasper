@@ -34,7 +34,7 @@ type Manager interface {
 	CreateCommand(context.Context) *Command
 	Register(context.Context, Process) error
 
-	List(context.Context, Filter) ([]Process, error)
+	List(context.Context, options.Filter) ([]Process, error)
 	Group(context.Context, string) ([]Process, error)
 	Get(context.Context, string) (Process, error)
 	Clear(context.Context)

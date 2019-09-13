@@ -97,7 +97,7 @@ func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register existing processes on remote manager")
 }
 
-func (c *sshClient) List(ctx context.Context, f jasper.Filter) ([]jasper.Process, error) {
+func (c *sshClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
 	output, err := c.runManagerCommand(ctx, ListCommand, &FilterInput{Filter: f})
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -174,7 +174,7 @@ func (c *sshClient) CloseConnection() error {
 	return nil
 }
 
-func (c *sshClient) ConfigureCache(ctx context.Context, opts jasper.CacheOptions) error {
+func (c *sshClient) ConfigureCache(ctx context.Context, opts options.Cache) error {
 	output, err := c.runRemoteCommand(ctx, ConfigureCacheCommand, &opts)
 	if err != nil {
 		return errors.WithStack(err)
@@ -187,7 +187,7 @@ func (c *sshClient) ConfigureCache(ctx context.Context, opts jasper.CacheOptions
 	return nil
 }
 
-func (c *sshClient) DownloadFile(ctx context.Context, info jasper.DownloadInfo) error {
+func (c *sshClient) DownloadFile(ctx context.Context, info options.Download) error {
 	output, err := c.runRemoteCommand(ctx, DownloadFileCommand, &info)
 	if err != nil {
 		return errors.WithStack(err)
@@ -200,8 +200,8 @@ func (c *sshClient) DownloadFile(ctx context.Context, info jasper.DownloadInfo) 
 	return nil
 }
 
-func (c *sshClient) WriteFile(ctx context.Context, info jasper.WriteFileInfo) error {
-	sendInfo := func(info jasper.WriteFileInfo) error {
+func (c *sshClient) WriteFile(ctx context.Context, info options.WriteFile) error {
+	sendInfo := func(info options.WriteFile) error {
 		output, err := c.runRemoteCommand(ctx, WriteFileCommand, &info)
 		if err != nil {
 			return errors.WithStack(err)
@@ -216,7 +216,7 @@ func (c *sshClient) WriteFile(ctx context.Context, info jasper.WriteFileInfo) er
 	return info.WriteBufferedContent(sendInfo)
 }
 
-func (c *sshClient) DownloadMongoDB(ctx context.Context, opts jasper.MongoDBDownloadOptions) error {
+func (c *sshClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {
 	output, err := c.runRemoteCommand(ctx, DownloadMongoDBCommand, &opts)
 	if err != nil {
 		return errors.WithStack(err)

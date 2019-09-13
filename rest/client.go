@@ -156,7 +156,7 @@ func (c *restClient) getListOfProcesses(resp *http.Response) ([]jasper.Process, 
 	return output, nil
 }
 
-func (c *restClient) List(ctx context.Context, f jasper.Filter) ([]jasper.Process, error) {
+func (c *restClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
 	if err := f.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -273,7 +273,7 @@ func (c *restClient) GetLogStream(ctx context.Context, id string, count int) (ja
 	return stream, nil
 }
 
-func (c *restClient) DownloadFile(ctx context.Context, info jasper.DownloadInfo) error {
+func (c *restClient) DownloadFile(ctx context.Context, info options.Download) error {
 	body, err := makeBody(info)
 	if err != nil {
 		return errors.Wrap(err, "problem building request")
@@ -289,7 +289,7 @@ func (c *restClient) DownloadFile(ctx context.Context, info jasper.DownloadInfo)
 }
 
 // DownloadMongoDB downloads the desired version of MongoDB.
-func (c *restClient) DownloadMongoDB(ctx context.Context, opts jasper.MongoDBDownloadOptions) error {
+func (c *restClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {
 	body, err := makeBody(opts)
 	if err != nil {
 		return err
@@ -305,7 +305,7 @@ func (c *restClient) DownloadMongoDB(ctx context.Context, opts jasper.MongoDBDow
 }
 
 // ConfigureCache changes the cache configurations.
-func (c *restClient) ConfigureCache(ctx context.Context, opts jasper.CacheOptions) error {
+func (c *restClient) ConfigureCache(ctx context.Context, opts options.Cache) error {
 	body, err := makeBody(opts)
 	if err != nil {
 		return err
@@ -330,8 +330,8 @@ func (c *restClient) SignalEvent(ctx context.Context, name string) error {
 	return nil
 }
 
-func (c *restClient) WriteFile(ctx context.Context, info jasper.WriteFileInfo) error {
-	sendInfo := func(info jasper.WriteFileInfo) error {
+func (c *restClient) WriteFile(ctx context.Context, info options.WriteFile) error {
+	sendInfo := func(info options.WriteFile) error {
 		body, err := makeBody(info)
 		if err != nil {
 			return errors.Wrap(err, "problem building request")

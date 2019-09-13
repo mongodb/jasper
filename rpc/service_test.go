@@ -73,7 +73,7 @@ func TestRPCService(t *testing.T) {
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
 
-					info := jasper.DownloadInfo{
+					info := options.Download{
 						URL:  "http://example.com",
 						Path: file.Name(),
 					}
@@ -88,12 +88,12 @@ func TestRPCService(t *testing.T) {
 				"DownloadFileFailsForInvalidArchiveFormat": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					fileName := filepath.Join(buildDir(t), "out.txt")
 
-					info := jasper.DownloadInfo{
+					info := options.Download{
 						URL:  "https://example.com",
 						Path: fileName,
-						ArchiveOpts: jasper.ArchiveOptions{
+						ArchiveOpts: options.Archive{
 							ShouldExtract: true,
-							Format:        jasper.ArchiveFormat("foo"),
+							Format:        options.ArchiveFormat("foo"),
 						},
 					}
 					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
@@ -103,7 +103,7 @@ func TestRPCService(t *testing.T) {
 				"DownloadFileFailsForInvalidURL": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					fileName := filepath.Join(buildDir(t), "out.txt")
 
-					info := jasper.DownloadInfo{
+					info := options.Download{
 						URL:  "://example.com",
 						Path: fileName,
 					}
@@ -114,7 +114,7 @@ func TestRPCService(t *testing.T) {
 				"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					fileName := filepath.Join(buildDir(t), "out.txt")
 
-					info := jasper.DownloadInfo{
+					info := options.Download{
 						URL:  "http://example.com/foo",
 						Path: fileName,
 					}

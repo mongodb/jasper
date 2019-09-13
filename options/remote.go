@@ -22,8 +22,7 @@ func (opts *Remote) Validate() error {
 	return nil
 }
 
-// HostString returns the string to connect to the host.
-func (opts *Remote) HostString() string {
+func (opts *Remote) String() string {
 	if opts.User == "" {
 		return opts.Host
 	}

@@ -67,7 +67,7 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*optio
 		remoteCmd += strings.Join(args, " ")
 	}
 
-	opts.Args = append(append([]string{"ssh"}, c.opts.Remote.Args...), c.opts.Remote.HostString(), remoteCmd)
+	opts.Args = append(append([]string{"ssh"}, c.opts.Remote.Args...), c.opts.Remote.String(), remoteCmd)
 	return opts, nil
 }
 
@@ -133,7 +133,7 @@ func (c *Command) SetOutputOptions(opts options.Output) *Command {
 
 // String returns a stringified representation.
 func (c *Command) String() string {
-	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, c.opts.Remote.HostString(), c.getCmd())
+	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, c.opts.Remote.String(), c.getCmd())
 }
 
 // Export returns all of the options.Create that will be used to spawn the

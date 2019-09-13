@@ -2,6 +2,8 @@ package jasper
 
 import (
 	"context"
+
+	"github.com/mongodb/jasper/options"
 )
 
 // CloseFunc is a function used to close a service or close the client
@@ -14,11 +16,11 @@ type CloseFunc func() error
 type RemoteClient interface {
 	Manager
 	CloseConnection() error
-	ConfigureCache(ctx context.Context, opts CacheOptions) error
-	DownloadFile(ctx context.Context, info DownloadInfo) error
-	DownloadMongoDB(ctx context.Context, opts MongoDBDownloadOptions) error
+	ConfigureCache(ctx context.Context, opts options.Cache) error
+	DownloadFile(ctx context.Context, info options.Download) error
+	DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error
 	GetLogStream(ctx context.Context, id string, count int) (LogStream, error)
 	GetBuildloggerURLs(ctx context.Context, id string) ([]string, error)
 	SignalEvent(ctx context.Context, name string) error
-	WriteFile(ctx context.Context, info WriteFileInfo) error
+	WriteFile(ctx context.Context, info options.WriteFile) error
 }

@@ -26,7 +26,7 @@ type Service struct {
 	hostID     string
 	manager    jasper.Manager
 	cache      *lru.Cache
-	cacheOpts  jasper.CacheOptions
+	cacheOpts  options.Cache
 	cacheMutex sync.RWMutex
 }
 
@@ -242,7 +242,7 @@ func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) listProcesses(rw http.ResponseWriter, r *http.Request) {
-	filter := jasper.Filter(gimlet.GetVars(r)["filter"])
+	filter := options.Filter(gimlet.GetVars(r)["filter"])
 	if err := filter.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -494,7 +494,7 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
-	var info jasper.DownloadInfo
+	var info options.Download
 	if err := gimlet.GetJSON(r.Body, &info); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -578,7 +578,7 @@ func (s *Service) signalEvent(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
-	var info jasper.WriteFileInfo
+	var info options.WriteFile
 	if err := gimlet.GetJSON(r.Body, &info); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -632,7 +632,7 @@ func (s *Service) closeManager(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
-	opts := jasper.CacheOptions{}
+	opts := options.Cache{}
 	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -663,7 +663,7 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) downloadMongoDB(rw http.ResponseWriter, r *http.Request) {
-	opts := jasper.MongoDBDownloadOptions{}
+	opts := options.MongoDBDownload{}
 	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,

@@ -69,7 +69,7 @@ func (m *localProcessManager) Register(ctx context.Context, proc Process) error 
 	return errors.WithStack(m.manager.Register(ctx, proc))
 }
 
-func (m *localProcessManager) List(ctx context.Context, f Filter) ([]Process, error) {
+func (m *localProcessManager) List(ctx context.Context, f options.Filter) ([]Process, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

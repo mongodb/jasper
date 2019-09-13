@@ -83,7 +83,7 @@ func TestCLIManager(t *testing.T) {
 					assert.Error(t, execCLICommandInputOutput(t, c, managerGet(), input, &InfoResponse{}))
 				},
 				"ListValidFilterPasses": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					input, err := json.Marshal(FilterInput{jasper.All})
+					input, err := json.Marshal(FilterInput{options.All})
 					require.NoError(t, err)
 					resp := &InfosResponse{}
 					require.NoError(t, execCLICommandInputOutput(t, c, managerList(), input, resp))
@@ -92,7 +92,7 @@ func TestCLIManager(t *testing.T) {
 					assert.Equal(t, jasperProcID, resp.Infos[0].ID)
 				},
 				"ListInvalidFilterFails": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					input, err := json.Marshal(FilterInput{jasper.Filter("foo")})
+					input, err := json.Marshal(FilterInput{options.Filter("foo")})
 					require.NoError(t, err)
 					assert.Error(t, execCLICommandInputOutput(t, c, managerList(), input, &InfosResponse{}))
 				},

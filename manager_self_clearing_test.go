@@ -66,7 +66,7 @@ func TestSelfClearingManager(t *testing.T) {
 					sleepProc, err := createFunc(ctx, manager, t, sleepOpts)
 					assert.Error(t, err)
 					assert.Nil(t, sleepProc)
-					otherSleepProcs, err := manager.List(ctx, All)
+					otherSleepProcs, err := manager.List(ctx, options.All)
 					require.NoError(t, err)
 					for _, otherSleepProc := range otherSleepProcs {
 						_, err := otherSleepProc.Wait(ctx)

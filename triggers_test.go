@@ -18,7 +18,7 @@ func TestDefaultTrigger(t *testing.T) {
 		"VerifyFixtures": func(ctx context.Context, t *testing.T, manager Manager) {
 			require.NotNil(t, manager)
 			require.NotNil(t, ctx)
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 			assert.NotNil(t, makeDefaultTrigger(ctx, manager, testutil.TrueCreateOpts(), parentID))
@@ -31,7 +31,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(ctx, manager, opts, parentID)
 			trigger(ProcessInfo{})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			_, err = out[0].Wait(ctx)
@@ -46,7 +46,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(ctx, manager, opts, parentID)
 			trigger(ProcessInfo{Successful: true})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			info := out[0].Info(ctx)
@@ -61,7 +61,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(cctx, manager, opts, parentID)
 			trigger(ProcessInfo{})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
@@ -74,21 +74,21 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(cctx, manager, opts, parentID)
 			trigger(ProcessInfo{Successful: true})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
 		"SuccessOutcomeWithNoTriggers": func(ctx context.Context, t *testing.T, manager Manager) {
 			trigger := makeDefaultTrigger(ctx, manager, testutil.TrueCreateOpts(), parentID)
 			trigger(ProcessInfo{})
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
 		"FailureOutcomeWithNoTriggers": func(ctx context.Context, t *testing.T, manager Manager) {
 			trigger := makeDefaultTrigger(ctx, manager, testutil.TrueCreateOpts(), parentID)
 			trigger(ProcessInfo{Successful: true})
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
@@ -102,7 +102,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(tctx, manager, opts, parentID)
 			trigger(ProcessInfo{Timeout: true})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			_, err = out[0].Wait(ctx)
@@ -118,7 +118,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(ctx, manager, opts, parentID)
 			trigger(ProcessInfo{Timeout: true})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			_, err = out[0].Wait(ctx)
@@ -137,7 +137,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(cctx, manager, opts, parentID)
 			trigger(ProcessInfo{Timeout: true})
 
-			out, err := manager.List(ctx, All)
+			out, err := manager.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
