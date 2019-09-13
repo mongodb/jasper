@@ -19,18 +19,18 @@ import (
 )
 
 func TestNewSSHClient(t *testing.T) {
-	for testName, testCase := range map[string]func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions){
-		"NewSSHClientFailsWithEmptyRemoteOptions": func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) {
-			remoteOpts = jasper.RemoteOptions{}
+	for testName, testCase := range map[string]func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions){
+		"NewSSHClientFailsWithEmptyRemoteOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
+			remoteOpts = options.Remote{}
 			_, err := NewSSHClient(remoteOpts, clientOpts, false)
 			assert.Error(t, err)
 		},
-		"NewSSHClientFailsWithEmptyClientOptions": func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) {
+		"NewSSHClientFailsWithEmptyClientOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
 			clientOpts = ClientOptions{}
 			_, err := NewSSHClient(remoteOpts, clientOpts, false)
 			assert.Error(t, err)
 		},
-		"NewSSHClientSucceedsWithPopulatedOptions": func(t *testing.T, remoteOpts jasper.RemoteOptions, clientOpts ClientOptions) {
+		"NewSSHClientSucceedsWithPopulatedOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
 			client, err := NewSSHClient(remoteOpts, clientOpts, false)
 			require.NoError(t, err)
 			assert.NotNil(t, client)
@@ -106,7 +106,7 @@ func TestSSHClient(t *testing.T) {
 			assert.Error(t, err)
 		},
 		"RunCommandPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			inputChecker := jasper.CommandOptions{}
+			inputChecker := options.Command{}
 
 			baseManager.Create = makeCreateFunc(
 				t, client,
@@ -564,8 +564,8 @@ func invalidResponse() interface{} {
 	return &struct{}{}
 }
 
-func mockRemoteOptions() jasper.RemoteOptions {
-	return jasper.RemoteOptions{
+func mockRemoteOptions() options.Remote {
+	return options.Remote{
 		User: "user",
 		Host: "localhost",
 	}

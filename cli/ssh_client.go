@@ -20,7 +20,7 @@ type sshClient struct {
 
 // NewSSHClient creates a new Jasper manager that connects to a remote
 // machine's Jasper service over SSH using the remote machine's Jasper CLI.
-func NewSSHClient(remoteOpts jasper.RemoteOptions, clientOpts ClientOptions, trackProcs bool) (jasper.RemoteClient, error) {
+func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProcs bool) (jasper.RemoteClient, error) {
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
@@ -78,8 +78,8 @@ func (c *sshClient) CreateProcess(ctx context.Context, opts *options.Create) (ja
 // CreateCommand creates a command that logically will execute via the remote
 // CLI. Users should not use (*jasper.Command).SetRunFunc().
 func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
-	return c.manager.CreateCommand(ctx).SetRunFunc(func(opts jasper.CommandOptions) error {
-		opts.Remote = jasper.RemoteOptions{}
+	return c.manager.CreateCommand(ctx).SetRunFunc(func(opts options.Command) error {
+		opts.Remote = options.Remote{}
 		output, err := c.runManagerCommand(ctx, CreateCommand, &opts)
 		if err != nil {
 			return errors.Wrap(err, "could not run command from given input")

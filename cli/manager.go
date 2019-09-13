@@ -81,14 +81,14 @@ func managerCreateCommand() cli.Command {
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
-			opts := &jasper.CommandOptions{}
+			opts := &options.Command{}
 			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				cmd := client.CreateCommand(ctx).Extend(opts.Commands).
 					Background(opts.RunBackground).
 					ContinueOnError(opts.ContinueOnError).
 					IgnoreError(opts.IgnoreError).
 					Sudo(opts.Sudo).
-					ApplyFromOpts(&opts.ProcOptions)
+					ApplyFromOpts(&opts.Process)
 				if opts.SudoUser != "" {
 					cmd.SudoAs(opts.SudoUser)
 				}

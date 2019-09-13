@@ -400,9 +400,9 @@ func TestCommandImplementation(t *testing.T) {
 								SendOutputToError: true,
 							}
 
-							assert.False(t, cmd.opts.ProcOptions.Output.SendOutputToError)
+							assert.False(t, cmd.opts.Process.Output.SendOutputToError)
 							cmd.SetOutputOptions(opts)
-							assert.True(t, cmd.opts.ProcOptions.Output.SendOutputToError)
+							assert.True(t, cmd.opts.Process.Output.SendOutputToError)
 						},
 						"ApplyFromOptsOverridesExistingOptions": func(ctx context.Context, t *testing.T, cmd Command) {
 							_ = cmd.Add([]string{echo, arg1}).Directory("bar")
@@ -558,7 +558,7 @@ func TestCommandImplementation(t *testing.T) {
 								ContinueOnError(true).IgnoreError(true).
 								Priority(prio).Background(true).
 								Sudo(true).SudoAs(user).
-								SetRunFunc(func(opts CommandOptions) error {
+								SetRunFunc(func(opts options.Command) error {
 									runFuncCalled = true
 									assert.True(t, opts.ContinueOnError)
 									assert.True(t, opts.IgnoreError)

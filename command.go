@@ -22,45 +22,10 @@ import (
 // such as output and error functionality and remote execution. Command methods
 // are not thread-safe.
 type Command struct {
-	opts    CommandOptions
-	procs   []Process
-	runFunc func(CommandOptions) error
-}
-
-// CommandOptions represents serializable options that are configurable by the
-// user.
-type CommandOptions struct {
-	ID              string         `json:"id,omitempty"`
-	Commands        [][]string     `json:"commands"`
-	ProcOptions     options.Create `json:"proc_opts,omitempty"`
-	Remote          RemoteOptions  `json:"remote_options,omitempty"`
-	ContinueOnError bool           `json:"continue_on_error,omitempty"`
-	IgnoreError     bool           `json:"ignore_error,omitempty"`
-	Priority        level.Priority `json:"priority,omitempty"`
-	RunBackground   bool           `json:"run_background,omitempty"`
-	Sudo            bool           `json:"sudo,omitempty"`
-	SudoUser        string         `json:"sudo_user,omitempty"`
-
-	MakeProc     ProcessConstructor `json:"-"`
-	Prerequisite func() bool        `json:"-"`
-}
-
-// Validate ensures that the options passed to the command are valid.
-func (opts *CommandOptions) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	// The semantics of options.Create expects Args to be non-empty, but Command
-	// ignores these args.
-	if len(opts.ProcOptions.Args) == 0 {
-		opts.ProcOptions.Args = []string{""}
-	}
-	catcher.Add(opts.ProcOptions.Validate())
-	if opts.Priority != 0 && !level.IsValidPriority(opts.Priority) {
-		catcher.Add(errors.New("priority is not in the valid range of values"))
-	}
-	if len(opts.Commands) == 0 {
-		catcher.Add(errors.New("must specify at least one command"))
-	}
-	return catcher.Resolve()
+	opts     options.Command
+	procs    []Process
+	runFunc  func(options.Command) error
+	makeProc ProcessConstructor
 }
 
 func (c *Command) sudoCmd() []string {
@@ -75,17 +40,17 @@ func (c *Command) sudoCmd() []string {
 }
 
 func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*options.Create, error) {
-	opts := c.opts.ProcOptions.Copy()
+	opts := c.opts.Process.Copy()
 	opts.WorkingDirectory = ""
 	opts.Environment = nil
 
 	var remoteCmd string
 
-	if c.opts.ProcOptions.WorkingDirectory != "" {
-		remoteCmd += fmt.Sprintf("cd '%s' && ", c.opts.ProcOptions.WorkingDirectory)
+	if c.opts.Process.WorkingDirectory != "" {
+		remoteCmd += fmt.Sprintf("cd '%s' && ", c.opts.Process.WorkingDirectory)
 	}
 
-	if env := c.opts.ProcOptions.ResolveEnvironment(); len(env) != 0 {
+	if env := c.opts.Process.ResolveEnvironment(); len(env) != 0 {
 		remoteCmd += strings.Join(env, " ") + " "
 	}
 
@@ -102,7 +67,7 @@ func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*optio
 		remoteCmd += strings.Join(args, " ")
 	}
 
-	opts.Args = append(append([]string{"ssh"}, c.opts.Remote.Args...), c.opts.Remote.hostString(), remoteCmd)
+	opts.Args = append(append([]string{"ssh"}, c.opts.Remote.Args...), c.opts.Remote.HostString(), remoteCmd)
 	return opts, nil
 }
 
@@ -119,20 +84,20 @@ func splitCmdToArgs(cmd string) []string {
 // New blank Commands will use basicProcess as their default Process for
 // executing sub-commands unless it is changed via ProcConstructor().
 func NewCommand() *Command {
-	return &Command{opts: CommandOptions{MakeProc: newBasicProcess}}
+	return &Command{makeProc: newBasicProcess}
 }
 
 // ProcConstructor returns a blank Command that will use the process created
 // by the given ProcessConstructor.
 func (c *Command) ProcConstructor(processConstructor ProcessConstructor) *Command {
-	c.opts.MakeProc = processConstructor
+	c.makeProc = processConstructor
 	return c
 }
 
 // SetRunFunc sets the function that overrides the default behavior when a
 // command is run, allowing the caller to run the command with their own custom
 // function given all the given inputs to the command.
-func (c *Command) SetRunFunc(f func(CommandOptions) error) *Command { c.runFunc = f; return c }
+func (c *Command) SetRunFunc(f func(options.Command) error) *Command { c.runFunc = f; return c }
 
 // GetProcIDs returns an array of Process IDs associated with the sub-commands
 // being run. This method will return a nil slice until processes have actually
@@ -156,19 +121,19 @@ func (c *Command) GetProcIDs() []string {
 // SetOutputSender, SetOutputWriter, SuppressStandardError, and
 // SuppressStandardOutput.
 func (c *Command) ApplyFromOpts(opts *options.Create) *Command {
-	c.opts.ProcOptions = *opts
+	c.opts.Process = *opts
 	return c
 }
 
 // SetOutputOptions sets the output options for a command.
 func (c *Command) SetOutputOptions(opts options.Output) *Command {
-	c.opts.ProcOptions.Output = opts
+	c.opts.Process.Output = opts
 	return c
 }
 
 // String returns a stringified representation.
 func (c *Command) String() string {
-	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, c.opts.Remote.hostString(), c.getCmd())
+	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, c.opts.Remote.HostString(), c.getCmd())
 }
 
 // Export returns all of the options.Create that will be used to spawn the
@@ -183,7 +148,7 @@ func (c *Command) Export(ctx context.Context) ([]*options.Create, error) {
 
 // Directory sets the working directory. If this is a remote command, it sets
 // the working directory of the command being run remotely.
-func (c *Command) Directory(d string) *Command { c.opts.ProcOptions.WorkingDirectory = d; return c }
+func (c *Command) Directory(d string) *Command { c.opts.Process.WorkingDirectory = d; return c }
 
 // Host sets the hostname. A blank hostname implies local execution of the
 // command, a non-blank hostname is treated as a remotely executed command.
@@ -213,12 +178,12 @@ func (c *Command) ID(id string) *Command { c.opts.ID = id; return c }
 
 // SetTags overrides any existing tags for a process with the
 // specified list. Tags are used to filter process with the manager.
-func (c *Command) SetTags(tags []string) *Command { c.opts.ProcOptions.Tags = tags; return c }
+func (c *Command) SetTags(tags []string) *Command { c.opts.Process.Tags = tags; return c }
 
 // AppendTags adds the specified tags to the existing tag slice. Tags
 // are used to filter process with the manager.
 func (c *Command) AppendTags(t ...string) *Command {
-	c.opts.ProcOptions.Tags = append(c.opts.ProcOptions.Tags, t...)
+	c.opts.Process.Tags = append(c.opts.Process.Tags, t...)
 	return c
 }
 
@@ -226,7 +191,7 @@ func (c *Command) AppendTags(t ...string) *Command {
 // added to the process after creation. Tags are used to filter
 // process with the manager.
 func (c *Command) ExtendTags(t []string) *Command {
-	c.opts.ProcOptions.Tags = append(c.opts.ProcOptions.Tags, t...)
+	c.opts.Process.Tags = append(c.opts.Process.Tags, t...)
 	return c
 }
 
@@ -249,49 +214,49 @@ func (c *Command) IgnoreError(ignore bool) *Command { c.opts.IgnoreError = ignor
 // SuppressStandardError sets a flag for determining if the Command should
 // discard all standard error content.
 func (c *Command) SuppressStandardError(v bool) *Command {
-	c.opts.ProcOptions.Output.SuppressError = v
+	c.opts.Process.Output.SuppressError = v
 	return c
 }
 
 // SetLoggers sets the logging output on this command to the specified
 // slice. This removes any loggers previously configured.
 func (c *Command) SetLoggers(l []options.Logger) *Command {
-	c.opts.ProcOptions.Output.Loggers = l
+	c.opts.Process.Output.Loggers = l
 	return c
 }
 
 // AppendLoggers adds one or more loggers to the existing configured
 // loggers in the command.
 func (c *Command) AppendLoggers(l ...options.Logger) *Command {
-	c.opts.ProcOptions.Output.Loggers = append(c.opts.ProcOptions.Output.Loggers, l...)
+	c.opts.Process.Output.Loggers = append(c.opts.Process.Output.Loggers, l...)
 	return c
 }
 
 // ExtendLoggers takes the existing slice of loggers and adds that to any
 // existing configuration.
 func (c *Command) ExtendLoggers(l []options.Logger) *Command {
-	c.opts.ProcOptions.Output.Loggers = append(c.opts.ProcOptions.Output.Loggers, l...)
+	c.opts.Process.Output.Loggers = append(c.opts.Process.Output.Loggers, l...)
 	return c
 }
 
 // SuppressStandardOutput sets a flag for determining if the Command should
 // discard all standard output content.
 func (c *Command) SuppressStandardOutput(v bool) *Command {
-	c.opts.ProcOptions.Output.SuppressOutput = v
+	c.opts.Process.Output.SuppressOutput = v
 	return c
 }
 
 // RedirectOutputToError sets a flag for determining if the Command should send
 // all standard output content to standard error.
 func (c *Command) RedirectOutputToError(v bool) *Command {
-	c.opts.ProcOptions.Output.SendOutputToError = v
+	c.opts.Process.Output.SendOutputToError = v
 	return c
 }
 
 // RedirectErrorToOutput sets a flag for determining if the Command should send
 // all standard error content to standard output.
 func (c *Command) RedirectErrorToOutput(v bool) *Command {
-	c.opts.ProcOptions.Output.SendOutputToError = v
+	c.opts.Process.Output.SendOutputToError = v
 	return c
 }
 
@@ -299,7 +264,7 @@ func (c *Command) RedirectErrorToOutput(v bool) *Command {
 // map. If this is a remote command, it sets the environment of the command
 // being run remotely.
 func (c *Command) Environment(e map[string]string) *Command {
-	c.opts.ProcOptions.Environment = e
+	c.opts.Process.Environment = e
 	return c
 }
 
@@ -308,7 +273,7 @@ func (c *Command) Environment(e map[string]string) *Command {
 // environment of the command being run remotely.
 func (c *Command) AddEnv(k, v string) *Command {
 	c.setupEnv()
-	c.opts.ProcOptions.Environment[k] = v
+	c.opts.Process.Environment[k] = v
 	return c
 }
 
@@ -373,8 +338,8 @@ func (c *Command) Sh(script string) *Command { return c.ShellScript("sh", script
 func (c *Command) AppendArgs(args ...string) *Command { return c.Add(args) }
 
 func (c *Command) setupEnv() {
-	if c.opts.ProcOptions.Environment == nil {
-		c.opts.ProcOptions.Environment = map[string]string{}
+	if c.opts.Process.Environment == nil {
+		c.opts.Process.Environment = map[string]string{}
 	}
 }
 
@@ -433,8 +398,8 @@ func (c *Command) RunParallel(ctx context.Context) error {
 
 	for idx, cmd := range c.opts.Commands {
 		splitCmd := *c
-		optsCopy := c.opts.ProcOptions.Copy()
-		splitCmd.opts.ProcOptions = *optsCopy
+		optsCopy := c.opts.Process.Copy()
+		splitCmd.opts.Process = *optsCopy
 		splitCmd.opts.Commands = [][]string{cmd}
 		splitCmd.procs = []Process{}
 		parallelCmds[idx] = splitCmd
@@ -486,19 +451,19 @@ func (c *Command) RunParallel(ctx context.Context) error {
 
 // Close closes this command and its resources.
 func (c *Command) Close() error {
-	return c.opts.ProcOptions.Close()
+	return c.opts.Process.Close()
 }
 
 // SetInput sets the standard input.
 func (c *Command) SetInput(r io.Reader) *Command {
-	c.opts.ProcOptions.StandardInput = r
+	c.opts.Process.StandardInput = r
 	return c
 }
 
 // SetInputBytes is the same as SetInput but sets b as the bytes to be read from
 // standard input.
 func (c *Command) SetInputBytes(b []byte) *Command {
-	c.opts.ProcOptions.StandardInputBytes = b
+	c.opts.Process.StandardInputBytes = b
 	return c
 }
 
@@ -506,8 +471,8 @@ func (c *Command) SetInputBytes(b []byte) *Command {
 // stderr.
 func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.opts.ProcOptions.RegisterCloser(writer.Close)
-	c.opts.ProcOptions.Output.Error = writer
+	c.opts.Process.RegisterCloser(writer.Close)
+	c.opts.Process.Output.Error = writer
 	return c
 }
 
@@ -515,8 +480,8 @@ func (c *Command) SetErrorSender(l level.Priority, s send.Sender) *Command {
 // stdout.
 func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.opts.ProcOptions.RegisterCloser(writer.Close)
-	c.opts.ProcOptions.Output.Output = writer
+	c.opts.Process.RegisterCloser(writer.Close)
+	c.opts.Process.Output.Output = writer
 	return c
 }
 
@@ -524,34 +489,34 @@ func (c *Command) SetOutputSender(l level.Priority, s send.Sender) *Command {
 // SetOutputSender().
 func (c *Command) SetCombinedSender(l level.Priority, s send.Sender) *Command {
 	writer := send.MakeWriterSender(s, l)
-	c.opts.ProcOptions.RegisterCloser(writer.Close)
-	c.opts.ProcOptions.Output.Error = writer
-	c.opts.ProcOptions.Output.Output = writer
+	c.opts.Process.RegisterCloser(writer.Close)
+	c.opts.Process.Output.Error = writer
+	c.opts.Process.Output.Output = writer
 	return c
 }
 
 // SetErrorWriter sets a Writer to be used by this Command for its output to
 // stderr.
 func (c *Command) SetErrorWriter(writer io.WriteCloser) *Command {
-	c.opts.ProcOptions.RegisterCloser(writer.Close)
-	c.opts.ProcOptions.Output.Error = writer
+	c.opts.Process.RegisterCloser(writer.Close)
+	c.opts.Process.Output.Error = writer
 	return c
 }
 
 // SetOutputWriter sets a Writer to be used by this Command for its output to
 // stdout.
 func (c *Command) SetOutputWriter(writer io.WriteCloser) *Command {
-	c.opts.ProcOptions.RegisterCloser(writer.Close)
-	c.opts.ProcOptions.Output.Output = writer
+	c.opts.Process.RegisterCloser(writer.Close)
+	c.opts.Process.Output.Output = writer
 	return c
 }
 
 // SetCombinedWriter is the combination of SetErrorWriter() and
 // SetOutputWriter().
 func (c *Command) SetCombinedWriter(writer io.WriteCloser) *Command {
-	c.opts.ProcOptions.RegisterCloser(writer.Close)
-	c.opts.ProcOptions.Output.Error = writer
-	c.opts.ProcOptions.Output.Output = writer
+	c.opts.Process.RegisterCloser(writer.Close)
+	c.opts.Process.Output.Error = writer
+	c.opts.Process.Output.Output = writer
 	return c
 }
 
@@ -602,7 +567,7 @@ func (c *Command) JobsForeground(ctx context.Context) ([]amboy.Job, error) {
 
 	out := make([]amboy.Job, len(opts))
 	for idx := range opts {
-		out[idx] = NewJobForeground(c.opts.MakeProc, opts[idx])
+		out[idx] = NewJobForeground(c.makeProc, opts[idx])
 	}
 	return out, nil
 }
@@ -618,13 +583,13 @@ func (c *Command) Jobs(ctx context.Context) ([]amboy.Job, error) {
 
 	out := make([]amboy.Job, len(opts))
 	for idx := range opts {
-		out[idx] = NewJobOptions(c.opts.MakeProc, opts[idx])
+		out[idx] = NewJobOptions(c.makeProc, opts[idx])
 	}
 	return out, nil
 }
 
 func (c *Command) getCmd() string {
-	env := strings.Join(c.opts.ProcOptions.ResolveEnvironment(), " ")
+	env := strings.Join(c.opts.Process.ResolveEnvironment(), " ")
 	out := []string{}
 	for _, cmd := range c.opts.Commands {
 		if c.opts.Sudo {
@@ -640,7 +605,7 @@ func (c *Command) getCmd() string {
 	return strings.Join(out, "\n")
 }
 func (c *Command) getCreateOpt(ctx context.Context, args []string) (*options.Create, error) {
-	opts := c.opts.ProcOptions.Copy()
+	opts := c.opts.Process.Copy()
 	switch len(args) {
 	case 0:
 		return nil, errors.New("cannot have empty args")
@@ -702,11 +667,11 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 		"index":      idx,
 		"len":        len(c.opts.Commands),
 		"background": c.opts.RunBackground,
-		"tags":       c.opts.ProcOptions.Tags,
+		"tags":       c.opts.Process.Tags,
 	}
 
 	writeOutput := getMsgOutput(opts.Output)
-	proc, err := c.opts.MakeProc(ctx, opts)
+	proc, err := c.makeProc(ctx, opts)
 	if err != nil {
 		return errors.Wrap(err, "problem starting command")
 	}
