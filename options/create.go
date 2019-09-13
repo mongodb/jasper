@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/shlex"
@@ -25,21 +26,22 @@ import (
 type Create struct {
 	Args             []string          `bson:"args" json:"args" yaml:"args"`
 	Environment      map[string]string `bson:"env,omitempty" json:"env,omitempty" yaml:"env,omitempty"`
+	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	WorkingDirectory string            `bson:"working_directory,omitempty" json:"working_directory,omitempty" yaml:"working_directory,omitempty"`
 	Output           Output            `bson:"output" json:"output" yaml:"output"`
-	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
+	RemoteInfo       *Remote           `bson:"remote,omitempty" json:"remote,omitempty" yaml:"remote,omitempty"`
 	// TimeoutSecs takes precedence over Timeout. On remote interfaces,
 	// TimeoutSecs should be set instead of Timeout.
-	TimeoutSecs   int           `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
-	Timeout       time.Duration `bson:"timeout" json:"-" yaml:"-"`
-	Tags          []string      `bson:"tags" json:"tags,omitempty" yaml:"tags"`
-	OnSuccess     []*Create     `bson:"on_success" json:"on_success,omitempty" yaml:"on_success"`
-	OnFailure     []*Create     `bson:"on_failure" json:"on_failure,omitempty" yaml:"on_failure"`
-	OnTimeout     []*Create     `bson:"on_timeout" json:"on_timeout,omitempty" yaml:"on_timeout"`
-	StandardInput io.Reader     `bson:"-" json:"-" yaml:"-"`
+	TimeoutSecs int           `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
+	Timeout     time.Duration `bson:"timeout" json:"-" yaml:"-"`
+	Tags        []string      `bson:"tags" json:"tags,omitempty" yaml:"tags"`
+	OnSuccess   []*Create     `bson:"on_success" json:"on_success,omitempty" yaml:"on_success"`
+	OnFailure   []*Create     `bson:"on_failure" json:"on_failure,omitempty" yaml:"on_failure"`
+	OnTimeout   []*Create     `bson:"on_timeout" json:"on_timeout,omitempty" yaml:"on_timeout"`
 	// StandardInputBytes takes precedence over StandardInput. On remote
 	// interfaces, StandardInputBytes should be set instead of StandardInput.
-	StandardInputBytes []byte `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
+	StandardInput      io.Reader `bson:"-" json:"-" yaml:"-"`
+	StandardInputBytes []byte    `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
 
 	closers []func() error
 }
@@ -137,6 +139,26 @@ func (opts *Create) Hash() hash.Hash {
 	return hash
 }
 
+func (opts *Create) resolveRemote(env []string) {
+	if opts.RemoteInfo == nil {
+		return
+	}
+
+	var remoteCmd string
+
+	if opts.WorkingDirectory != "" {
+		remoteCmd += fmt.Sprintf("cd '%s' && ", opts.WorkingDirectory)
+	}
+
+	if len(env) != 0 {
+		remoteCmd += strings.Join(env, " ") + " "
+	}
+
+	remoteCmd += strings.Join(opts.Args, " ")
+
+	opts.Args = append(append([]string{"ssh"}, opts.RemoteInfo.Args...), opts.RemoteInfo.String(), remoteCmd)
+}
+
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
@@ -150,16 +172,18 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 
-	if opts.WorkingDirectory == "" {
+	if opts.WorkingDirectory == "" && opts.RemoteInfo == nil {
 		opts.WorkingDirectory, _ = os.Getwd()
 	}
 
 	var env []string
-	if !opts.OverrideEnviron {
+	if !opts.OverrideEnviron && opts.RemoteInfo == nil {
 		env = os.Environ()
 	}
 
 	env = append(env, opts.ResolveEnvironment()...)
+
+	opts.resolveRemote(env)
 
 	var args []string
 	if len(opts.Args) > 1 {
