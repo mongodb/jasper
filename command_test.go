@@ -65,7 +65,6 @@ func verifyCommandAndGetOutput(ctx context.Context, t *testing.T, cmd *Command, 
 
 func checkOutput(t *testing.T, exists bool, output string, expectedOutputs ...string) {
 	for _, expected := range expectedOutputs {
-		// TODO: Maybe don't try to be so cheeky with an XOR...
 		assert.True(t, exists == strings.Contains(output, expected), "out='%s' and expected='%s'", output, expected)
 	}
 }
@@ -203,7 +202,7 @@ func TestCommandImplementation(t *testing.T) {
 										},
 									} {
 										t.Run(subTestName, func(t *testing.T) {
-											cmd = *NewCommand().ProcConstructor(cmd.makep)
+											cmd = *NewCommand().ProcConstructor(makep)
 											if isRemote {
 												cmd.User(user).Host("localhost")
 											}
@@ -251,7 +250,7 @@ func TestCommandImplementation(t *testing.T) {
 							for i := 0; i < numCombinations; i++ {
 								continueOnError, ignoreError, includeBadCmd := i&1 == 1, i&2 == 2, i&4 == 4
 
-								cmd := NewCommand().Add([]string{echo, arg1}).ProcConstructor(cmd.makep)
+								cmd := NewCommand().Add([]string{echo, arg1}).ProcConstructor(makep)
 								if includeBadCmd {
 									cmd.Add([]string{ls, arg3})
 								}
@@ -299,6 +298,7 @@ func TestCommandImplementation(t *testing.T) {
 								},
 							} {
 								t.Run(subName, func(t *testing.T) {
+									cmd = *NewCommand().ProcConstructor(makep)
 									subTestCase(ctx, t, cmd, runFunc)
 								})
 							}
@@ -324,7 +324,7 @@ func TestCommandImplementation(t *testing.T) {
 								},
 							} {
 								t.Run(subName, func(t *testing.T) {
-									cmd.Extend([][]string{
+									cmd = *NewCommand().ProcConstructor(makep).Extend([][]string{
 										[]string{echo, arg1},
 										[]string{echo, arg2},
 										[]string{ls, arg3},
@@ -340,7 +340,7 @@ func TestCommandImplementation(t *testing.T) {
 						"SenderOutputAndErrorIsSettable": func(ctx context.Context, t *testing.T, cmd Command) {
 							for subName, subTestCase := range map[string]func(context.Context, *testing.T, Command, *send.InMemorySender){
 								"StdOutOnly": func(ctx context.Context, t *testing.T, cmd Command, sender *send.InMemorySender) {
-									cmd.SetOutputSender(cmd.priority, sender)
+									cmd.SetOutputSender(cmd.opts.Priority, sender)
 									require.NoError(t, runFunc(&cmd, ctx))
 									out, err := sender.GetString()
 									require.NoError(t, err)
@@ -348,7 +348,7 @@ func TestCommandImplementation(t *testing.T) {
 									checkOutput(t, false, strings.Join(out, "\n"), lsErrorMsg)
 								},
 								"StdErrOnly": func(ctx context.Context, t *testing.T, cmd Command, sender *send.InMemorySender) {
-									cmd.SetErrorSender(cmd.priority, sender)
+									cmd.SetErrorSender(cmd.opts.Priority, sender)
 									require.NoError(t, runFunc(&cmd, ctx))
 									out, err := sender.GetString()
 									require.NoError(t, err)
@@ -356,7 +356,7 @@ func TestCommandImplementation(t *testing.T) {
 									checkOutput(t, false, strings.Join(out, "\n"), arg1, arg2)
 								},
 								"StdOutAndStdErr": func(ctx context.Context, t *testing.T, cmd Command, sender *send.InMemorySender) {
-									cmd.SetCombinedSender(cmd.priority, sender)
+									cmd.SetCombinedSender(cmd.opts.Priority, sender)
 									require.NoError(t, runFunc(&cmd, ctx))
 									out, err := sender.GetString()
 									require.NoError(t, err)
@@ -364,13 +364,13 @@ func TestCommandImplementation(t *testing.T) {
 								},
 							} {
 								t.Run(subName, func(t *testing.T) {
-									cmd.Extend([][]string{
+									cmd = *NewCommand().ProcConstructor(makep).Extend([][]string{
 										[]string{echo, arg1},
 										[]string{echo, arg2},
 										[]string{ls, arg3},
 									}).ContinueOnError(true).IgnoreError(true).Priority(level.Info)
 
-									levelInfo := send.LevelInfo{Default: cmd.priority, Threshold: cmd.priority}
+									levelInfo := send.LevelInfo{Default: cmd.opts.Priority, Threshold: cmd.opts.Priority}
 									sender, err := send.NewInMemorySender(t.Name(), levelInfo, 100)
 									require.NoError(t, err)
 
@@ -400,9 +400,9 @@ func TestCommandImplementation(t *testing.T) {
 								SendOutputToError: true,
 							}
 
-							assert.False(t, cmd.opts.Output.SendOutputToError)
+							assert.False(t, cmd.opts.Process.Output.SendOutputToError)
 							cmd.SetOutputOptions(opts)
-							assert.True(t, cmd.opts.Output.SendOutputToError)
+							assert.True(t, cmd.opts.Process.Output.SendOutputToError)
 						},
 						"ApplyFromOptsOverridesExistingOptions": func(ctx context.Context, t *testing.T, cmd Command) {
 							_ = cmd.Add([]string{echo, arg1}).Directory("bar")
@@ -424,7 +424,7 @@ func TestCommandImplementation(t *testing.T) {
 								Environment:      map[string]string{"foo": "bar"},
 							}
 							args := []string{echo, arg1}
-							cmd.cmds = [][]string{}
+							cmd.opts.Commands = [][]string{}
 							_ = cmd.ApplyFromOpts(opts).Add(args)
 							genOpts, err := cmd.getCreateOpts(ctx)
 							require.NoError(t, err)
@@ -530,7 +530,7 @@ func TestCommandImplementation(t *testing.T) {
 								},
 							} {
 								t.Run(subTestName, func(t *testing.T) {
-									cmd = *NewCommand().ProcConstructor(cmd.makep)
+									cmd = *NewCommand().ProcConstructor(makep)
 									subTestCase(ctx, t, cmd)
 								})
 							}
@@ -549,6 +549,27 @@ func TestCommandImplementation(t *testing.T) {
 							assert.Equal(t, []string{"echo", "hello", "world"}, optslist[0].Args)
 							assert.Equal(t, []string{"echo", "hello world"}, optslist[1].Args)
 							assert.Equal(t, []string{"echo", "hello\"world\""}, optslist[2].Args)
+						},
+						"RunFuncReceivesPopulatedOptions": func(ctx context.Context, t *testing.T, cmd Command) {
+							prio := level.Warning
+							user := "user"
+							runFuncCalled := false
+							cmd.Add([]string{echo, arg1}).
+								ContinueOnError(true).IgnoreError(true).
+								Priority(prio).Background(true).
+								Sudo(true).SudoAs(user).
+								SetRunFunc(func(opts options.Command) error {
+									runFuncCalled = true
+									assert.True(t, opts.ContinueOnError)
+									assert.True(t, opts.IgnoreError)
+									assert.True(t, opts.RunBackground)
+									assert.True(t, opts.Sudo)
+									assert.Equal(t, user, opts.SudoUser)
+									assert.Equal(t, prio, opts.Priority)
+									return nil
+								})
+							require.NoError(t, cmd.Run(ctx))
+							assert.True(t, runFuncCalled)
 						},
 						// "": func(ctx context.Context, t *testing.T, cmd Command) {},
 					} {

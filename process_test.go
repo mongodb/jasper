@@ -185,8 +185,7 @@ func TestProcessImplementations(t *testing.T) {
 					}
 				},
 				"SignalTriggerRunsBeforeSignal": func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
-					opts := testutil.YesCreateOpts(0)
-					proc, err := makep(ctx, &opts)
+					proc, err := makep(ctx, testutil.YesCreateOpts(0))
 					require.NoError(t, err)
 
 					expectedSig := syscall.SIGKILL
@@ -210,8 +209,7 @@ func TestProcessImplementations(t *testing.T) {
 					assert.True(t, proc.Complete(ctx))
 				},
 				"SignalTriggerCanSkipSignal": func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
-					opts := testutil.YesCreateOpts(0)
-					proc, err := makep(ctx, &opts)
+					proc, err := makep(ctx, testutil.YesCreateOpts(0))
 					require.NoError(t, err)
 
 					expectedSig := syscall.SIGKILL

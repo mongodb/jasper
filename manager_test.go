@@ -520,8 +520,7 @@ func TestTrackedManager(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 					defer cancel()
-					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
-					test(tctx, t, makeManager(), &opts)
+					test(tctx, t, makeManager(), testutil.YesCreateOpts(testutil.ManagerTestTimeout))
 				})
 			}
 		})

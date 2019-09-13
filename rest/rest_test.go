@@ -888,8 +888,7 @@ func TestRestService(t *testing.T) {
 			assert.Contains(t, handleError(resp).Error(), "no process 'foo' found")
 		},
 		"ServiceRegisterSignalTriggerIDChecksForInvalidTriggerID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := testutil.YesCreateOpts(0)
-			proc, err := client.CreateProcess(ctx, &opts)
+			proc, err := client.CreateProcess(ctx, testutil.YesCreateOpts(0))
 			require.NoError(t, err)
 			assert.True(t, proc.Running(ctx))
 
@@ -898,8 +897,7 @@ func TestRestService(t *testing.T) {
 			assert.NoError(t, proc.Signal(ctx, syscall.SIGTERM))
 		},
 		"ServiceRegisterSignalTriggerIDPassesWithValidArgs": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := testutil.YesCreateOpts(0)
-			proc, err := client.CreateProcess(ctx, &opts)
+			proc, err := client.CreateProcess(ctx, testutil.YesCreateOpts(0))
 			require.NoError(t, err)
 			assert.True(t, proc.Running(ctx))
 
