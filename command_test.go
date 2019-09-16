@@ -432,52 +432,6 @@ func TestCommandImplementation(t *testing.T) {
 							assert.Equal(t, opts.WorkingDirectory, genOpts[0].WorkingDirectory)
 							assert.Equal(t, opts.Environment, genOpts[0].Environment)
 						},
-						"DirectoryIsSetInRemoteCommand": func(ctx context.Context, t *testing.T, cmd Command) {
-							args := []string{echo, arg1}
-							dir := "foo"
-							_ = cmd.Host("localhost").Directory(dir).Add(args)
-							genOpts, err := cmd.getCreateOpts()
-							require.NoError(t, err)
-							require.Len(t, genOpts, 1)
-
-							// The remote command should run with the working
-							// directory set, not the local command.
-							assert.NotEqual(t, dir, genOpts[0].WorkingDirectory)
-							setsDir := false
-							for _, args := range genOpts[0].Args {
-								if strings.Contains(args, dir) {
-									setsDir = true
-									break
-								}
-							}
-							assert.True(t, setsDir)
-						},
-						"EnvironmentIsSetInRemoteCommand": func(ctx context.Context, t *testing.T, cmd Command) {
-							opts := &options.Create{
-								Environment: map[string]string{"foo": "bar"},
-							}
-							args := []string{echo, arg1}
-							_ = cmd.Host("localhost").ApplyFromOpts(opts).Add(args)
-							genOpts, err := cmd.getCreateOpts()
-							require.NoError(t, err)
-							require.Len(t, genOpts, 1)
-
-							// The remote command should run with the environment
-							// set, not the local command.
-							assert.Empty(t, genOpts[0].Environment)
-							setsEnv := false
-							envSlice := opts.ResolveEnvironment()
-							for _, args := range genOpts[0].Args {
-								for _, envVarAndValue := range envSlice {
-									if !strings.Contains(args, envVarAndValue) {
-										continue
-									}
-								}
-								setsEnv = true
-								break
-							}
-							assert.True(t, setsEnv)
-						},
 						"GetJobs": func(ctx context.Context, t *testing.T, cmd Command) {
 							jobs, err := cmd.Append("ls", "echo hi", "ls -lha").Jobs(ctx)
 							assert.NoError(t, err)
