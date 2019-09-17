@@ -47,7 +47,7 @@ func (m *remoteOverrideMgr) Group(ctx context.Context, n string) ([]Process, err
 }
 
 func (m *remoteOverrideMgr) Get(ctx context.Context, n string) (Process, error) {
-	return m.Get(ctx, n)
+	return m.mgr.Get(ctx, n)
 }
 
 func (m *remoteOverrideMgr) Clear(ctx context.Context)       { m.mgr.Clear(ctx) }
