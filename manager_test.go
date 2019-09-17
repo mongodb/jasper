@@ -54,6 +54,19 @@ func TestManagerInterface(t *testing.T) {
 			require.NoError(t, err)
 			return selfClearingBlockingManager
 		},
+		"Basic/NoLock/RemoteNil/BasicProcs": func(_ context.Context, _ *testing.T) Manager {
+			m := &basicProcessManager{
+				id:       "id",
+				procs:    map[string]Process{},
+				blocking: false,
+			}
+			return NewRemoteManager(m, nil)
+		},
+		"Basic/Lock/RemoteNil/BasicProcs": func(_ context.Context, t *testing.T) Manager {
+			m, err := NewLocalManager(false)
+			require.NoError(t, err)
+			return NewRemoteManager(m, nil)
+		},
 	} {
 		t.Run(mname, func(t *testing.T) {
 			for name, test := range map[string]func(context.Context, *testing.T, Manager){
