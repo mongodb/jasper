@@ -101,7 +101,14 @@ func (c *Command) SetOutputOptions(opts options.Output) *Command {
 
 // String returns a stringified representation.
 func (c *Command) String() string {
-	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, c.opts.Remote.String(), c.getCmd())
+	var remote string
+	if c.opts.Remote == nil {
+		remote = "nil"
+	} else {
+		remote = c.opts.Remote.String()
+	}
+
+	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, remote, c.getCmd())
 }
 
 // Export returns all of the options.Create that will be used to spawn the
@@ -120,15 +127,29 @@ func (c *Command) Directory(d string) *Command { c.opts.Process.WorkingDirectory
 
 // Host sets the hostname. A blank hostname implies local execution of the
 // command, a non-blank hostname is treated as a remotely executed command.
-func (c *Command) Host(h string) *Command { c.opts.Remote.Host = h; return c }
+func (c *Command) Host(h string) *Command { c.initRemote(); c.opts.Remote.Host = h; return c }
+
+func (c *Command) initRemote() {
+	if c.opts.Remote == nil {
+		c.opts.Remote = &options.Remote{}
+	}
+}
 
 // User sets the username for remote operations. Host name must be set
 // to execute as a remote command.
-func (c *Command) User(u string) *Command { c.opts.Remote.User = u; return c }
+func (c *Command) User(u string) *Command {
+	c.initRemote()
+	c.opts.Remote.User = u
+	return c
+}
 
 // SetRemoteArgs sets the arguments, if any, that are passed to the
 // underlying ssh command, for remote commands.
-func (c *Command) SetRemoteArgs(args []string) *Command { c.opts.Remote.Args = args; return c }
+func (c *Command) SetRemoteArgs(args []string) *Command {
+	c.initRemote()
+	c.opts.Remote.Args = args
+	return c
+}
 
 // ExtendRemoteArgs allows you to add arguments, when needed, to the
 // underlying ssh command, for remote commands.
