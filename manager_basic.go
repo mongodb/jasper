@@ -16,7 +16,6 @@ type basicProcessManager struct {
 	procs              map[string]Process
 	skipDefaultTrigger bool
 	blocking           bool
-	remote             *options.Remote
 	tracker            ProcessTracker
 }
 

@@ -609,8 +609,8 @@ func (c *Command) getCreateOpts() ([]*options.Create, error) {
 			continue
 		}
 
-		if c.opts.Remote.Host != "" {
-			cmd.RemoteInfo = &c.opts.Remote
+		if c.opts.Remote != nil && c.opts.Remote.Host != "" {
+			cmd.RemoteInfo = c.opts.Remote
 		}
 
 		out = append(out, cmd)

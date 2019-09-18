@@ -7,7 +7,7 @@ import (
 )
 
 type remoteOverrideMgr struct {
-	remote options.Remote
+	remote *options.Remote
 	mgr    Manager
 }
 
@@ -15,7 +15,8 @@ type remoteOverrideMgr struct {
 // manager, but creates all commands with the specified remote
 // options. Commands and processes with non-nil remote options will
 // run over SSH.
-func NewRemoteManager(mgr Manager, remote options.Remote) Manager {
+func NewRemoteManager(mgr Manager, remote *options.Remote) Manager {
+
 	return &remoteOverrideMgr{
 		remote: remote,
 		mgr:    mgr,
@@ -24,7 +25,7 @@ func NewRemoteManager(mgr Manager, remote options.Remote) Manager {
 
 func (m *remoteOverrideMgr) ID() string { return m.mgr.ID() }
 func (m *remoteOverrideMgr) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
-	opts.RemoteInfo = &m.remote
+	opts.RemoteInfo = m.remote
 	return m.mgr.CreateProcess(ctx, opts)
 }
 

@@ -60,12 +60,12 @@ func TestManagerInterface(t *testing.T) {
 				procs:    map[string]Process{},
 				blocking: false,
 			}
-			return NewRemoteManager(m, options.Remote{})
+			return NewRemoteManager(m, nil)
 		},
 		"Basic/Lock/RemoteNil/BasicProcs": func(_ context.Context, t *testing.T) Manager {
 			m, err := NewLocalManager(false)
 			require.NoError(t, err)
-			return NewRemoteManager(m, options.Remote{})
+			return NewRemoteManager(m, nil)
 		},
 	} {
 		t.Run(mname, func(t *testing.T) {
