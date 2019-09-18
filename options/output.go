@@ -80,11 +80,11 @@ func (o *Output) Validate() error {
 		catcher.Add(errors.New("cannot suppress error and redirect it to output"))
 	}
 
-	if o.SendOutputToError && o.Error == nil && !o.errorLogging() {
+	if o.SendOutputToError && o.errorIsNull() && !o.errorLogging() {
 		catcher.Add(errors.New("cannot redirect output to error without a defined error writer"))
 	}
 
-	if o.SendErrorToOutput && o.Output == nil && !o.outputLogging() {
+	if o.SendErrorToOutput && o.outputIsNull() && !o.outputLogging() {
 		catcher.Add(errors.New("cannot redirect error to output without a defined output writer"))
 	}
 

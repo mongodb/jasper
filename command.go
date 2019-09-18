@@ -256,7 +256,7 @@ func (c *Command) RedirectOutputToError(v bool) *Command {
 // RedirectErrorToOutput sets a flag for determining if the Command should send
 // all standard error content to standard output.
 func (c *Command) RedirectErrorToOutput(v bool) *Command {
-	c.opts.Process.Output.SendOutputToError = v
+	c.opts.Process.Output.SendErrorToOutput = v
 	return c
 }
 
