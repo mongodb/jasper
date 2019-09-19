@@ -56,6 +56,7 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 		return nil, errors.Wrap(err, "problem starting command")
 	}
 
+	p.info.StartAt = time.Now()
 	p.info.ID = p.id
 	p.info.Options = p.opts
 	p.info.Host, _ = os.Hostname()
@@ -81,6 +82,7 @@ func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd *
 		defer close(p.waitProcessed)
 		finishTime := time.Now()
 		p.err = err
+		p.info.EndAt = finishTime
 		p.info.IsRunning = false
 		p.info.Complete = true
 		procWaitStatus := p.cmd.ProcessState.Sys().(syscall.WaitStatus)

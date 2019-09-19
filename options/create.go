@@ -95,7 +95,7 @@ func (opts *Create) Validate() error {
 		return errors.Wrap(err, "cannot create command with invalid output")
 	}
 
-	if opts.WorkingDirectory != "" {
+	if opts.WorkingDirectory != "" && opts.RemoteInfo == nil {
 		info, err := os.Stat(opts.WorkingDirectory)
 
 		if os.IsNotExist(err) {
@@ -199,7 +199,9 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 	}
 
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
-	cmd.Dir = opts.WorkingDirectory
+	if opts.RemoteInfo == nil {
+		cmd.Dir = opts.WorkingDirectory
+	}
 
 	cmd.Stdout, err = opts.Output.GetOutput()
 	if err != nil {
@@ -209,7 +211,9 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 	if err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
-	cmd.Env = env
+	if opts.RemoteInfo == nil {
+		cmd.Env = env
+	}
 
 	if opts.StandardInput != nil {
 		cmd.Stdin = opts.StandardInput
