@@ -39,38 +39,6 @@ func (c *Command) sudoCmd() []string {
 	return sudoCmd
 }
 
-func (c *Command) getRemoteCreateOpt(ctx context.Context, args []string) (*options.Create, error) {
-	opts := c.opts.Process.Copy()
-	opts.WorkingDirectory = ""
-	opts.Environment = nil
-
-	var remoteCmd string
-
-	if c.opts.Process.WorkingDirectory != "" {
-		remoteCmd += fmt.Sprintf("cd '%s' && ", c.opts.Process.WorkingDirectory)
-	}
-
-	if env := c.opts.Process.ResolveEnvironment(); len(env) != 0 {
-		remoteCmd += strings.Join(env, " ") + " "
-	}
-
-	if c.opts.Sudo {
-		args = append(c.sudoCmd(), args...)
-	}
-
-	switch len(args) {
-	case 0:
-		return nil, errors.New("cannot have empty args")
-	case 1:
-		remoteCmd += args[0]
-	default:
-		remoteCmd += strings.Join(args, " ")
-	}
-
-	opts.Args = append(append([]string{"ssh"}, c.opts.Remote.Args...), c.opts.Remote.String(), remoteCmd)
-	return opts, nil
-}
-
 func splitCmdToArgs(cmd string) []string {
 	args, err := shlex.Split(cmd)
 	if err != nil {
@@ -133,13 +101,20 @@ func (c *Command) SetOutputOptions(opts options.Output) *Command {
 
 // String returns a stringified representation.
 func (c *Command) String() string {
-	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, c.opts.Remote.String(), c.getCmd())
+	var remote string
+	if c.opts.Remote == nil {
+		remote = "nil"
+	} else {
+		remote = c.opts.Remote.String()
+	}
+
+	return fmt.Sprintf("id='%s', remote='%s', cmd='%s'", c.opts.ID, remote, c.getCmd())
 }
 
 // Export returns all of the options.Create that will be used to spawn the
 // processes that run all subcommands.
-func (c *Command) Export(ctx context.Context) ([]*options.Create, error) {
-	opts, err := c.getCreateOpts(ctx)
+func (c *Command) Export() ([]*options.Create, error) {
+	opts, err := c.getCreateOpts()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem getting process creation options")
 	}
@@ -152,15 +127,29 @@ func (c *Command) Directory(d string) *Command { c.opts.Process.WorkingDirectory
 
 // Host sets the hostname. A blank hostname implies local execution of the
 // command, a non-blank hostname is treated as a remotely executed command.
-func (c *Command) Host(h string) *Command { c.opts.Remote.Host = h; return c }
+func (c *Command) Host(h string) *Command { c.initRemote(); c.opts.Remote.Host = h; return c }
+
+func (c *Command) initRemote() {
+	if c.opts.Remote == nil {
+		c.opts.Remote = &options.Remote{}
+	}
+}
 
 // User sets the username for remote operations. Host name must be set
 // to execute as a remote command.
-func (c *Command) User(u string) *Command { c.opts.Remote.User = u; return c }
+func (c *Command) User(u string) *Command {
+	c.initRemote()
+	c.opts.Remote.User = u
+	return c
+}
 
 // SetRemoteArgs sets the arguments, if any, that are passed to the
 // underlying ssh command, for remote commands.
-func (c *Command) SetRemoteArgs(args []string) *Command { c.opts.Remote.Args = args; return c }
+func (c *Command) SetRemoteArgs(args []string) *Command {
+	c.initRemote()
+	c.opts.Remote.Args = args
+	return c
+}
 
 // ExtendRemoteArgs allows you to add arguments, when needed, to the
 // underlying ssh command, for remote commands.
@@ -360,7 +349,7 @@ func (c *Command) Run(ctx context.Context) error {
 
 	catcher := grip.NewBasicCatcher()
 
-	opts, err := c.getCreateOpts(ctx)
+	opts, err := c.getCreateOpts()
 	if err != nil {
 		catcher.Add(err)
 		catcher.Add(c.Close())
@@ -560,7 +549,7 @@ func (c *Command) Enqueue(ctx context.Context, q amboy.Queue) error {
 // captured in the command. The output of the commands are logged,
 // using the default grip sender in the foreground.
 func (c *Command) JobsForeground(ctx context.Context) ([]amboy.Job, error) {
-	opts, err := c.getCreateOpts(ctx)
+	opts, err := c.getCreateOpts()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -576,7 +565,7 @@ func (c *Command) JobsForeground(ctx context.Context) ([]amboy.Job, error) {
 // command. The output of the commands are captured in the body of the
 // job.
 func (c *Command) Jobs(ctx context.Context) ([]amboy.Job, error) {
-	opts, err := c.getCreateOpts(ctx)
+	opts, err := c.getCreateOpts()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -604,8 +593,10 @@ func (c *Command) getCmd() string {
 	}
 	return strings.Join(out, "\n")
 }
-func (c *Command) getCreateOpt(ctx context.Context, args []string) (*options.Create, error) {
+
+func (c *Command) getCreateOpt(args []string) (*options.Create, error) {
 	opts := c.opts.Process.Copy()
+
 	switch len(args) {
 	case 0:
 		return nil, errors.New("cannot have empty args")
@@ -615,7 +606,7 @@ func (c *Command) getCreateOpt(ctx context.Context, args []string) (*options.Cre
 			if err != nil {
 				return nil, errors.Wrap(err, "problem splitting argstring")
 			}
-			return c.getCreateOpt(ctx, spl)
+			return c.getCreateOpt(spl)
 		}
 		opts.Args = args
 	default:
@@ -629,30 +620,23 @@ func (c *Command) getCreateOpt(ctx context.Context, args []string) (*options.Cre
 	return opts, nil
 }
 
-func (c *Command) getCreateOpts(ctx context.Context) ([]*options.Create, error) {
+func (c *Command) getCreateOpts() ([]*options.Create, error) {
 	out := []*options.Create{}
 	catcher := grip.NewBasicCatcher()
-	if c.opts.Remote.Host != "" {
-		for _, args := range c.opts.Commands {
-			cmd, err := c.getRemoteCreateOpt(ctx, args)
-			if err != nil {
-				catcher.Add(err)
-				continue
-			}
-
-			out = append(out, cmd)
+	for _, args := range c.opts.Commands {
+		cmd, err := c.getCreateOpt(args)
+		if err != nil {
+			catcher.Add(err)
+			continue
 		}
-	} else {
-		for _, args := range c.opts.Commands {
-			cmd, err := c.getCreateOpt(ctx, args)
-			if err != nil {
-				catcher.Add(err)
-				continue
-			}
 
-			out = append(out, cmd)
+		if c.opts.Remote != nil && c.opts.Remote.Host != "" {
+			cmd.RemoteInfo = c.opts.Remote
 		}
+
+		out = append(out, cmd)
 	}
+
 	if catcher.HasErrors() {
 		return nil, catcher.Resolve()
 	}

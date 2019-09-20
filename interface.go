@@ -130,4 +130,6 @@ type ProcessInfo struct {
 	Complete   bool           `json:"complete"`
 	Timeout    bool           `json:"timeout"`
 	Options    options.Create `json:"options"`
+	StartAt    time.Time      `json:"start_at"`
+	EndAt      time.Time      `json:"end_at"`
 }

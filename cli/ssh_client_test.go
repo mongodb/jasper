@@ -544,16 +544,8 @@ func makeCreateFunc(t *testing.T, client *sshClient, expectedClientSubcommand []
 		}
 
 		cliCommand := strings.Join(client.opts.buildCommand(expectedClientSubcommand...), " ")
-		cliCommandFound := false
-		for _, arg := range opts.Args {
-			if testutil.RemoveWhitespace(arg) == testutil.RemoveWhitespace(cliCommand) {
-				cliCommandFound = true
-				break
-			}
-		}
-		assert.True(t, cliCommandFound)
-
-		require.True(t, expectedResponse != nil)
+		assert.Equal(t, cliCommand, strings.Join(opts.Args, " "))
+		require.NotNil(t, expectedResponse)
 		require.NoError(t, writeOutput(opts.Output.Output, expectedResponse))
 		return mock.Process{}
 	}

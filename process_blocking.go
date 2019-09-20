@@ -66,6 +66,7 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 		PID:       cmd.Process.Pid,
 		Options:   *opts,
 		IsRunning: true,
+		StartAt:   time.Now(),
 	}
 	p.info.Host, _ = os.Hostname()
 
@@ -124,6 +125,7 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd *
 			func() {
 				p.mu.RLock()
 				defer p.mu.RUnlock()
+				p.info.EndAt = finishTime
 
 				info = p.info
 				info.Complete = true
@@ -168,6 +170,7 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd *
 			info.Complete = true
 			info.IsRunning = false
 			info.Successful = false
+			info.EndAt = time.Now()
 
 			p.mu.RLock()
 			p.triggers.Run(info)
