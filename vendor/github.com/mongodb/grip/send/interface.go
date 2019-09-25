@@ -39,11 +39,13 @@ type Sender interface {
 	// the error handler, although some, use a default handler to
 	// write logging errors to standard output.
 	SetErrorHandler(ErrorHandler) error
+	ErrorHandler() ErrorHandler
 
 	// SetFormatter allows users to inject formatting functions to
 	// modify the output of the log sender by providing a function
 	// that takes a message and returns string and error.
 	SetFormatter(MessageFormatter) error
+	Formatter() MessageFormatter
 
 	// If the logging sender holds any resources that require
 	// desecration, they should be cleaned up tin the Close()
