@@ -40,8 +40,9 @@ const (
 
 // Constants representing service flags.
 const (
-	quietFlagName = "quiet"
-	userFlagName  = "user"
+	quietFlagName    = "quiet"
+	userFlagName     = "user"
+	passwordFlagName = "password"
 
 	logNameFlagName = "log_name"
 	defaultLogName  = "jasper"
@@ -101,6 +102,11 @@ func serviceFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  userFlagName,
 			Usage: "the user who running the service",
+		},
+		cli.StringFlag{
+			Name:   passwordFlagName,
+			Usage:  "the password for the user running the service",
+			EnvVar: "JASPER_USER_PASSWORD",
 		},
 		cli.StringFlag{
 			Name:  logNameFlagName,
@@ -178,22 +184,24 @@ func buildRunCommand(c *cli.Context, serviceType string) []string {
 
 // serviceOptions returns all options specific to particular service management
 // systems.
-func serviceOptions() service.KeyValue {
+func serviceOptions(c *cli.Context) service.KeyValue {
 	return service.KeyValue{
 		// launchd-specific options
 		"RunAtLoad": true,
+		"Password":  c.String(passwordFlagName),
 	}
 }
 
 // serviceConfig returns the daemon service configuration.
-func serviceConfig(serviceType string, args []string) *service.Config {
+func serviceConfig(serviceType string, c *cli.Context, args []string) *service.Config {
 	return &service.Config{
 		Name:        fmt.Sprintf("%s_jasperd", serviceType),
 		DisplayName: fmt.Sprintf("Jasper %s service", serviceType),
 		Description: "Jasper is a service for process management",
 		Executable:  "", // No executable refers to the current executable.
 		Arguments:   args,
-		Option:      serviceOptions(),
+		Option:      serviceOptions(c),
+		UserName:    c.String(userFlagName),
 	}
 }
 
