@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
@@ -48,9 +49,10 @@ const (
 
 	logLevelFlagName = "log_level"
 
-	splunkURLFlagName     = "splunk_url"
-	splunkTokenFlagName   = "splunk_token"
-	splunkChannelFlagName = "splunk_channel"
+	splunkURLFlagName           = "splunk_url"
+	splunkTokenFlagName         = "splunk_token"
+	splunkTokenFilePathFlagName = "splunk_token_path"
+	splunkChannelFlagName       = "splunk_channel"
 )
 
 // Service encapsulates the functionality to set up Jasper services.
@@ -122,6 +124,10 @@ func serviceFlags() []cli.Flag {
 			EnvVar: "GRIP_SPLUNK_CLIENT_TOKEN",
 		},
 		cli.StringFlag{
+			Name:  splunkTokenFilePathFlagName,
+			Usage: "the path to the file containing the splunk token",
+		},
+		cli.StringFlag{
 			Name:   splunkChannelFlagName,
 			Usage:  "the splunk channel",
 			EnvVar: "GRIP_SPLUNK_CHANNEL",
@@ -147,6 +153,16 @@ func makeLogger(c *cli.Context) *options.Logger {
 		ServerURL: c.String(splunkURLFlagName),
 		Token:     c.String(splunkTokenFlagName),
 		Channel:   c.String(splunkChannelFlagName),
+	}
+	if info.Token == "" {
+		if tokenFilePath := c.String(splunkTokenFilePathFlagName); tokenFilePath != "" {
+			token, err := ioutil.ReadFile(tokenFilePath)
+			if err != nil {
+				grip.Error(errors.Wrapf(err, "could not read splunk token file from path '%s'", tokenFilePath))
+				return nil
+			}
+			info.Token = string(token)
+		}
 	}
 	if !info.Populated() {
 		return nil
