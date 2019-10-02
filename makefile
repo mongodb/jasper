@@ -35,6 +35,33 @@ lint-%:$(buildDir)/output.%.lint
 # end convienence targets
 
 
+# start linting configuration
+#   package, testing, and linter dependencies specified
+#   separately. This is a temporary solution: eventually we should
+#   vendorize all of these dependencies.
+lintDeps := github.com/alecthomas/gometalinter
+#   include test files and give linters 40s to run to avoid timeouts
+lintArgs := --tests --deadline=13m --vendor
+#   gotype produces false positives because it reads .a files which
+#   are rarely up to date.
+lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="golint"
+lintArgs += --skip="build"
+#   enable and configure additional linters
+lintArgs += --line-length=100 --dupl-threshold=150
+#   some test cases are structurally similar, and lead to dupl linter
+#   warnings, but are important to maintain separately, and would be
+#   difficult to test without a much more complex reflection/code
+#   generation approach, so we ignore dupl errors in tests.
+lintArgs += --exclude="warning: duplicate of .*_test.go"
+#   go lint warns on an error in docstring format, erroneously because
+#   it doesn't consider the entire package.
+lintArgs += --exclude="warning: package comment should be of the form \"Package .* ...\""
+#   known issues that the linter picks up that are not relevant in our cases
+lintArgs += --exclude="file is not goimported" # top-level mains aren't imported
+lintArgs += --exclude="error return value not checked .defer.*"
+# end linting configuration
+
+
 # start test and coverage artifacts
 #    This varable includes everything that the tests actually need to
 #    run. (The "build" target is intentional and makes these targetsb
@@ -75,6 +102,11 @@ $(buildDir)/output.%.coverage:$(buildDir)/ .FORCE
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 	go tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
+lintDeps := $(addprefix $(GOPATH)/src/,$(lintDeps))
+$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
+	 go build -o $@ $<
+$(buildDir)/.lintSetup:$(lintDeps)
+	@-$(GOPATH)/bin/gometalinter --install >/dev/null && touch $@
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 	@./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 $(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE

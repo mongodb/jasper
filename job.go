@@ -47,6 +47,9 @@ const (
 	amboyForegroundOutputJobName     = "jasper-foreground-job"
 )
 
+// RegisterJobs adds factories for the jobtypes provided by these
+// packages to make it possible to dispatch these jobs to a
+// remote/distributed queue.
 func RegisterJobs(pc ProcessConstructor) {
 	registry.AddJobType(amboyJobName, func() amboy.Job { return amboyJobFactory(pc) })
 	registry.AddJobType(amboySimpleCapturedOutputJobName, func() amboy.Job { return amboySimpleCapturedOutputJobFactory(pc) })
@@ -66,8 +69,16 @@ func amboyJobFactory(pc ProcessConstructor) *amboyJob {
 	}
 	j.SetDependency(dependency.NewAlways())
 	return j
+
 }
 
+// NewJob constructs an amboy job that wraps a provided
+// ProcessConstructor. The identifier of the job includes a hash of
+// the command, so running the same command repeatedly may result in
+// job collisions.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
 func NewJob(pc ProcessConstructor, cmd string) Job {
 	j := amboyJobFactory(pc)
 	j.CmdString = cmd
@@ -75,6 +86,10 @@ func NewJob(pc ProcessConstructor, cmd string) Job {
 	return j
 }
 
+// NewJobBasic constructs an amboy job that uses jasper process
+// management internally. The identifier of the job includes a hash of
+// the command, so running the same command repeatedly may result in
+// job collisions.
 func NewJobBasic(cmd string) Job {
 	j := amboyJobFactory(newBasicProcess)
 	j.CmdString = cmd
@@ -82,6 +97,13 @@ func NewJobBasic(cmd string) Job {
 	return j
 }
 
+// NewJobExtended builds a job that creates a process with environment
+// variables and a working directory defined. The identifier of the
+// job includes a hash of the command, so running the same command
+// repeatedly may result in job collisions.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
 func NewJobExtended(pc ProcessConstructor, cmd string, env map[string]string, wd string) Job {
 	j := amboyJobFactory(pc)
 	j.CmdString = cmd
@@ -91,6 +113,10 @@ func NewJobExtended(pc ProcessConstructor, cmd string, env map[string]string, wd
 	return j
 }
 
+// NewJobBasicExtended builds a job that creates a process with environment
+// variables and a working directory defined. The identifier of the
+// job includes a hash of the command, so running the same command
+// repeatedly may result in job collisions.
 func NewJobBasicExtended(cmd string, env map[string]string, wd string) Job {
 	j := amboyJobFactory(newBasicProcess)
 	j.CmdString = cmd
@@ -166,6 +192,12 @@ func amboySimpleCapturedOutputJobFactory(pc ProcessConstructor) *amboySimpleCapt
 	return j
 }
 
+// NewJobOptions creates a new job using the options to define the
+// parameters of the job. The identifier of the job is the hash of the
+// options structure.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
 func NewJobOptions(pc ProcessConstructor, opts *options.Create) Job {
 	j := amboySimpleCapturedOutputJobFactory(pc)
 	j.Options = opts
@@ -221,6 +253,12 @@ func amboyForegroundOutputJobFactory(pc ProcessConstructor) *amboyForegroundOutp
 	return j
 }
 
+// NewJobForeground creates an amboy job that write all output,
+// linwise to the current processes global grip logging instance with
+// error and output sperpeated by level.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
 func NewJobForeground(pc ProcessConstructor, opts *options.Create) Job {
 	j := amboyForegroundOutputJobFactory(pc)
 	j.SetID(fmt.Sprintf("%s.%x", j.Type().Name, opts.Hash()))
@@ -228,6 +266,9 @@ func NewJobForeground(pc ProcessConstructor, opts *options.Create) Job {
 	return j
 }
 
+// NewJobBasicForeground creates an amboy job that write all output,
+// linwise to the current processes global grip logging instance with
+// error and output sperpeated by level.
 func NewJobBasicForeground(opts *options.Create) Job {
 	j := amboyForegroundOutputJobFactory(newBasicProcess)
 	j.SetID(fmt.Sprintf("%s.basic.%x", j.Type().Name, opts.Hash()))

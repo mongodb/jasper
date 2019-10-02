@@ -82,7 +82,8 @@ const (
 
 var (
 	modkernel32 = syscall.NewLazyDLL("kernel32.dll")
-	modadvapi32 = syscall.NewLazyDLL("advapi32.dll")
+	// commented the following unused mod
+	// modadvapi32 = syscall.NewLazyDLL("advapi32.dll")
 
 	procAssignProcessToJobObject  = modkernel32.NewProc("AssignProcessToJobObject")
 	procCloseHandle               = modkernel32.NewProc("CloseHandle")
@@ -332,6 +333,7 @@ func WaitForSingleObject(object syscall.Handle, timeout time.Duration) (uint32, 
 	return waitStatus, nil
 }
 
+// nolint
 func getWaitStatusError(waitStatus uint32) error {
 	switch waitStatus {
 	case WAIT_OBJECT_0:

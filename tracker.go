@@ -31,6 +31,7 @@ type mockProcessTracker struct {
 	Infos       []ProcessInfo
 }
 
+// nolint
 func newMockProcessTracker() ProcessTracker {
 	return &mockProcessTracker{
 		Infos: []ProcessInfo{},
