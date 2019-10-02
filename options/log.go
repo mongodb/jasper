@@ -235,7 +235,7 @@ func (l *Logger) Configure() (send.Sender, error) {
 		return nil, errors.New("failed to set log format")
 	}
 
-	if l.Options.BufferOptions.Buffered {
+	if l.Type != LogBuildloggerV3 && l.Options.BufferOptions.Buffered {
 		if l.Options.BufferOptions.Duration < 0 || l.Options.BufferOptions.MaxSize < 0 {
 			return nil, errors.New("buffer options cannot be negative")
 		}
