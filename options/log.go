@@ -1,6 +1,7 @@
 package options
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -105,13 +106,13 @@ func (opts Buffer) Validate() error {
 type Log struct {
 	BufferOptions        Buffer                    `json:"buffer_options,omitempty"`
 	BuildloggerOptions   send.BuildloggerConfig    `json:"buildlogger_options,omitempty"`
+	BuildloggerV3Options timber.LoggerOptions      `json:"buildlogger_v3_options"`
 	DefaultPrefix        string                    `json:"default_prefix,omitempty"`
 	FileName             string                    `json:"file_name,omitempty"`
 	Format               LogFormat                 `json:"format"`
 	InMemoryCap          int                       `json:"in_memory_cap,omitempty"`
 	Level                send.LevelInfo            `json:"level,omitempty"`
 	SplunkOptions        send.SplunkConnectionInfo `json:"splunk_options,omitempty"`
-	BuildloggerV3Options timber.LoggerOptions      `json:"buildlogger_v3_options"`
 	SumoEndpoint         string                    `json:"sumo_endpoint,omitempty"`
 }
 
@@ -217,8 +218,8 @@ func (l *Logger) Configure() (send.Sender, error) {
 		if err != nil {
 			return nil, err
 		}
-	case BuildloggerV3:
-		sender, err = timber.NewLogger(DefaultLogName, l.Options.Level, &l.Options.BuildloggerV3Options)
+	case LogBuildloggerV3:
+		sender, err = timber.NewLogger(context.Background(), DefaultLogName, l.Options.Level, &l.Options.BuildloggerV3Options)
 		if err != nil {
 			return nil, err
 		}
