@@ -153,6 +153,5 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/net/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/text/
-
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor -type d -empty | xargs rm -rf
