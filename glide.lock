@@ -35,6 +35,8 @@ imports:
     version: 8e1b763add73034cb803b88f1fdd17438e2b7891
   - name: github.com/tychoish/mongorpc
     version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
+  - name: github.com/evergreen-ci/timber
+    version: 81c260a8aec0fe3a3a7c2028ffe23db8f7a1813d
 
   # cgroup requirements
   - name: github.com/containerd/cgroups
