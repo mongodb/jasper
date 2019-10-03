@@ -247,16 +247,16 @@ func serviceOptions(c *cli.Context) service.KeyValue {
 
 	// Linux-specific resource limit options
 	if limit := resourceLimit(c.Int(limitNumFilesFlagName)); limit != "" {
-		opts["LimitNOFILE"] = limit
+		opts["LimitNumFiles"] = limit
 	}
 	if limit := resourceLimit(c.Int(limitNumProcsFlagName)); limit != "" {
-		opts["LimitNPROC"] = limit
+		opts["LimitNumProcs"] = limit
 	}
 	if limit := resourceLimit(c.Int(limitLockedMemoryFlagName)); limit != "" {
-		opts["LimitMEMLOCK"] = limit
+		opts["LimitLockedMemory"] = limit
 	}
 	if limit := resourceLimit(c.Int(limitVirtualMemoryFlagName)); limit != "" {
-		opts["LimitAS"] = limit
+		opts["LimitVirtualMemory"] = limit
 	}
 
 	return opts
