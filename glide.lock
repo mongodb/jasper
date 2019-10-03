@@ -27,7 +27,7 @@ imports:
     version: 693af58b4d51b8fcc7f9d89576da170765980581
     # kim: TODO: vendor service on PR is merged
   - name: github.com/evergreen-ci/service
-    version: fffe6c52ed0fd8653543bbe72432dbf6ea02f300
+    version: 82d35dc013454d62290efe84c5df82378f4a68ec
   - name: github.com/cheynewallace/tabby
     version: b7224f6123093cc04ce961170a360e1d22e214a5
   - name: github.com/evergreen-ci/aviation
