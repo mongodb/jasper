@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/kardianos/service"
+	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
