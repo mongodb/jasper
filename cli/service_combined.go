@@ -57,6 +57,7 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 			validatePort(restPortFlagName),
 			validatePort(rpcPortFlagName),
 			validateLogLevel(logLevelFlagName),
+			validateLimits(limitNumFilesFlagName, limitNumProcsFlagName, limitLockedMemoryFlagName, limitVirtualMemoryFlagName),
 		),
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewLocalManager(false)
