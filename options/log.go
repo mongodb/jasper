@@ -1,7 +1,6 @@
 package options
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -219,7 +218,7 @@ func (l *Logger) Configure() (send.Sender, error) {
 			return nil, err
 		}
 	case LogBuildloggerV3:
-		sender, err = timber.NewLogger(context.Background(), DefaultLogName, l.Options.Level, &l.Options.BuildloggerV3Options)
+		sender, err = timber.NewLogger(DefaultLogName, l.Options.Level, &l.Options.BuildloggerV3Options)
 		if err != nil {
 			return nil, err
 		}
