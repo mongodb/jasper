@@ -16,3 +16,4 @@ import:
   - package: github.com/tychoish/mongorpc
   - package: github.com/mongodb/ftdc
   - package: github.com/evergreen-ci/timber
+  - package: go.mongodb.org/go-driver

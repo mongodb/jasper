@@ -36,7 +36,7 @@ imports:
   - name: github.com/tychoish/mongorpc
     version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
   - name: github.com/evergreen-ci/timber
-    version: ad7d81390dfba2d545679730761e1603049cce71
+    version: d8ccb7cbe151e1466a7be084342653363a1be500
 
   # cgroup requirements
   - name: github.com/containerd/cgroups
@@ -65,3 +65,7 @@ imports:
     version: 082222b4a5c572e33e82ee9162d1352c7cf38682
   - name: github.com/golang/protobuf
     version: c823c79ea1570fb5ff454033735a8e68575d1d0f
+
+  # vendoring mongo-go-driver because many dependencies use it
+  - name: go.mongodb.org/mongo-driver
+    version: 305bc4a5e4131420fe8ba5628e6faa9e6ade4e86
