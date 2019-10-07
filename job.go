@@ -253,9 +253,9 @@ func amboyForegroundOutputJobFactory(pc ProcessConstructor) *amboyForegroundOutp
 	return j
 }
 
-// NewJobForeground creates an amboy job that write all output,
-// linwise to the current processes global grip logging instance with
-// error and output sperpeated by level.
+// NewJobForeground creates an amboy job that writes all output
+// linewise to the current processes global grip logging instance with
+// error and output separated by level.
 //
 // Pass the process constructor to allow the amboy jobs to manipulate
 // processes in an existing Manager.
@@ -266,9 +266,9 @@ func NewJobForeground(pc ProcessConstructor, opts *options.Create) Job {
 	return j
 }
 
-// NewJobBasicForeground creates an amboy job that write all output,
-// linwise to the current processes global grip logging instance with
-// error and output sperpeated by level.
+// NewJobBasicForeground creates an amboy job that writes all output
+// linewise to the current processes global grip logging instance with
+// error and output separated by level.
 func NewJobBasicForeground(opts *options.Create) Job {
 	j := amboyForegroundOutputJobFactory(newBasicProcess)
 	j.SetID(fmt.Sprintf("%s.basic.%x", j.Type().Name, opts.Hash()))

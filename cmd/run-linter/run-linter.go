@@ -28,7 +28,6 @@ func (r *result) String() string {
 	if r.passed {
 		fmt.Fprintf(buf, "--- PASS: %s (%s)", r.name, r.duration)
 	} else {
-		// fmt.Fprintln(buf, "    CMD:", r.cmd)
 		fmt.Fprintf(buf, strings.Join(r.output, "\n"))
 		fmt.Fprintf(buf, "--- FAIL: %s (%s)", r.name, r.duration)
 	}
