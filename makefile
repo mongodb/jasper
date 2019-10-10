@@ -204,5 +204,17 @@ vendor-clean:
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/sys/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/text/
 	rm -rf vendor/go.mongodb.org/mongo-driver/data/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/aviation/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/golang/protobuf/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/amboy/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/pkg/errors/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/net/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/sys/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/text/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor -type d -empty | xargs rm -rf
