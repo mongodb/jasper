@@ -10,6 +10,16 @@ coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).
 
 benchPattern := ./
 
+# start environment setup
+gopath := $(GOPATH)
+gocache := $(abspath $(buildDir)/.cache)
+ifeq ($(OS),Windows_NT)
+gocache := $(shell cygpath -m $(gocache))
+gopath := $(shell cygpath -m $(gopath))
+endif
+buildEnv := GOCACHE=$(gocache)
+# end environment setup
+
 .PHONY: benchmark
 benchmark:
 	@mkdir -p $(buildDir)
@@ -33,6 +43,37 @@ html-coverage-%:$(buildDir)/output.%.coverage.html
 lint-%:$(buildDir)/output.%.lint
 	@grep -v -s -q "^--- FAIL" $<
 # end convienence targets
+
+
+# start linting configuration
+#   package, testing, and linter dependencies specified
+#   separately. This is a temporary solution: eventually we should
+#   vendorize all of these dependencies.
+lintDeps := github.com/alecthomas/gometalinter
+#   include test files and give linters 40s to run to avoid timeouts
+lintArgs := --tests --deadline=5m --vendor
+#   gotype produces false positives because it reads .a files which
+#   are rarely up to date.
+lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
+lintArgs += --skip="$(buildDir)" --skip="buildscripts"
+#  add and configure additional linters
+lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
+#  golint doesn't handle splitting package comments between multiple files.
+lintArgs += --exclude="package comment should be of the form \"Package .* \(golint\)"
+#  no need to check the error of closer read operations in defer cases
+lintArgs += --exclude="error return value not checked \(defer.*"
+lintArgs += --exclude="should check returned error before deferring .*\.Close"
+lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
+$(gopath)/src/%:
+	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
+	go get $(subst $(gopath)/src/,,$@)
+$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
+	$(buildEnv) go build -o $@ $<
+$(buildDir)/.lintSetup:$(lintDeps)
+	@mkdir -p $(buildDir)
+	@-$(gopath)/bin/gometalinter --install >/dev/null && touch $@
+# end lint suppressions
+
 
 
 # start test and coverage artifacts

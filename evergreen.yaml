@@ -73,6 +73,10 @@ tasks:
     name: test-options
 
   - <<: *run-build
+    tags: ["report"]
+    name: test-lint
+
+  - <<: *run-build
     tags: ["test"]
     name: test-mock
 
@@ -105,6 +109,7 @@ buildvariants:
       - archlinux-build
     tasks: 
       - name: ".test"
+      - name: ".report"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04
