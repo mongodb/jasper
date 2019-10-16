@@ -133,7 +133,6 @@ buildvariants:
       build_env: "GOROOT=/opt/golang/go1.11/ PATH=/opt/golang/go1.11/bin:$PATH DISABLE_COVERAGE=true"
     run_on:
       - macos-1014
-      - macos-1014-i7
     tasks:
       - name: ".test"
       - name: ".bench"
