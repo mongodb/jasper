@@ -435,14 +435,18 @@ func TestTrackedManager(t *testing.T) {
 			return &basicProcessManager{
 				procs:    map[string]Process{},
 				blocking: false,
-				tracker:  newMockProcessTracker(),
+				tracker: &mockProcessTracker{
+					Infos: []ProcessInfo{},
+				},
 			}
 		},
 		"Basic/NoLock/BlockingProcs": func() *basicProcessManager {
 			return &basicProcessManager{
 				procs:    map[string]Process{},
 				blocking: true,
-				tracker:  newMockProcessTracker(),
+				tracker: &mockProcessTracker{
+					Infos: []ProcessInfo{},
+				},
 			}
 		},
 	} {

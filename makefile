@@ -8,8 +8,6 @@ _testPackages := $(subst $(name),,$(foreach target,$(packages),./$(target)))
 coverageOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage)
 coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage.html)
 
-benchPattern := ./
-
 # start environment setup
 gopath := $(GOPATH)
 gocache := $(abspath $(buildDir)/.cache)
@@ -20,11 +18,6 @@ endif
 buildEnv := GOCACHE=$(gocache)
 # end environment setup
 
-.PHONY: benchmark
-benchmark:
-	@mkdir -p $(buildDir)
-	go test $(testArgs) -bench=$(benchPattern) $(if $(RUN_TEST),, -run=^^$$) | tee $(buildDir)/bench.sink.out
-	@grep -s -q -e "^PASS" $(buildDir)/bench.sink.out
 compile:
 	go build $(_testPackages)
 compile-base:

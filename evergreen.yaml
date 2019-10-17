@@ -92,10 +92,6 @@ tasks:
     tags: ["legacy-check"]
     name: compile-base
 
-  - <<: *run-build
-    tags: ["bench"]
-    name: benchmark
-
 #######################################
 #           Buildvariants             #
 #######################################
@@ -120,7 +116,6 @@ buildvariants:
       - ubuntu1604-build
     tasks: 
       - name: ".test"
-      - name: ".bench"
 
   - name: ubuntu1604-go1.9
     display_name: Ubuntu 16.04 (go1.9)
@@ -140,7 +135,6 @@ buildvariants:
       - macos-1014
     tasks:
       - name: ".test"
-      - name: ".bench"
 
   - name: windows
     display_name: Windows
@@ -157,4 +151,3 @@ buildvariants:
       build_env: "GOROOT=c:/golang/go1.11 PATH=/cygdrive/c/golang/go1.11/bin:$PATH DISABLE_COVERAGE=true"
     tasks:
       - name: ".test"
-      - name: ".bench"
