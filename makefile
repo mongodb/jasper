@@ -109,11 +109,6 @@ $(buildDir)/output.%.coverage:$(buildDir)/ .FORCE
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 	go tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
-lintDeps := $(addprefix $(GOPATH)/src/,$(lintDeps))
-$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
-	 go build -o $@ $<
-$(buildDir)/.lintSetup:$(lintDeps)
-	@-$(GOPATH)/bin/gometalinter --install >/dev/null && touch $@
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 	@./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 $(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
