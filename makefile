@@ -2,19 +2,23 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest mock options
+packages := $(name) cli rpc rest options
+testPackages := $(packages) mock
 
-_testPackages := $(subst $(name),,$(foreach target,$(packages),./$(target)))
-coverageOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage)
-coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage.html)
+_testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
+coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
+coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
-benchPattern := ./
+# start environment setup
+gopath := $(GOPATH)
+gocache := $(abspath $(buildDir)/.cache)
+ifeq ($(OS),Windows_NT)
+gocache := $(shell cygpath -m $(gocache))
+gopath := $(shell cygpath -m $(gopath))
+endif
+buildEnv := GOCACHE=$(gocache)
+# end environment setup
 
-.PHONY: benchmark
-benchmark:
-	@mkdir -p $(buildDir)
-	go test $(testArgs) -bench=$(benchPattern) $(if $(RUN_TEST),, -run=^^$$) | tee $(buildDir)/bench.sink.out
-	@grep -s -q -e "^PASS" $(buildDir)/bench.sink.out
 compile:
 	go build $(_testPackages)
 compile-base:
@@ -41,25 +45,28 @@ lint-%:$(buildDir)/output.%.lint
 #   vendorize all of these dependencies.
 lintDeps := github.com/alecthomas/gometalinter
 #   include test files and give linters 40s to run to avoid timeouts
-lintArgs := --tests --deadline=13m --vendor
+lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
-lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="golint"
-lintArgs += --skip="build"
-#   enable and configure additional linters
-lintArgs += --line-length=100 --dupl-threshold=150
-#   some test cases are structurally similar, and lead to dupl linter
-#   warnings, but are important to maintain separately, and would be
-#   difficult to test without a much more complex reflection/code
-#   generation approach, so we ignore dupl errors in tests.
-lintArgs += --exclude="warning: duplicate of .*_test.go"
-#   go lint warns on an error in docstring format, erroneously because
-#   it doesn't consider the entire package.
-lintArgs += --exclude="warning: package comment should be of the form \"Package .* ...\""
-#   known issues that the linter picks up that are not relevant in our cases
-lintArgs += --exclude="file is not goimported" # top-level mains aren't imported
-lintArgs += --exclude="error return value not checked .defer.*"
-# end linting configuration
+lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
+lintArgs += --skip="$(buildDir)" --skip="buildscripts"
+#  add and configure additional linters
+lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
+#  golint doesn't handle splitting package comments between multiple files.
+lintArgs += --exclude="package comment should be of the form \"Package .* \(golint\)"
+#  no need to check the error of closer read operations in defer cases
+lintArgs += --exclude="error return value not checked \(defer.*"
+lintArgs += --exclude="should check returned error before deferring .*\.Close"
+lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
+$(gopath)/src/%:
+	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
+	go get $(subst $(gopath)/src/,,$@)
+$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
+	$(buildEnv) go build -o $@ $<
+$(buildDir)/.lintSetup:$(lintDeps)
+	@mkdir -p $(buildDir)
+	@-$(gopath)/bin/gometalinter --install >/dev/null && touch $@
+# end lint suppressions
 
 
 # start test and coverage artifacts
@@ -125,7 +132,7 @@ coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
-.PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).test)
+.PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 .PRECIOUS:$(buildDir)/output.lint
 # end front-ends
@@ -145,10 +152,19 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/google.golang.org/grpc/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/pkg/errors
-	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/evergreen-ci/gimlet
-	rm -rf vendor/github.com/mongodb/amboy/vendor/golang.org/x/tools
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/gopkg.in/mgo.v2/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/mgo_depot.go
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/square/certstrap/vendor/golang.org/x/sys/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/square/certstrap/vendor/github.com/urfave/cli/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/pkg/errors/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/pkg/errors/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/evergreen-ci/gimlet/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/golang.org/x/tools/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/urfave/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
@@ -175,5 +191,23 @@ vendor-clean:
 	rm -rf vendor/github.com/mholt/archiver/tarlz4.go
 	rm -rf vendor/github.com/mholt/archiver/tarsz.go
 	rm -rf vendor/github.com/mholt/archiver/tarxz.go
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/evergreen-ci/aviation/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/pkg/errors/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/golang/protobuf/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/google.golang.org/genproto/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/google.golang.org/grpc/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/net/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/sys/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/text/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/montanaflynn/stats/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pkg/errors/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/stretchr/testify/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/net/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/sys/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/text/
+	rm -rf vendor/go.mongodb.org/mongo-driver/data/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor -type d -empty | xargs rm -rf

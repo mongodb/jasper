@@ -21,21 +21,21 @@ import (
 type Job amboy.Job
 
 type amboyJob struct {
-	CmdString        string            `bson:"cmd" json:"cmd" yaml:"cmd"`
-	Environment      map[string]string `bson:"env" json:"env" yaml:"env"`
-	OverrideEnviron  bool              `bson:"override_env" json:"override_env" yaml:"override_env"`
-	WorkingDirectory string            `bson:"working_dir" json:"working_dir" yaml:"working_dir"`
-	Output           struct {
-		Error  string `bson:"error" json:"error" yaml:"error"`
-		Output string `bson:"output" json:"output" yaml:"output"`
-	} `bson:"output" json:"output" yaml:"output"`
-	ExitCode      int `bson:"exit_code" json:"exit_code" yaml:"exit_code"`
-	OutputOptions struct {
+	OverrideEnviron bool `bson:"override_env" json:"override_env" yaml:"override_env"`
+	OutputOptions   struct {
 		SuppressOutput    bool `bson:"suppress_output,omitempty" json:"suppress_output,omitempty" yaml:"suppress_output,omitempty"`
 		SuppressError     bool `bson:"suppress_error,omitempty" json:"suppress_error,omitempty" yaml:"suppress_error,omitempty"`
 		SendOutputToError bool `bson:"redirect_output_to_error,omitempty" json:"redirect_output_to_error,omitempty" yaml:"redirect_output_to_error,omitempty"`
 		SendErrorToOutput bool `bson:"redirect_error_to_output,omitempty" json:"redirect_error_to_output,omitempty" yaml:"redirect_error_to_output,omitempty"`
 	} `bson:"output_opts,omitempty" json:"output_opts,omitempty" yaml:"output_opts,omitempty"`
+	ExitCode         int               `bson:"exit_code" json:"exit_code" yaml:"exit_code"`
+	Environment      map[string]string `bson:"env" json:"env" yaml:"env"`
+	CmdString        string            `bson:"cmd" json:"cmd" yaml:"cmd"`
+	WorkingDirectory string            `bson:"working_dir" json:"working_dir" yaml:"working_dir"`
+	Output           struct {
+		Error  string `bson:"error" json:"error" yaml:"error"`
+		Output string `bson:"output" json:"output" yaml:"output"`
+	} `bson:"output" json:"output" yaml:"output"`
 	job.Base `bson:"metadata" json:"metadata" yaml:"metadata"`
 
 	makep ProcessConstructor
@@ -47,7 +47,7 @@ const (
 	amboyForegroundOutputJobName     = "jasper-foreground-job"
 )
 
-// RegisterJobs adds factories for the jobtypes provided by these
+// RegisterJobs adds factories for the job types provided by these
 // packages to make it possible to dispatch these jobs to a
 // remote/distributed queue.
 func RegisterJobs(pc ProcessConstructor) {

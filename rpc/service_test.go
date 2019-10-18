@@ -195,7 +195,7 @@ func TestRPCService(t *testing.T) {
 
 					go func() {
 						<-ctx.Done()
-						conn.Close()
+						assert.NoError(t, conn.Close())
 					}()
 
 					testCase(ctx, t, client)

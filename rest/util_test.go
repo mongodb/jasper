@@ -38,7 +38,7 @@ outerRetry:
 			}
 
 			go func() {
-				app.Run(ctx)
+				grip.Warning(app.Run(ctx))
 			}()
 
 			timer := time.NewTimer(5 * time.Millisecond)

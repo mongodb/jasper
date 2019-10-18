@@ -195,7 +195,7 @@ func TestProcessImplementations(t *testing.T) {
 						assert.False(t, info.Complete)
 						return false
 					}))
-					proc.Signal(ctx, expectedSig)
+					assert.NoError(t, proc.Signal(ctx, expectedSig))
 
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
@@ -409,10 +409,10 @@ func TestProcessImplementations(t *testing.T) {
 					require.NotNil(t, proc)
 
 					countIncremented := make(chan bool)
-					proc.RegisterTrigger(ctx, func(pInfo ProcessInfo) {
+					assert.NoError(t, proc.RegisterTrigger(ctx, func(pInfo ProcessInfo) {
 						count++
 						countIncremented <- true
-					})
+					}))
 					time.Sleep(3 * time.Second)
 
 					select {
@@ -425,10 +425,10 @@ func TestProcessImplementations(t *testing.T) {
 					newProc, err := proc.Respawn(ctx)
 					require.NoError(t, err)
 					require.NotNil(t, newProc)
-					newProc.RegisterTrigger(ctx, func(pIfno ProcessInfo) {
+					assert.NoError(t, newProc.RegisterTrigger(ctx, func(pIfno ProcessInfo) {
 						count++
 						countIncremented <- true
-					})
+					}))
 					time.Sleep(3 * time.Second)
 
 					select {
@@ -474,7 +474,7 @@ func TestProcessImplementations(t *testing.T) {
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					sig := syscall.SIGTERM
-					proc.Signal(ctx, sig)
+					assert.NoError(t, proc.Signal(ctx, sig))
 					exitCode, err := proc.Wait(ctx)
 					assert.Error(t, err)
 					if runtime.GOOS == "windows" {

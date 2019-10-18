@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kardianos/service"
+	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/rest"
@@ -241,6 +241,7 @@ func (cw *CappedWriter) String() string {
 	return cw.Buffer.String()
 }
 
+// Bytes returns the contents of the buffer.
 func (cw *CappedWriter) Bytes() []byte {
 	return cw.Buffer.Bytes()
 }

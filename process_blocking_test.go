@@ -221,6 +221,8 @@ func TestBlockingProcess(t *testing.T) {
 					go func() {
 						for {
 							select {
+							case <-ctx.Done():
+								assert.NoError(t, ctx.Err())
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									Complete:   true,
@@ -253,6 +255,8 @@ func TestBlockingProcess(t *testing.T) {
 					go func() {
 						for {
 							select {
+							case <-ctx.Done():
+								assert.NoError(t, ctx.Err())
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
@@ -286,6 +290,8 @@ func TestBlockingProcess(t *testing.T) {
 					go func() {
 						for {
 							select {
+							case <-ctx.Done():
+								assert.NoError(t, ctx.Err())
 							case op := <-proc.ops:
 								proc.err = errors.New("signal: killed")
 								proc.setInfo(ProcessInfo{

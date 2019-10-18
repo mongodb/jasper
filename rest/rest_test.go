@@ -76,9 +76,7 @@ func TestRestService(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Error(t, client.Register(ctx, nil))
-			assert.Error(t, client.Register(nil, nil))
 			assert.Error(t, client.Register(ctx, proc))
-			assert.Error(t, client.Register(nil, proc))
 		},
 		"ClientMethodsErrorWithBadUrl": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "://", 1)
@@ -498,7 +496,7 @@ func TestRestService(t *testing.T) {
 			listener, err := net.Listen("tcp", fileServerAddr)
 			require.NoError(t, err)
 			go func() {
-				fileServer.Serve(listener)
+				assert.NoError(t, fileServer.Serve(listener))
 			}()
 
 			baseURL := fmt.Sprintf("http://%s", fileServerAddr)
