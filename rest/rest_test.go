@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
 	"github.com/mongodb/jasper/options"
@@ -496,7 +497,7 @@ func TestRestService(t *testing.T) {
 			listener, err := net.Listen("tcp", fileServerAddr)
 			require.NoError(t, err)
 			go func() {
-				assert.NoError(t, fileServer.Serve(listener))
+				grip.Info(fileServer.Serve(listener))
 			}()
 
 			baseURL := fmt.Sprintf("http://%s", fileServerAddr)
