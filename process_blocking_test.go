@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
@@ -222,7 +223,7 @@ func TestBlockingProcess(t *testing.T) {
 						for {
 							select {
 							case <-ctx.Done():
-								assert.NoError(t, ctx.Err())
+								grip.Warning(ctx.Err())
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									Complete:   true,
@@ -256,7 +257,7 @@ func TestBlockingProcess(t *testing.T) {
 						for {
 							select {
 							case <-ctx.Done():
-								assert.NoError(t, ctx.Err())
+								grip.Warning(ctx.Err())
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
@@ -291,7 +292,7 @@ func TestBlockingProcess(t *testing.T) {
 						for {
 							select {
 							case <-ctx.Done():
-								assert.NoError(t, ctx.Err())
+								grip.Warning(ctx.Err())
 							case op := <-proc.ops:
 								proc.err = errors.New("signal: killed")
 								proc.setInfo(ProcessInfo{

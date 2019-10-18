@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/send"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -305,7 +306,7 @@ func TestLoggers(t *testing.T) {
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, file.Close())
-				assert.NoError(t, os.RemoveAll(file.Name()))
+				grip.Warning(os.RemoveAll(file.Name()))
 			}()
 
 			l.Type = LogFile
