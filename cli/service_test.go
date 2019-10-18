@@ -15,7 +15,7 @@ import (
 
 func TestDaemon(t *testing.T) {
 	for daemonAndClientName, makeDaemonAndClient := range map[string]func(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient){
-		"RPCService": func(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient) {
+		"RPCService": func(ctx context.Context, t *testing.T, _ jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient) {
 			port := testutil.GetPortNumber()
 			manager, err := jasper.NewLocalManager(false)
 			require.NoError(t, err)
@@ -30,7 +30,7 @@ func TestDaemon(t *testing.T) {
 
 			return func() error { return daemon.Stop(svc) }, client
 		},
-		"RESTService": func(ctx context.Context, t *testing.T, manager jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient) {
+		"RESTService": func(ctx context.Context, t *testing.T, _ jasper.Manager) (jasper.CloseFunc, jasper.RemoteClient) {
 			port := testutil.GetPortNumber()
 			manager, err := jasper.NewLocalManager(false)
 			require.NoError(t, err)
