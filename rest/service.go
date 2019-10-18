@@ -102,7 +102,7 @@ func (s *Service) SetCacheMaxSize(size int) {
 	s.cacheOpts.MaxSize = size
 }
 
-// SetCacheMaxSize sets the underlying option for the
+// SetPruneDelay sets the underlying option for the
 // services cache.
 func (s *Service) SetPruneDelay(dur time.Duration) {
 	s.cacheMutex.Lock()

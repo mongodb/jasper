@@ -2,11 +2,12 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest mock options
+packages := $(name) cli rpc rest options
+testPackages := $(packages) mock
 
-_testPackages := $(subst $(name),,$(foreach target,$(packages),./$(target)))
-coverageOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage)
-coverageHtmlOutput := $(foreach target,$(packages),$(buildDir)/output.$(target).coverage.html)
+_testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
+coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
+coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
 # start environment setup
 gopath := $(GOPATH)
@@ -127,7 +128,7 @@ coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
-.PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).test)
+.PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 .PRECIOUS:$(buildDir)/output.lint
 # end front-ends
