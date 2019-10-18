@@ -73,10 +73,6 @@ tasks:
     name: test-options
 
   - <<: *run-build
-    tags: ["report"]
-    name: test-lint
-
-  - <<: *run-build
     tags: ["test"]
     name: test-mock
 
