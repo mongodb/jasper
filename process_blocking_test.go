@@ -224,6 +224,7 @@ func TestBlockingProcess(t *testing.T) {
 							select {
 							case <-ctx.Done():
 								grip.Warning(ctx.Err())
+								return
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									Complete:   true,
@@ -258,6 +259,7 @@ func TestBlockingProcess(t *testing.T) {
 							select {
 							case <-ctx.Done():
 								grip.Warning(ctx.Err())
+								return
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
@@ -293,6 +295,7 @@ func TestBlockingProcess(t *testing.T) {
 							select {
 							case <-ctx.Done():
 								grip.Warning(ctx.Err())
+								return
 							case op := <-proc.ops:
 								proc.err = errors.New("signal: killed")
 								proc.setInfo(ProcessInfo{
