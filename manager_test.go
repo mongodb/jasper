@@ -218,7 +218,7 @@ func TestManagerInterface(t *testing.T) {
 				"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, manager Manager) {
 					procs, err := createProcs(ctx, testutil.TrueCreateOpts(), manager, 10)
 					for _, p := range procs {
-						_, err := p.Wait(ctx)
+						_, err = p.Wait(ctx)
 						require.NoError(t, err)
 					}
 

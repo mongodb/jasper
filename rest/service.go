@@ -500,8 +500,8 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
-	var info options.Download
-	if err := gimlet.GetJSON(r.Body, &info); err != nil {
+	var opts options.Download
+	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrap(err, "problem reading request").Error(),
@@ -509,18 +509,18 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := info.Validate(); err != nil {
+	if err := opts.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem validating download info").Error(),
+			Message:    errors.Wrap(err, "problem validating download options").Error(),
 		})
 		return
 	}
 
-	if err := info.Download(); err != nil {
+	if err := opts.Download(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem occurred during file download for URL %s", info.URL).Error(),
+			Message:    errors.Wrapf(err, "problem occurred during file download for URL %s", opts.URL).Error(),
 		})
 		return
 	}
@@ -584,8 +584,8 @@ func (s *Service) signalEvent(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
-	var info options.WriteFile
-	if err := gimlet.GetJSON(r.Body, &info); err != nil {
+	var opts options.WriteFile
+	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrap(err, "problem reading request").Error(),
@@ -593,26 +593,26 @@ func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := info.Validate(); err != nil {
+	if err := opts.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem validating file write info").Error(),
+			Message:    errors.Wrap(err, "problem validating file write options").Error(),
 		})
 		return
 	}
 
-	if err := info.DoWrite(); err != nil {
+	if err := opts.DoWrite(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem occurred during file write to %s", info.Path).Error(),
+			Message:    errors.Wrapf(err, "problem occurred during file write to %s", opts.Path).Error(),
 		})
 		return
 	}
 
-	if err := info.SetPerm(); err != nil {
+	if err := opts.SetPerm(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem occurred while setting permissions on file %s", info.Path).Error(),
+			Message:    errors.Wrapf(err, "problem occurred while setting permissions on file %s", opts.Path).Error(),
 		})
 		return
 	}

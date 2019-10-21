@@ -73,11 +73,11 @@ func TestRPCService(t *testing.T) {
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
 
-					info := options.Download{
+					opts := options.Download{
 						URL:  "http://example.com",
 						Path: file.Name(),
 					}
-					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadOptions(opts))
 					require.NoError(t, err)
 					assert.True(t, outcome.Success)
 
@@ -88,7 +88,7 @@ func TestRPCService(t *testing.T) {
 				"DownloadFileFailsForInvalidArchiveFormat": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					fileName := filepath.Join(buildDir(t), "out.txt")
 
-					info := options.Download{
+					opts := options.Download{
 						URL:  "https://example.com",
 						Path: fileName,
 						ArchiveOpts: options.Archive{
@@ -96,29 +96,29 @@ func TestRPCService(t *testing.T) {
 							Format:        options.ArchiveFormat("foo"),
 						},
 					}
-					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadOptions(opts))
 					assert.NoError(t, err)
 					assert.False(t, outcome.Success)
 				},
 				"DownloadFileFailsForInvalidURL": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					fileName := filepath.Join(buildDir(t), "out.txt")
 
-					info := options.Download{
+					opts := options.Download{
 						URL:  "://example.com",
 						Path: fileName,
 					}
-					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadOptions(opts))
 					require.NoError(t, err)
 					assert.False(t, outcome.Success)
 				},
 				"DownloadFileFailsForNonexistentURL": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {
 					fileName := filepath.Join(buildDir(t), "out.txt")
 
-					info := options.Download{
+					opts := options.Download{
 						URL:  "http://example.com/foo",
 						Path: fileName,
 					}
-					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadInfo(info))
+					outcome, err := client.DownloadFile(ctx, internal.ConvertDownloadOptions(opts))
 					require.NoError(t, err)
 					assert.False(t, outcome.Success)
 				},

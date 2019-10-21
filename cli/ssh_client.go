@@ -187,8 +187,8 @@ func (c *sshClient) ConfigureCache(ctx context.Context, opts options.Cache) erro
 	return nil
 }
 
-func (c *sshClient) DownloadFile(ctx context.Context, info options.Download) error {
-	output, err := c.runRemoteCommand(ctx, DownloadFileCommand, &info)
+func (c *sshClient) DownloadFile(ctx context.Context, opts options.Download) error {
+	output, err := c.runRemoteCommand(ctx, DownloadFileCommand, &opts)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -200,9 +200,9 @@ func (c *sshClient) DownloadFile(ctx context.Context, info options.Download) err
 	return nil
 }
 
-func (c *sshClient) WriteFile(ctx context.Context, info options.WriteFile) error {
-	sendInfo := func(info options.WriteFile) error {
-		output, err := c.runRemoteCommand(ctx, WriteFileCommand, &info)
+func (c *sshClient) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	sendOpts := func(opts options.WriteFile) error {
+		output, err := c.runRemoteCommand(ctx, WriteFileCommand, &opts)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -213,7 +213,7 @@ func (c *sshClient) WriteFile(ctx context.Context, info options.WriteFile) error
 
 		return nil
 	}
-	return info.WriteBufferedContent(sendInfo)
+	return opts.WriteBufferedContent(sendOpts)
 }
 
 func (c *sshClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {

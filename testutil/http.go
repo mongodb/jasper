@@ -29,8 +29,8 @@ func PutHTTPClient(client *http.Client) {
 	httpClientPool.Put(client)
 }
 
-// waitForRESTService waits until the REST service becomes available to serve
-// requests or the context times out.
+// WaitForRESTService waits until the REST service becomes available to serve
+// requests or the context cancels.
 func WaitForRESTService(ctx context.Context, url string) error {
 	client := GetHTTPClient()
 	defer PutHTTPClient(client)

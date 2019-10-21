@@ -117,7 +117,7 @@ $(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 # end test and coverage artifacts
 
 
-# userfacing targets for basic build and development operations
+# user-facing targets for basic build and development operations
 proto:
 	@mkdir -p rpc/internal
 	protoc --go_out=plugins=grpc:rpc/internal *.proto

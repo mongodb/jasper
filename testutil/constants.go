@@ -2,6 +2,7 @@ package testutil
 
 import "time"
 
+// Test timeouts
 const (
 	TestTimeout        = 5 * time.Second
 	RPCTestTimeout     = 30 * time.Second

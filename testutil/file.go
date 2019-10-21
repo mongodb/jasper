@@ -9,6 +9,7 @@ import (
 	"github.com/mongodb/grip"
 )
 
+// AddFileToDirectory creates a file in the directory with the given contents.
 func AddFileToDirectory(dir string, fileName string, fileContents string) error {
 	if format := archiver.MatchingFormat(fileName); format != nil {
 		tmpFile, err := ioutil.TempFile(dir, "tmp.txt")

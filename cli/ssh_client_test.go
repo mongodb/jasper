@@ -492,8 +492,8 @@ func TestSSHClient(t *testing.T) {
 				makeOutcomeResponse(nil),
 			)
 
-			info := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
-			require.NoError(t, client.WriteFile(ctx, info))
+			opts := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
+			require.NoError(t, client.WriteFile(ctx, opts))
 		},
 		"WriteFileFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.Create = makeCreateFunc(
@@ -502,13 +502,13 @@ func TestSSHClient(t *testing.T) {
 				nil,
 				invalidResponse(),
 			)
-			info := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
-			assert.Error(t, client.WriteFile(ctx, info))
+			opts := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
+			assert.Error(t, client.WriteFile(ctx, opts))
 		},
 		"WriteFileFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.FailCreate = true
-			info := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
-			assert.Error(t, client.WriteFile(ctx, info))
+			opts := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
+			assert.Error(t, client.WriteFile(ctx, opts))
 		},
 		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
 	} {
