@@ -46,45 +46,6 @@ func makeCreateOpts(timeout time.Duration, logger options.Logger) *options.Creat
 	return &opts
 }
 
-func inMemoryLoggerCase(ctx context.Context, c *caseDefinition) result {
-	var logType options.LogType = options.LogInMemory
-	logOptions := options.Log{InMemoryCap: 1000, Format: options.LogFormatPlain}
-	res := result{duration: c.timeout}
-	size := make(chan int64)
-	opts := makeCreateOpts(c.timeout, options.Logger{Type: logType, Options: logOptions})
-	opts.closers = append(opts.closers, func() (_ error) {
-		defer close(size)
-		logger := opts.Output.outputSender.Sender.(*send.InMemorySender)
-		select {
-		case size <- logger.TotalBytesSent():
-		case <-ctx.Done():
-		}
-		return
-	})
-
-	sizeAdded := make(chan struct{})
-	go func(res *result) {
-		defer close(sizeAdded)
-		select {
-		case numBytes := <-size:
-			res.size += float64(numBytes)
-		case <-ctx.Done():
-		}
-	}(&res)
-
-	err := runIteration(ctx, c.procMaker, opts)
-	if err != nil {
-		return result{err: err}
-	}
-
-	select {
-	case <-sizeAdded:
-	case <-ctx.Done():
-	}
-
-	return res
-}
-
 func getInMemoryBenchmark(makeProc makeProcess) poplar.Benchmark {
 	var logType options.LogType = options.LogInMemory
 	logOptions := options.Log{InMemoryCap: 1000, Format: options.LogFormatPlain}
