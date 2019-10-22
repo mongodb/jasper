@@ -29,7 +29,7 @@ type Create struct {
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	WorkingDirectory string            `bson:"working_directory,omitempty" json:"working_directory,omitempty" yaml:"working_directory,omitempty"`
 	Output           Output            `bson:"output" json:"output" yaml:"output"`
-	RemoteInfo       *Remote           `bson:"remote,omitempty" json:"remote,omitempty" yaml:"remote,omitempty"`
+	Remote           *Remote           `bson:"remote,omitempty" json:"remote,omitempty" yaml:"remote,omitempty"`
 	// TimeoutSecs takes precedence over Timeout. On remote interfaces,
 	// TimeoutSecs should be set instead of Timeout.
 	TimeoutSecs int           `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
@@ -95,7 +95,7 @@ func (opts *Create) Validate() error {
 		return errors.Wrap(err, "cannot create command with invalid output")
 	}
 
-	if opts.WorkingDirectory != "" && opts.RemoteInfo == nil {
+	if opts.WorkingDirectory != "" && opts.Remote == nil {
 		info, err := os.Stat(opts.WorkingDirectory)
 
 		if os.IsNotExist(err) {
@@ -141,8 +141,9 @@ func (opts *Create) Hash() hash.Hash {
 	return hash
 }
 
+// kim: TODO: fix this implementation
 func (opts *Create) resolveRemote(env []string) {
-	if opts.RemoteInfo == nil {
+	if opts.Remote == nil {
 		return
 	}
 
@@ -158,7 +159,7 @@ func (opts *Create) resolveRemote(env []string) {
 
 	remoteCmd += strings.Join(opts.Args, " ")
 
-	opts.Args = append(append([]string{"ssh"}, opts.RemoteInfo.Args...), opts.RemoteInfo.String(), remoteCmd)
+	opts.Args = append(append([]string{"ssh"}, opts.Remote.Args...), opts.Remote.String(), remoteCmd)
 }
 
 // Resolve creates the command object according to the create options. It
@@ -174,12 +175,12 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 
-	if opts.WorkingDirectory == "" && opts.RemoteInfo == nil {
+	if opts.WorkingDirectory == "" && opts.Remote == nil {
 		opts.WorkingDirectory, _ = os.Getwd()
 	}
 
 	var env []string
-	if !opts.OverrideEnviron && opts.RemoteInfo == nil {
+	if !opts.OverrideEnviron && opts.Remote == nil {
 		env = os.Environ()
 	}
 
@@ -201,7 +202,7 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 	}
 
 	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
-	if opts.RemoteInfo == nil {
+	if opts.Remote == nil {
 		cmd.Dir = opts.WorkingDirectory
 	}
 
@@ -213,7 +214,7 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 	if err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
-	if opts.RemoteInfo == nil {
+	if opts.Remote == nil {
 		cmd.Env = env
 	}
 

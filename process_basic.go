@@ -59,7 +59,11 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 	p.info.StartAt = time.Now()
 	p.info.ID = p.id
 	p.info.Options = p.opts
-	p.info.Host, _ = os.Hostname()
+	if opts.Remote != nil {
+		p.info.Host = p.opts.Remote.Host
+	} else {
+		p.info.Host, _ = os.Hostname()
+	}
 	p.info.IsRunning = true
 	p.info.PID = cmd.Process.Pid
 

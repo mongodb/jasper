@@ -631,7 +631,7 @@ func (c *Command) getCreateOpts() ([]*options.Create, error) {
 		}
 
 		if c.opts.Remote != nil {
-			cmd.RemoteInfo = c.opts.Remote
+			cmd.Remote = c.opts.Remote
 		}
 
 		out = append(out, cmd)

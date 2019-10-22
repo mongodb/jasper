@@ -68,7 +68,11 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 		IsRunning: true,
 		StartAt:   time.Now(),
 	}
-	p.info.Host, _ = os.Hostname()
+	if opts.Remote != nil {
+		p.info.Host = opts.Remote.Host
+	} else {
+		p.info.Host, _ = os.Hostname()
+	}
 
 	go p.reactor(ctx, deadline, cmd)
 
