@@ -28,8 +28,6 @@ type mongoDriver struct {
 	instanceID string
 	mu         sync.RWMutex
 	canceler   context.CancelFunc
-
-	LockManager
 }
 
 // NewMongoDriver constructs a MongoDB backed queue driver
@@ -83,8 +81,6 @@ func (d *mongoDriver) Open(ctx context.Context) error {
 }
 
 func (d *mongoDriver) start(ctx context.Context, client *mongo.Client) error {
-	d.LockManager = NewLockManager(ctx, d)
-
 	dCtx, cancel := context.WithCancel(ctx)
 	d.canceler = cancel
 
@@ -137,6 +133,13 @@ func (d *mongoDriver) setupDB(ctx context.Context) error {
 		})
 	}
 
+	if d.opts.CheckDispatchBy {
+		keys = append(keys, bsonx.Elem{
+			Key:   "time_info.dispatch_by",
+			Value: bsonx.Int32(1),
+		})
+	}
+
 	// priority must be at the end for the sort
 	if d.opts.Priority {
 		keys = append(keys, bsonx.Elem{
@@ -145,7 +148,7 @@ func (d *mongoDriver) setupDB(ctx context.Context) error {
 		})
 	}
 
-	_, err := d.getCollection().Indexes().CreateMany(ctx, []mongo.IndexModel{
+	indexes := []mongo.IndexModel{
 		mongo.IndexModel{
 			Keys: keys,
 		},
@@ -157,7 +160,22 @@ func (d *mongoDriver) setupDB(ctx context.Context) error {
 				},
 			},
 		},
-	})
+	}
+	if d.opts.TTL > 0 {
+		ttl := int32(d.opts.TTL / time.Second)
+		indexes = append(indexes, mongo.IndexModel{
+			Keys: bsonx.Doc{
+				{
+					Key:   "time_info.created",
+					Value: bsonx.Int32(1),
+				},
+			},
+			Options: &options.IndexOptions{
+				ExpireAfterSeconds: &ttl,
+			},
+		})
+	}
+	_, err := d.getCollection().Indexes().CreateMany(ctx, indexes)
 
 	return errors.Wrap(err, "problem building indexes")
 }
@@ -215,9 +233,8 @@ func isMongoDupKey(err error) bool {
 func (d *mongoDriver) Save(ctx context.Context, j amboy.Job) error {
 	name := j.ID()
 	stat := j.Status()
-	stat.Owner = d.instanceID
-	stat.ModificationCount++
 	stat.ModificationTime = time.Now()
+	stat.ErrorCount = len(stat.Errors)
 	j.SetStatus(stat)
 
 	job, err := registry.MakeJobInterchange(j, d.opts.Format)
@@ -244,28 +261,6 @@ func (d *mongoDriver) Save(ctx context.Context, j amboy.Job) error {
 	if res.MatchedCount == 0 {
 		return errors.Errorf("problem saving job [id=%s, matched=%d, modified=%d]", name, res.MatchedCount, res.ModifiedCount)
 	}
-	return nil
-}
-
-func (d *mongoDriver) SaveStatus(ctx context.Context, j amboy.Job, stat amboy.JobStatusInfo) error {
-	id := j.ID()
-	query := getAtomicQuery(d.instanceID, id, stat.ModificationCount)
-	stat.Owner = d.instanceID
-	stat.ModificationCount++
-	stat.ModificationTime = time.Now()
-	timeInfo := j.TimeInfo()
-
-	res, err := d.getCollection().UpdateOne(ctx, query, bson.M{"$set": bson.M{"status": stat, "time_info": timeInfo}})
-	if err != nil {
-		return errors.Wrapf(err, "problem updating status document for %s", id)
-	}
-
-	if res.MatchedCount == 0 {
-		return errors.Errorf("did not update any status documents [id=%s, matched=%d, modified=%d]", id, res.MatchedCount, res.ModifiedCount)
-	}
-
-	j.SetStatus(stat)
-
 	return nil
 }
 
@@ -386,22 +381,25 @@ func (d *mongoDriver) Next(ctx context.Context) amboy.Job {
 			},
 			{
 				"status.completed": false,
-				"status.mod_ts":    bson.M{"$lte": time.Now().Add(-LockTimeout)},
+				"status.mod_ts":    bson.M{"$lte": time.Now().Add(-amboy.LockTimeout)},
 				"status.in_prog":   true,
 			},
 		},
 	}
 
+	timeLimits := bson.M{}
+	now := time.Now()
 	if d.opts.CheckWaitUntil {
-		qd = bson.M{
-			"$and": []bson.M{
-				qd,
-				{"$or": []bson.M{
-					{"time_info.wait_until": bson.M{"$lte": time.Now()}},
-					{"time_info.wait_until": bson.M{"$exists": false}}},
-				},
-			},
+		timeLimits["time_info.wait_until"] = bson.M{"$lte": now}
+	}
+	if d.opts.CheckDispatchBy {
+		timeLimits["$or"] = []bson.M{
+			{"time_info.dispatch_by": bson.M{"$gt": now}},
+			{"time_info.dispatch_by": time.Time{}},
 		}
+	}
+	if len(timeLimits) > 0 {
+		qd = bson.M{"$and": []bson.M{qd, timeLimits}}
 	}
 
 	opts := options.Find().SetBatchSize(4)
@@ -455,6 +453,25 @@ RETRY:
 					// try for the next thing in the iterator if we can
 					continue CURSOR
 				}
+
+				if job.TimeInfo().IsStale() {
+					var res *mongo.DeleteResult
+
+					res, err = d.getCollection().DeleteOne(ctx, bson.M{"_id": job.ID()})
+					msg := message.Fields{
+						"id":          d.instanceID,
+						"service":     "amboy.queue.mongo",
+						"num_deleted": res.DeletedCount,
+						"message":     "found stale job",
+						"operation":   "job staleness check",
+						"job":         job.ID(),
+						"job_type":    job.Type().Name,
+					}
+					grip.Warning(message.WrapError(err, msg))
+					grip.NoticeWhen(err == nil, msg)
+					continue CURSOR
+				}
+
 				break CURSOR
 			}
 

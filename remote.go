@@ -2,9 +2,8 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/mongodb/jasper/options"
 )
 
 // CloseFunc is a function used to close a service or close the client
@@ -17,34 +16,11 @@ type CloseFunc func() error
 type RemoteClient interface {
 	Manager
 	CloseConnection() error
-	ConfigureCache(context.Context, CacheOptions) error
-	DownloadFile(context.Context, DownloadInfo) error
-	DownloadMongoDB(context.Context, MongoDBDownloadOptions) error
-	GetLogStream(context.Context, string, int) (LogStream, error)
-	GetBuildloggerURLs(context.Context, string) ([]string, error)
-	SignalEvent(context.Context, string) error
-}
-
-// RemoteOptions represents options to SSH into a remote machine.
-type RemoteOptions struct {
-	Host string
-	User string
-	Args []string
-}
-
-// Validate checks that the host is set so that the remote host can be
-// identified.
-func (opts *RemoteOptions) Validate() error {
-	if opts.Host == "" {
-		return errors.New("host cannot be empty")
-	}
-	return nil
-}
-
-func (opts *RemoteOptions) hostString() string {
-	if opts.User == "" {
-		return opts.Host
-	}
-
-	return fmt.Sprintf("%s@%s", opts.User, opts.Host)
+	ConfigureCache(ctx context.Context, opts options.Cache) error
+	DownloadFile(ctx context.Context, info options.Download) error
+	DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error
+	GetLogStream(ctx context.Context, id string, count int) (LogStream, error)
+	GetBuildloggerURLs(ctx context.Context, id string) ([]string, error)
+	SignalEvent(ctx context.Context, name string) error
+	WriteFile(ctx context.Context, info options.WriteFile) error
 }

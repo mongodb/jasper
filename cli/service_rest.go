@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kardianos/service"
+	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/rest"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -21,7 +23,7 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 	return cli.Command{
 		Name:  RESTService,
 		Usage: fmt.Sprintf("%s a REST service", cmd),
-		Flags: []cli.Flag{
+		Flags: append(serviceFlags(),
 			cli.StringFlag{
 				Name:   hostFlagName,
 				EnvVar: restHostEnvVar,
@@ -34,45 +36,59 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 				Usage:  "the port running the REST service",
 				Value:  defaultRESTPort,
 			},
-			cli.StringFlag{
-				Name:  userFlagName,
-				Usage: "the user who will run the REST service",
-			},
-		},
-		Before: validatePort(portFlagName),
+		),
+		Before: mergeBeforeFuncs(
+			validatePort(portFlagName),
+			validateLogLevel(logLevelFlagName),
+			validateLimits(limitNumFilesFlagName, limitNumProcsFlagName, limitLockedMemoryFlagName, limitVirtualMemoryFlagName),
+		),
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewLocalManager(false)
 			if err != nil {
 				return errors.Wrap(err, "error creating REST manager")
 			}
 
-			daemon := newRESTDaemon(c.String(hostFlagName), c.Int(portFlagName), manager)
+			daemon := newRESTDaemon(c.String(hostFlagName), c.Int(portFlagName), manager, makeLogger(c))
 
-			config := serviceConfig(RESTService, buildRunCommand(c, RESTService))
-			config.UserName = c.String(userFlagName)
+			config := serviceConfig(RESTService, c, buildRunCommand(c, RESTService))
 
-			return operation(daemon, config)
+			if err := operation(daemon, config); !c.Bool(quietFlagName) {
+				return err
+			}
+			return nil
 		},
 	}
 }
 
 type restDaemon struct {
-	Host string
-	Port int
-
+	Host    string
+	Port    int
 	Manager jasper.Manager
-	exit    chan struct{}
+	Logger  *options.Logger
+
+	exit chan struct{}
 }
 
-func newRESTDaemon(host string, port int, manager jasper.Manager) *restDaemon {
+func newRESTDaemon(host string, port int, manager jasper.Manager, logger *options.Logger) *restDaemon {
 	return &restDaemon{
 		Host:    host,
 		Port:    port,
 		Manager: manager,
+		Logger:  logger,
 	}
 }
 
 func (d *restDaemon) Start(s service.Service) error {
+	if d.Logger != nil {
+		sender, err := d.Logger.Configure()
+		if err != nil {
+			return errors.Wrap(err, "could not configure logging")
+		}
+		if err := grip.SetSender(sender); err != nil {
+			return errors.Wrap(err, "could not set logging sender")
+		}
+	}
+
 	d.exit = make(chan struct{})
 	if d.Manager == nil {
 		var err error
@@ -111,7 +127,7 @@ func (d *restDaemon) newService(ctx context.Context) (jasper.CloseFunc, error) {
 // newRESTService creates a REST service around the manager serving requests on
 // the host and port.
 func newRESTService(ctx context.Context, host string, port int, manager jasper.Manager) (jasper.CloseFunc, error) {
-	service := jasper.NewManagerService(manager)
+	service := rest.NewManagerService(manager)
 	app := service.App(ctx)
 	app.SetPrefix("jasper")
 	if err := app.SetHost(host); err != nil {

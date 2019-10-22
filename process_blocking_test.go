@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip"
+	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -186,7 +189,7 @@ func TestBlockingProcess(t *testing.T) {
 					<-signal
 				},
 				"WaitSomeBeforeCanceling": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					proc.opts = *sleepCreateOpts(10)
+					proc.opts = *testutil.SleepCreateOpts(10)
 					proc.complete = make(chan struct{})
 					cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
 					defer cancel()
@@ -219,6 +222,9 @@ func TestBlockingProcess(t *testing.T) {
 					go func() {
 						for {
 							select {
+							case <-ctx.Done():
+								grip.Warning(ctx.Err())
+								return
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									Complete:   true,
@@ -251,6 +257,9 @@ func TestBlockingProcess(t *testing.T) {
 					go func() {
 						for {
 							select {
+							case <-ctx.Done():
+								grip.Warning(ctx.Err())
+								return
 							case op := <-proc.ops:
 								proc.setInfo(ProcessInfo{
 									ID:         "foo",
@@ -284,6 +293,9 @@ func TestBlockingProcess(t *testing.T) {
 					go func() {
 						for {
 							select {
+							case <-ctx.Done():
+								grip.Warning(ctx.Err())
+								return
 							case op := <-proc.ops:
 								proc.err = errors.New("signal: killed")
 								proc.setInfo(ProcessInfo{
@@ -300,7 +312,7 @@ func TestBlockingProcess(t *testing.T) {
 					<-signal
 				},
 				"InfoDoesNotWaitForContextTimeoutAfterProcessCompletes": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					opts := &CreateOptions{
+					opts := &options.Create{
 						Args: []string{"ls"},
 					}
 
@@ -327,7 +339,7 @@ func TestBlockingProcess(t *testing.T) {
 					}
 				},
 				"RunningDoesNotWaitForContextTimeoutAfterProcessCompletes": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					opts := &CreateOptions{
+					opts := &options.Create{
 						Args: []string{"ls"},
 					}
 
@@ -354,7 +366,7 @@ func TestBlockingProcess(t *testing.T) {
 					}
 				},
 				"SignalDoesNotWaitForContextTimeoutAfterProcessCompletes": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					opts := &CreateOptions{
+					opts := &options.Create{
 						Args: []string{"ls"},
 					}
 
@@ -389,7 +401,7 @@ func TestBlockingProcess(t *testing.T) {
 					proc := &blockingProcess{
 						id:   id,
 						ops:  make(chan func(*exec.Cmd), 1),
-						opts: CreateOptions{},
+						opts: options.Create{},
 						info: ProcessInfo{ID: id},
 					}
 

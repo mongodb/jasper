@@ -2,13 +2,17 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/amboy/pool"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
+	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 // LocalLimitedSize implements the amboy.Queue interface, and unlike
@@ -26,8 +30,11 @@ type limitedSizeLocal struct {
 	capacity int
 	storage  map[string]amboy.Job
 
-	runner amboy.Runner
-	mu     sync.RWMutex
+	deletedCount int
+	staleCount   int
+	id           string
+	runner       amboy.Runner
+	mu           sync.RWMutex
 }
 
 // NewLocalLimitedSize constructs a LocalLimitedSize queue instance
@@ -36,9 +43,17 @@ func NewLocalLimitedSize(workers, capacity int) amboy.Queue {
 	q := &limitedSizeLocal{
 		capacity: capacity,
 		storage:  make(map[string]amboy.Job),
+		id:       fmt.Sprintf("queue.local.unordered.fixed.%s", uuid.NewV4().String()),
 	}
 	q.runner = pool.NewLocalWorkers(workers, q)
 	return q
+}
+
+func (q *limitedSizeLocal) ID() string {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+
+	return q.id
 }
 
 // Put adds a job to the queue, returning an error if the queue isn't
@@ -50,29 +65,47 @@ func (q *limitedSizeLocal) Put(ctx context.Context, j amboy.Job) error {
 		return errors.Errorf("queue not open. could not add %s", j.ID())
 	}
 
-	name := j.ID()
-
-	q.mu.RLock()
-	if _, ok := q.storage[name]; ok {
-		q.mu.RUnlock()
-		return errors.Errorf("cannot dispatch '%s', already complete", name)
-	}
-	q.mu.RUnlock()
-
 	j.UpdateTimeInfo(amboy.JobTimeInfo{
 		Created: time.Now(),
 	})
+
+	if err := j.TimeInfo().Validate(); err != nil {
+		return errors.Wrap(err, "invalid job timeinfo")
+	}
+
+	name := j.ID()
+
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if _, ok := q.storage[name]; ok {
+		return errors.Errorf("cannot dispatch '%s', already complete", name)
+	}
 
 	select {
 	case <-ctx.Done():
 		return errors.Wrapf(ctx.Err(), "queue full, cannot add %s", name)
 	case q.channel <- j:
-		q.mu.Lock()
-		defer q.mu.Unlock()
 		q.storage[name] = j
-
 		return nil
 	}
+}
+
+func (q *limitedSizeLocal) Save(ctx context.Context, j amboy.Job) error {
+	if !q.Started() {
+		return errors.Errorf("queue not open. could not add %s", j.ID())
+	}
+
+	name := j.ID()
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if _, ok := q.storage[name]; !ok {
+		return errors.Errorf("cannot save '%s', which is not tracked", name)
+	}
+
+	q.storage[name] = j
+	return nil
 }
 
 // Get returns a job, by name. This will include all tasks currently
@@ -90,11 +123,37 @@ func (q *limitedSizeLocal) Get(ctx context.Context, name string) (amboy.Job, boo
 // implementations to fetch work. This operation blocks until a job is
 // available or the context is canceled.
 func (q *limitedSizeLocal) Next(ctx context.Context) amboy.Job {
-	select {
-	case job := <-q.channel:
-		return job
-	case <-ctx.Done():
-		return nil
+	for {
+		select {
+		case job := <-q.channel:
+			ti := job.TimeInfo()
+			if ti.IsStale() {
+				q.mu.Lock()
+				delete(q.storage, job.ID())
+				q.staleCount++
+				q.mu.Unlock()
+
+				grip.Notice(message.Fields{
+					"state":    "stale",
+					"job":      job.ID(),
+					"job_type": job.Type().Name,
+				})
+				continue
+			}
+
+			if !ti.IsDispatchable() {
+				go func() {
+					defer recovery.LogStackTraceAndContinue("re-queue waiting job", job.ID())
+					q.channel <- job
+				}()
+				continue
+			}
+
+			return job
+		case <-ctx.Done():
+			return nil
+		}
+
 	}
 }
 
@@ -174,8 +233,8 @@ func (q *limitedSizeLocal) Stats(ctx context.Context) amboy.QueueStats {
 	defer q.mu.RUnlock()
 
 	s := amboy.QueueStats{
-		Total:     len(q.storage),
-		Completed: len(q.toDelete),
+		Total:     len(q.storage) + q.staleCount,
+		Completed: len(q.toDelete) + q.deletedCount,
 		Pending:   len(q.channel),
 	}
 	s.Running = s.Total - s.Completed - s.Pending
@@ -195,6 +254,7 @@ func (q *limitedSizeLocal) Complete(ctx context.Context, j amboy.Job) {
 
 	if len(q.toDelete) == q.capacity-1 {
 		delete(q.storage, <-q.toDelete)
+		q.deletedCount++
 	}
 
 	q.toDelete <- j.ID()

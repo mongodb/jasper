@@ -14,24 +14,28 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
+	"github.com/mongodb/jasper/options"
 )
 
+// Job is an alias for an amboy.Job
+type Job amboy.Job
+
 type amboyJob struct {
-	CmdString        string            `bson:"cmd" json:"cmd" yaml:"cmd"`
-	Environment      map[string]string `bson:"env" json:"env" yaml:"env"`
-	OverrideEnviron  bool              `bson:"override_env" json:"override_env" yaml:"override_env"`
-	WorkingDirectory string            `bson:"working_dir" json:"working_dir" yaml:"working_dir"`
-	Output           struct {
-		Error  string `bson:"error" json:"error" yaml:"error"`
-		Output string `bson:"output" json:"output" yaml:"output"`
-	} `bson:"output" json:"output" yaml:"output"`
-	ExitCode      int `bson:"exit_code" json:"exit_code" yaml:"exit_code"`
-	OutputOptions struct {
+	OverrideEnviron bool `bson:"override_env" json:"override_env" yaml:"override_env"`
+	OutputOptions   struct {
 		SuppressOutput    bool `bson:"suppress_output,omitempty" json:"suppress_output,omitempty" yaml:"suppress_output,omitempty"`
 		SuppressError     bool `bson:"suppress_error,omitempty" json:"suppress_error,omitempty" yaml:"suppress_error,omitempty"`
 		SendOutputToError bool `bson:"redirect_output_to_error,omitempty" json:"redirect_output_to_error,omitempty" yaml:"redirect_output_to_error,omitempty"`
 		SendErrorToOutput bool `bson:"redirect_error_to_output,omitempty" json:"redirect_error_to_output,omitempty" yaml:"redirect_error_to_output,omitempty"`
 	} `bson:"output_opts,omitempty" json:"output_opts,omitempty" yaml:"output_opts,omitempty"`
+	ExitCode         int               `bson:"exit_code" json:"exit_code" yaml:"exit_code"`
+	Environment      map[string]string `bson:"env" json:"env" yaml:"env"`
+	CmdString        string            `bson:"cmd" json:"cmd" yaml:"cmd"`
+	WorkingDirectory string            `bson:"working_dir" json:"working_dir" yaml:"working_dir"`
+	Output           struct {
+		Error  string `bson:"error" json:"error" yaml:"error"`
+		Output string `bson:"output" json:"output" yaml:"output"`
+	} `bson:"output" json:"output" yaml:"output"`
 	job.Base `bson:"metadata" json:"metadata" yaml:"metadata"`
 
 	makep ProcessConstructor
@@ -43,6 +47,9 @@ const (
 	amboyForegroundOutputJobName     = "jasper-foreground-job"
 )
 
+// RegisterJobs adds factories for the job types provided by these
+// packages to make it possible to dispatch these jobs to a
+// remote/distributed queue.
 func RegisterJobs(pc ProcessConstructor) {
 	registry.AddJobType(amboyJobName, func() amboy.Job { return amboyJobFactory(pc) })
 	registry.AddJobType(amboySimpleCapturedOutputJobName, func() amboy.Job { return amboySimpleCapturedOutputJobFactory(pc) })
@@ -62,23 +69,42 @@ func amboyJobFactory(pc ProcessConstructor) *amboyJob {
 	}
 	j.SetDependency(dependency.NewAlways())
 	return j
+
 }
 
-func NewJob(pc ProcessConstructor, cmd string) amboy.Job {
+// NewJob constructs an amboy job that wraps a provided
+// ProcessConstructor. The identifier of the job includes a hash of
+// the command, so running the same command repeatedly may result in
+// job collisions.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
+func NewJob(pc ProcessConstructor, cmd string) Job {
 	j := amboyJobFactory(pc)
 	j.CmdString = cmd
 	j.SetID(fmt.Sprintf("%s.%x", amboyJobName, sha1.Sum([]byte(cmd))))
 	return j
 }
 
-func NewJobBasic(cmd string) amboy.Job {
+// NewJobBasic constructs an amboy job that uses jasper process
+// management internally. The identifier of the job includes a hash of
+// the command, so running the same command repeatedly may result in
+// job collisions.
+func NewJobBasic(cmd string) Job {
 	j := amboyJobFactory(newBasicProcess)
 	j.CmdString = cmd
 	j.SetID(fmt.Sprintf("%s.basic.%x", amboyJobName, sha1.Sum([]byte(cmd))))
 	return j
 }
 
-func NewJobExtended(pc ProcessConstructor, cmd string, env map[string]string, wd string) amboy.Job {
+// NewJobExtended builds a job that creates a process with environment
+// variables and a working directory defined. The identifier of the
+// job includes a hash of the command, so running the same command
+// repeatedly may result in job collisions.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
+func NewJobExtended(pc ProcessConstructor, cmd string, env map[string]string, wd string) Job {
 	j := amboyJobFactory(pc)
 	j.CmdString = cmd
 	j.Environment = env
@@ -87,7 +113,11 @@ func NewJobExtended(pc ProcessConstructor, cmd string, env map[string]string, wd
 	return j
 }
 
-func NewJobBasicExtended(cmd string, env map[string]string, wd string) amboy.Job {
+// NewJobBasicExtended builds a job that creates a process with environment
+// variables and a working directory defined. The identifier of the
+// job includes a hash of the command, so running the same command
+// repeatedly may result in job collisions.
+func NewJobBasicExtended(cmd string, env map[string]string, wd string) Job {
 	j := amboyJobFactory(newBasicProcess)
 	j.CmdString = cmd
 	j.Environment = env
@@ -104,7 +134,7 @@ func (j *amboyJob) Run(ctx context.Context) {
 		return
 	}
 
-	opts, err := MakeCreationOptions(j.CmdString)
+	opts, err := options.MakeCreation(j.CmdString)
 	if err != nil {
 		j.AddError(err)
 		return
@@ -135,7 +165,7 @@ func (j *amboyJob) Run(ctx context.Context) {
 }
 
 type amboySimpleCapturedOutputJob struct {
-	Options *CreateOptions `bson:"options" json:"options" yaml:"options"`
+	Options *options.Create `bson:"options" json:"options" yaml:"options"`
 	Output  struct {
 		Error  string `bson:"error," json:"error," yaml:"error,"`
 		Output string `bson:"output" json:"output" yaml:"output"`
@@ -162,10 +192,16 @@ func amboySimpleCapturedOutputJobFactory(pc ProcessConstructor) *amboySimpleCapt
 	return j
 }
 
-func NewJobOptions(pc ProcessConstructor, opts *CreateOptions) amboy.Job {
+// NewJobOptions creates a new job using the options to define the
+// parameters of the job. The identifier of the job is the hash of the
+// options structure.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
+func NewJobOptions(pc ProcessConstructor, opts *options.Create) Job {
 	j := amboySimpleCapturedOutputJobFactory(pc)
 	j.Options = opts
-	j.SetID(fmt.Sprintf("%s.%x", j.Type().Name, opts.hash()))
+	j.SetID(fmt.Sprintf("%s.%x", j.Type().Name, opts.Hash()))
 	return j
 }
 
@@ -195,8 +231,8 @@ func (j *amboySimpleCapturedOutputJob) Run(ctx context.Context) {
 }
 
 type amboyForegroundOutputJob struct {
-	Options  *CreateOptions `bson:"options" json:"options" yaml:"options"`
-	ExitCode int            `bson:"exit_code" json:"exit_code" yaml:"exit_code"`
+	Options  *options.Create `bson:"options" json:"options" yaml:"options"`
+	ExitCode int             `bson:"exit_code" json:"exit_code" yaml:"exit_code"`
 	job.Base `bson:"metadata" json:"metadata" yaml:"metadata"`
 
 	makep ProcessConstructor
@@ -217,16 +253,25 @@ func amboyForegroundOutputJobFactory(pc ProcessConstructor) *amboyForegroundOutp
 	return j
 }
 
-func NewJobForeground(pc ProcessConstructor, opts *CreateOptions) amboy.Job {
+// NewJobForeground creates an amboy job that writes all output
+// linewise to the current processes global grip logging instance with
+// error and output separated by level.
+//
+// Pass the process constructor to allow the amboy jobs to manipulate
+// processes in an existing Manager.
+func NewJobForeground(pc ProcessConstructor, opts *options.Create) Job {
 	j := amboyForegroundOutputJobFactory(pc)
-	j.SetID(fmt.Sprintf("%s.%x", j.Type().Name, opts.hash()))
+	j.SetID(fmt.Sprintf("%s.%x", j.Type().Name, opts.Hash()))
 	j.Options = opts
 	return j
 }
 
-func NewJobBasicForeground(opts *CreateOptions) amboy.Job {
+// NewJobBasicForeground creates an amboy job that writes all output
+// linewise to the current processes global grip logging instance with
+// error and output separated by level.
+func NewJobBasicForeground(opts *options.Create) Job {
 	j := amboyForegroundOutputJobFactory(newBasicProcess)
-	j.SetID(fmt.Sprintf("%s.basic.%x", j.Type().Name, opts.hash()))
+	j.SetID(fmt.Sprintf("%s.basic.%x", j.Type().Name, opts.Hash()))
 	j.Options = opts
 	return j
 }

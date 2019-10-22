@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip"
+	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tychoish/bond"
@@ -39,8 +42,7 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	arch := bond.MongoDBArch("x86_64")
 	release := "4.0-stable"
 
-	require.NoError(t, makeEnclosingDirectories("build"))
-	dir, err := ioutil.TempDir("build", "mongodb")
+	dir, err := ioutil.TempDir("", "mongodb")
 	require.NoError(t, err)
 
 	opts := bond.BuildOptions{
@@ -70,12 +72,12 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	return dir, mongodPath
 }
 
-func setupMongods(numProcs int, mongodPath string) ([]CreateOptions, []string, error) {
+func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, error) {
 	dbPaths := make([]string, numProcs)
-	optslist := make([]CreateOptions, numProcs)
+	optslist := make([]options.Create, numProcs)
 	for i := 0; i < numProcs; i++ {
 		procName := "mongod"
-		port := getPortNumber()
+		port := testutil.GetPortNumber()
 
 		dbPath, err := ioutil.TempDir("build", procName)
 		if err != nil {
@@ -83,7 +85,7 @@ func setupMongods(numProcs int, mongodPath string) ([]CreateOptions, []string, e
 		}
 		dbPaths[i] = dbPath
 
-		opts := CreateOptions{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
+		opts := options.Create{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
 		optslist[i] = opts
 	}
 
@@ -92,7 +94,7 @@ func setupMongods(numProcs int, mongodPath string) ([]CreateOptions, []string, e
 
 func removeDBPaths(dbPaths []string) {
 	for _, dbPath := range dbPaths {
-		os.RemoveAll(dbPath)
+		grip.Error(os.RemoveAll(dbPath))
 	}
 }
 
@@ -116,28 +118,28 @@ func TestMongod(t *testing.T) {
 				id          string
 				numProcs    int
 				signal      syscall.Signal
-				sleepMillis time.Duration
+				sleep       time.Duration
 				expectError bool
 			}{
 				{
 					id:          "WithSingleMongod",
 					numProcs:    1,
 					signal:      syscall.SIGKILL,
-					sleepMillis: 0,
+					sleep:       0,
 					expectError: true,
 				},
 				{
 					id:          "With10MongodsAndSigkill",
 					numProcs:    10,
 					signal:      syscall.SIGKILL,
-					sleepMillis: 2000,
+					sleep:       2000 * time.Millisecond,
 					expectError: true,
 				},
 				{
 					id:          "With30MongodsAndSigkill",
 					numProcs:    30,
 					signal:      syscall.SIGKILL,
-					sleepMillis: 4000,
+					sleep:       4000 * time.Millisecond,
 					expectError: true,
 				},
 			} {
@@ -164,7 +166,7 @@ func TestMongod(t *testing.T) {
 					}
 
 					// Signal to stop mongods
-					time.Sleep(test.sleepMillis * time.Millisecond)
+					time.Sleep(test.sleep)
 					for _, proc := range procs {
 						err := proc.Signal(ctx, test.signal)
 						assert.NoError(t, err)

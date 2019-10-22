@@ -17,15 +17,12 @@ type Driver interface {
 	Get(context.Context, string) (amboy.Job, error)
 	Put(context.Context, amboy.Job) error
 	Save(context.Context, amboy.Job) error
-	SaveStatus(context.Context, amboy.Job, amboy.JobStatusInfo) error
 
 	Jobs(context.Context) <-chan amboy.Job
 	Next(context.Context) amboy.Job
 
 	Stats(context.Context) amboy.QueueStats
 	JobStats(context.Context) <-chan amboy.JobStatusInfo
-
-	LockManager
 }
 
 // MongoDBOptions is a struct passed to the NewMgo constructor to
@@ -36,9 +33,14 @@ type MongoDBOptions struct {
 	DB              string
 	Priority        bool
 	CheckWaitUntil  bool
+	CheckDispatchBy bool
 	SkipIndexBuilds bool
 	Format          amboy.Format
 	WaitInterval    time.Duration
+	// TTL sets the number of seconds for a TTL index on the "info.created"
+	// field. If set to zero, the TTL index will not be created and
+	// and documents may live forever in the database.
+	TTL time.Duration
 }
 
 // DefaultMongoDBOptions constructs a new options object with default

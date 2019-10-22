@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -19,10 +20,14 @@ type sshClient struct {
 
 // NewSSHClient creates a new Jasper manager that connects to a remote
 // machine's Jasper service over SSH using the remote machine's Jasper CLI.
-func NewSSHClient(remoteOpts jasper.RemoteOptions, clientOpts ClientOptions, trackProcs bool) (jasper.RemoteClient, error) {
+func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProcs bool) (jasper.RemoteClient, error) {
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
+	// We have to suppress logs from SSH, because it will prevent the JSON
+	// output from the Jasper CLI from being parsed correctly (e.g. adding a
+	// host to the known hosts file generates a warning).
+	remoteOpts.Args = append([]string{"-o", "LogLevel=QUIET"}, remoteOpts.Args...)
 
 	if err := clientOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating client options")
@@ -56,7 +61,7 @@ func (c *sshClient) ID() string {
 	return resp.ID
 }
 
-func (c *sshClient) CreateProcess(ctx context.Context, opts *jasper.CreateOptions) (jasper.Process, error) {
+func (c *sshClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	output, err := c.runManagerCommand(ctx, CreateProcessCommand, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -70,20 +75,29 @@ func (c *sshClient) CreateProcess(ctx context.Context, opts *jasper.CreateOption
 	return newSSHProcess(c.runClientCommand, resp.Info)
 }
 
-// CreateCommand creates an in-memory command whose subcommands run over SSH.
-// However, the desired semantics would be to actually send CommandInput to the
-// Jasper CLI over SSH.
-// TODO: this can likely be fixed by serializing the command inputs, which
-// requires MAKE-841.
+// CreateCommand creates a command that logically will execute via the remote
+// CLI. Users should not use (*jasper.Command).SetRunFunc().
 func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
-	return c.manager.CreateCommand(ctx).ProcConstructor(c.CreateProcess)
+	return c.manager.CreateCommand(ctx).SetRunFunc(func(opts options.Command) error {
+		opts.Remote = &options.Remote{}
+		output, err := c.runManagerCommand(ctx, CreateCommand, &opts)
+		if err != nil {
+			return errors.Wrap(err, "could not run command from given input")
+		}
+
+		if _, err := ExtractOutcomeResponse(output); err != nil {
+			return errors.WithStack(err)
+		}
+
+		return nil
+	})
 }
 
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register existing processes on remote manager")
 }
 
-func (c *sshClient) List(ctx context.Context, f jasper.Filter) ([]jasper.Process, error) {
+func (c *sshClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
 	output, err := c.runManagerCommand(ctx, ListCommand, &FilterInput{Filter: f})
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -157,10 +171,10 @@ func (c *sshClient) Close(ctx context.Context) error {
 }
 
 func (c *sshClient) CloseConnection() error {
-	return errors.New("cannot close connection on an SSH client")
+	return nil
 }
 
-func (c *sshClient) ConfigureCache(ctx context.Context, opts jasper.CacheOptions) error {
+func (c *sshClient) ConfigureCache(ctx context.Context, opts options.Cache) error {
 	output, err := c.runRemoteCommand(ctx, ConfigureCacheCommand, &opts)
 	if err != nil {
 		return errors.WithStack(err)
@@ -173,7 +187,7 @@ func (c *sshClient) ConfigureCache(ctx context.Context, opts jasper.CacheOptions
 	return nil
 }
 
-func (c *sshClient) DownloadFile(ctx context.Context, info jasper.DownloadInfo) error {
+func (c *sshClient) DownloadFile(ctx context.Context, info options.Download) error {
 	output, err := c.runRemoteCommand(ctx, DownloadFileCommand, &info)
 	if err != nil {
 		return errors.WithStack(err)
@@ -186,7 +200,23 @@ func (c *sshClient) DownloadFile(ctx context.Context, info jasper.DownloadInfo) 
 	return nil
 }
 
-func (c *sshClient) DownloadMongoDB(ctx context.Context, opts jasper.MongoDBDownloadOptions) error {
+func (c *sshClient) WriteFile(ctx context.Context, info options.WriteFile) error {
+	sendInfo := func(info options.WriteFile) error {
+		output, err := c.runRemoteCommand(ctx, WriteFileCommand, &info)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		if _, err := ExtractOutcomeResponse(output); err != nil {
+			return errors.WithStack(err)
+		}
+
+		return nil
+	}
+	return info.WriteBufferedContent(sendInfo)
+}
+
+func (c *sshClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {
 	output, err := c.runRemoteCommand(ctx, DownloadMongoDBCommand, &opts)
 	if err != nil {
 		return errors.WithStack(err)
@@ -268,12 +298,12 @@ func (c *sshClient) runClientCommand(ctx context.Context, subcommand []string, s
 
 // newCommand creates the command that runs the Jasper CLI client command
 // over SSH.
-func (c *sshClient) newCommand(ctx context.Context, clientSubcommand []string, input io.Reader, output io.WriteCloser) *jasper.Command {
+func (c *sshClient) newCommand(ctx context.Context, clientSubcommand []string, input []byte, output io.WriteCloser) *jasper.Command {
 	cmd := c.manager.CreateCommand(ctx).Host(c.opts.Machine.Host).User(c.opts.Machine.User).ExtendRemoteArgs(c.opts.Machine.Args...).
 		Add(c.opts.buildCommand(clientSubcommand...))
 
-	if input != nil {
-		cmd.SetInput(input)
+	if len(input) != 0 {
+		cmd.SetInputBytes(input)
 	}
 
 	if output != nil {
@@ -292,7 +322,7 @@ func clientOutput() *CappedWriter {
 }
 
 // clientInput constructs the JSON input to the CLI from the struct.
-func clientInput(input interface{}) (*bytes.Buffer, error) {
+func clientInput(input interface{}) ([]byte, error) {
 	if input == nil {
 		return nil, nil
 	}
@@ -302,5 +332,5 @@ func clientInput(input interface{}) (*bytes.Buffer, error) {
 		return nil, errors.Wrap(err, "could not encode input as JSON")
 	}
 
-	return bytes.NewBuffer(inputBytes), nil
+	return inputBytes, nil
 }

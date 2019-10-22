@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/level"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -225,11 +225,15 @@ func ExtractBuildloggerURLsResponse(input []byte) (BuildloggerURLsResponse, erro
 	return resp, resp.successOrError()
 }
 
+// IDResponse describes the structure of a wrapped Jasper process ID
+// specific command as a response for the CLI.
 type IDResponse struct {
 	OutcomeResponse `json:"outcome"`
 	ID              string `json:"id,omitempty"`
 }
 
+// ExtractIDResponse unmarshells an ID response from an unprocessed
+// slice of bytes.
 func ExtractIDResponse(input []byte) (IDResponse, error) {
 	resp := IDResponse{}
 	if err := json.Unmarshal(input, &resp); err != nil {
@@ -291,34 +295,6 @@ func (in *SignalTriggerIDInput) Validate() error {
 	return nil
 }
 
-// CommandInput represents CLI-specific input to create a jasper.Command.
-type CommandInput struct {
-	Commands        [][]string           `json:"commands"`
-	Background      bool                 `json:"background,omitempty"`
-	CreateOptions   jasper.CreateOptions `json:"create_options,omitempty"`
-	Priority        level.Priority       `json:"priority,omitempty"`
-	ContinueOnError bool                 `json:"continue_on_error,omitempty"`
-	IgnoreError     bool                 `json:"ignore_error,omitempty"`
-}
-
-// Validate checks that the input to the jasper.Command is valid.
-func (in *CommandInput) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	// The semantics of CreateOptions expects Args to be non-empty, but
-	// jasper.Command ignores (CreateOptions).Args.
-	if len(in.CreateOptions.Args) == 0 {
-		in.CreateOptions.Args = []string{""}
-	}
-	catcher.Add(in.CreateOptions.Validate())
-	if in.Priority != 0 && !level.IsValidPriority(in.Priority) {
-		catcher.Add(errors.New("priority is not in the valid range of values"))
-	}
-	if len(in.Commands) == 0 {
-		catcher.Add(errors.New("must specify at least one command"))
-	}
-	return catcher.Resolve()
-}
-
 // TagIDInput represents the CLI-specific input for a process with a given tag.
 type TagIDInput struct {
 	ID  string `json:"id"`
@@ -352,7 +328,7 @@ func (in *TagInput) Validate() error {
 
 // FilterInput represents the CLI-specific input to filter processes.
 type FilterInput struct {
-	Filter jasper.Filter
+	Filter options.Filter
 }
 
 // Validate checks that the jasper.Filter is a recognized filter.

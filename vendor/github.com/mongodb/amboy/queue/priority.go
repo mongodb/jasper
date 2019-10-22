@@ -2,13 +2,17 @@ package queue
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/amboy/pool"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
+	"github.com/mongodb/grip/recovery"
+	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 // LocalPriorityQueue is an amboy.Queue implementation that dispatches
@@ -20,6 +24,7 @@ type priorityLocalQueue struct {
 	fixed    *fixedStorage
 	channel  chan amboy.Job
 	runner   amboy.Runner
+	id       string
 	counters struct {
 		started   int
 		completed int
@@ -34,11 +39,14 @@ func NewLocalPriorityQueue(workers, capacity int) amboy.Queue {
 	q := &priorityLocalQueue{
 		storage: makePriorityStorage(),
 		fixed:   newFixedStorage(capacity),
+		id:      fmt.Sprintf("queue.local.unordered.priority.%s", uuid.NewV4().String()),
 	}
 
 	q.runner = pool.NewLocalWorkers(workers, q)
 	return q
 }
+
+func (q *priorityLocalQueue) ID() string { return q.id }
 
 // Put adds a job to the priority queue. If the Job already exists,
 // this operation updates it in the queue, potentially reordering the
@@ -48,7 +56,16 @@ func (q *priorityLocalQueue) Put(ctx context.Context, j amboy.Job) error {
 		Created: time.Now(),
 	})
 
+	if err := j.TimeInfo().Validate(); err != nil {
+		return errors.Wrap(err, "invalid job timeinfo")
+	}
+
 	return q.storage.Insert(j)
+}
+
+func (q *priorityLocalQueue) Save(ctx context.Context, j amboy.Job) error {
+	q.storage.Save(j)
+	return nil
 }
 
 // Get takes the name of a job and returns the job from the queue that
@@ -62,14 +79,36 @@ func (q *priorityLocalQueue) Get(ctx context.Context, name string) (amboy.Job, b
 // if the context is canceled. Otherwise, this operation blocks until
 // a job is available for dispatching.
 func (q *priorityLocalQueue) Next(ctx context.Context) amboy.Job {
-	select {
-	case <-ctx.Done():
-		return nil
-	case job := <-q.channel:
-		q.counters.Lock()
-		defer q.counters.Unlock()
-		q.counters.started++
-		return job
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case job := <-q.channel:
+			ti := job.TimeInfo()
+			if ti.IsStale() {
+				q.storage.Remove(job.ID())
+				grip.Notice(message.Fields{
+					"state":    "stale",
+					"job":      job.ID(),
+					"job_type": job.Type().Name,
+				})
+				continue
+			}
+
+			if !ti.IsDispatchable() {
+				go func() {
+					defer recovery.LogStackTraceAndContinue("re-queue waiting job", job.ID())
+					q.channel <- job
+				}()
+				continue
+			}
+
+			q.counters.Lock()
+			q.counters.started++
+			q.counters.Unlock()
+
+			return job
+		}
 	}
 }
 
