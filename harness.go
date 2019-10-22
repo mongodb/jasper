@@ -1,5 +1,3 @@
-// +build none
-
 package jasper
 
 import (
@@ -7,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/evergreen-ci/poplar"
@@ -14,6 +13,34 @@ import (
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
+
+func RunLogBenchmarks(ctx context.Context) error {
+	prefix := fmt.Sprintf("jasper-log-benchmark-%d", time.Now().Unix())
+	if err := os.Mkdir(prefix, os.ModePerm); err != nil {
+		return errors.Wrap(err, "problem creating benchmark directory")
+	}
+
+	resultFile, err := os.Create(filepath.Join(prefix, "results.txt"))
+	if err != nil {
+		return errors.Wrap(err, "problem creating result file")
+	}
+
+	var resultText string
+	s := getLogBenchmarkSuite()
+	res, err := s.Run(ctx, prefix)
+	if err != nil {
+		resultText = fmt.Sprintf("--- FAIL: %s\n", err)
+	} else {
+		resultText = fmt.Sprintf("--- PASS: %s\n", res.Report())
+	}
+
+	_, err = resultFile.WriteString(resultText)
+	if err != nil {
+		return errors.Wrap(err, "failed to write benchmark results to file")
+	}
+
+	return resultFile.Close()
+}
 
 type makeProcess func(context.Context, *options.Create) (Process, error)
 
@@ -46,7 +73,7 @@ func makeCreateOpts(timeout time.Duration, logger options.Logger) *options.Creat
 	return &opts
 }
 
-func getInMemoryBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
+func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
 	var logType options.LogType = options.LogInMemory
 	logOptions := options.Log{InMemoryCap: 1000, Format: options.LogFormatPlain}
 	opts := makeCreateOpts(timeout, options.Logger{Type: logType, Options: logOptions})
@@ -58,7 +85,7 @@ func getInMemoryBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Be
 		if err != nil {
 			return err
 		}
-		r.Inc(1)
+		r.IncOps(1)
 		logger := opts.Output.Loggers[0].GetSender().(*send.InMemorySender)
 		r.IncSize(logger.TotalBytesSent())
 		r.End(time.Since(startAt))
@@ -70,7 +97,7 @@ func getInMemoryBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Be
 func getFileLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
 	return func(ctx context.Context, r poplar.Recorder, _ int) error {
 		var logType options.LogType = options.LogFile
-		file, err := ioutil.TempFile("build", "bench_out.txt")
+		file, err := ioutil.TempFile("", "bench_out.txt")
 		if err != nil {
 			return err
 		}
@@ -84,7 +111,7 @@ func getFileLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.
 		if err != nil {
 			return err
 		}
-		r.Inc(1)
+		r.IncOps(1)
 		info, err := file.Stat()
 		if err != nil {
 			return err
@@ -96,8 +123,8 @@ func getFileLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.
 	}
 }
 
-func logBenchmarks() map[string]func(context.Context, *caseDefinition) result {
-	return map[string]func(makeProcess) poplar.Benchmark{
+func logBenchmarks() map[string]func(makeProcess, time.Duration) poplar.Benchmark {
+	return map[string]func(makeProcess, time.Duration) poplar.Benchmark{
 		"InMemoryLogger": getInMemoryLoggerBenchmark,
 		"FileLogger":     getFileLoggerBenchmark,
 	}
@@ -107,9 +134,9 @@ func getLogBenchmarkSuite() poplar.BenchmarkSuite {
 	benchmarkSuite := poplar.BenchmarkSuite{}
 	for procName, makeProc := range procMap() {
 		for logName, logBench := range logBenchmarks() {
-			cases = append(benchmarkSuite,
+			benchmarkSuite = append(benchmarkSuite,
 				&poplar.BenchmarkCase{
-					Name:             fmt.Sprintf("%s/%s/Send1Second", logName, procName),
+					CaseName:         fmt.Sprintf("%s-%s-Send1Second", logName, procName),
 					Bench:            logBench(makeProc, time.Second),
 					MinRuntime:       30 * time.Second,
 					MaxRuntime:       time.Minute,
@@ -118,11 +145,11 @@ func getLogBenchmarkSuite() poplar.BenchmarkSuite {
 					Count:            1,
 					MinIterations:    10,
 					MaxIterations:    20,
-					Recorder:         poplar.RecorderType,
+					Recorder:         poplar.RecorderPerf,
 				},
 				&poplar.BenchmarkCase{
-					Name:             fmt.Sprintf("%s/%s/Send5Seconds", logName, procName),
-					Bench:            logBench(markProc, 5*time.Second),
+					CaseName:         fmt.Sprintf("%s-%s-Send5Seconds", logName, procName),
+					Bench:            logBench(makeProc, 5*time.Second),
 					MinRuntime:       30 * time.Second,
 					MaxRuntime:       time.Minute,
 					Timeout:          10 * time.Minute,
@@ -130,11 +157,11 @@ func getLogBenchmarkSuite() poplar.BenchmarkSuite {
 					Count:            1,
 					MinIterations:    5,
 					MaxIterations:    20,
-					Recorder:         poplar.RecorderType,
+					Recorder:         poplar.RecorderPerf,
 				},
 				&poplar.BenchmarkCase{
-					Name:             fmt.Sprintf("%s/%s/Send30Seconds", logName, procName),
-					Bench:            logBench(markProc, 30*time.Second),
+					CaseName:         fmt.Sprintf("%s-%s-Send30Seconds", logName, procName),
+					Bench:            logBench(makeProc, 30*time.Second),
 					MinRuntime:       30 * time.Second,
 					MaxRuntime:       time.Minute,
 					Timeout:          10 * time.Minute,
@@ -142,7 +169,7 @@ func getLogBenchmarkSuite() poplar.BenchmarkSuite {
 					Count:            1,
 					MinIterations:    1,
 					MaxIterations:    20,
-					Recorder:         poplar.RecorderType,
+					Recorder:         poplar.RecorderPerf,
 				},
 			)
 		}
