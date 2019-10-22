@@ -63,7 +63,7 @@ test-%:
 	@grep -s -q -e "^PASS" $(buildDir)/test.*.out
 coverage-%:$(buildDir)/cover.%.out
 	@go tool cover -func=$< | sed -E 's%github.com/.*/ftdc/%%' | column -t
-html-coverage-%:coverage-%
+html-coverage-%:$(buildDir)/cover.%.html
 $(buildDir)/cover.%.out:$(buildDir) $(testFiles) .FORCE
 	go test $(testArgs) -covermode=count -coverprofile $@ -cover ./$*
 $(buildDir)/cover.%.html:$(buildDir)/cover.%.out
@@ -94,5 +94,7 @@ vendor-clean:
 	rm -rf vendor/gopkg.in/mgo.v2/internal/json/testdata
 	rm -rf vendor/gopkg.in/mgo.v2/.git/
 	rm -rf vendor/gopkg.in/mgo.v2/txn/
+	rm -rf vendor/github.com/papertrail/go-tail/vendor/github.com/spf13/pflag/
+	rm -rf vendor/github.com/papertrail/go-tail/main.go
 	sed -ri 's/bson:"(.*),omitempty"/bson:"\1"/' `find vendor/github.com/mongodb/grip/vendor/github.com/shirou/gopsutil/ -name "*go"` || true
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*.dat" -o -name "*testdata" | xargs rm -rf

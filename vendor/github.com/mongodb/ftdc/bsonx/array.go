@@ -12,6 +12,8 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/mongodb/ftdc/bsonx/bsonerr"
+	"github.com/mongodb/ftdc/bsonx/bsontype"
 	"github.com/mongodb/ftdc/bsonx/elements"
 	"github.com/pkg/errors"
 )
@@ -42,7 +44,7 @@ func ArrayFromDocument(doc *Document) *Array {
 
 // MakeArray creates a new array with the size hint (capacity)
 // specified.
-func MakeArray(size int) *Array { return &Array{doc: MakeDocument(size)} }
+func MakeArray(size int) *Array { return &Array{doc: DC.Make(size)} }
 
 // Len returns the number of elements in the array.
 func (a *Array) Len() int {
@@ -82,17 +84,34 @@ func (a *Array) Validate() (uint32, error) {
 // a LookupOK that returns a bool. Although if we want to align with the
 // semantics of how Go arrays and slices work, we would not provide a LookupOK
 // and force users to use the Len method before hand to avoid panics.
-func (a *Array) Lookup(index uint) (*Value, error) {
+func (a *Array) Lookup(index uint) *Value {
+	return a.doc.ElementAt(index).value
+}
+
+func (a *Array) LookupErr(index uint) (*Value, error) {
 	v, ok := a.doc.ElementAtOK(index)
 	if !ok {
-		return nil, ErrOutOfBounds
+		return nil, bsonerr.OutOfBounds
 	}
 
 	return v.value, nil
 }
 
+func (a *Array) LookupElementErr(index uint) (*Element, error) {
+	v, ok := a.doc.ElementAtOK(index)
+	if !ok {
+		return nil, bsonerr.OutOfBounds
+	}
+
+	return v, nil
+}
+
+func (a *Array) LookupElement(index uint) *Element {
+	return a.doc.ElementAt(index)
+}
+
 func (a *Array) lookupTraverse(index uint, keys ...string) (*Value, error) {
-	value, err := a.Lookup(index)
+	value, err := a.LookupErr(index)
 	if err != nil {
 		return nil, err
 	}
@@ -102,17 +121,17 @@ func (a *Array) lookupTraverse(index uint, keys ...string) (*Value, error) {
 	}
 
 	switch value.Type() {
-	case TypeEmbeddedDocument:
-		element, err := value.MutableDocument().LookupElementErr(keys...)
+	case bsontype.EmbeddedDocument:
+		element, err := value.MutableDocument().RecursiveLookupElementErr(keys...)
 		if err != nil {
 			return nil, err
 		}
 
 		return element.Value(), nil
-	case TypeArray:
+	case bsontype.Array:
 		index, err := strconv.ParseUint(keys[0], 10, 0)
 		if err != nil {
-			return nil, ErrInvalidArrayKey
+			return nil, bsonerr.InvalidArrayKey
 		}
 
 		val, err := value.MutableArray().lookupTraverse(uint(index), keys[1:]...)
@@ -122,7 +141,7 @@ func (a *Array) lookupTraverse(index uint, keys ...string) (*Value, error) {
 
 		return val, nil
 	default:
-		return nil, ErrInvalidDepthTraversal
+		return nil, bsonerr.InvalidDepthTraversal
 	}
 }
 
@@ -164,7 +183,7 @@ func (a *Array) Prepend(values ...*Value) *Array {
 // out of bounds.
 func (a *Array) Set(index uint, value *Value) *Array {
 	if index >= uint(len(a.doc.elems)) {
-		panic(ErrOutOfBounds)
+		panic(bsonerr.OutOfBounds)
 	}
 
 	a.doc.elems[index] = &Element{value}
@@ -190,7 +209,7 @@ func (a *Array) Concat(docs ...interface{}) error {
 				continue
 			}
 
-			return ErrNilDocument
+			return bsonerr.NilDocument
 		}
 
 		switch val := arr.(type) {
@@ -200,7 +219,7 @@ func (a *Array) Concat(docs ...interface{}) error {
 					continue
 				}
 
-				return ErrNilDocument
+				return bsonerr.NilDocument
 			}
 
 			for _, e := range val.doc.elems {
@@ -212,7 +231,7 @@ func (a *Array) Concat(docs ...interface{}) error {
 					continue
 				}
 
-				return ErrNilDocument
+				return bsonerr.NilDocument
 			}
 
 			for _, e := range val.elems {
@@ -227,7 +246,7 @@ func (a *Array) Concat(docs ...interface{}) error {
 				return err
 			}
 		default:
-			return ErrInvalidDocumentType
+			return bsonerr.InvalidDocumentType
 		}
 	}
 
@@ -309,7 +328,7 @@ func (a *Array) writeByteSlice(start uint, size uint32, b []byte) (int64, error)
 	var pos = start
 
 	if len(b) < int(start)+int(size) {
-		return 0, NewErrTooSmall()
+		return 0, newErrTooSmall()
 	}
 	n, err := elements.Int32.Encode(start, b, int32(size))
 	total += int64(n)
@@ -362,7 +381,7 @@ func (a *Array) MarshalBSON() ([]byte, error) {
 
 // Iterator returns a ArrayIterator that can be used to iterate through the
 // elements of this Array.
-func (a *Array) Iterator() *ArrayIterator {
+func (a *Array) Iterator() Iterator {
 	return newArrayIterator(a)
 }
 
