@@ -15,7 +15,10 @@ import (
 )
 
 func RunLogBenchmarks(ctx context.Context) error {
-	prefix := fmt.Sprintf("jasper-log-benchmark-%d", time.Now().Unix())
+	prefix := filepath.Join(
+		"build",
+		fmt.Sprintf("jasper-log-benchmark-%d", time.Now().Unix()),
+	)
 	if err := os.Mkdir(prefix, os.ModePerm); err != nil {
 		return errors.Wrap(err, "problem creating benchmark directory")
 	}

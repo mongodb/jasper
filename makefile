@@ -68,6 +68,11 @@ $(buildDir)/.lintSetup:$(lintDeps)
 	@-$(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
 
+# benchmark setup targets
+$(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
+	@mkdir -p $(buildDir)
+	go build -o $@ $<
+# end benchmark setup targets
 
 # start test and coverage artifacts
 #    This varable includes everything that the tests actually need to
@@ -123,6 +128,8 @@ proto:
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
 lint:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 test:build $(buildDir)/output.test
+benchmarks:$(buildDir)/run-benchmarks $(buildDir)/ .FORCE
+	./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
