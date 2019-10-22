@@ -20,8 +20,8 @@ type selfClearingProcessManager struct {
 // of a process in its memory that has already completed.
 //
 // The self clearing process manager is not thread safe. Wrap with the
-// local process manager for multithreaded use.
-// TODO: MAKE-803: allow local process manager to wrap other managers.
+// synchronized process manager for multithreaded use.
+// TODO: MAKE-803: allow synchronized process manager to wrap other managers.
 func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
 	pm, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
 	if err != nil {
@@ -43,8 +43,8 @@ func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, erro
 // See the NewSelfClearingProcessManager() constructor for more information.
 //
 // The self clearing process manager is not thread safe. Wrap with the
-// local process manager for multithreaded use.
-// TODO: MAKE-803: allow local process manager to wrap other managers.
+// synchronized process manager for multithreaded use.
+// TODO: MAKE-803: allow synchronized process manager to wrap other managers.
 func NewSelfClearingProcessManagerBlockingProcesses(maxProcs int, trackProcs bool) (Manager, error) {
 	pm, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
 	if err != nil {

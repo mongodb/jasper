@@ -8,39 +8,39 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewLocalManager is a constructor for a thread-safe Manager.
-func NewLocalManager(trackProcs bool) (Manager, error) {
+// NewSynchronizedManager is a constructor for a thread-safe Manager.
+func NewSynchronizedManager(trackProcs bool) (Manager, error) {
 	basicManager, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
 	if err != nil {
 		return nil, err
 	}
-	return &localProcessManager{
+	return &synchronizedProcessManager{
 		manager: basicManager.(*basicProcessManager),
 	}, nil
 }
 
-// NewLocalManagerBlockingProcesses is a constructor for localProcessManager,
+// NewSynchronizedManagerBlockingProcesses is a constructor for synchronizedProcessManager,
 // that uses blockingProcess instead of the default basicProcess.
-func NewLocalManagerBlockingProcesses(trackProcs bool) (Manager, error) {
+func NewSynchronizedManagerBlockingProcesses(trackProcs bool) (Manager, error) {
 	basicBlockingManager, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
 	if err != nil {
 		return nil, err
 	}
-	return &localProcessManager{
+	return &synchronizedProcessManager{
 		manager: basicBlockingManager.(*basicProcessManager),
 	}, nil
 }
 
-type localProcessManager struct {
+type synchronizedProcessManager struct {
 	mu      sync.RWMutex
 	manager *basicProcessManager
 }
 
-func (m *localProcessManager) ID() string {
+func (m *synchronizedProcessManager) ID() string {
 	return m.manager.ID()
 }
 
-func (m *localProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
+func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -52,24 +52,24 @@ func (m *localProcessManager) CreateProcess(ctx context.Context, opts *options.C
 
 	_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 
-	proc = &localProcess{proc: proc}
+	proc = &synchronizedProcess{proc: proc}
 	m.manager.procs[proc.ID()] = proc
 
 	return proc, nil
 }
 
-func (m *localProcessManager) CreateCommand(ctx context.Context) *Command {
+func (m *synchronizedProcessManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
-func (m *localProcessManager) Register(ctx context.Context, proc Process) error {
+func (m *synchronizedProcessManager) Register(ctx context.Context, proc Process) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	return errors.WithStack(m.manager.Register(ctx, proc))
 }
 
-func (m *localProcessManager) List(ctx context.Context, f options.Filter) ([]Process, error) {
+func (m *synchronizedProcessManager) List(ctx context.Context, f options.Filter) ([]Process, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -77,7 +77,7 @@ func (m *localProcessManager) List(ctx context.Context, f options.Filter) ([]Pro
 	return procs, errors.WithStack(err)
 }
 
-func (m *localProcessManager) Get(ctx context.Context, id string) (Process, error) {
+func (m *synchronizedProcessManager) Get(ctx context.Context, id string) (Process, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -85,21 +85,21 @@ func (m *localProcessManager) Get(ctx context.Context, id string) (Process, erro
 	return proc, errors.WithStack(err)
 }
 
-func (m *localProcessManager) Clear(ctx context.Context) {
+func (m *synchronizedProcessManager) Clear(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.manager.Clear(ctx)
 }
 
-func (m *localProcessManager) Close(ctx context.Context) error {
+func (m *synchronizedProcessManager) Close(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	return errors.WithStack(m.manager.Close(ctx))
 }
 
-func (m *localProcessManager) Group(ctx context.Context, name string) ([]Process, error) {
+func (m *synchronizedProcessManager) Group(ctx context.Context, name string) ([]Process, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
