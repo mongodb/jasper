@@ -40,9 +40,6 @@ imports:
   - name: github.com/evergreen-ci/timber
     version: d8ccb7cbe151e1466a7be084342653363a1be500
 
-  - name: github.com/surullabs/lint
-    version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
-
   # cgroup requirements
   - name: github.com/containerd/cgroups
     version: dbea6f2bd41658b84b00417ceefa416b979cbf10
