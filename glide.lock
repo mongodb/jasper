@@ -40,7 +40,7 @@ imports:
   - name: github.com/evergreen-ci/timber
     version: d8ccb7cbe151e1466a7be084342653363a1be500
   - name: github.com/evergreen-ci/poplar
-    version: 086af8bac2be15d3321a6738798bb218fe9e686c
+    version: a77cf69fb19eb0d3235d73eb0e5428002936827e
 
   - name: github.com/surullabs/lint
     version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951

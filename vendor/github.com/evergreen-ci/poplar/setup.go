@@ -1,17 +1,14 @@
 package poplar
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
-	"github.com/evergreen-ci/aviation"
+	"github.com/evergreen-ci/aviation/services"
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -120,75 +117,17 @@ func reportSetupEnv() (*Report, error) {
 	}, nil
 }
 
-type userCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
+// DialCedarOptions describes the options for the DialCedar function. The base
+// address defaults to `cedar.mongodb.com` and the RPC port to 7070. If a base
+// address is provided the RPC port must also be provided. Username and
+// password must always be provided. This aliases the same type in aviation in
+// order to avoid users having to vendor aviation.
+type DialCedarOptions services.DialCedarOptions
 
 // DialCedar is a convenience function for creating a RPC client connection
-// with cedar via gRPC. The username and password are LDAP credentials for the
-// cedar service.
-func DialCedar(ctx context.Context, username, password string, retries int) (*grpc.ClientConn, error) {
-	cedarRPCAddress := "cedar.mongodb.com:7070"
-
-	creds := &userCredentials{
-		Username: username,
-		Password: password,
-	}
-	credsPayload, err := json.Marshal(creds)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem building credentials payload")
-	}
-
-	ca, err := makeCedarCertRequest(ctx, "/ca", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem getting cedar root cert")
-	}
-	crt, err := makeCedarCertRequest(ctx, "/users/certificate", bytes.NewBuffer(credsPayload))
-	if err != nil {
-		return nil, errors.Wrap(err, "problem getting cedar user cert")
-	}
-	key, err := makeCedarCertRequest(ctx, "/users/certificate/key", bytes.NewBuffer(credsPayload))
-	if err != nil {
-		return nil, errors.Wrap(err, "problem getting cedar user key")
-	}
-
-	tlsConf, err := aviation.GetClientTLSConfig(ca, crt, key)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem creating TLS config")
-	}
-
-	return aviation.Dial(ctx, aviation.DialOptions{
-		Address: cedarRPCAddress,
-		Retries: retries,
-		TLSConf: tlsConf,
-	})
-}
-
-func makeCedarCertRequest(ctx context.Context, url string, body io.Reader) ([]byte, error) {
-	cedarHTTPAddress := "https://cedar.mongodb.com/rest/v1/admin"
-	client := &http.Client{Timeout: 5 * time.Minute}
-
-	req, err := http.NewRequest(http.MethodGet, cedarHTTPAddress+url, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem creating http request")
-	}
-	req = req.WithContext(ctx)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem with request")
-	}
-	defer resp.Body.Close()
-
-	out, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem reading response")
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return out, errors.Errorf("failed request with status code %d", resp.StatusCode)
-	}
-
-	return out, nil
+// with cedar via gRPC. This wraps the same function in aviation in order to
+// avoid users having to vendor aviation.
+func DialCedar(ctx context.Context, client *http.Client, opts DialCedarOptions) (*grpc.ClientConn, error) {
+	serviceOpts := services.DialCedarOptions(opts)
+	return services.DialCedar(ctx, client, &serviceOpts)
 }

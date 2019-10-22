@@ -12,7 +12,7 @@ imports:
   - name: github.com/mongodb/amboy
     version: 2b8431d235ec6c322dba74eff51988ebd8ac1f7f
   - name: github.com/evergreen-ci/aviation
-    version: 01ec2cc16df096cae4f7d8bd55195763d78d5240
+    version: d74791c0d819b6f7908cced0dd37e6ab3fb9eeae
 
   - name: github.com/pkg/errors
     version: 2b3a18b5f0fb6b4f9190549597d3f962c02bc5eb
