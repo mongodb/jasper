@@ -147,10 +147,11 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/google.golang.org/grpc/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/mgo_depot.go
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/square/certstrap/vendor/golang.org/x/crypto
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/square/certstrap/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/square/certstrap/vendor/github.com/urfave/cli/
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/pkg/errors/
@@ -200,6 +201,7 @@ vendor-clean:
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/montanaflynn/stats/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pkg/errors/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/stretchr/testify/
+	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/crypto/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/net/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/sys/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/text/

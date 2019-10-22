@@ -17,6 +17,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
+	"github.com/mongodb/jasper/executor"
 	"github.com/pkg/errors"
 )
 
@@ -165,7 +166,7 @@ func (opts *Create) resolveRemote(env []string) {
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
-func (opts *Create) Resolve(ctx context.Context) (Executor, time.Time, error) {
+func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, error) {
 	var err error
 	if ctx.Err() != nil {
 		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
@@ -230,7 +231,7 @@ func (opts *Create) Resolve(ctx context.Context) (Executor, time.Time, error) {
 	})
 
 	// kim: TODO: maybe replace above with more helpers
-	return &executorLocal{cmd}, deadline, nil
+	return &executor.Local{cmd}, deadline, nil
 }
 
 // ResolveEnvironment returns the (Create).Environment as a slice of environment

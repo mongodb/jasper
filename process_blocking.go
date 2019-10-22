@@ -12,6 +12,7 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	"github.com/mongodb/jasper/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -20,7 +21,7 @@ import (
 type blockingProcess struct {
 	id       string
 	opts     options.Create
-	ops      chan func(Executor)
+	ops      chan func(executor.Executor)
 	complete chan struct{}
 	err      error
 
@@ -44,7 +45,7 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 		id:       id,
 		opts:     *opts,
 		tags:     make(map[string]struct{}),
-		ops:      make(chan func(Executor)),
+		ops:      make(chan func(executor.Executor)),
 		complete: make(chan struct{}),
 	}
 
@@ -62,7 +63,7 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 
 	p.info = ProcessInfo{
 		ID:        id,
-		PID:       cmd.Process.Pid,
+		PID:       cmd.PID(),
 		Options:   *opts,
 		IsRunning: true,
 		StartAt:   time.Now(),
@@ -111,7 +112,7 @@ func (p *blockingProcess) getErr() error {
 	return p.err
 }
 
-func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd Executor) {
+func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd executor.Executor) {
 	signal := make(chan error)
 	go func() {
 		defer close(signal)
@@ -136,9 +137,9 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd E
 
 				info.Successful = cmd.Success()
 				if sig, signaled := cmd.SignalInfo(); signaled {
-					info.ExitCode = int(signal)
+					info.ExitCode = int(sig)
 					if !deadline.IsZero() {
-						info.Timeout = signal == syscall.SIGKILL && finishTime.After(deadline)
+						info.Timeout = sig == syscall.SIGKILL && finishTime.After(deadline)
 					}
 				} else {
 					info.ExitCode = cmd.ExitCode()
@@ -191,7 +192,7 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 	}
 
 	out := make(chan ProcessInfo)
-	operation := func(cmd Executor) {
+	operation := func(cmd executor.Executor) {
 		out <- p.getInfo()
 		close(out)
 	}
@@ -219,7 +220,7 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 	}
 
 	out := make(chan bool)
-	operation := func(cmd Executor) {
+	operation := func(cmd executor.Executor) {
 		defer close(out)
 
 		if cmd == nil {
@@ -262,7 +263,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 	}
 
 	out := make(chan error)
-	operation := func(cmd Executor) {
+	operation := func(cmd executor.Executor) {
 		defer close(out)
 
 		if cmd == nil {
@@ -344,7 +345,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 	}
 
 	out := make(chan error)
-	waiter := func(cmd Executor) {
+	waiter := func(cmd executor.Executor) {
 		if !p.hasCompleteInfo() {
 			return
 		}

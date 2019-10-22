@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mongodb/jasper/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -15,7 +16,7 @@ import (
 
 type basicProcess struct {
 	info           ProcessInfo
-	cmd            Executor
+	cmd            executor.Executor
 	err            error
 	id             string
 	opts           options.Create
@@ -64,14 +65,14 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 		p.info.Host, _ = os.Hostname()
 	}
 	p.info.IsRunning = true
-	p.info.PID = cmd.Process.Pid
+	p.info.PID = cmd.PID()
 
 	go p.transition(ctx, deadline, cmd)
 
 	return p, nil
 }
 
-func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd Executor) {
+func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd executor.Executor) {
 	waitFinished := make(chan error)
 
 	go func() {
@@ -88,19 +89,18 @@ func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd E
 		p.info.EndAt = finishTime
 		p.info.IsRunning = false
 		p.info.Complete = true
-		procWaitStatus := p.cmd.ProcessState.Sys().(syscall.WaitStatus)
-		if procWaitStatus.Signaled() {
-			p.info.ExitCode = int(procWaitStatus.Signal())
+		if sig, signaled := cmd.SignalInfo(); signaled {
+			p.info.ExitCode = int(sig)
 			if !deadline.IsZero() {
-				p.info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && finishTime.After(deadline)
+				p.info.Timeout = sig == syscall.SIGKILL && finishTime.After(deadline)
 			}
 		} else {
-			p.info.ExitCode = procWaitStatus.ExitStatus()
+			p.info.ExitCode = cmd.ExitCode()
 			if runtime.GOOS == "windows" && !deadline.IsZero() {
-				p.info.Timeout = procWaitStatus.ExitStatus() == 1 && finishTime.After(deadline)
+				p.info.Timeout = cmd.ExitCode() == 1 && finishTime.After(deadline)
 			}
 		}
-		p.info.Successful = p.cmd.ProcessState.Success()
+		p.info.Successful = cmd.Success()
 		p.triggers.Run(p.info)
 	}
 	finish(<-waitFinished)
@@ -136,7 +136,7 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 
 	if skipSignal := p.signalTriggers.Run(p.info, sig); !skipSignal {
 		sig = makeCompatible(sig)
-		return errors.Wrapf(p.cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
+		return errors.Wrapf(p.cmd.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
 	}
 	return nil
 }
