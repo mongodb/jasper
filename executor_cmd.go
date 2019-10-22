@@ -1,0 +1,5 @@
+package jasper
+
+type executorLocal {
+
+}

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/shlex"
@@ -44,6 +45,23 @@ type Create struct {
 	StandardInputBytes []byte    `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
 
 	closers []func() error
+}
+
+// executor is an interface by which Jasper processes can manipulate process
+// attributes and
+// kim: TODO: put *exec.Cmd and *ssh.Session implementations into executors.
+type executor interface {
+	setEnv(map[string]string)
+	setWorkingDirectory(string)
+	setStdin(io.Reader)
+	setStdout(io.Writer)
+	setStderr(io.Writer)
+	pid() int
+	start() error
+	wait() error
+	exitCode() int
+	success() bool
+	signal(syscall.Signal) error
 }
 
 // MakeCreation takes a command string and returns an equivalent
