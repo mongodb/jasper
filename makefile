@@ -169,7 +169,6 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/satori/go.uuid/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/stretchr/testify/
