@@ -46,10 +46,10 @@ func makeCreateOpts(timeout time.Duration, logger options.Logger) *options.Creat
 	return &opts
 }
 
-func getInMemoryBenchmark(makeProc makeProcess) poplar.Benchmark {
+func getInMemoryBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
 	var logType options.LogType = options.LogInMemory
 	logOptions := options.Log{InMemoryCap: 1000, Format: options.LogFormatPlain}
-	opts := makeCreateOpts(c.timeout, options.Logger{Type: logType, Options: logOptions})
+	opts := makeCreateOpts(timeout, options.Logger{Type: logType, Options: logOptions})
 
 	return func(ctx context.Context, r poplar.Recorder, _ int) error {
 		startAt := time.Now()
@@ -67,7 +67,7 @@ func getInMemoryBenchmark(makeProc makeProcess) poplar.Benchmark {
 	}
 }
 
-func getFileLoggerBenchmark(makeProc makeProcess) poplar.Benchmark {
+func getFileLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
 	return func(ctx context.Context, r poplar.Recorder, _ int) error {
 		var logType options.LogType = options.LogFile
 		file, err := ioutil.TempFile("build", "bench_out.txt")
@@ -76,7 +76,7 @@ func getFileLoggerBenchmark(makeProc makeProcess) poplar.Benchmark {
 		}
 		defer os.Remove(file.Name())
 		logOptions := options.Log{FileName: file.Name(), Format: options.LogFormatPlain}
-		opts := makeCreateOpts(c.timeout, options.Logger{Type: logType, Options: logOptions})
+		opts := makeCreateOpts(timeout, options.Logger{Type: logType, Options: logOptions})
 
 		startAt := time.Now()
 		r.Begin()
@@ -108,18 +108,41 @@ func getLogBenchmarkSuite() poplar.BenchmarkSuite {
 	for procName, makeProc := range procMap() {
 		for logName, logBench := range logBenchmarks() {
 			cases = append(benchmarkSuite,
-				// TODO: figure out reasonable setttings for these cases
 				&poplar.BenchmarkCase{
-					Name:  fmt.Sprintf("%s/%s/Send1Second", logName, procName),
-					Bench: logBench(makeProc),
+					Name:             fmt.Sprintf("%s/%s/Send1Second", logName, procName),
+					Bench:            logBench(makeProc, time.Second),
+					MinRuntime:       30 * time.Second,
+					MaxRuntime:       time.Minute,
+					Timeout:          10 * time.Minute,
+					IterationTimeout: time.Second,
+					Count:            1,
+					MinIterations:    10,
+					MaxIterations:    20,
+					Recorder:         poplar.RecorderType,
 				},
 				&poplar.BenchmarkCase{
-					Name:  fmt.Sprintf("%s/%s/Send5Seconds", logName, procName),
-					Bench: logBench(markProc),
+					Name:             fmt.Sprintf("%s/%s/Send5Seconds", logName, procName),
+					Bench:            logBench(markProc, 5*time.Second),
+					MinRuntime:       30 * time.Second,
+					MaxRuntime:       time.Minute,
+					Timeout:          10 * time.Minute,
+					IterationTimeout: 5 * time.Second,
+					Count:            1,
+					MinIterations:    5,
+					MaxIterations:    20,
+					Recorder:         poplar.RecorderType,
 				},
 				&poplar.BenchmarkCase{
-					Name:  fmt.Sprintf("%s/%s/Send30Seconds", logName, procName),
-					Bench: logBench(markProc),
+					Name:             fmt.Sprintf("%s/%s/Send30Seconds", logName, procName),
+					Bench:            logBench(markProc, 30*time.Second),
+					MinRuntime:       30 * time.Second,
+					MaxRuntime:       time.Minute,
+					Timeout:          10 * time.Minute,
+					IterationTimeout: 30 * time.Second,
+					Count:            1,
+					MinIterations:    1,
+					MaxIterations:    20,
+					Recorder:         poplar.RecorderType,
 				},
 			)
 		}
