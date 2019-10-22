@@ -3,7 +3,6 @@ package jasper
 import (
 	"context"
 	"os"
-	"os/exec"
 	"runtime"
 	"sync"
 	"syscall"
@@ -16,7 +15,7 @@ import (
 
 type basicProcess struct {
 	info           ProcessInfo
-	cmd            *exec.Cmd
+	cmd            Executor
 	err            error
 	id             string
 	opts           options.Create
@@ -56,25 +55,23 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 		return nil, errors.Wrap(err, "problem starting command")
 	}
 
-	p.info = ProcesInfo{
-		ID:        p.id,
-		PID:       cmd.Process.Pid,
-		Options:   *opts,
-		IsRunning: true,
-		StartAt:   time.Now(),
-	}
+	p.info.StartAt = time.Now()
+	p.info.ID = p.id
+	p.info.Options = p.opts
 	if opts.Remote != nil {
 		p.info.Host = p.opts.Remote.Host
 	} else {
 		p.info.Host, _ = os.Hostname()
 	}
+	p.info.IsRunning = true
+	p.info.PID = cmd.Process.Pid
 
 	go p.transition(ctx, deadline, cmd)
 
 	return p, nil
 }
 
-func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd *exec.Cmd) {
+func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd Executor) {
 	waitFinished := make(chan error)
 
 	go func() {

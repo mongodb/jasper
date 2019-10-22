@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"io"
 	"syscall"
 	"time"
 
@@ -111,6 +112,23 @@ type Process interface {
 	GetTags() []string
 	// ResetTags should clear all existing tags.
 	ResetTags()
+}
+
+// Executor is an interface by which Jasper processes can manipulate and
+// introspect on operating system process.
+type Executor interface {
+	SetEnv(map[string]string)
+	SetWorkingDirectory(string)
+	SetStdin(io.Reader)
+	SetStdout(io.Writer)
+	SetStderr(io.Writer)
+	Start() error
+	Wait() error
+	Signal(syscall.Signal) error
+	PID() int
+	ExitCode() int
+	Success() bool
+	SignalInfo() (sig syscall.Signal, signaled bool)
 }
 
 // ProcessConstructor is a function type that, given a context.Context and a

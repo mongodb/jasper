@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/google/shlex"
@@ -45,23 +44,6 @@ type Create struct {
 	StandardInputBytes []byte    `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
 
 	closers []func() error
-}
-
-// executor is an interface by which Jasper processes can manipulate process
-// attributes and
-// kim: TODO: put *exec.Cmd and *ssh.Session implementations into executors.
-type executor interface {
-	setEnv(map[string]string)
-	setWorkingDirectory(string)
-	setStdin(io.Reader)
-	setStdout(io.Writer)
-	setStderr(io.Writer)
-	pid() int
-	start() error
-	wait() error
-	exitCode() int
-	success() bool
-	signal(syscall.Signal) error
 }
 
 // MakeCreation takes a command string and returns an equivalent
@@ -183,7 +165,7 @@ func (opts *Create) resolveRemote(env []string) {
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
-func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
+func (opts *Create) Resolve(ctx context.Context) (Executor, time.Time, error) {
 	var err error
 	if ctx.Err() != nil {
 		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
@@ -211,6 +193,8 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 		args = opts.Args[1:]
 	}
 
+	// kim: TODO: this context cancellation has to go into the Executor
+	// implementation
 	var deadline time.Time
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
@@ -245,7 +229,8 @@ func (opts *Create) Resolve(ctx context.Context) (*exec.Cmd, time.Time, error) {
 		return errors.WithStack(opts.Output.Close())
 	})
 
-	return cmd, deadline, nil
+	// kim: TODO: maybe replace above with more helpers
+	return &executorLocal{cmd}, deadline, nil
 }
 
 // ResolveEnvironment returns the (Create).Environment as a slice of environment

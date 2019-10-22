@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/rand"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
@@ -21,7 +20,7 @@ import (
 type blockingProcess struct {
 	id       string
 	opts     options.Create
-	ops      chan func(*exec.Cmd)
+	ops      chan func(Executor)
 	complete chan struct{}
 	err      error
 
@@ -45,7 +44,7 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 		id:       id,
 		opts:     *opts,
 		tags:     make(map[string]struct{}),
-		ops:      make(chan func(*exec.Cmd)),
+		ops:      make(chan func(Executor)),
 		complete: make(chan struct{}),
 	}
 
@@ -112,7 +111,7 @@ func (p *blockingProcess) getErr() error {
 	return p.err
 }
 
-func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd *exec.Cmd) {
+func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd Executor) {
 	signal := make(chan error)
 	go func() {
 		defer close(signal)
@@ -135,22 +134,17 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd *
 				info.Complete = true
 				info.IsRunning = false
 
-				if cmd.ProcessState != nil {
-					info.Successful = cmd.ProcessState.Success()
-					procWaitStatus := cmd.ProcessState.Sys().(syscall.WaitStatus)
-					if procWaitStatus.Signaled() {
-						info.ExitCode = int(procWaitStatus.Signal())
-						if !deadline.IsZero() {
-							info.Timeout = procWaitStatus.Signal() == syscall.SIGKILL && finishTime.After(deadline)
-						}
-					} else {
-						info.ExitCode = procWaitStatus.ExitStatus()
-						if runtime.GOOS == "windows" && !deadline.IsZero() {
-							info.Timeout = procWaitStatus.ExitStatus() == 1 && finishTime.After(deadline)
-						}
+				info.Successful = cmd.Success()
+				if sig, signaled := cmd.SignalInfo(); signaled {
+					info.ExitCode = int(signal)
+					if !deadline.IsZero() {
+						info.Timeout = signal == syscall.SIGKILL && finishTime.After(deadline)
 					}
 				} else {
-					info.Successful = (err == nil)
+					info.ExitCode = cmd.ExitCode()
+					if runtime.GOOS == "windows" && !deadline.IsZero() {
+						info.Timeout = cmd.ExitCode() == 1 && finishTime.After(deadline)
+					}
 				}
 
 				grip.Debug(message.WrapError(err, message.Fields{
@@ -197,7 +191,7 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 	}
 
 	out := make(chan ProcessInfo)
-	operation := func(cmd *exec.Cmd) {
+	operation := func(cmd Executor) {
 		out <- p.getInfo()
 		close(out)
 	}
@@ -225,15 +219,15 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 	}
 
 	out := make(chan bool)
-	operation := func(cmd *exec.Cmd) {
+	operation := func(cmd Executor) {
 		defer close(out)
 
-		if cmd == nil || cmd.Process == nil {
+		if cmd == nil {
 			out <- false
 			return
 		}
 
-		if cmd.Process.Pid <= 0 {
+		if cmd.PID() <= 0 {
 			out <- false
 			return
 		}
@@ -268,7 +262,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 	}
 
 	out := make(chan error)
-	operation := func(cmd *exec.Cmd) {
+	operation := func(cmd Executor) {
 		defer close(out)
 
 		if cmd == nil {
@@ -278,7 +272,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
 			sig = makeCompatible(sig)
-			out <- errors.Wrapf(cmd.Process.Signal(sig), "problem sending signal '%s' to '%s'",
+			out <- errors.Wrapf(cmd.Signal(sig), "problem sending signal '%s' to '%s'",
 				sig, p.id)
 		} else {
 			out <- nil
@@ -350,7 +344,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 	}
 
 	out := make(chan error)
-	waiter := func(cmd *exec.Cmd) {
+	waiter := func(cmd Executor) {
 		if !p.hasCompleteInfo() {
 			return
 		}
