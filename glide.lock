@@ -38,12 +38,9 @@ imports:
   - name: github.com/tychoish/mongorpc
     version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
   - name: github.com/evergreen-ci/timber
-    version: d8ccb7cbe151e1466a7be084342653363a1be500
+    version: 1cdd00ad2f2eaf6fb1cb9dedacaddbc3b0e03149
   - name: github.com/evergreen-ci/poplar
     version: a77cf69fb19eb0d3235d73eb0e5428002936827e
-
-  - name: github.com/surullabs/lint
-    version: 3c204a3ee0bd5ba72fdcd8ab0baa779adf879951
 
   # cgroup requirements
   - name: github.com/containerd/cgroups
