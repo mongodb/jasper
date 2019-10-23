@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/google/shlex"
@@ -202,22 +201,12 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	}
 	cmd.SetDir(opts.WorkingDirectory)
 
-	var env map[string]string
+	var env []string
 	if !opts.OverrideEnviron && opts.Remote == nil {
-		if env == nil {
-			env = map[string]string{}
-		}
-		for _, entry := range os.Environ() {
-			if keyAndValue := strings.Split(entry, "="); len(keyAndValue) == 2 {
-				env[keyAndValue[0]] = env[keyAndValue[1]]
-			}
-		}
+		env = os.Environ()
 	}
 	for key, value := range opts.Environment {
-		if env == nil {
-			env = map[string]string{}
-		}
-		env[key] = value
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
 	if err := cmd.SetEnv(env); err != nil {
 		return nil, time.Time{}, errors.Wrap(err, "could not set environment")

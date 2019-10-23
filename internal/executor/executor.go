@@ -11,8 +11,8 @@ import (
 // process tests.
 type Executor interface {
 	Args() []string
-	SetEnv(map[string]string) error
-	Env() map[string]string
+	SetEnv([]string) error
+	Env() []string
 	SetDir(string)
 	Dir() string
 	SetStdin(io.Reader)

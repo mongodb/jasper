@@ -2,10 +2,8 @@ package executor
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os/exec"
-	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -38,26 +36,13 @@ func (e *Local) Args() []string {
 	return e.args
 }
 
-func (e *Local) SetEnv(env map[string]string) error {
-	var envSlice []string
-	for k, v := range env {
-		envSlice = append(envSlice, fmt.Sprintf("%s=%s", k, v))
-	}
-	e.cmd.Env = envSlice
+func (e *Local) SetEnv(env []string) error {
+	e.cmd.Env = env
 	return nil
 }
 
-func (e *Local) Env() map[string]string {
-	if e.cmd.Env == nil {
-		return nil
-	}
-	env := map[string]string{}
-	for _, entry := range e.cmd.Env {
-		if keyAndValue := strings.Split(entry, "="); len(keyAndValue) == 2 {
-			env[keyAndValue[0]] = keyAndValue[1]
-		}
-	}
-	return env
+func (e *Local) Env() []string {
+	return e.cmd.Env
 }
 
 func (e *Local) SetDir(dir string) {
