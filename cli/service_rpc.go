@@ -128,7 +128,7 @@ func (d *rpcDaemon) newService(ctx context.Context) (jasper.CloseFunc, error) {
 		return nil, errors.New("manager is not set on RPC service")
 	}
 
-	grip.Infof("starting RPC service at '%s'", net.JoinHostPort(d.Host, d.Port))
+	grip.Infof("starting RPC service at '%s:%d'", d.Host, d.Port)
 
 	return newRPCService(ctx, d.Host, d.Port, d.Manager, d.CredsFilePath)
 }
@@ -136,7 +136,7 @@ func (d *rpcDaemon) newService(ctx context.Context) (jasper.CloseFunc, error) {
 // newRPCService creates an RPC service around the manager serving requests on
 // the host and port.
 func newRPCService(ctx context.Context, host string, port int, manager jasper.Manager, credsFilePath string) (jasper.CloseFunc, error) {
-	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(host, port))
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to resolve RPC address")
 	}

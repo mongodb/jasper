@@ -3,8 +3,6 @@ package options
 import (
 	"fmt"
 	"io/ioutil"
-	"net"
-	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
@@ -19,7 +17,6 @@ type Remote struct {
 	PrivKeyFile       string
 	PrivKeyPassphrase string
 	Password          string
-	ConnTimeout       time.Duration
 }
 
 const defaultSSHPort = 22
@@ -75,7 +72,7 @@ func (opts *Remote) Resolve() (*ssh.Client, *ssh.Session, error) {
 		Auth:            auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-	client, err := ssh.Dial("tcp", net.JoinHostPort(opts.Host, opts.Port), config)
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", opts.Host, opts.Port), config)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem dialing host")
 	}
