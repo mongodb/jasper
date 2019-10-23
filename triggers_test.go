@@ -159,8 +159,7 @@ func TestDefaultTrigger(t *testing.T) {
 
 			testcase(ctx, t, &synchronizedProcessManager{
 				manager: &basicProcessManager{
-					skipDefaultTrigger: true,
-					procs:              map[string]Process{},
+					procs: map[string]Process{},
 				},
 			})
 		})

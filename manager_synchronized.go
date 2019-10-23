@@ -8,32 +8,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewSynchronizedManager is a constructor for a thread-safe Manager.
-func NewSynchronizedManager(trackProcs bool) (Manager, error) {
-	basicManager, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
-	if err != nil {
-		return nil, err
-	}
-	return &synchronizedProcessManager{
-		manager: basicManager.(*basicProcessManager),
-	}, nil
+// MakeSynchronizedManager wraps the given manager in a thread-safe Manager.
+func MakeSynchronizedManager(manager Manager) (Manager, error) {
+	return &synchronizedProcessManager{manager: manager}, nil
 }
 
-// NewSynchronizedManagerBlockingProcesses is a constructor for synchronizedProcessManager,
-// that uses blockingProcess instead of the default basicProcess.
-func NewSynchronizedManagerBlockingProcesses(trackProcs bool) (Manager, error) {
-	basicBlockingManager, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
+// NewSynchronizedManager is a constructor for a thread-safe Manager.
+func NewSynchronizedManager(trackProcs bool) (Manager, error) {
+	basicManager, err := newBasicProcessManager(map[string]Process{}, false, trackProcs)
 	if err != nil {
 		return nil, err
 	}
-	return &synchronizedProcessManager{
-		manager: basicBlockingManager.(*basicProcessManager),
-	}, nil
+
+	return &synchronizedProcessManager{manager: basicManager}, nil
+}
+
+// NewSynchronizedManagerBlockingProcesses is a constructor for a thread-safe Manager
+// that uses blockingProcess instead of the default basicProcess.
+func NewSynchronizedManagerBlockingProcesses(trackProcs bool) (Manager, error) {
+	basicBlockingManager, err := newBasicProcessManager(map[string]Process{}, true, trackProcs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &synchronizedProcessManager{manager: basicBlockingManager}, nil
 }
 
 type synchronizedProcessManager struct {
 	mu      sync.RWMutex
-	manager *basicProcessManager
+	manager Manager
 }
 
 func (m *synchronizedProcessManager) ID() string {
@@ -44,18 +47,12 @@ func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *op
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.manager.skipDefaultTrigger = true
 	proc, err := m.manager.CreateProcess(ctx, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
-
-	proc = &synchronizedProcess{proc: proc}
-	m.manager.procs[proc.ID()] = proc
-
-	return proc, nil
+	return &synchronizedProcess{proc: proc}, nil
 }
 
 func (m *synchronizedProcessManager) CreateCommand(ctx context.Context) *Command {
