@@ -2,25 +2,33 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"syscall"
 
+	"github.com/mongodb/grip"
 	"golang.org/x/crypto/ssh"
 )
 
 // SSH runs processes on a remote machine via SSH.
 type SSH struct {
 	session *ssh.Session
+	client  *ssh.Client
 	args    []string
-	ctx     context.Context
+	dir     string
+	env     map[string]string
 	exitErr error
 }
 
-// kim: TODO: have to establish connection and somehow set up closing the
-// connection on ctx cancel.
-func NewSSH(ctx context.Context, args []string) Executor {
-	return &SSH{}
+func MakeSSH(ctx context.Context, client *ssh.Client, session *ssh.Session, args []string) Executor {
+	e := &SSH{session: session, client: client, args: args}
+	go func() {
+		<-ctx.Done()
+		grip.Warning(e.session.Close())
+		grip.Warning(e.client.Close())
+	}()
+	return e
 }
 
 func (e *SSH) Args() []string {
@@ -33,21 +41,20 @@ func (e *SSH) SetEnv(env map[string]string) error {
 			return err
 		}
 	}
+	e.env = env
 	return nil
 }
 
 func (e *SSH) Env() map[string]string {
-	// kim: TODO or remove
-	return nil
+	return e.env
 }
 
 func (e *SSH) SetDir(dir string) {
-	// kim: TODO
+	e.dir = dir
 }
 
 func (e *SSH) Dir() string {
-	// kim: TODO
-	return ""
+	return e.dir
 }
 
 func (e *SSH) SetStdin(stdin io.Reader) {
@@ -63,11 +70,52 @@ func (e *SSH) SetStderr(stderr io.Writer) {
 }
 
 func (e *SSH) Start() error {
-	return e.session.Run(strings.Join(e.args, " "))
+	args := e.args
+	if e.dir != "" {
+		args = append([]string{fmt.Sprintf("cd %s\n", e.dir)}, e.args...)
+	}
+	return e.session.Run(strings.Join(args, " "))
 }
 
 func (e *SSH) Wait() error {
 	return e.session.Wait()
+}
+
+func (e *SSH) Signal(sig syscall.Signal) error {
+	return e.session.Signal(syscallToSSHSignal(sig))
+}
+
+func (e *SSH) PID() int {
+	// There is no way to retrieve the PID of the SSH process being run through
+	// the API.
+	return -1
+}
+
+func (e *SSH) ExitCode() int {
+	if e.exitErr == nil {
+		return -1
+	}
+	sshExitErr, ok := e.exitErr.(*ssh.ExitError)
+	if !ok {
+		return -1
+	}
+	return sshExitErr.Waitmsg.ExitStatus()
+}
+
+func (e *SSH) Success() bool {
+	return e.exitErr == nil
+}
+
+func (e *SSH) SignalInfo() (sig syscall.Signal, signaled bool) {
+	if e.exitErr == nil {
+		return syscall.Signal(0), false
+	}
+	sshExitErr, ok := e.exitErr.(*ssh.ExitError)
+	if !ok {
+		return syscall.Signal(0), false
+	}
+	sshSig := ssh.Signal(sshExitErr.Waitmsg.Signal())
+	return sshToSyscallSignal(sshSig), sshSig != ""
 }
 
 func syscallToSSHSignal(sig syscall.Signal) ssh.Signal {
@@ -132,39 +180,4 @@ func sshToSyscallSignal(sig ssh.Signal) syscall.Signal {
 		return syscall.SIGUSR2
 	}
 	return syscall.Signal(0)
-}
-
-func (e *SSH) Signal(sig syscall.Signal) error {
-	return e.session.Signal(syscallToSSHSignal(sig))
-}
-
-func (e *SSH) PID() int {
-	return -1
-}
-
-func (e *SSH) ExitCode() int {
-	if e.exitErr == nil {
-		return -1
-	}
-	sshExitErr, ok := e.exitErr.(*ssh.ExitError)
-	if !ok {
-		return -1
-	}
-	return sshExitErr.Waitmsg.ExitStatus()
-}
-
-func (e *SSH) Success() bool {
-	return e.exitErr == nil
-}
-
-func (e *SSH) SignalInfo() (sig syscall.Signal, signaled bool) {
-	if e.exitErr == nil {
-		return syscall.Signal(0), false
-	}
-	sshExitErr, ok := e.exitErr.(*ssh.ExitError)
-	if !ok {
-		return syscall.Signal(0), false
-	}
-	sshSig := ssh.Signal(sshExitErr.Waitmsg.Signal())
-	return sshToSyscallSignal(sshSig), sshSig != ""
 }

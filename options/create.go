@@ -175,9 +175,32 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 
+	// kim: TODO: this context cancellation has to go into the Executor
+	// implementation
+	var deadline time.Time
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		deadline, _ = ctx.Deadline()
+		opts.closers = append(opts.closers, func() error { cancel(); return nil })
+	}
+
+	var cmd executor.Executor
+	if opts.Remote == nil {
+		cmd = executor.NewLocal(ctx, opts.Args)
+	} else {
+		// The client and session will be closed by the SSH executor.
+		client, session, err := opts.Remote.Resolve()
+		if err != nil {
+			return nil, time.Time{}, errors.Wrap(err, "could not set up SSH connection")
+		}
+		cmd = executor.MakeSSH(ctx, client, session, opts.Args)
+	}
+
 	if opts.WorkingDirectory == "" && opts.Remote == nil {
 		opts.WorkingDirectory, _ = os.Getwd()
 	}
+	cmd.SetDir(opts.WorkingDirectory)
 
 	var env map[string]string
 	if !opts.OverrideEnviron && opts.Remote == nil {
@@ -196,74 +219,31 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		}
 		env[key] = value
 	}
-
-	// kim: TODO: remove
-	// env = append(env, opts.ResolveEnvironment()...)
-
-	// kim: TODO: replace this
-	// opts.resolveRemote(env)
-
-	// kim: TODO: remove
-	// var args []string
-	// if len(opts.Args) > 1 {
-	//     args = opts.Args[1:]
-	// }
-
-	// kim: TODO: this context cancellation has to go into the Executor
-	// implementation
-	var deadline time.Time
-	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		deadline, _ = ctx.Deadline()
-		opts.closers = append(opts.closers, func() error { cancel(); return nil })
+	if err := cmd.SetEnv(env); err != nil {
+		return nil, time.Time{}, errors.Wrap(err, "could not set environment")
 	}
-
-	cmd := executor.NewLocal(ctx, opts.Args)
-	if opts.Remote == nil {
-		cmd.SetDir(opts.WorkingDirectory)
-	}
-	// cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
-	// if opts.Remote == nil {
-	//     cmd.Dir = opts.WorkingDirectory
-	// }
 
 	stdout, err := opts.Output.GetOutput()
 	if err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStdout(stdout)
-	// cmd.Stdout, err = opts.Output.GetOutput()
-	// if err != nil {
-	//     return nil, time.Time{}, errors.WithStack(err)
-	// }
+
 	stderr, err := opts.Output.GetError()
 	if err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStderr(stderr)
-	// cmd.Stderr, err = opts.Output.GetError()
-	// if err != nil {
-	//     return nil, time.Time{}, errors.WithStack(err)
-	// }
-	cmd.SetEnv(env)
-	// if opts.Remote == nil {
-	//     cmd.Env = env
-	// }
 
 	if opts.StandardInput != nil {
 		cmd.SetStdin(opts.StandardInput)
 	}
-	// if opts.StandardInput != nil {
-	//     cmd.Stdin = opts.StandardInput
-	// }
 
 	// Senders require Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() error {
 		return errors.WithStack(opts.Output.Close())
 	})
 
-	// kim: TODO: maybe replace above with more helpers
 	return cmd, deadline, nil
 }
 
