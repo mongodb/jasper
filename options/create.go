@@ -140,27 +140,6 @@ func (opts *Create) Hash() hash.Hash {
 	return hash
 }
 
-// kim: TODO: fix this implementation
-// func (opts *Create) resolveRemote(env []string) {
-//     if opts.Remote == nil {
-//         return
-//     }
-//
-//     var remoteCmd string
-//
-//     if opts.WorkingDirectory != "" {
-//         remoteCmd += fmt.Sprintf("cd '%s' && ", opts.WorkingDirectory)
-//     }
-//
-//     if len(env) != 0 {
-//         remoteCmd += strings.Join(env, " ") + " "
-//     }
-//
-//     remoteCmd += strings.Join(opts.Args, " ")
-//
-//     opts.Args = append(append([]string{"ssh"}, opts.Remote.Args...), opts.Remote.String(), remoteCmd)
-// }
-
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
@@ -174,8 +153,6 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 
-	// kim: TODO: this context cancellation has to go into the Executor
-	// implementation
 	var deadline time.Time
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc

@@ -14,14 +14,13 @@ import (
 
 // SSH runs processes on a remote machine via SSH.
 type SSH struct {
-	session *ssh.Session
-	client  *ssh.Client
-	args    []string
-	dir     string
-	env     []string
-	exited  bool
-	exitErr error
-	// kim: TOD: requires cancel func to manually stop goroutine
+	session   *ssh.Session
+	client    *ssh.Client
+	args      []string
+	dir       string
+	env       []string
+	exited    bool
+	exitErr   error
 	closeConn context.CancelFunc
 }
 

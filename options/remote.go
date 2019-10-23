@@ -11,14 +11,9 @@ import (
 
 // Remote represents options to SSH into a remote machine.
 type Remote struct {
-	Host string
-	User string
-	// TODO: will be ignored, remove
-	Args []string
-
-	Port int
-
-	// Authentication
+	Host              string
+	User              string
+	Port              int
 	PrivKeyFile       string
 	PrivKeyPassphrase string
 	Password          string
@@ -26,8 +21,8 @@ type Remote struct {
 
 const defaultSSHPort = 22
 
-// Validate checks that the host is set so that the remote host can be
-// identified.
+// Validate ensures that enough information is provided to connect to a remote
+// host.
 func (opts *Remote) Validate() error {
 	if opts.Host == "" {
 		return errors.New("host cannot be empty")

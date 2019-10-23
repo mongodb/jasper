@@ -6,9 +6,7 @@ import (
 )
 
 // Executor is an interface by which Jasper processes can manipulate and
-// introspect on operating system process.
-// kim: TODO: make this pass tests, for some reason causes stack overflow in
-// process tests.
+// introspect on processes.
 type Executor interface {
 	Args() []string
 	SetEnv([]string) error
