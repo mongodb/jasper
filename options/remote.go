@@ -36,7 +36,10 @@ func (opts *Remote) Validate() error {
 		opts.Port = defaultSSHPort
 	}
 	if opts.PrivKeyFile == "" && opts.Password == "" {
-		return errors.New("must specify password or private key file")
+		return errors.New("must specify an authentication method")
+	}
+	if opts.PrivKeyFile != "" && opts.Password != "" {
+		return errors.New("cannot specify more than one authentication method")
 	}
 	if opts.PrivKeyFile == "" && opts.PrivKeyPassphrase != "" {
 		return errors.New("cannot set passphrase without private key file")
@@ -53,6 +56,10 @@ func (opts *Remote) String() string {
 }
 
 func (opts *Remote) Resolve() (*ssh.Client, *ssh.Session, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, nil, errors.Wrap(err, "invalid remote options")
+	}
+
 	var auth []ssh.AuthMethod
 	if opts.PrivKeyFile != "" {
 		pubkey, err := opts.publicKey()

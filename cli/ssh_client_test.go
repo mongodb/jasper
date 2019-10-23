@@ -557,8 +557,10 @@ func invalidResponse() interface{} {
 
 func mockRemoteOptions() options.Remote {
 	return options.Remote{
-		User: "user",
-		Host: "localhost",
+		User:     "user",
+		Host:     "localhost",
+		Port:     12345,
+		Password: "abc123",
 	}
 }
 
