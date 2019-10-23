@@ -27,6 +27,13 @@ func NewLocal(ctx context.Context, args []string) Executor {
 	return &Local{cmd: cmd, args: args}
 }
 
+func MakeLocal(cmd *exec.Cmd) Executor {
+	return &Local{
+		cmd:  cmd,
+		args: cmd.Args,
+	}
+}
+
 func (e *Local) Args() []string {
 	return e.args
 }

@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mongodb/jasper/executor"
+	"github.com/mongodb/jasper/internal/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"

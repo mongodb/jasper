@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/mongodb/grip"
-	"github.com/mongodb/jasper/executor"
+	"github.com/mongodb/jasper/internal/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
@@ -112,9 +112,9 @@ func TestBlockingProcess(t *testing.T) {
 
 					op := <-proc.ops
 
-					op(&executor.Local{&exec.Cmd{
+					op(executor.MakeLocal(&exec.Cmd{
 						Process: &os.Process{},
-					}})
+					}))
 					<-signal
 				},
 				"RunningIsFalseWithNilCmd": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
@@ -137,9 +137,9 @@ func TestBlockingProcess(t *testing.T) {
 					}()
 
 					op := <-proc.ops
-					op(&executor.Local{&exec.Cmd{
+					op(executor.MakeLocal(&exec.Cmd{
 						Process: &os.Process{Pid: 42},
-					}})
+					}))
 
 					<-signal
 				},
@@ -183,9 +183,9 @@ func TestBlockingProcess(t *testing.T) {
 					}()
 
 					op := <-proc.ops
-					op(&executor.Local{&exec.Cmd{
+					op(executor.MakeLocal(&exec.Cmd{
 						Process: &os.Process{Pid: -42},
-					}})
+					}))
 
 					<-signal
 				},
