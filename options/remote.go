@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
@@ -17,6 +18,7 @@ type Remote struct {
 	PrivKeyFile       string
 	PrivKeyPassphrase string
 	Password          string
+	ConnTimeout       time.Duration
 }
 
 const defaultSSHPort = 22
