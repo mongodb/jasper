@@ -19,8 +19,12 @@ type SSH struct {
 
 // kim: TODO: have to establish connection and somehow set up closing the
 // connection on ctx cancel.
-func newSSH(ctx context.Context, args []string) {
+func NewSSH(ctx context.Context, args []string) Executor {
+	return &SSH{}
+}
 
+func (e *SSH) Args() []string {
+	return e.args
 }
 
 func (e *SSH) SetEnv(env map[string]string) error {
@@ -32,8 +36,18 @@ func (e *SSH) SetEnv(env map[string]string) error {
 	return nil
 }
 
-func (e *SSH) SetDirectory(dir string) {
+func (e *SSH) Env() map[string]string {
+	// kim: TODO or remove
+	return nil
+}
+
+func (e *SSH) SetDir(dir string) {
 	// kim: TODO
+}
+
+func (e *SSH) Dir() string {
+	// kim: TODO
+	return ""
 }
 
 func (e *SSH) SetStdin(stdin io.Reader) {

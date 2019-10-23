@@ -8,7 +8,6 @@ import (
 	"hash"
 	"io"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 	"time"
@@ -143,25 +142,25 @@ func (opts *Create) Hash() hash.Hash {
 }
 
 // kim: TODO: fix this implementation
-func (opts *Create) resolveRemote(env []string) {
-	if opts.Remote == nil {
-		return
-	}
-
-	var remoteCmd string
-
-	if opts.WorkingDirectory != "" {
-		remoteCmd += fmt.Sprintf("cd '%s' && ", opts.WorkingDirectory)
-	}
-
-	if len(env) != 0 {
-		remoteCmd += strings.Join(env, " ") + " "
-	}
-
-	remoteCmd += strings.Join(opts.Args, " ")
-
-	opts.Args = append(append([]string{"ssh"}, opts.Remote.Args...), opts.Remote.String(), remoteCmd)
-}
+// func (opts *Create) resolveRemote(env []string) {
+//     if opts.Remote == nil {
+//         return
+//     }
+//
+//     var remoteCmd string
+//
+//     if opts.WorkingDirectory != "" {
+//         remoteCmd += fmt.Sprintf("cd '%s' && ", opts.WorkingDirectory)
+//     }
+//
+//     if len(env) != 0 {
+//         remoteCmd += strings.Join(env, " ") + " "
+//     }
+//
+//     remoteCmd += strings.Join(opts.Args, " ")
+//
+//     opts.Args = append(append([]string{"ssh"}, opts.Remote.Args...), opts.Remote.String(), remoteCmd)
+// }
 
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
@@ -180,19 +179,35 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		opts.WorkingDirectory, _ = os.Getwd()
 	}
 
-	var env []string
+	var env map[string]string
 	if !opts.OverrideEnviron && opts.Remote == nil {
-		env = os.Environ()
+		if env == nil {
+			env = map[string]string{}
+		}
+		for _, entry := range os.Environ() {
+			if keyAndValue := strings.Split(entry, "="); len(keyAndValue) == 2 {
+				env[keyAndValue[0]] = env[keyAndValue[1]]
+			}
+		}
+	}
+	for key, value := range opts.Environment {
+		if env == nil {
+			env = map[string]string{}
+		}
+		env[key] = value
 	}
 
-	env = append(env, opts.ResolveEnvironment()...)
+	// kim: TODO: remove
+	// env = append(env, opts.ResolveEnvironment()...)
 
-	opts.resolveRemote(env)
+	// kim: TODO: replace this
+	// opts.resolveRemote(env)
 
-	var args []string
-	if len(opts.Args) > 1 {
-		args = opts.Args[1:]
-	}
+	// kim: TODO: remove
+	// var args []string
+	// if len(opts.Args) > 1 {
+	//     args = opts.Args[1:]
+	// }
 
 	// kim: TODO: this context cancellation has to go into the Executor
 	// implementation
@@ -204,26 +219,44 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		opts.closers = append(opts.closers, func() error { cancel(); return nil })
 	}
 
-	cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
+	cmd := executor.NewLocal(ctx, opts.Args)
 	if opts.Remote == nil {
-		cmd.Dir = opts.WorkingDirectory
+		cmd.SetDir(opts.WorkingDirectory)
 	}
+	// cmd := exec.CommandContext(ctx, opts.Args[0], args...) // nolint
+	// if opts.Remote == nil {
+	//     cmd.Dir = opts.WorkingDirectory
+	// }
 
-	cmd.Stdout, err = opts.Output.GetOutput()
+	stdout, err := opts.Output.GetOutput()
 	if err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
-	cmd.Stderr, err = opts.Output.GetError()
+	cmd.SetStdout(stdout)
+	// cmd.Stdout, err = opts.Output.GetOutput()
+	// if err != nil {
+	//     return nil, time.Time{}, errors.WithStack(err)
+	// }
+	stderr, err := opts.Output.GetError()
 	if err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
-	if opts.Remote == nil {
-		cmd.Env = env
-	}
+	cmd.SetStderr(stderr)
+	// cmd.Stderr, err = opts.Output.GetError()
+	// if err != nil {
+	//     return nil, time.Time{}, errors.WithStack(err)
+	// }
+	cmd.SetEnv(env)
+	// if opts.Remote == nil {
+	//     cmd.Env = env
+	// }
 
 	if opts.StandardInput != nil {
-		cmd.Stdin = opts.StandardInput
+		cmd.SetStdin(opts.StandardInput)
 	}
+	// if opts.StandardInput != nil {
+	//     cmd.Stdin = opts.StandardInput
+	// }
 
 	// Senders require Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() error {
@@ -231,7 +264,7 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	})
 
 	// kim: TODO: maybe replace above with more helpers
-	return &executor.Local{cmd}, deadline, nil
+	return cmd, deadline, nil
 }
 
 // ResolveEnvironment returns the (Create).Environment as a slice of environment

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -12,85 +13,108 @@ import (
 
 // Local runs processes on a local machine via exec.
 type Local struct {
-	*exec.Cmd
+	cmd  *exec.Cmd
+	args []string
 }
 
-func newLocal(ctx context.Context, args []string) Executor {
+func NewLocal(ctx context.Context, args []string) Executor {
 	executable := args[0]
+	var execArgs []string
 	if len(args) > 1 {
-		args = args[1:]
+		execArgs = args[1:]
 	}
-	cmd := exec.CommandContext(ctx, executable, args...)
-	return &Local{cmd}
+	cmd := exec.CommandContext(ctx, executable, execArgs...)
+	return &Local{cmd: cmd, args: args}
+}
+
+func (e *Local) Args() []string {
+	return e.args
 }
 
 func (e *Local) SetEnv(env map[string]string) error {
-	if e.Env == nil {
-		e.Env = []string{}
+	if len(env) == 0 {
+		return nil
 	}
 	for k, v := range env {
-		e.Env = append(e.Env, fmt.Sprintf("%s=%s", k, v))
+		e.cmd.Env = append(e.cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return nil
 }
 
-func (e *Local) SetDirectory(dir string) {
-	e.Dir = dir
+func (e *Local) Env() map[string]string {
+	if e.cmd.Env == nil {
+		return nil
+	}
+	env := map[string]string{}
+	for _, entry := range e.cmd.Env {
+		if keyAndValue := strings.Split(entry, "="); len(keyAndValue) == 2 {
+			env[keyAndValue[0]] = keyAndValue[1]
+		}
+	}
+	return env
+}
+
+func (e *Local) SetDir(dir string) {
+	e.cmd.Dir = dir
+}
+
+func (e *Local) Dir() string {
+	return e.cmd.Dir
 }
 
 func (e *Local) SetStdin(stdin io.Reader) {
-	e.Stdin = stdin
+	e.cmd.Stdin = stdin
 }
 
 func (e *Local) SetStdout(stdout io.Writer) {
-	e.Stdout = stdout
+	e.cmd.Stdout = stdout
 }
 
 func (e *Local) SetStderr(stderr io.Writer) {
-	e.Stderr = stderr
+	e.cmd.Stderr = stderr
 }
 
 func (e *Local) Start() error {
-	return e.Start()
+	return e.cmd.Start()
 }
 
 func (e *Local) Wait() error {
-	return e.Wait()
+	return e.cmd.Wait()
 }
 
 func (e *Local) Signal(sig syscall.Signal) error {
-	if e.Process == nil {
+	if e.cmd.Process == nil {
 		return errors.New("cannot signal unstarted process")
 	}
-	return e.Process.Signal(sig)
+	return e.cmd.Process.Signal(sig)
 }
 
 func (e *Local) PID() int {
-	if e.Process == nil {
+	if e.cmd.Process == nil {
 		return -1
 	}
-	return e.Process.Pid
+	return e.cmd.Process.Pid
 }
 
 func (e *Local) ExitCode() int {
-	if e.ProcessState == nil {
+	if e.cmd.ProcessState == nil {
 		return -1
 	}
-	status := e.ProcessState.Sys().(syscall.WaitStatus)
+	status := e.cmd.ProcessState.Sys().(syscall.WaitStatus)
 	return status.ExitStatus()
 }
 
 func (e *Local) Success() bool {
-	if e.ProcessState == nil {
+	if e.cmd.ProcessState == nil {
 		return false
 	}
-	return e.ProcessState.Success()
+	return e.cmd.ProcessState.Success()
 }
 
 func (e *Local) SignalInfo() (sig syscall.Signal, signaled bool) {
-	if e.ProcessState == nil {
+	if e.cmd.ProcessState == nil {
 		return syscall.Signal(0), false
 	}
-	status := e.ProcessState.Sys().(syscall.WaitStatus)
+	status := e.cmd.ProcessState.Sys().(syscall.WaitStatus)
 	return status.Signal(), status.Signaled()
 }
