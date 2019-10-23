@@ -12,19 +12,17 @@ import (
 )
 
 type basicProcessManager struct {
-	id                 string
-	procs              map[string]Process
-	skipDefaultTrigger bool
-	blocking           bool
-	tracker            ProcessTracker
+	id       string
+	procs    map[string]Process
+	blocking bool
+	tracker  ProcessTracker
 }
 
-func newBasicProcessManager(procs map[string]Process, skipDefaultTrigger bool, blocking bool, trackProcs bool) (Manager, error) {
+func newBasicProcessManager(procs map[string]Process, blocking bool, trackProcs bool) (Manager, error) {
 	m := basicProcessManager{
-		procs:              procs,
-		blocking:           blocking,
-		skipDefaultTrigger: skipDefaultTrigger,
-		id:                 uuid.Must(uuid.NewV4()).String(),
+		procs:    procs,
+		blocking: blocking,
+		id:       uuid.Must(uuid.NewV4()).String(),
 	}
 	if trackProcs {
 		tracker, err := NewProcessTracker(m.id)
@@ -58,10 +56,10 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 		return nil, errors.Wrap(err, "problem constructing local process")
 	}
 
-	// TODO this will race because it runs later
-	if !m.skipDefaultTrigger {
-		_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
-	}
+	// This trigger is not guaranteed to be registered since the process may
+	// have already completed. One way to guarantee it runs could be to add this
+	// as a closer to CreateOptions.
+	_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
 
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.

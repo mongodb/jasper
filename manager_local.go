@@ -8,32 +8,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewLocalManager is a constructor for a thread-safe Manager.
-func NewLocalManager(trackProcs bool) (Manager, error) {
-	basicManager, err := newBasicProcessManager(map[string]Process{}, false, false, trackProcs)
-	if err != nil {
-		return nil, err
-	}
-	return &localProcessManager{
-		manager: basicManager.(*basicProcessManager),
-	}, nil
+// MakeLocalManager wraps the given manager in a thread-safe Manager.
+func MakeLocalManager(manager Manager) (Manager, error) {
+	return &localProcessManager{manager: manager}, nil
 }
 
-// NewLocalManagerBlockingProcesses is a constructor for localProcessManager,
-// that uses blockingProcess instead of the default basicProcess.
-func NewLocalManagerBlockingProcesses(trackProcs bool) (Manager, error) {
-	basicBlockingManager, err := newBasicProcessManager(map[string]Process{}, false, true, trackProcs)
+// NewLocalManager is a constructor for a thread-safe Manager.
+func NewLocalManager(trackProcs bool) (Manager, error) {
+	basicManager, err := newBasicProcessManager(map[string]Process{}, false, trackProcs)
 	if err != nil {
 		return nil, err
 	}
-	return &localProcessManager{
-		manager: basicBlockingManager.(*basicProcessManager),
-	}, nil
+
+	return &localProcessManager{manager: basicManager}, nil
+}
+
+// NewLocalManagerBlockingProcesses is a constructor for a thread-safe Manager
+// that uses blockingProcess instead of the default basicProcess.
+func NewLocalManagerBlockingProcesses(trackProcs bool) (Manager, error) {
+	basicBlockingManager, err := newBasicProcessManager(map[string]Process{}, true, trackProcs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &localProcessManager{manager: basicBlockingManager}, nil
 }
 
 type localProcessManager struct {
 	mu      sync.RWMutex
-	manager *basicProcessManager
+	manager Manager
 }
 
 func (m *localProcessManager) ID() string {
@@ -44,18 +47,12 @@ func (m *localProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.manager.skipDefaultTrigger = true
 	proc, err := m.manager.CreateProcess(ctx, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	_ = proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, m, opts, proc.ID()))
-
-	proc = &localProcess{proc: proc}
-	m.manager.procs[proc.ID()] = proc
-
-	return proc, nil
+	return &localProcess{proc: proc}, nil
 }
 
 func (m *localProcessManager) CreateCommand(ctx context.Context) *Command {
