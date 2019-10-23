@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
@@ -120,7 +121,7 @@ func (d *restDaemon) newService(ctx context.Context) (jasper.CloseFunc, error) {
 	if d.Manager == nil {
 		return nil, errors.New("manager is not set on REST service")
 	}
-	grip.Infof("starting REST service at '%s:%d'", d.Host, d.Port)
+	grip.Infof("starting REST service at '%s'", net.JoinHostPort(d.Host, d.Port))
 	return newRESTService(ctx, d.Host, d.Port, d.Manager)
 }
 

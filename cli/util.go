@@ -104,7 +104,7 @@ func writeOutput(output io.Writer, input interface{}) error {
 // given host and port, with the optional TLS credentials file for RPC
 // communication.
 func newRemoteClient(ctx context.Context, service, host string, port int, credsFilePath string) (jasper.RemoteClient, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(host, port))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to resolve address")
 	}
