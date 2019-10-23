@@ -32,12 +32,11 @@ func (e *Local) Args() []string {
 }
 
 func (e *Local) SetEnv(env map[string]string) error {
-	if len(env) == 0 {
-		return nil
-	}
+	var envSlice []string
 	for k, v := range env {
-		e.cmd.Env = append(e.cmd.Env, fmt.Sprintf("%s=%s", k, v))
+		envSlice = append(envSlice, fmt.Sprintf("%s=%s", k, v))
 	}
+	e.cmd.Env = envSlice
 	return nil
 }
 

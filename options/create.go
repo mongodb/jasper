@@ -16,7 +16,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
-	"github.com/mongodb/jasper/executor"
+	"github.com/mongodb/jasper/internal/executor"
 	"github.com/pkg/errors"
 )
 
