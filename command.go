@@ -140,11 +140,18 @@ func (c *Command) Port(p int) *Command {
 	return c
 }
 
-// PrivKey sets the path to the private key file in order to authenticate to a
-// remote host.
-func (c *Command) PrivKey(path string) *Command {
+// PrivKey sets the private key in order to authenticate to a remote host.
+func (c *Command) PrivKey(key string) *Command {
 	c.initRemote()
-	c.opts.Remote.PrivKeyFile = path
+	c.opts.Remote.Key = key
+	return c
+}
+
+// PrivKeyFile sets the path to the private key file in order to authenticate to a
+// remote host.
+func (c *Command) PrivKeyFile(path string) *Command {
+	c.initRemote()
+	c.opts.Remote.KeyFile = path
 	return c
 }
 
@@ -152,7 +159,7 @@ func (c *Command) PrivKey(path string) *Command {
 // authenticate to a remote host.
 func (c *Command) PrivKeyPassphrase(pass string) *Command {
 	c.initRemote()
-	c.opts.Remote.PrivKeyPassphrase = pass
+	c.opts.Remote.KeyPassphrase = pass
 	return c
 }
 
