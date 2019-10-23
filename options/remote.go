@@ -70,6 +70,7 @@ func (opts *Remote) Resolve() (*ssh.Client, *ssh.Session, error) {
 		auth = append(auth, ssh.Password(opts.Password))
 	}
 	config := &ssh.ClientConfig{
+		Timeout:         opts.ConnTimeout,
 		User:            opts.User,
 		Auth:            auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
