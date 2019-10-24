@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/poplar"
+	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
 )
 
@@ -37,19 +39,15 @@ func RunLogBenchmarks(ctx context.Context) error {
 		resultText = fmt.Sprintf("--- PASS: %s\n", res.Report())
 	}
 
+	catcher := grip.NewBasicCatcher()
 	_, err = resultFile.WriteString(resultText)
-	if err != nil {
-		return errors.Wrap(err, "failed to write benchmark results to file")
-	}
+	catcher.Add(errors.Wrap(err, "failed to write benchmark results to file"))
+	catcher.Add(resultFile.Close())
 
-	return resultFile.Close()
+	return catcher.Resolve()
 }
 
 type makeProcess func(context.Context, *options.Create) (Process, error)
-
-func yesCreateOpts(timeout time.Duration) options.Create {
-	return options.Create{Args: []string{"yes"}, Timeout: timeout}
-}
 
 func procMap() map[string]func(context.Context, *options.Create) (Process, error) {
 	return map[string]func(context.Context, *options.Create) (Process, error){
@@ -71,7 +69,7 @@ func runIteration(ctx context.Context, makeProc makeProcess, opts *options.Creat
 }
 
 func makeCreateOpts(timeout time.Duration, logger options.Logger) *options.Create {
-	opts := yesCreateOpts(timeout)
+	opts := testutil.YesCreateOpts(timeout)
 	opts.Output.Loggers = []options.Logger{logger}
 	return &opts
 }
@@ -89,7 +87,7 @@ func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) pop
 			return err
 		}
 		r.IncOps(1)
-		logger := opts.Output.Loggers[0].GetSender().(*send.InMemorySender)
+		logger := opts.Output.Loggers[0].Configure().(*send.InMemorySender)
 		r.IncSize(logger.TotalBytesSent())
 		r.End(time.Since(startAt))
 

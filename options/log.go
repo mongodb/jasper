@@ -137,9 +137,6 @@ type Logger struct {
 	sender send.Sender
 }
 
-// TODO: is this ok?
-func (l Logger) GetSender() send.Sender { return l.sender }
-
 // Validate ensures that LogOptions is valid.
 func (l Logger) Validate() error {
 	catcher := grip.NewBasicCatcher()
