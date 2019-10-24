@@ -9,7 +9,7 @@ import (
 // introspect on processes.
 type Executor interface {
 	Args() []string
-	SetEnv([]string) error
+	SetEnv([]string)
 	Env() []string
 	SetDir(string)
 	Dir() string
@@ -23,4 +23,5 @@ type Executor interface {
 	ExitCode() int
 	Success() bool
 	SignalInfo() (sig syscall.Signal, signaled bool)
+	Close()
 }

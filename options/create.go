@@ -168,7 +168,11 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		// The client and session will be closed by the SSH executor.
 		client, session, err := opts.Remote.Resolve()
 		if err != nil {
-			return nil, time.Time{}, errors.Wrap(err, "could not set up SSH connection")
+			catcher := grip.NewBasicCatcher()
+			catcher.Wrap(err)
+			catcher.Wrap(client.Close())
+			catcher.Wrap(session.Close())
+			return nil, time.Time{}, errors.Wrap(catcher.Resolve(), "could not set up SSH connection")
 		}
 		cmd = executor.MakeSSH(ctx, client, session, opts.Args)
 	}
@@ -185,18 +189,18 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	for key, value := range opts.Environment {
 		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
-	if err := cmd.SetEnv(env); err != nil {
-		return nil, time.Time{}, errors.Wrap(err, "could not set environment")
-	}
+	cmd.SetEnv(env)
 
 	stdout, err := opts.Output.GetOutput()
 	if err != nil {
+		cmd.Close()
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStdout(stdout)
 
 	stderr, err := opts.Output.GetError()
 	if err != nil {
+		cmd.Close()
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStderr(stderr)

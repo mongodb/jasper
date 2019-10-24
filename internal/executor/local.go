@@ -9,12 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Local runs processes on a local machine via exec.
-type Local struct {
+// execLocal runs processes on a local machine via exec.
+type execLocal struct {
 	cmd  *exec.Cmd
 	args []string
 }
 
+// NewexecLocal returns an Executor that creates processes locally.
 func NewLocal(ctx context.Context, args []string) Executor {
 	executable := args[0]
 	var execArgs []string
@@ -22,72 +23,74 @@ func NewLocal(ctx context.Context, args []string) Executor {
 		execArgs = args[1:]
 	}
 	cmd := exec.CommandContext(ctx, executable, execArgs...)
-	return &Local{cmd: cmd, args: args}
+	return &execLocal{cmd: cmd, args: args}
 }
 
+// MakeLocal wraps an existing local process.
 func MakeLocal(cmd *exec.Cmd) Executor {
-	return &Local{
+	return &execLocal{
 		cmd:  cmd,
 		args: cmd.Args,
 	}
 }
 
-func (e *Local) Args() []string {
+// Args returns the arguments to the command.
+func (e *execLocal) Args() []string {
 	return e.args
 }
 
-func (e *Local) SetEnv(env []string) error {
+func (e *execLocal) SetEnv(env []string) {
 	e.cmd.Env = env
 	return nil
 }
 
-func (e *Local) Env() []string {
+func (e *execLocal) Env() []string {
 	return e.cmd.Env
 }
 
-func (e *Local) SetDir(dir string) {
+func (e *execLocal) SetDir(dir string) {
 	e.cmd.Dir = dir
 }
 
-func (e *Local) Dir() string {
+func (e *execLocal) Dir() string {
 	return e.cmd.Dir
 }
 
-func (e *Local) SetStdin(stdin io.Reader) {
+func (e *execLocal) SetStdin(stdin io.Reader) {
 	e.cmd.Stdin = stdin
 }
 
-func (e *Local) SetStdout(stdout io.Writer) {
+func (e *execLocal) SetStdout(stdout io.Writer) {
 	e.cmd.Stdout = stdout
 }
 
-func (e *Local) SetStderr(stderr io.Writer) {
+func (e *execLocal) SetStderr(stderr io.Writer) {
 	e.cmd.Stderr = stderr
 }
 
-func (e *Local) Start() error {
+func (e *execLocal) Start() error {
 	return e.cmd.Start()
 }
 
-func (e *Local) Wait() error {
+func (e *execLocal) Wait() error {
 	return e.cmd.Wait()
 }
 
-func (e *Local) Signal(sig syscall.Signal) error {
+func (e *execLocal) Signal(sig syscall.Signal) error {
 	if e.cmd.Process == nil {
 		return errors.New("cannot signal unstarted process")
 	}
 	return e.cmd.Process.Signal(sig)
 }
 
-func (e *Local) PID() int {
+func (e *execLocal) PID() int {
 	if e.cmd.Process == nil {
 		return -1
 	}
 	return e.cmd.Process.Pid
 }
 
-func (e *Local) ExitCode() int {
+func (e *execLocal) ExitCode() int {
 	if e.cmd.ProcessState == nil {
 		return -1
 	}
@@ -95,17 +98,22 @@ func (e *Local) ExitCode() int {
 	return status.ExitStatus()
 }
 
-func (e *Local) Success() bool {
+func (e *execLocal) Success() bool {
 	if e.cmd.ProcessState == nil {
 		return false
 	}
 	return e.cmd.ProcessState.Success()
 }
 
-func (e *Local) SignalInfo() (sig syscall.Signal, signaled bool) {
+func (e *execLocal) SignalInfo() (sig syscall.Signal, signaled bool) {
 	if e.cmd.ProcessState == nil {
 		return syscall.Signal(0), false
 	}
 	status := e.cmd.ProcessState.Sys().(syscall.WaitStatus)
 	return status.Signal(), status.Signaled()
+}
+
+// CLose is a no-op.
+func (e *execLocal) Close() {
+	return nil
 }

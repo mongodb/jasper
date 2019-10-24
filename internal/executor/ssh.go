@@ -12,8 +12,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// SSH runs processes on a remote machine via SSH.
-type SSH struct {
+// execSSH runs processes on a remote machine via SSH.
+type execSSH struct {
 	session   *ssh.Session
 	client    *ssh.Client
 	args      []string
@@ -24,9 +24,12 @@ type SSH struct {
 	closeConn context.CancelFunc
 }
 
+// MakeSSH returns an Executor that creates processes over SSH. Callers are
+// expected to clean up resources by either cancelling the context or explicitly
+// calling Close.
 func MakeSSH(ctx context.Context, client *ssh.Client, session *ssh.Session, args []string) Executor {
 	ctx, cancel := context.WithCancel(ctx)
-	e := &SSH{session: session, client: client, args: args}
+	e := &execSSH{session: session, client: client, args: args}
 	e.closeConn = cancel
 	go func() {
 		<-ctx.Done()
@@ -40,40 +43,49 @@ func MakeSSH(ctx context.Context, client *ssh.Client, session *ssh.Session, args
 	return e
 }
 
-func (e *SSH) Args() []string {
+// Args returns the arguments to the command.
+func (e *execSSH) Args() []string {
 	return e.args
 }
 
-func (e *SSH) SetEnv(env []string) error {
+// SetEnv sets the command environment.
+func (e *execSSH) SetEnv(env []string) {
 	e.env = env
 	return nil
 }
 
-func (e *SSH) Env() []string {
+// Env returns the command environment.
+func (e *execSSH) Env() []string {
 	return e.env
 }
 
-func (e *SSH) SetDir(dir string) {
+// SetDir sets the command working directory.
+func (e *execSSH) SetDir(dir string) {
 	e.dir = dir
 }
 
-func (e *SSH) Dir() string {
+// Dir returns the command working directory.
+func (e *execSSH) Dir() string {
 	return e.dir
 }
 
-func (e *SSH) SetStdin(stdin io.Reader) {
+// SetStdin sets the command standard input.
+func (e *execSSH) SetStdin(stdin io.Reader) {
 	e.session.Stdin = stdin
 }
 
-func (e *SSH) SetStdout(stdout io.Writer) {
+// SetStdout sets the command standard output.
+func (e *execSSH) SetStdout(stdout io.Writer) {
 	e.session.Stdout = stdout
 }
 
-func (e *SSH) SetStderr(stderr io.Writer) {
+// SetStderr sets the command standard error.
+func (e *execSSH) SetStderr(stderr io.Writer) {
 	e.session.Stderr = stderr
 }
 
-func (e *SSH) Start() error {
+// Start begins running the process.
+func (e *execSSH) Start() error {
 	args := []string{}
 	for _, entry := range e.env {
 		args = append(args, fmt.Sprintf("export %s", entry))
@@ -85,8 +97,7 @@ func (e *SSH) Start() error {
 	return e.session.Start(strings.Join(args, "\n"))
 }
 
-func (e *SSH) Wait() error {
-	defer e.closeConn()
+func (e *execSSH) Wait() error {
 	catcher := grip.NewBasicCatcher()
 	e.exitErr = e.session.Wait()
 	catcher.Add(e.exitErr)
@@ -94,16 +105,17 @@ func (e *SSH) Wait() error {
 	return catcher.Resolve()
 }
 
-func (e *SSH) Signal(sig syscall.Signal) error {
+func (e *execSSH) Signal(sig syscall.Signal) error {
 	return e.session.Signal(syscallToSSHSignal(sig))
 }
 
-func (e *SSH) PID() int {
-	// There is no simple way of retrieving the PID of the remote process.
+func (e *execSSH) PID() int {
+	// TODO: there is no simple way of retrieving the PID of the remote process.
 	return -1
 }
 
-func (e *SSH) ExitCode() int {
+// ExitCode returns the exit code of the process.
+func (e *execSSH) ExitCode() int {
 	if !e.exited {
 		return -1
 	}
@@ -117,11 +129,16 @@ func (e *SSH) ExitCode() int {
 	return sshExitErr.Waitmsg.ExitStatus()
 }
 
-func (e *SSH) Success() bool {
+// Success returns whether or not the command ran successfully.
+func (e *execSSH) Success() bool {
+	if !e.exited {
+		return false
+	}
 	return e.exitErr == nil
 }
 
-func (e *SSH) SignalInfo() (sig syscall.Signal, signaled bool) {
+// SignalInfo returns information about signals the process has received.
+func (e *execSSH) SignalInfo() (sig syscall.Signal, signaled bool) {
 	if e.exitErr == nil {
 		return syscall.Signal(-1), false
 	}
@@ -133,6 +150,12 @@ func (e *SSH) SignalInfo() (sig syscall.Signal, signaled bool) {
 	return sshToSyscallSignal(sshSig), sshSig != ""
 }
 
+// Close closese the SSH connection.
+func (e *execSSH) Close() {
+	e.closeConn()
+}
+
+// syscallToSSHSignal converts a syscall.Signal to its equivalent ssh.Signal
 func syscallToSSHSignal(sig syscall.Signal) ssh.Signal {
 	switch sig {
 	case syscall.SIGABRT:
@@ -194,5 +217,5 @@ func sshToSyscallSignal(sig ssh.Signal) syscall.Signal {
 	case ssh.SIGUSR2:
 		return syscall.SIGUSR2
 	}
-	return syscall.Signal(0)
+	return syscall.Signal(-1)
 }
