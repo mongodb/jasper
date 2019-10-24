@@ -108,7 +108,7 @@ func TestRPCClient(t *testing.T) {
 		t.Run(setupMethod, func(t *testing.T) {
 			for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.RemoteClient{
 				"Basic": func(ctx context.Context, t *testing.T) jasper.RemoteClient {
-					mngr, err := jasper.NewLocalManager(false)
+					mngr, err := jasper.NewSynchronizedManager(false)
 					require.NoError(t, err)
 
 					client, err := makeTestServiceAndClient(ctx, mngr)
@@ -116,7 +116,7 @@ func TestRPCClient(t *testing.T) {
 					return client
 				},
 				"Blocking": func(ctx context.Context, t *testing.T) jasper.RemoteClient {
-					mngr, err := jasper.NewLocalManagerBlockingProcesses(false)
+					mngr, err := jasper.NewSynchronizedManagerBlockingProcesses(false)
 					require.NoError(t, err)
 
 					client, err := makeTestServiceAndClient(ctx, mngr)
@@ -595,7 +595,7 @@ func TestRPCProcess(t *testing.T) {
 		t.Run(setupMethod, func(t *testing.T) {
 			for cname, makeProc := range map[string]processConstructor{
 				"Basic": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-					mngr, err := jasper.NewLocalManager(false)
+					mngr, err := jasper.NewSynchronizedManager(false)
 					if err != nil {
 						return nil, errors.WithStack(err)
 					}
@@ -608,7 +608,7 @@ func TestRPCProcess(t *testing.T) {
 					return client.CreateProcess(ctx, opts)
 				},
 				"Blocking": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-					mngr, err := jasper.NewLocalManagerBlockingProcesses(false)
+					mngr, err := jasper.NewSynchronizedManagerBlockingProcesses(false)
 					if err != nil {
 						return nil, errors.WithStack(err)
 					}
