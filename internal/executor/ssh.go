@@ -51,7 +51,6 @@ func (e *execSSH) Args() []string {
 // SetEnv sets the command environment.
 func (e *execSSH) SetEnv(env []string) {
 	e.env = env
-	return nil
 }
 
 // Env returns the command environment.

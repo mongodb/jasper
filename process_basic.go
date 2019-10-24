@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/internal/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
@@ -52,7 +53,7 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 		catcher := grip.NewBasicCatcher()
 		catcher.Wrap(opts.Close(), "problem closing options")
 		catcher.Add(err)
-		return nil, errors.Wrap(catcher.Resolve() "problem registering options close trigger")
+		return nil, errors.Wrap(catcher.Resolve(), "problem registering options close trigger")
 	}
 
 	if err = cmd.Start(); err != nil {

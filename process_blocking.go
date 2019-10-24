@@ -57,7 +57,7 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 		catcher := grip.NewBasicCatcher()
 		catcher.Wrap(opts.Close(), "problem closing options")
 		catcher.Add(err)
-		return nil, errors.Wrap(catcher.Resolve() "problem registering options close trigger")
+		return nil, errors.Wrap(catcher.Resolve(), "problem registering options close trigger")
 	}
 
 	if err = cmd.Start(); err != nil {

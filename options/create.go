@@ -154,8 +154,8 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	}
 
 	var deadline time.Time
+	var cancel context.CancelFunc
 	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		deadline, _ = ctx.Deadline()
 		opts.closers = append(opts.closers, func() error { cancel(); return nil })
@@ -168,11 +168,8 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		// The client and session will be closed by the SSH executor.
 		client, session, err := opts.Remote.Resolve()
 		if err != nil {
-			catcher := grip.NewBasicCatcher()
-			catcher.Wrap(err)
-			catcher.Wrap(client.Close())
-			catcher.Wrap(session.Close())
-			return nil, time.Time{}, errors.Wrap(catcher.Resolve(), "could not set up SSH connection")
+			cancel()
+			return nil, time.Time{}, errors.Wrap(err, "could not create SSH connection")
 		}
 		cmd = executor.MakeSSH(ctx, client, session, opts.Args)
 	}
@@ -193,14 +190,14 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 
 	stdout, err := opts.Output.GetOutput()
 	if err != nil {
-		cmd.Close()
+		cancel()
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStdout(stdout)
 
 	stderr, err := opts.Output.GetError()
 	if err != nil {
-		cmd.Close()
+		cancel()
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStderr(stderr)

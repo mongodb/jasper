@@ -41,7 +41,6 @@ func (e *execLocal) Args() []string {
 
 func (e *execLocal) SetEnv(env []string) {
 	e.cmd.Env = env
-	return nil
 }
 
 func (e *execLocal) Env() []string {
@@ -114,6 +113,4 @@ func (e *execLocal) SignalInfo() (sig syscall.Signal, signaled bool) {
 }
 
 // CLose is a no-op.
-func (e *execLocal) Close() {
-	return nil
-}
+func (e *execLocal) Close() {}
