@@ -123,10 +123,23 @@ func (c *Command) initRemote() {
 	}
 }
 
-// Host sets the hostname for remote operations.
-func (c *Command) Host(h string) *Command { c.initRemote(); c.opts.Remote.Host = h; return c }
+func (c *Command) initRemoteProxy() {
+	if c.opts.Remote == nil {
+		c.opts.Remote = &options.Remote{}
+	}
+	if c.opts.Remote.Proxy == nil {
+		c.opts.Remote.Proxy = &options.Proxy{}
+	}
+}
 
-// User sets the username for remote operations.
+// Host sets the hostname for connecting to a remote host.
+func (c *Command) Host(h string) *Command {
+	c.initRemote()
+	c.opts.Remote.Host = h
+	return c
+}
+
+// User sets the username for connecting to a remote host.
 func (c *Command) User(u string) *Command {
 	c.initRemote()
 	c.opts.Remote.User = u
@@ -147,8 +160,8 @@ func (c *Command) PrivKey(key string) *Command {
 	return c
 }
 
-// PrivKeyFile sets the path to the private key file in order to authenticate to a
-// remote host.
+// PrivKeyFile sets the path to the private key file in order to authenticate to
+// a remote host.
 func (c *Command) PrivKeyFile(path string) *Command {
 	c.initRemote()
 	c.opts.Remote.KeyFile = path
@@ -165,16 +178,65 @@ func (c *Command) PrivKeyPassphrase(pass string) *Command {
 
 // Password sets the password in order to authenticate to a remote host.
 func (c *Command) Password(p string) *Command {
+	c.initRemote()
 	c.opts.Remote.Password = p
+	return c
+}
+
+// ProxyHost sets the proxy hostname for connecting to a proxy host.
+func (c *Command) ProxyHost(h string) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.Host = h
+	return c
+}
+
+// ProxyUser sets the proxy username for conencting to a proxy host.
+func (c *Command) ProxyUser(u string) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.User = u
+	return c
+}
+
+// ProxyPort sets the proxy port for connecting to a proxy host.
+func (c *Command) ProxyPort(p int) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.Port = p
+	return c
+}
+
+// ProxyPrivKey sets the proxy private key in order to authenticate to a remote host.
+func (c *Command) ProxyPrivKey(key string) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.Key = key
+	return c
+}
+
+// ProxyPrivKeyFile sets the path to the proxy private key file in order to
+// authenticate to a proxy host.
+func (c *Command) ProxyPrivKeyFile(path string) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.KeyFile = path
+	return c
+}
+
+// ProxyPrivKeyPassphrase sets the passphrase for the private key file in order to
+// authenticate to a proxy host.
+func (c *Command) ProxyPrivKeyPassphrase(pass string) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.KeyPassphrase = pass
+	return c
+}
+
+// ProxyPassword sets the password in order to authenticate to a proxy host.
+func (c *Command) ProxyPassword(p string) *Command {
+	c.initRemoteProxy()
+	c.opts.Remote.Proxy.Password = p
 	return c
 }
 
 // SetRemoteOptions sets the configuration for remote operations. This overrides
 // any existing remote configuration.
-func (c *Command) SetRemoteOptions(opts *options.Remote) *Command {
-	c.opts.Remote = opts
-	return c
-}
+func (c *Command) SetRemoteOptions(opts *options.Remote) *Command { c.opts.Remote = opts; return c }
 
 // Directory sets the working directory. If this is a remote command, it sets
 // the working directory of the command being run remotely.
