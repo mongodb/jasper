@@ -119,6 +119,8 @@ func (p *blockingProcess) getErr() error {
 }
 
 func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd executor.Executor) {
+	defer cmd.Close()
+
 	signal := make(chan error)
 	go func() {
 		defer close(signal)

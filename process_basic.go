@@ -80,6 +80,8 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 }
 
 func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd executor.Executor) {
+	defer cmd.Close()
+
 	waitFinished := make(chan error)
 
 	go func() {
