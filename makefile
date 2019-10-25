@@ -68,6 +68,11 @@ $(buildDir)/.lintSetup:$(lintDeps)
 	@-$(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
 
+# benchmark setup targets
+$(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
+	@mkdir -p $(buildDir)
+	go build -o $@ $<
+# end benchmark setup targets
 
 # start test and coverage artifacts
 #    This varable includes everything that the tests actually need to
@@ -123,6 +128,8 @@ proto:
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
 lint:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 test:build $(buildDir)/output.test
+benchmarks:$(buildDir)/run-benchmarks $(buildDir)/ .FORCE
+	./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
@@ -162,7 +169,6 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/satori/go.uuid/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/stretchr/testify/
@@ -204,5 +210,17 @@ vendor-clean:
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/sys/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/golang.org/x/text/
 	rm -rf vendor/go.mongodb.org/mongo-driver/data/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/aviation/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/golang/protobuf/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/amboy/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/grip/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/pkg/errors/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/net/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/sys/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/text/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor -type d -empty | xargs rm -rf

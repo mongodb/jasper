@@ -11,45 +11,13 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/mongodb/ftdc/bsonx/bsonerr"
 	"github.com/mongodb/ftdc/bsonx/bsontype"
 	"github.com/mongodb/ftdc/bsonx/elements"
 	"github.com/pkg/errors"
 )
 
 const validateMaxDepthDefault = 2048
-
-// ErrUninitializedElement is returned whenever any method is invoked on an uninitialized Element.
-var ErrUninitializedElement = errors.New("bson/ast/compact: Method call on uninitialized Element")
-
-// ErrInvalidWriter indicates that a type that can't be written into was passed to a writer method.
-var ErrInvalidWriter = errors.New("bson: invalid writer provided")
-
-// ErrInvalidString indicates that a BSON string value had an incorrect length.
-var ErrInvalidString = errors.New("invalid string value")
-
-// ErrInvalidBinarySubtype indicates that a BSON binary value had an undefined subtype.
-var ErrInvalidBinarySubtype = errors.New("invalid BSON binary Subtype")
-
-// ErrInvalidBooleanType indicates that a BSON boolean value had an incorrect byte.
-var ErrInvalidBooleanType = errors.New("invalid value for BSON Boolean Type")
-
-// ErrStringLargerThanContainer indicates that the code portion of a BSON JavaScript code with scope
-// value is larger than the specified length of the entire value.
-var ErrStringLargerThanContainer = errors.New("string size is larger than the JavaScript code with scope container")
-
-// ErrInvalidElement indicates that a bson.Element had invalid underlying BSON.
-var ErrInvalidElement = errors.New("invalid Element")
-
-// ElementTypeError specifies that a method to obtain a BSON value an incorrect type was called on a bson.Value.
-type ElementTypeError struct {
-	Method string
-	Type   bsontype.Type
-}
-
-// Error implements the error interface.
-func (ete ElementTypeError) Error() string {
-	return "Call of " + ete.Method + " on " + ete.Type.String() + " type"
-}
 
 // Element represents a BSON element, i.e. key-value pair of a BSON document.
 //
@@ -86,10 +54,10 @@ func (e *Element) Value() *Value {
 // Validate validates the element and returns its total size.
 func (e *Element) Validate() (uint32, error) {
 	if e == nil {
-		return 0, ErrNilElement
+		return 0, bsonerr.NilElement
 	}
 	if e.value == nil {
-		return 0, ErrUninitializedElement
+		return 0, bsonerr.UninitializedElement
 	}
 
 	var total uint32 = 1
@@ -116,7 +84,7 @@ func (e *Element) validate(recursive bool, currentDepth, maxDepth uint32) (uint3
 
 func (e *Element) validateKey() (uint32, error) {
 	if e.value.data == nil {
-		return 0, ErrUninitializedElement
+		return 0, bsonerr.UninitializedElement
 	}
 
 	pos, end := e.value.start+1, e.value.offset
@@ -128,7 +96,7 @@ func (e *Element) validateKey() (uint32, error) {
 		total++
 	}
 	if pos == end || e.value.data[pos] != '\x00' {
-		return total, ErrInvalidKey
+		return total, bsonerr.InvalidKey
 	}
 	total++
 	return total, nil
@@ -137,15 +105,31 @@ func (e *Element) validateKey() (uint32, error) {
 // Key returns the key for this element.
 // It panics if e is uninitialized.
 func (e *Element) Key() string {
-	if e == nil || e.value == nil || e.value.offset == 0 || e.value.data == nil {
-		panic(ErrUninitializedElement)
+	key, ok := e.KeyOK()
+	if !ok {
+		panic(bsonerr.UninitializedElement)
 	}
-	return string(e.value.data[e.value.start+1 : e.value.offset-1])
+	return key
+}
+
+func (e *Element) KeyOK() (string, bool) {
+	if e == nil || e.value == nil || e.value.offset == 0 || e.value.data == nil {
+		return "", false
+	}
+
+	return string(e.value.data[e.value.start+1 : e.value.offset-1]), true
 }
 
 // WriteTo implements the io.WriterTo interface.
 func (e *Element) WriteTo(w io.Writer) (int64, error) {
-	return 0, nil
+	val, err := e.MarshalBSON()
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+
+	n, err := w.Write(val)
+
+	return int64(n), errors.WithStack(err)
 }
 
 // WriteElement serializes this element to the provided writer starting at the
@@ -166,11 +150,13 @@ func (e *Element) writeElement(key bool, start uint, writer interface{}) (int64,
 	case []byte:
 		n, err := e.writeByteSlice(key, start, size, w)
 		if err != nil {
-			return 0, NewErrTooSmall()
+			return 0, newErrTooSmall()
 		}
 		total += int64(n)
+	case io.Writer:
+		return e.WriteTo(w)
 	default:
-		return 0, ErrInvalidWriter
+		return 0, bsonerr.InvalidWriter
 	}
 	return total, nil
 }
@@ -190,7 +176,7 @@ func (e *Element) writeByteSlice(key bool, start uint, size uint32, b []byte) (i
 	}
 
 	if uint(len(b)) < needed {
-		return 0, NewErrTooSmall()
+		return 0, newErrTooSmall()
 	}
 
 	var n int
@@ -306,7 +292,7 @@ func (e *Element) MarshalBSON() ([]byte, error) {
 // String implements the fmt.Stringer interface.
 func (e *Element) String() string {
 	val := e.Value().Interface()
-	if s, ok := val.(string); ok && e.Value().Type() == TypeString {
+	if s, ok := val.(string); ok && e.Value().Type() == bsontype.String {
 		val = strconv.Quote(s)
 	}
 	return fmt.Sprintf(`bson.Element{[%s]"%s": %v}`, e.Value().Type(), e.Key(), val)

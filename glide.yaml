@@ -17,3 +17,4 @@ import:
   - package: github.com/mongodb/ftdc
   - package: github.com/evergreen-ci/timber
   - package: go.mongodb.org/go-driver
+  - package: github.com/evergreen-ci/poplar
