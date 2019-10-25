@@ -2,8 +2,8 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest options internal/executor
-testPackages := $(packages) mock
+packages := $(name) cli rpc rest options mock internal/executor
+testPackages := $(packages)
 
 _testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
@@ -108,8 +108,6 @@ $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 #  targets to generate gotest output from the linter.
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 	@./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
-$(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
-	@./$< --output="$@" --lintArgs='$(lintArgs)' --packages="$(packages)"
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
@@ -122,12 +120,12 @@ lint:build $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 test:build $(foreach target,$(packages),$(buildDir)/output.$(target).test)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
-phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
+phony += lint lint-deps build build-race race test coverage coverage-html
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
-.PRECIOUS:$(buildDir)/output.lint
 # end front-ends
+.PHONY: $(phony)
 
 .FORCE:
 

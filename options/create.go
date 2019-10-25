@@ -144,12 +144,11 @@ func (opts *Create) Hash() hash.Hash {
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
 func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, error) {
-	var err error
 	if ctx.Err() != nil {
 		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
 	}
 
-	if err = opts.Validate(); err != nil {
+	if err := opts.Validate(); err != nil {
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 

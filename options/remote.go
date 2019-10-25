@@ -29,6 +29,7 @@ type Remote struct {
 	Proxy *Proxy
 }
 
+// Proxy represents the remote configuration to access a remote proxy machine.
 type Proxy struct {
 	remoteConfig
 }
@@ -124,6 +125,7 @@ func (opts *Remote) String() string {
 	return fmt.Sprintf("%s@%s", opts.User, opts.Host)
 }
 
+// Resolve returns the SSH client and session from the options.
 func (opts *Remote) Resolve() (*ssh.Client, *ssh.Session, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, nil, errors.Wrap(err, "invalid remote options")

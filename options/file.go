@@ -111,8 +111,8 @@ func (opts *WriteFile) WriteBufferedContent(doWrite func(bufopts WriteFile) erro
 			bufOpts.Append = true
 		}
 
-		if err := doWrite(bufOpts); err != nil {
-			return errors.Wrap(err, "could not perform buffered write")
+		if writeErr := doWrite(bufOpts); err != nil {
+			return errors.Wrap(writeErr, "could not perform buffered write")
 		}
 
 		didWrite = true
