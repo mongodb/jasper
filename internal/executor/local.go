@@ -112,5 +112,5 @@ func (e *execLocal) SignalInfo() (sig syscall.Signal, signaled bool) {
 	return status.Signal(), status.Signaled()
 }
 
-// CLose is a no-op.
+// Close is a no-op.
 func (e *execLocal) Close() {}

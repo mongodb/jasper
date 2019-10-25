@@ -149,7 +149,7 @@ func (e *execSSH) SignalInfo() (sig syscall.Signal, signaled bool) {
 	return sshToSyscallSignal(sshSig), sshSig != ""
 }
 
-// Close closese the SSH connection.
+// Close closes the SSH connection.
 func (e *execSSH) Close() {
 	e.closeConn()
 }
