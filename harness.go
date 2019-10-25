@@ -71,7 +71,7 @@ func runIteration(ctx context.Context, makeProc makeProcess, opts *options.Creat
 func makeCreateOpts(timeout time.Duration, logger options.Logger) *options.Create {
 	opts := testutil.YesCreateOpts(timeout)
 	opts.Output.Loggers = []options.Logger{logger}
-	return &opts
+	return opts
 }
 
 func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
@@ -87,8 +87,12 @@ func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) pop
 			return err
 		}
 		r.IncOps(1)
-		logger := opts.Output.Loggers[0].Configure().(*send.InMemorySender)
-		r.IncSize(logger.TotalBytesSent())
+		sender, err := opts.Output.Loggers[0].Configure()
+		if err != nil {
+			return err
+		}
+		rawSender := sender.(*send.InMemorySender)
+		r.IncSize(rawSender.TotalBytesSent())
 		r.End(time.Since(startAt))
 
 		return nil
