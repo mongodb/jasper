@@ -154,7 +154,7 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	}
 
 	var deadline time.Time
-	var cancel context.CancelFunc
+	var cancel context.CancelFunc = func() {}
 	if opts.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		deadline, _ = ctx.Deadline()

@@ -100,9 +100,6 @@ $(buildDir)/:
 $(buildDir)/output.%.test:$(buildDir)/ .FORCE
 	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
 	@! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@
-$(buildDir)/output.test:$(buildDir)/ .FORCE
-	go test $(testArgs) ./... | tee $@
-	@! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@
 $(buildDir)/output.%.coverage:$(buildDir)/ .FORCE
 	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
 	@-[ -f $@ ] && go tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
@@ -121,8 +118,8 @@ $(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 proto:
 	@mkdir -p rpc/internal
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
-lint:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
-test:build $(buildDir)/output.test
+lint:build $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
+test:build $(foreach target,$(packages),$(buildDir)/output.$(target).test)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
