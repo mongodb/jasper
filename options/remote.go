@@ -113,7 +113,7 @@ func (opts *Remote) Validate() error {
 		catcher.Wrap(opts.Proxy.validate(), "invalid proxy config")
 	}
 
-	catcher.Add(opts.validate())
+	catcher.Wrap(opts.validate(), "invalid remote config")
 	return catcher.Resolve()
 }
 

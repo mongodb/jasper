@@ -295,7 +295,7 @@ func (c *sshClient) runClientCommand(ctx context.Context, subcommand []string, s
 // newCommand creates the command that runs the Jasper CLI client command
 // over SSH.
 func (c *sshClient) newCommand(ctx context.Context, clientSubcommand []string, input []byte, output io.WriteCloser) *jasper.Command {
-	cmd := c.manager.CreateCommand(ctx).Host(c.opts.Machine.Host).User(c.opts.Machine.User).
+	cmd := c.manager.CreateCommand(ctx).SetRemoteOptions(&c.opts.Machine).
 		Add(c.opts.buildCommand(clientSubcommand...))
 
 	if len(input) != 0 {
