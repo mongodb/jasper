@@ -179,10 +179,6 @@ func syscallToSSHSignal(sig syscall.Signal) ssh.Signal {
 		return ssh.SIGSEGV
 	case syscall.SIGTERM:
 		return ssh.SIGTERM
-	case syscall.SIGUSR1:
-		return ssh.SIGUSR1
-	case syscall.SIGUSR2:
-		return ssh.SIGUSR2
 	}
 	return ssh.Signal("")
 }
@@ -211,10 +207,6 @@ func sshToSyscallSignal(sig ssh.Signal) syscall.Signal {
 		return syscall.SIGSEGV
 	case ssh.SIGTERM:
 		return syscall.SIGTERM
-	case ssh.SIGUSR1:
-		return syscall.SIGUSR1
-	case ssh.SIGUSR2:
-		return syscall.SIGUSR2
 	}
 	return syscall.Signal(-1)
 }
