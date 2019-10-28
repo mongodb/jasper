@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/k0kubun/pp"
 	"github.com/mongodb/ftdc/bsonx"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
+	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc"
 	mongorpcBson "github.com/tychoish/mongorpc/bson"
@@ -79,7 +81,7 @@ func (s *Service) handleList(ctx context.Context, w io.Writer, msg mongowire.Mes
 		grip.Error(errors.New("received unexpected mongo message"))
 		return
 	}
-	list, err := s.manager.List(ctx, jasper.Filter(listString))
+	list, err := s.manager.List(ctx, options.Filter(listString))
 	if err != nil {
 		grip.Error(errors.New("received unexpected mongo message"))
 		return
@@ -233,65 +235,55 @@ func (s *Service) handleCreateProcess(ctx context.Context, w io.Writer, msg mong
 		grip.Error(errors.New("couldn't marshall bson"))
 		return
 	}
-	options := jasper.CreateOptions{}
-	err = bson.Unmarshal(byteArray, &options)
+	opts := options.Create{}
+	err = bson.Unmarshal(byteArray, &opts)
 	if err != nil {
 		grip.Error(err)
 		return
 	}
-	var cctx context.Context
-	var cancel context.CancelFunc
-	if options.Timeout > 0 {
-		cctx, cancel = context.WithTimeout(context.Background(), options.Timeout)
-	} else {
-		cctx, cancel = context.WithCancel(context.Background())
-	}
-	process, err := s.manager.CreateProcess(cctx, &options)
+
+	// Spawn a new context so that the process' context is not potentially
+	// canceled by the request's. See how rest_service.go's createProcess() does
+	// this same thing.
+	pctx, cancel := context.WithCancel(context.Background())
+
+	proc, err := s.manager.CreateProcess(pctx, &opts)
 	if err != nil {
-		writeError(err, w)
+		cancel()
+		grip.Error(errors.Wrap(writeErrorReply(err, w), "error writing response after process creation failure"))
 		return
 	}
 
-	if err := process.RegisterTrigger(cctx, func(_ jasper.ProcessInfo) {
+	if err := proc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if !process.Info(cctx).Complete {
-			processBSON, err := bson.Marshal(process.Info(ctx))
-			if err != nil {
-				grip.Error(err)
-				return
-			}
-			responseOk := bsonx.EC.Int32("ok", 1)
-			processDoc, err := bsonx.ReadDocument(processBSON)
-			if err != nil {
-				grip.Error(err)
-				return
-			}
-			processSubDoc := bsonx.EC.SubDocument("info", processDoc)
-			doc := bsonx.NewDocument(responseOk, processSubDoc)
-			grip.Error(errors.Wrap(writeReply(doc, w), "could not make response to createProcess"))
-			return
+		if info := getProcInfoNoHang(ctx, proc); !info.Complete {
+			cancel()
 		}
-		cancel()
 	}
 
-	processBSON, err := bson.Marshal(process.Info(ctx))
+	info, err := bson.Marshal(getProcInfoNoHang(ctx, proc))
 	if err != nil {
-		grip.Error(err)
+		grip.Error(errors.Wrap(writeErrorReply(err, w), "error writing response after marshalling process info failure"))
 		return
 	}
 	responseOk := bsonx.EC.Int32("ok", 1)
-	processDoc, err := bsonx.ReadDocument(processBSON)
+	doc, err := bsonx.ReadDocument(info)
 	if err != nil {
-		grip.Error(err)
+		grip.Error(errors.Wrap(writeErrorReply(err, w), "could not write error response after reading document failure"))
 		return
 	}
-	processSubDoc := bsonx.EC.SubDocument("info", processDoc)
-	doc := bsonx.NewDocument(responseOk, processSubDoc)
-	grip.Error(errors.Wrap(writeReply(doc, w), "could not make response to createProcess"))
+	responseDoc := bsonx.NewDocument(responseOk, bsonx.EC.SubDocument("info", doc))
+	grip.Error(errors.Wrap(writeReply(responseDoc, w), "could not write response to createProcess"))
 }
 
-func writeError(err error, w io.Writer) error {
+func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo {
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	return p.Info(ctx)
+}
+
+func writeErrorReply(err error, w io.Writer) error {
 	responseNotOk := bsonx.EC.Int32("ok", 0)
 	errorDoc := bsonx.EC.String("error", err.Error())
 	doc := bsonx.NewDocument(responseNotOk, errorDoc)

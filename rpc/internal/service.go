@@ -233,7 +233,9 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 		cancel()
 		return nil, errors.WithStack(err)
 	}
-	_ = s.manager.Register(ctx, newProc)
+	if err := s.manager.Register(ctx, newProc); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	if err := newProc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
