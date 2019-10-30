@@ -4,16 +4,16 @@ type OpType int32
 
 const (
 	OP_REPLY         OpType = 1
-	OP_MSG                  = 1000
-	OP_UPDATE               = 2001
-	OP_INSERT               = 2002
-	RESERVED                = 2003
-	OP_QUERY                = 2004
-	OP_GET_MORE             = 2005
-	OP_DELETE               = 2006
-	OP_KILL_CURSORS         = 2007
-	OP_COMMAND              = 2010
-	OP_COMMAND_REPLY        = 2011
+	OP_MSG           OpType = 1000
+	OP_UPDATE        OpType = 2001
+	OP_INSERT        OpType = 2002
+	RESERVED         OpType = 2003
+	OP_QUERY         OpType = 2004
+	OP_GET_MORE      OpType = 2005
+	OP_DELETE        OpType = 2006
+	OP_KILL_CURSORS  OpType = 2007
+	OP_COMMAND       OpType = 2010
+	OP_COMMAND_REPLY OpType = 2011
 )
 
 func (op OpType) String() string {

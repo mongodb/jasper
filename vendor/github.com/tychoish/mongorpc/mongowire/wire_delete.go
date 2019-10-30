@@ -1,11 +1,11 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewDelete(ns string, flags int32, filter bson.Simple) Message {
+func NewDelete(ns string, flags int32, filter *birch.Document) Message {
 	return &deleteMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -23,7 +23,7 @@ func (m *deleteMessage) Scope() *OpScope       { return &OpScope{Type: m.header.
 func (m *deleteMessage) Serialize() []byte {
 	size := 16 /* header */ + 8 /* update header */
 	size += len(m.Namespace) + 1
-	size += int(m.Filter.Size)
+	size += int(getDocSize(m.Filter))
 
 	m.header.Size = int32(size)
 
@@ -40,7 +40,7 @@ func (m *deleteMessage) Serialize() []byte {
 	writeInt32(m.Flags, buf, loc)
 	loc += 4
 
-	m.Filter.Copy(&loc, buf)
+	loc += writeDocAt(loc, m.Filter, buf)
 
 	return buf
 }
@@ -73,11 +73,11 @@ func (h *MessageHeader) parseDeleteMessage(buf []byte) (Message, error) {
 	m.Flags = readInt32(buf[loc:])
 	loc += 4
 
-	m.Filter, err = bson.ParseSimple(buf[loc:])
+	m.Filter, err = birch.ReadDocument(buf[loc:])
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	loc += int(m.Filter.Size) // nolint
+	loc += int(getDocSize(m.Filter)) // nolint
 
 	return m, nil
 }

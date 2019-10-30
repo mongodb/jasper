@@ -37,6 +37,14 @@ func (o *OperationRegistry) Get(scope *mongowire.OpScope) (HandlerFunc, bool) {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
 
-	handler, ok := o.ops[*scope]
+	scopeCopy := *scope
+	if handler, ok := o.ops[scopeCopy]; ok {
+		return handler, ok
+	}
+
+	// Default to using a handler without a context if there isn't a more
+	// specific context match.
+	scopeCopy.Context = ""
+	handler, ok := o.ops[scopeCopy]
 	return handler, ok
 }

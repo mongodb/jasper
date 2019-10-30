@@ -1,11 +1,11 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewUpdate(ns string, flags int32, filter, update bson.Simple) Message {
+func NewUpdate(ns string, flags int32, filter, update *birch.Document) Message {
 	return &updateMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -25,8 +25,8 @@ func (m *updateMessage) Scope() *OpScope       { return &OpScope{Type: m.header.
 func (m *updateMessage) Serialize() []byte {
 	size := 16 /* header */ + 8 /* update header */
 	size += len(m.Namespace) + 1
-	size += int(m.Filter.Size)
-	size += int(m.Update.Size)
+	size += getDocSize(m.Filter)
+	size += getDocSize(m.Update)
 
 	m.header.Size = int32(size)
 
@@ -43,8 +43,8 @@ func (m *updateMessage) Serialize() []byte {
 	writeInt32(m.Flags, buf, loc)
 	loc += 4
 
-	m.Filter.Copy(&loc, buf)
-	m.Update.Copy(&loc, buf)
+	loc += writeDocAt(loc, m.Filter, buf)
+	loc += writeDocAt(loc, m.Update, buf)
 
 	return buf
 }
@@ -79,21 +79,21 @@ func (h *MessageHeader) parseUpdateMessage(buf []byte) (Message, error) {
 	m.Flags = readInt32(buf[loc:])
 	loc += 4
 
-	m.Filter, err = bson.ParseSimple(buf[loc:])
+	m.Filter, err = birch.ReadDocument(buf[loc:])
 	if err != nil {
 		return nil, err
 	}
-	loc += int(m.Filter.Size)
+	loc += getDocSize(m.Filter)
 
 	if len(buf) < loc {
 		return m, errors.New("invalid update message -- message length is too short")
 	}
 
-	m.Update, err = bson.ParseSimple(buf[loc:])
+	m.Update, err = birch.ReadDocument(buf[loc:])
 	if err != nil {
 		return nil, err
 	}
-	loc += int(m.Filter.Size) // nolint
+	loc += getDocSize(m.Update) // nolint
 
 	return m, nil
 }

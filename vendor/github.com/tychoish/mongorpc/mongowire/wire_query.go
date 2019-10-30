@@ -1,11 +1,11 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewQuery(ns string, flags, skip, toReturn int32, query, project bson.Simple) Message {
+func NewQuery(ns string, flags, skip, toReturn int32, query, project *birch.Document) Message {
 	return &queryMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -27,8 +27,8 @@ func (m *queryMessage) Scope() *OpScope       { return &OpScope{Type: m.header.O
 func (m *queryMessage) Serialize() []byte {
 	size := 16 /* header */ + 12 /* query header */
 	size += len(m.Namespace) + 1
-	size += int(m.Query.Size)
-	size += int(m.Project.Size)
+	size += getDocSize(m.Query)
+	size += getDocSize(m.Project)
 
 	m.header.Size = int32(size)
 
@@ -45,8 +45,8 @@ func (m *queryMessage) Serialize() []byte {
 	writeInt32(m.NReturn, buf, loc)
 	loc += 4
 
-	m.Query.Copy(&loc, buf)
-	m.Project.Copy(&loc, buf)
+	loc += writeDocAt(loc, m.Query, buf)
+	loc += writeDocAt(loc, m.Project, buf)
 
 	return buf
 }
@@ -56,22 +56,13 @@ func (m *queryMessage) convertToCommand() *CommandMessage {
 		return nil
 	}
 
-	docs, err := m.Query.ToBSOND()
-	if err != nil {
-		return nil
-	}
-
-	if len(docs) == 0 {
-		return nil
-	}
-
 	return &CommandMessage{
 		header: MessageHeader{
 			OpCode:    OP_COMMAND,
 			RequestID: 19,
 		},
 		DB:          NamespaceToDB(m.Namespace),
-		CmdName:     docs[0].Name,
+		CmdName:     m.Query.ElementAt(0).Key(),
 		CommandArgs: m.Query,
 		upconverted: true,
 	}
@@ -109,18 +100,18 @@ func (h *MessageHeader) parseQueryMessage(buf []byte) (Message, error) {
 	qm.NReturn = readInt32(buf[loc:])
 	loc += 4
 
-	qm.Query, err = bson.ParseSimple(buf[loc:])
+	qm.Query, err = birch.ReadDocument(buf[loc:])
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	loc += int(qm.Query.Size)
+	loc += getDocSize(qm.Query)
 
 	if loc < len(buf) {
-		qm.Project, err = bson.ParseSimple(buf[loc:])
+		qm.Project, err = birch.ReadDocument(buf[loc:])
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		loc += int(qm.Project.Size) // nolint
+		loc += getDocSize(qm.Project) // nolint
 	}
 
 	if NamespaceIsCommand(qm.Namespace) {

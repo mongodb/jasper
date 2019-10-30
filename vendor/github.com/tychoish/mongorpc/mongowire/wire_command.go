@@ -1,11 +1,11 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewCommand(db, name string, args, metadata bson.Simple, inputs []bson.Simple) Message {
+func NewCommand(db, name string, args, metadata *birch.Document, inputs []birch.Document) Message {
 	return &CommandMessage{
 		header: MessageHeader{
 			OpCode:    OP_COMMAND,
@@ -34,25 +34,26 @@ func (m *CommandMessage) Serialize() []byte {
 	size := 16 /* header */
 	size += len(m.DB) + 1
 	size += len(m.CmdName) + 1
-	size += int(m.CommandArgs.Size)
-	size += int(m.Metadata.Size)
+	size += getDocSize(m.CommandArgs)
+	size += getDocSize(m.Metadata)
 	for _, d := range m.InputDocs {
-		size += int(d.Size)
+		size += getDocSize(&d)
 	}
 	m.header.Size = int32(size)
 
 	buf := make([]byte, size)
 	m.header.WriteInto(buf)
 
-	loc := 16
+	loc := int64(16)
 
-	writeCString(m.DB, buf, &loc)
-	writeCString(m.CmdName, buf, &loc)
-	m.CommandArgs.Copy(&loc, buf)
-	m.Metadata.Copy(&loc, buf)
+	offset, _ := m.CommandArgs.WriteDocument(uint(loc), buf)
+	loc += offset
+	offset, _ = m.Metadata.WriteDocument(uint(loc), buf)
+	loc += offset
 
 	for _, d := range m.InputDocs {
-		d.Copy(&loc, buf)
+		offset, _ = d.WriteDocument(uint(loc), buf)
+		loc += offset
 	}
 
 	return buf
@@ -84,31 +85,48 @@ func (h *MessageHeader) parseCommandMessage(buf []byte) (Message, error) {
 	}
 	buf = buf[len(cmd.CmdName)+1:]
 
-	cmd.CommandArgs, err = bson.ParseSimple(buf)
+	cmd.CommandArgs, err = birch.ReadDocument(buf)
 	if err != nil {
 		return nil, err
 	}
-	if len(buf) < int(cmd.CommandArgs.Size) {
-		return cmd, errors.New("invalid command message -- message length is too short")
-	}
-	buf = buf[cmd.CommandArgs.Size:]
 
-	cmd.Metadata, err = bson.ParseSimple(buf)
+	size, err := cmd.CommandArgs.Validate()
 	if err != nil {
 		return nil, err
 	}
-	if len(buf) < int(cmd.Metadata.Size) {
+
+	if len(buf) < int(size) {
 		return cmd, errors.New("invalid command message -- message length is too short")
 	}
-	buf = buf[cmd.Metadata.Size:]
+	buf = buf[size:]
+
+	cmd.Metadata, err = birch.ReadDocument(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	size, err = cmd.Metadata.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(buf) < int(size) {
+		return cmd, errors.New("invalid command message -- message length is too short")
+	}
+	buf = buf[size:]
 
 	for len(buf) > 0 {
-		doc, err := bson.ParseSimple(buf)
+		doc, err := birch.ReadDocument(buf)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		buf = buf[doc.Size:]
-		cmd.InputDocs = append(cmd.InputDocs, doc)
+		size, err = doc.Validate()
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		buf = buf[size:]
+		cmd.InputDocs = append(cmd.InputDocs, *doc.Copy())
 	}
 
 	return cmd, nil

@@ -5,7 +5,7 @@ import (
 	"io"
 	"syscall"
 
-	"github.com/mongodb/ftdc/bsonx"
+	"github.com/evergreen-ci/birch"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc/mongowire"
@@ -44,7 +44,7 @@ func (s *Service) processID(ctx context.Context, w io.Writer, msg mongowire.Mess
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.String("id", proc.ID()))
+	resp := birch.NewDocument(birch.EC.String("id", proc.ID()))
 
 	writeSuccessReply(w, resp, ProcessIDCommand)
 }
@@ -73,7 +73,7 @@ func (s *Service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Me
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.SubDocument("info", info))
+	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
 
 	writeSuccessReply(w, resp, InfoCommand)
 }
@@ -96,7 +96,7 @@ func (s *Service) processRunning(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.Boolean("running", proc.Running(ctx)))
+	resp := birch.NewDocument(birch.EC.Boolean("running", proc.Running(ctx)))
 
 	writeSuccessReply(w, resp, RunningCommand)
 }
@@ -119,7 +119,7 @@ func (s *Service) processComplete(ctx context.Context, w io.Writer, msg mongowir
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.Boolean("complete", proc.Complete(ctx)))
+	resp := birch.NewDocument(birch.EC.Boolean("complete", proc.Complete(ctx)))
 
 	writeSuccessReply(w, resp, CompleteCommand)
 }
@@ -143,9 +143,9 @@ func (s *Service) processWait(ctx context.Context, w io.Writer, msg mongowire.Me
 	}
 
 	exitCode, err := proc.Wait(ctx)
-	resp := bsonx.NewDocument(bsonx.EC.Int64("exitCode", int64(exitCode)))
+	resp := birch.NewDocument(birch.EC.Int("exitCode", exitCode))
 	if err != nil {
-		resp.Append(bsonx.EC.String("error", err.Error()))
+		resp.Append(birch.EC.String("error", err.Error()))
 	}
 
 	writeSuccessReply(w, resp, WaitCommand)
@@ -181,7 +181,7 @@ func (s *Service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.SubDocument("info", info))
+	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
 
 	writeSuccessReply(w, resp, RespawnCommand)
 }
@@ -199,13 +199,20 @@ func (s *Service) processSignal(ctx context.Context, w io.Writer, msg mongowire.
 	}
 	id, ok := signalArgs.Lookup("id").StringValueOK()
 	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), SignalCommand)
+		writeErrorReply(w, errors.New("could not read process id from request"), SignalCommand)
 		return
 	}
-	sig, ok := signalArgs.Lookup("signal").Int64OK()
+
+	sigVal := signalArgs.Lookup("signal")
+	sig, ok := sigVal.IntOK()
 	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process signal from request"), SignalCommand)
-		return
+		// The mongo shell treats number literals as doubles by default.
+		sigDouble, ok := sigVal.DoubleOK()
+		sig = int(sigDouble)
+		if !ok {
+			writeErrorReply(w, errors.New("could not read signal number from request"), SignalCommand)
+			return
+		}
 	}
 
 	proc, err := s.manager.Get(ctx, id)
@@ -219,7 +226,7 @@ func (s *Service) processSignal(ctx context.Context, w io.Writer, msg mongowire.
 		return
 	}
 
-	writeSuccessReply(w, bsonx.NewDocument(), SignalCommand)
+	writeSuccessReply(w, birch.NewDocument(), SignalCommand)
 }
 
 func (s *Service) processRegisterSignalTriggerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
@@ -261,7 +268,7 @@ func (s *Service) processRegisterSignalTriggerID(ctx context.Context, w io.Write
 		return
 	}
 
-	writeSuccessReply(w, bsonx.NewDocument(), RegisterSignalTriggerIDCommand)
+	writeSuccessReply(w, birch.NewDocument(), RegisterSignalTriggerIDCommand)
 }
 
 func (s *Service) processTag(ctx context.Context, w io.Writer, msg mongowire.Message) {
@@ -294,7 +301,7 @@ func (s *Service) processTag(ctx context.Context, w io.Writer, msg mongowire.Mes
 
 	proc.Tag(tag)
 
-	writeSuccessReply(w, bsonx.NewDocument(), TagCommand)
+	writeSuccessReply(w, birch.NewDocument(), TagCommand)
 }
 
 func (s *Service) processGetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
@@ -321,7 +328,7 @@ func (s *Service) processGetTags(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.Array("tags", tags))
+	resp := birch.NewDocument(birch.EC.Array("tags", tags))
 
 	writeSuccessReply(w, resp, GetTagsCommand)
 }
@@ -346,5 +353,5 @@ func (s *Service) processResetTags(ctx context.Context, w io.Writer, msg mongowi
 
 	proc.ResetTags()
 
-	writeSuccessReply(w, bsonx.NewDocument(), GetTagsCommand)
+	writeSuccessReply(w, birch.NewDocument(), GetTagsCommand)
 }

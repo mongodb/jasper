@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/mongodb/ftdc/bsonx"
+	"github.com/evergreen-ci/birch"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
@@ -24,7 +24,7 @@ const (
 )
 
 func (s *Service) managerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp := bsonx.NewDocument(bsonx.EC.String("id", s.manager.ID()))
+	resp := birch.NewDocument(birch.EC.String("id", s.manager.ID()))
 	writeSuccessReply(w, resp, ManagerIDCommand)
 }
 
@@ -77,7 +77,7 @@ func (s *Service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 		writeErrorReply(w, errors.Wrap(err, "could not convert process info to document"), CreateProcessCommand)
 		return
 	}
-	resp := bsonx.NewDocument(bsonx.EC.SubDocument("info", info))
+	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
 	writeSuccessReply(w, resp, CreateProcessCommand)
 }
 
@@ -104,7 +104,7 @@ func (s *Service) managerList(ctx context.Context, w io.Writer, msg mongowire.Me
 		writeErrorReply(w, errors.Wrap(err, "could not convert process information to BSON array"), ListCommand)
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.Array("infos", infos))
+	resp := birch.NewDocument(birch.EC.Array("infos", infos))
 
 	writeSuccessReply(w, resp, ListCommand)
 }
@@ -133,8 +133,8 @@ func (s *Service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.M
 		return
 	}
 
-	resp := bsonx.NewDocument(
-		bsonx.EC.Array("infos", procInfos),
+	resp := birch.NewDocument(
+		birch.EC.Array("infos", procInfos),
 	)
 
 	writeSuccessReply(w, resp, GroupCommand)
@@ -164,14 +164,14 @@ func (s *Service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Mes
 		return
 	}
 
-	resp := bsonx.NewDocument(bsonx.EC.SubDocument("info", info))
+	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
 
 	writeSuccessReply(w, resp, GetCommand)
 }
 
 func (s *Service) managerClear(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	s.manager.Clear(ctx)
-	writeSuccessReply(w, bsonx.NewDocument(), ClearCommand)
+	writeSuccessReply(w, birch.NewDocument(), ClearCommand)
 }
 
 func (s *Service) managerClose(ctx context.Context, w io.Writer, msg mongowire.Message) {
@@ -179,5 +179,5 @@ func (s *Service) managerClose(ctx context.Context, w io.Writer, msg mongowire.M
 		writeErrorReply(w, err, CloseCommand)
 		return
 	}
-	writeSuccessReply(w, bsonx.NewDocument(), CloseCommand)
+	writeSuccessReply(w, birch.NewDocument(), CloseCommand)
 }

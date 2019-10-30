@@ -1,7 +1,7 @@
 package mongowire
 
 import (
-	"github.com/tychoish/mongorpc/bson"
+	"github.com/evergreen-ci/birch"
 	"github.com/tychoish/mongorpc/model"
 )
 
@@ -21,7 +21,7 @@ type replyMessage struct {
 	StartingFrom   int32
 	NumberReturned int32
 
-	Docs []bson.Simple
+	Docs []*birch.Document
 }
 
 // OP_UPDATE
@@ -32,8 +32,8 @@ type updateMessage struct {
 	Flags     int32
 	Namespace string
 
-	Filter bson.Simple
-	Update bson.Simple
+	Filter *birch.Document
+	Update *birch.Document
 }
 
 // OP_QUERY
@@ -45,8 +45,8 @@ type queryMessage struct {
 	NReturn   int32
 	Namespace string
 
-	Query   bson.Simple
-	Project bson.Simple
+	Query   *birch.Document
+	Project *birch.Document
 }
 
 // OP_GET_MORE
@@ -66,7 +66,7 @@ type insertMessage struct {
 	Flags     int32
 	Namespace string
 
-	Docs []bson.Simple
+	Docs []*birch.Document
 }
 
 // OP_DELETE
@@ -77,7 +77,7 @@ type deleteMessage struct {
 	Flags     int32
 	Namespace string
 
-	Filter bson.Simple
+	Filter *birch.Document
 }
 
 // OP_KILL_CURSORS
@@ -95,9 +95,9 @@ type CommandMessage struct {
 
 	DB          string
 	CmdName     string
-	CommandArgs bson.Simple
-	Metadata    bson.Simple
-	InputDocs   []bson.Simple
+	CommandArgs *birch.Document
+	Metadata    *birch.Document
+	InputDocs   []birch.Document
 
 	// internal bookekeeping
 	upconverted bool
@@ -107,13 +107,25 @@ type CommandMessage struct {
 type commandReplyMessage struct {
 	header MessageHeader
 
-	CommandReply bson.Simple
-	Metadata     bson.Simple
-	OutputDocs   []bson.Simple
+	CommandReply *birch.Document
+	Metadata     *birch.Document
+	OutputDocs   []birch.Document
 }
 
-func GetModel(m Message) (interface{}, OpType) {
-	switch m := m.(type) {
+// OP_MSG
+type opMessage struct {
+	header MessageHeader
+
+	Flags      uint32
+	DB         string
+	Collection string
+	Operation  string
+	Items      []opMessageSection
+	Checksum   int32
+}
+
+func GetModel(msg Message) (interface{}, OpType) {
+	switch m := msg.(type) {
 	case *CommandMessage:
 		return &model.Command{
 			DB:                 m.DB,
@@ -123,6 +135,26 @@ func GetModel(m Message) (interface{}, OpType) {
 			Inputs:             m.InputDocs,
 			ConvertedFromQuery: m.upconverted,
 		}, OP_COMMAND
+	case *opMessage:
+		op := &model.Message{
+			Database:   m.DB,
+			Collection: m.Collection,
+			Operation:  m.Operation,
+		}
+
+		switch m.Flags {
+		case 0:
+			op.Checksum = true
+		case 1:
+			op.MoreToCome = true
+		case 3:
+			op.Checksum = true
+			op.MoreToCome = true
+		}
+
+		// TODO parse sequence/payload
+
+		return op, OP_MSG
 	case *deleteMessage:
 		return &model.Delete{
 			Namespace: m.Namespace,

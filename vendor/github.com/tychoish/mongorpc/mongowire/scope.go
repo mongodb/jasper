@@ -1,6 +1,7 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
 )
 
@@ -8,6 +9,7 @@ type OpScope struct {
 	Type    OpType
 	Context string
 	Command string
+	Payload *birch.Document
 }
 
 func (s *OpScope) Validate() error {
@@ -15,10 +17,6 @@ func (s *OpScope) Validate() error {
 	case OP_COMMAND:
 		if s.Command == "" {
 			return errors.New("commands much identify a named command")
-		}
-
-		if s.Context == "" {
-			return errors.New("command ops must specify a scope (dbname only)")
 		}
 
 		return nil

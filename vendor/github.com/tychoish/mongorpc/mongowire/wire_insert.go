@@ -1,12 +1,12 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewInsertM(ns string, docs ...bson.Simple) Message {
+func NewInsert(ns string, docs ...*birch.Document) Message {
 	return &insertMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -25,7 +25,7 @@ func (m *insertMessage) Serialize() []byte {
 	size := 16 /* header */ + 4 /* update header */
 	size += len(m.Namespace) + 1
 	for _, d := range m.Docs {
-		size += int(d.Size)
+		size += int(getDocSize(d))
 	}
 
 	m.header.Size = int32(size)
@@ -41,7 +41,7 @@ func (m *insertMessage) Serialize() []byte {
 	writeCString(m.Namespace, buf, &loc)
 
 	for _, d := range m.Docs {
-		d.Copy(&loc, buf)
+		loc += writeDocAt(loc, d, buf)
 	}
 
 	return buf
@@ -71,12 +71,12 @@ func (h *MessageHeader) parseInsertMessage(buf []byte) (Message, error) {
 	loc += len(m.Namespace) + 1
 
 	for loc < len(buf) {
-		doc, err := bson.ParseSimple(buf[loc:])
+		doc, err := birch.ReadDocument(buf[loc:])
 		if err != nil {
 			return nil, err
 		}
-		m.Docs = append(m.Docs, doc)
-		loc += int(doc.Size)
+		m.Docs = append(m.Docs, doc.Copy())
+		loc += getDocSize(doc)
 	}
 
 	return m, nil

@@ -1,8 +1,8 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
 func (m *commandReplyMessage) HasResponse() bool     { return false }
@@ -11,10 +11,11 @@ func (m *commandReplyMessage) Scope() *OpScope       { return nil }
 
 func (m *commandReplyMessage) Serialize() []byte {
 	size := 16 /* header */
-	size += int(m.CommandReply.Size)
-	size += int(m.Metadata.Size)
+
+	size += getDocSize(m.CommandReply)
+	size += getDocSize(m.Metadata)
 	for _, d := range m.OutputDocs {
-		size += int(d.Size)
+		size += getDocSize(&d)
 	}
 	m.header.Size = int32(size)
 
@@ -22,12 +23,11 @@ func (m *commandReplyMessage) Serialize() []byte {
 	m.header.WriteInto(buf)
 
 	loc := 16
-
-	m.CommandReply.Copy(&loc, buf)
-	m.Metadata.Copy(&loc, buf)
+	loc += writeDocAt(loc, m.CommandReply, buf)
+	loc += writeDocAt(loc, m.Metadata, buf)
 
 	for _, d := range m.OutputDocs {
-		d.Copy(&loc, buf)
+		loc += writeDocAt(loc, &d, buf)
 	}
 
 	return buf
@@ -40,31 +40,34 @@ func (h *MessageHeader) parseCommandReplyMessage(buf []byte) (Message, error) {
 
 	var err error
 
-	rm.CommandReply, err = bson.ParseSimple(buf)
+	rm.CommandReply, err = birch.ReadDocument(buf)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if len(buf) < int(rm.CommandReply.Size) {
+
+	replySize := getDocSize(rm.CommandReply)
+	if len(buf) < replySize {
 		return nil, errors.New("invalid command message -- message length is too short")
 	}
-	buf = buf[rm.CommandReply.Size:]
+	buf = buf[replySize:]
 
-	rm.Metadata, err = bson.ParseSimple(buf)
+	rm.Metadata, err = birch.ReadDocument(buf)
 	if err != nil {
 		return nil, err
 	}
-	if len(buf) < int(rm.Metadata.Size) {
+	metaSize := getDocSize(rm.Metadata)
+	if len(buf) < metaSize {
 		return nil, errors.New("invalid command message -- message length is too short")
 	}
-	buf = buf[rm.Metadata.Size:]
+	buf = buf[metaSize:]
 
 	for len(buf) > 0 {
-		doc, err := bson.ParseSimple(buf)
+		doc, err := birch.ReadDocument(buf)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		buf = buf[doc.Size:]
-		rm.OutputDocs = append(rm.OutputDocs, doc)
+		buf = buf[getDocSize(doc):]
+		rm.OutputDocs = append(rm.OutputDocs, *doc.Copy())
 	}
 
 	return rm, nil

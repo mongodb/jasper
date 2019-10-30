@@ -1,11 +1,11 @@
 package mongowire
 
 import (
+	"github.com/evergreen-ci/birch"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/bson"
 )
 
-func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []bson.Simple) Message {
+func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []*birch.Document) Message {
 	return &replyMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -27,7 +27,7 @@ func (m *replyMessage) Scope() *OpScope       { return nil }
 func (m *replyMessage) Serialize() []byte {
 	size := 16 /* header */ + 20 /* reply header */
 	for _, d := range m.Docs {
-		size += int(d.Size)
+		size += getDocSize(d)
 	}
 	m.header.Size = int32(size)
 
@@ -41,8 +41,7 @@ func (m *replyMessage) Serialize() []byte {
 
 	loc := 36
 	for _, d := range m.Docs {
-		copy(buf[loc:], d.BSON)
-		loc += len(d.BSON)
+		loc += writeDocAt(loc, d, buf)
 	}
 
 	return buf
@@ -72,12 +71,12 @@ func (h *MessageHeader) parseReplyMessage(buf []byte) (Message, error) {
 	loc += 4
 
 	for loc < len(buf) {
-		doc, err := bson.ParseSimple(buf[loc:])
+		doc, err := birch.ReadDocument(buf[loc:])
 		if err != nil {
 			return nil, err
 		}
 		rm.Docs = append(rm.Docs, doc)
-		loc += int(doc.Size)
+		loc += getDocSize(doc)
 	}
 
 	return rm, nil

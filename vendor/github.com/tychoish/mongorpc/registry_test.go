@@ -117,3 +117,41 @@ func (s *RegistrySuite) TestOpsAreRetreivable() {
 	s.NotNil(h)
 	s.Equal(fmt.Sprint(h), fmt.Sprint(s.handler))
 }
+
+func (s *RegistrySuite) TestOpsWithContextFallBackToNoContext() {
+	op := mongowire.OpScope{
+		Type:    mongowire.OP_COMMAND,
+		Context: "foo",
+		Command: "bar",
+	}
+
+	noContextOp := op
+	noContextOp.Context = ""
+	s.NoError(s.registry.Add(noContextOp, s.handler))
+	h, ok := s.registry.Get(&op)
+	s.True(ok)
+	s.NotNil(h)
+	s.Equal(fmt.Sprint(s.handler), fmt.Sprint(h))
+}
+
+func (s *RegistrySuite) TestOpsWithoutContextFallBackToNoContext() {
+	op := mongowire.OpScope{
+		Type:    mongowire.OP_COMMAND,
+		Context: "foo",
+		Command: "bar",
+	}
+
+	noContextOp := op
+	noContextOp.Context = ""
+	s.NoError(s.registry.Add(op, s.handler))
+	h, ok := s.registry.Get(&noContextOp)
+	s.False(ok)
+	s.Nil(h)
+
+	var noContextHandler HandlerFunc = func(ctx context.Context, w io.Writer, m mongowire.Message) {}
+	s.NoError(s.registry.Add(noContextOp, noContextHandler))
+	h, ok = s.registry.Get(&noContextOp)
+	s.True(ok)
+	s.NotNil(h)
+	s.Equal(fmt.Sprint(noContextHandler), fmt.Sprint(h))
+}
