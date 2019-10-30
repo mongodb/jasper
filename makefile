@@ -29,13 +29,13 @@ build:compile
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
 test-%:$(buildDir)/output.%.test
-	@grep -s -q -e "^PASS" $<
+	
 coverage-%:$(buildDir)/output.%.coverage
-	@grep -s -q -e "^PASS" $(buildDir)/output.$*.test
+	
 html-coverage-%:$(buildDir)/output.%.coverage.html
-	@grep -s -q -e "^PASS" $(buildDir)/output.$*.test
+	
 lint-%:$(buildDir)/output.%.lint
-	@grep -v -s -q "^--- FAIL" $<
+	
 # end convienence targets
 
 
@@ -89,14 +89,11 @@ endif
 ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
-ifneq (,$(DISABLE_COVERAGE))
+ifeq (,$(DISABLE_COVERAGE))
 testArgs += -cover
 endif
 ifneq (,$(RACE_DETECTOR))
 testArgs += -race
-endif
-ifneq (,$(SKIP_LONG))
-testArgs += -short
 endif
 # test execution and output handlers
 $(buildDir)/:
@@ -104,7 +101,7 @@ $(buildDir)/:
 
 $(buildDir)/output.%.test:$(buildDir)/ .FORCE
 	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
-	@! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@
+	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
 $(buildDir)/output.test:$(buildDir)/ .FORCE
 	go test $(testArgs) ./... | tee $@
 	@! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@
@@ -132,7 +129,8 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir)/ .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
-phony += lint lint-deps build build-race race test coverage coverage-html list-race list-tests
+phony += lint build race test coverage coverage-html
+.PHONY: $(phony)
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
@@ -223,4 +221,5 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
-	find vendor -type d -empty | xargs rm -rf
+	find vendor/ -type d -empty | xargs rm -rf
+	find vendor/ -type d -name '.git' | xargs rm -rf
