@@ -82,179 +82,45 @@ func (s *Service) listCollections(ctx context.Context, w io.Writer, msg mongowir
 }
 
 func (s *Service) registerHandlers() error {
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: IsMasterCommand,
-	}, s.isMaster); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", IsMasterCommand)
-	}
+	for name, handler := range map[string]mongorpc.HandlerFunc{
+		// Required initialization commands
+		IsMasterCommand:                s.isMaster,
+		WhatsMyURICommand:              s.whatsMyURI,
+		BuildinfoCommand:               s.buildInfo,
+		BuildInfoCommand:               s.buildInfo,
+		GetLogCommand:                  s.getLog,
+		ReplSetGetStatusCommand:        s.replSetGetStatus,
+		GetFreeMonitoringStatusCommand: s.getFreeMonitoringStatus,
+		ListCollectionsCommand:         s.listCollections,
 
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: WhatsMyURICommand,
-	}, s.whatsMyURI); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", WhatsMyURICommand)
-	}
+		// Manager commands
+		ManagerIDCommand:     s.managerID,
+		CreateProcessCommand: s.managerCreateProcess,
+		ListCommand:          s.managerList,
+		GroupCommand:         s.managerGroup,
+		GetCommand:           s.managerGet,
+		ClearCommand:         s.managerClear,
+		CloseCommand:         s.managerClose,
 
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: BuildinfoCommand,
-	}, s.buildInfo); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", BuildinfoCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: BuildInfoCommand,
-	}, s.buildInfo); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", BuildInfoCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: GetLogCommand,
-	}, s.getLog); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", GetLogCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: GetFreeMonitoringStatusCommand,
-	}, s.getFreeMonitoringStatus); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", GetFreeMonitoringStatusCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: ReplSetGetStatusCommand,
-	}, s.replSetGetStatus); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", ReplSetGetStatusCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: ListCollectionsCommand,
-	}, s.listCollections); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", ListCollectionsCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: CreateProcessCommand,
-	}, s.managerCreateProcess); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", CreateProcessCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: ListCommand,
-	}, s.managerList); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", ListCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: GroupCommand,
-	}, s.managerGroup); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", GroupCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: GetCommand,
-	}, s.managerGet); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", GetCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: ClearCommand,
-	}, s.managerClear); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", ClearCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: CloseCommand,
-	}, s.managerClose); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", CloseCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: ProcessIDCommand,
-	}, s.processID); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", ProcessIDCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: InfoCommand,
-	}, s.processInfo); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", InfoCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: RunningCommand,
-	}, s.processRunning); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", RunningCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: CompleteCommand,
-	}, s.processComplete); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", CompleteCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: WaitCommand,
-	}, s.processWait); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", WaitCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: RespawnCommand,
-	}, s.processRespawn); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", RespawnCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: SignalCommand,
-	}, s.processSignal); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", SignalCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: RegisterSignalTriggerIDCommand,
-	}, s.processRegisterSignalTriggerID); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", RegisterSignalTriggerIDCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: TagCommand,
-	}, s.processTag); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", TagCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: GetTagsCommand,
-	}, s.processGetTags); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", GetTagsCommand)
-	}
-
-	if err := s.RegisterOperation(&mongowire.OpScope{
-		Type:    mongowire.OP_COMMAND,
-		Command: ResetTagsCommand,
-	}, s.processResetTags); err != nil {
-		return errors.Wrapf(err, "could not register handler for %s", ResetTagsCommand)
+		// Process commands
+		ProcessIDCommand:               s.processID,
+		InfoCommand:                    s.processInfo,
+		RunningCommand:                 s.processRunning,
+		CompleteCommand:                s.processComplete,
+		WaitCommand:                    s.processWait,
+		SignalCommand:                  s.processSignal,
+		RegisterSignalTriggerIDCommand: s.processRegisterSignalTriggerID,
+		RespawnCommand:                 s.processRespawn,
+		TagCommand:                     s.processTag,
+		GetTagsCommand:                 s.processGetTags,
+		ResetTagsCommand:               s.processResetTags,
+	} {
+		if err := s.RegisterOperation(&mongowire.OpScope{
+			Type:    mongowire.OP_COMMAND,
+			Command: name,
+		}, handler); err != nil {
+			return errors.Wrapf(err, "could not register handler for %s", name)
+		}
 	}
 
 	return nil
