@@ -6,13 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -148,13 +145,6 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd *
 				} else {
 					info.Successful = (err == nil)
 				}
-
-				grip.Debug(message.WrapError(err, message.Fields{
-					"id":           p.ID,
-					"cmd":          strings.Join(p.opts.Args, " "),
-					"success":      info.Successful,
-					"num_triggers": len(p.triggers),
-				}))
 			}()
 
 			p.mu.RLock()
