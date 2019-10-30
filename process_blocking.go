@@ -17,7 +17,6 @@ import (
 
 type blockingProcess struct {
 	id       string
-	opts     options.Create
 	ops      chan func(*exec.Cmd)
 	complete chan struct{}
 	err      error
@@ -40,7 +39,6 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 
 	p := &blockingProcess{
 		id:       id,
-		opts:     *opts,
 		tags:     make(map[string]struct{}),
 		ops:      make(chan func(*exec.Cmd)),
 		complete: make(chan struct{}),
@@ -378,7 +376,7 @@ func (p *blockingProcess) Tag(t string) {
 	}
 
 	p.tags[t] = struct{}{}
-	p.opts.Tags = append(p.opts.Tags, t)
+	p.info.Options.Tags = append(p.info.Options.Tags, t)
 }
 
 func (p *blockingProcess) ResetTags() {
@@ -386,7 +384,7 @@ func (p *blockingProcess) ResetTags() {
 	defer p.mu.Unlock()
 
 	p.tags = make(map[string]struct{})
-	p.opts.Tags = []string{}
+	p.info.Options.Tags = []string{}
 }
 
 func (p *blockingProcess) GetTags() []string {
