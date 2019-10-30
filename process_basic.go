@@ -210,11 +210,15 @@ func (p *basicProcess) Tag(t string) {
 	}
 
 	p.tags[t] = struct{}{}
+	p.Lock()
+	defer p.Unlock()
 	p.info.Options.Tags = append(p.info.Options.Tags, t)
 }
 
 func (p *basicProcess) ResetTags() {
 	p.tags = make(map[string]struct{})
+	p.Lock()
+	defer p.Unlock()
 	p.info.Options.Tags = []string{}
 }
 
