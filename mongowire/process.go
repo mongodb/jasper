@@ -26,7 +26,7 @@ const (
 )
 
 func (s *service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractProcessInfoRequest(msg)
+	req, err := ExtractInfoRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), InfoCommand)
 		return
@@ -172,9 +172,9 @@ func (s *service) processRegisterSignalTriggerID(ctx context.Context, w io.Write
 		return
 	}
 	procID := req.Params.ID
-	sigID := int(req.Params.SignalTriggerID)
+	sigID := req.Params.SignalTriggerID
 
-	makeTrigger, ok := jasper.GetSignalTriggerFactory(jasper.SignalTriggerID(sigID))
+	makeTrigger, ok := jasper.GetSignalTriggerFactory(sigID)
 	if !ok {
 		writeErrorReply(w, errors.Wrap(err, "could not get signal trigger for ID"), RegisterSignalTriggerIDCommand)
 		return

@@ -11,6 +11,7 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc/mongowire"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo {
@@ -19,7 +20,61 @@ func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo
 	return p.Info(ctx)
 }
 
-func requestToDocument(msg mongowire.Message) (*birch.Document, error) {
+func messageToResponse(msg mongowire.Message, out interface{}) error {
+	doc, err := responseMessageToDocument(msg)
+	if err != nil {
+		return errors.Wrap(err, "could not read response")
+	}
+	b, err := doc.MarshalBSON()
+	if err != nil {
+		return errors.Wrap(err, "could not convert document to BSON")
+	}
+	if err := bson.Unmarshal(b, out); err != nil {
+		return errors.Wrap(err, "could not convert BSON to response")
+	}
+	return nil
+}
+
+func messageToRequest(msg mongowire.Message, out interface{}) error {
+	doc, err := requestMessageToDocument(msg)
+	if err != nil {
+		return errors.Wrap(err, "could not read response")
+	}
+	b, err := doc.MarshalBSON()
+	if err != nil {
+		return errors.Wrap(err, "could not convert document to BSON")
+	}
+	if err := bson.Unmarshal(b, out); err != nil {
+		return errors.Wrap(err, "could not convert BSON to response")
+	}
+	return nil
+}
+
+func responseToMessage(resp interface{}) (mongowire.Message, error) {
+	b, err := bson.Marshal(resp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert response to BSON")
+	}
+	doc, err := birch.ReadDocument(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert BSON response to document")
+	}
+	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+}
+
+func requestToMessage(req interface{}) (mongowire.Message, error) {
+	b, err := bson.Marshal(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert response to BSON")
+	}
+	doc, err := birch.ReadDocument(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert BSON response to document")
+	}
+	return mongowire.NewQuery(namespace, 0, 0, 1, doc, birch.NewDocument()), nil
+}
+
+func requestMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	cmdMsg, ok := msg.(*mongowire.CommandMessage)
 	if !ok {
 		return nil, errors.Errorf("message is not of type %s", mongowire.OP_COMMAND.String())
@@ -27,7 +82,7 @@ func requestToDocument(msg mongowire.Message) (*birch.Document, error) {
 	return cmdMsg.CommandArgs, nil
 }
 
-func responseToDocument(msg mongowire.Message) (*birch.Document, error) {
+func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	if replyMsg, ok := msg.(*mongowire.ReplyMessage); ok {
 		return replyMsg.Docs[0], nil
 	}

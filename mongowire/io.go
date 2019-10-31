@@ -1,12 +1,9 @@
 package mongowire
 
 import (
-	"github.com/evergreen-ci/birch"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc/mongowire"
-	"gopkg.in/mgo.v2/bson"
 )
 
 func intOK(ok bool) int {
@@ -36,69 +33,35 @@ func makeSuccessResponse() ErrorResponse {
 }
 
 func (r ErrorResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractErrorResponse(msg mongowire.Message) (ErrorResponse, error) {
-	resp := ErrorResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := ErrorResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
-type ProcessInfoRequest struct {
+type InfoRequest struct {
 	ID string `bson:"info"`
 }
 
-func makeProcessInfoRequest(id string) ProcessInfoRequest {
-	return ProcessInfoRequest{ID: id}
+func makeInfoRequest(id string) InfoRequest {
+	return InfoRequest{ID: id}
 }
 
-func (r ProcessInfoRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+func (r InfoRequest) Message() (mongowire.Message, error) {
+	return requestToMessage(r)
 }
 
-func ExtractProcessInfoRequest(msg mongowire.Message) (ProcessInfoRequest, error) {
-	resp := ProcessInfoRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+func ExtractInfoRequest(msg mongowire.Message) (InfoRequest, error) {
+	r := InfoRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type RunningRequest struct {
@@ -110,32 +73,15 @@ func makeRunningRequest(id string) RunningRequest {
 }
 
 func (r RunningRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractRunningRequest(msg mongowire.Message) (RunningRequest, error) {
-	resp := RunningRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := RunningRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type RunningResponse struct {
@@ -148,32 +94,15 @@ func makeRunningResponse(running bool) RunningResponse {
 }
 
 func (r RunningResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractRunningResponse(msg mongowire.Message) (RunningResponse, error) {
-	resp := RunningResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := RunningResponse{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type CompleteRequest struct {
@@ -185,32 +114,15 @@ func makeCompleteRequest(id string) CompleteRequest {
 }
 
 func (r CompleteRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractCompleteRequest(msg mongowire.Message) (CompleteRequest, error) {
-	resp := CompleteRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := CompleteRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type CompleteResponse struct {
@@ -223,32 +135,15 @@ func makeCompleteResponse(complete bool) CompleteResponse {
 }
 
 func (r CompleteResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractCompleteResponse(msg mongowire.Message) (CompleteResponse, error) {
-	resp := CompleteResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := CompleteResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type WaitRequest struct {
@@ -260,32 +155,15 @@ func makeWaitRequest(id string) WaitRequest {
 }
 
 func (r WaitRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractWaitRequest(msg mongowire.Message) (WaitRequest, error) {
-	resp := WaitRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := WaitRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type WaitResponse struct {
@@ -298,32 +176,15 @@ func makeWaitResponse(exitCode int, err error) WaitResponse {
 }
 
 func (r WaitResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractWaitResponse(msg mongowire.Message) (WaitResponse, error) {
-	resp := WaitResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := WaitResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type RespawnRequest struct {
@@ -335,32 +196,15 @@ func makeRespawnRequest(id string) RespawnRequest {
 }
 
 func (r RespawnRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractRespawnRequest(msg mongowire.Message) (RespawnRequest, error) {
-	resp := RespawnRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := RespawnRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type SignalRequest struct {
@@ -378,75 +222,41 @@ func makeSignalRequest(id string, signal int) SignalRequest {
 }
 
 func (r SignalRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractSignalRequest(msg mongowire.Message) (SignalRequest, error) {
-	resp := SignalRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := SignalRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type RegisterSignalTriggerIDRequest struct {
 	Params struct {
-		ID              string  `bson:"id"`
-		SignalTriggerID float64 `bson:"signal_trigger_id"` // The mongo shell sends integers as doubles by default
+		ID              string                 `bson:"id"`
+		SignalTriggerID jasper.SignalTriggerID `bson:"signal_trigger_id"`
 	} `bson:"register_signal_trigger_id"`
 }
 
-func makeRegisterSignalTriggerIDRequest(id string, sigID int) RegisterSignalTriggerIDRequest {
+func makeRegisterSignalTriggerIDRequest(id string, sigID jasper.SignalTriggerID) RegisterSignalTriggerIDRequest {
 	req := RegisterSignalTriggerIDRequest{}
 	req.Params.ID = id
-	req.Params.SignalTriggerID = float64(sigID)
+	req.Params.SignalTriggerID = sigID
 	return req
 }
 
 func (r RegisterSignalTriggerIDRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractRegisterSignalTriggerIDRequest(msg mongowire.Message) (RegisterSignalTriggerIDRequest, error) {
-	resp := RegisterSignalTriggerIDRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := RegisterSignalTriggerIDRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type TagRequest struct {
@@ -464,32 +274,15 @@ func makeTagRequest(id, tag string) TagRequest {
 }
 
 func (r TagRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractTagRequest(msg mongowire.Message) (TagRequest, error) {
-	resp := TagRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := TagRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type GetTagsRequest struct {
@@ -501,32 +294,15 @@ func makeGetTagsRequest(id string) GetTagsRequest {
 }
 
 func (r GetTagsRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractGetTagsRequest(msg mongowire.Message) (GetTagsRequest, error) {
-	resp := GetTagsRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := GetTagsRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type GetTagsResponse struct {
@@ -539,32 +315,15 @@ func makeGetTagsResponse(tags []string) GetTagsResponse {
 }
 
 func (r GetTagsResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractGetTagsResponse(msg mongowire.Message) (GetTagsResponse, error) {
-	resp := GetTagsResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := GetTagsResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type ResetTagsRequest struct {
@@ -576,32 +335,35 @@ func makeResetTagsRequest(id string) ResetTagsRequest {
 }
 
 func (r ResetTagsRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractResetTagsRequest(msg mongowire.Message) (ResetTagsRequest, error) {
-	resp := ResetTagsRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := ResetTagsRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
+	return r, nil
+}
+
+type IDRequest struct {
+	ID int `bson:"id"`
+}
+
+func makeIDRequest() IDRequest {
+	return IDRequest{ID: 1}
+}
+
+func (r IDRequest) Message() (mongowire.Message, error) {
+	return requestToMessage(r)
+}
+
+func ExtractIDRequest(msg mongowire.Message) (IDRequest, error) {
+	r := IDRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type IDResponse struct {
@@ -614,32 +376,15 @@ func makeIDResponse(id string) IDResponse {
 }
 
 func (r IDResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractIDResponse(msg mongowire.Message) (IDResponse, error) {
-	resp := IDResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := IDResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type WhatsMyURIResponse struct {
@@ -652,32 +397,15 @@ func makeWhatsMyURIResponse(uri string) WhatsMyURIResponse {
 }
 
 func (r WhatsMyURIResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractWhatsMyURIResponse(msg mongowire.Message) (WhatsMyURIResponse, error) {
-	resp := WhatsMyURIResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := WhatsMyURIResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type BuildInfoResponse struct {
@@ -690,32 +418,15 @@ func makeBuildInfoResponse(version string) BuildInfoResponse {
 }
 
 func (r BuildInfoResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractBuildInfoResponse(msg mongowire.Message) (BuildInfoResponse, error) {
-	resp := BuildInfoResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := BuildInfoResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type GetLogResponse struct {
@@ -728,32 +439,15 @@ func makeGetLogResponse(log []string) GetLogResponse {
 }
 
 func (r GetLogResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractGetLogResponse(msg mongowire.Message) (GetLogResponse, error) {
-	resp := GetLogResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := GetLogResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type CreateProcessRequest struct {
@@ -765,32 +459,15 @@ func makeCreateProcessRequest(opts options.Create) CreateProcessRequest {
 }
 
 func (r CreateProcessRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	// return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractCreateProcessRequest(msg mongowire.Message) (CreateProcessRequest, error) {
-	resp := CreateProcessRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not vonert")
+	r := CreateProcessRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type ListRequest struct {
@@ -802,32 +479,15 @@ func makeListRequest(filter options.Filter) ListRequest {
 }
 
 func (r ListRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	// return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractListRequest(msg mongowire.Message) (ListRequest, error) {
-	resp := ListRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := ListRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type GroupRequest struct {
@@ -839,31 +499,15 @@ func makeGroupRequest(tag string) GroupRequest {
 }
 
 func (r GroupRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
+	return requestToMessage(r)
 }
 
 func ExtractGroupRequest(msg mongowire.Message) (GroupRequest, error) {
-	resp := GroupRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := GroupRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type GetRequest struct {
@@ -875,32 +519,15 @@ func makeGetRequest(id string) GetRequest {
 }
 
 func (r GetRequest) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	// return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return requestToMessage(r)
 }
 
 func ExtractGetRequest(msg mongowire.Message) (GetRequest, error) {
-	resp := GetRequest{}
-	doc, err := requestToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := GetRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type InfoResponse struct {
@@ -913,32 +540,15 @@ func makeInfoResponse(info jasper.ProcessInfo) InfoResponse {
 }
 
 func (r InfoResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractInfoResponse(msg mongowire.Message) (InfoResponse, error) {
-	resp := InfoResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := InfoResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
-	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
-	}
-	return resp, nil
+	return r, nil
 }
 
 type InfosResponse struct {
@@ -951,30 +561,53 @@ func makeInfosResponse(infos []jasper.ProcessInfo) InfosResponse {
 }
 
 func (r InfosResponse) Message() (mongowire.Message, error) {
-	b, err := bson.Marshal(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert response to BSON")
-	}
-	doc, err := birch.ReadDocument(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert BSON response to document")
-	}
-	// return mongowire.NewCommandReply(doc, birch.NewDocument(), []birch.Document{}), nil
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return responseToMessage(r)
 }
 
 func ExtractInfosResponse(msg mongowire.Message) (InfosResponse, error) {
-	resp := InfosResponse{}
-	doc, err := responseToDocument(msg)
-	if err != nil {
-		return resp, errors.Wrap(err, "could not read response")
+	r := InfosResponse{}
+	if err := messageToResponse(msg, &r); err != nil {
+		return r, err
 	}
-	b, err := doc.MarshalBSON()
-	if err != nil {
-		return resp, errors.Wrap(err, "could not convert document to BSON")
+	return r, nil
+}
+
+type ClearRequest struct {
+	Clear int `bson:"clear"`
+}
+
+func makeClearRequest() ClearRequest {
+	return ClearRequest{Clear: 1}
+}
+
+func (r ClearRequest) Message() (mongowire.Message, error) {
+	return requestToMessage(r)
+}
+
+func ExtractClearRequest(msg mongowire.Message) (ClearRequest, error) {
+	r := ClearRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	if err := bson.Unmarshal(b, &resp); err != nil {
-		return resp, errors.Wrap(err, "could not convert BSON to response")
+	return r, nil
+}
+
+type CloseRequest struct {
+	Close int `bson:"close"`
+}
+
+func makeCloseRequest() CloseRequest {
+	return CloseRequest{Close: 1}
+}
+
+func (r CloseRequest) Message() (mongowire.Message, error) {
+	return requestToMessage(r)
+}
+
+func ExtractCloseRequest(msg mongowire.Message) (CloseRequest, error) {
+	r := CloseRequest{}
+	if err := messageToRequest(msg, &r); err != nil {
+		return r, err
 	}
-	return resp, nil
+	return r, nil
 }
