@@ -71,10 +71,6 @@ Quirks
   response, and the framework cannot ensure that OP_COMMAND requests
   get OP_COMMAND_REPLY messages.
 
-- While the ``mongorpc/bson`` package implements ``bson`` parsing, it
-  does still depend on the ``mgo/bson`` package for marshaling and
-  unmarshalling. There are unmarshalling helpers to convert into
-  ``mgo/bson`` types or into other Go native types.
 
 Dependencies
 ------------
@@ -83,6 +79,4 @@ Currently, ``mongorpc`` does not vendor its dependencies, and uses:
 
 - `github.com/mongodb/grip <https://github.com/mongodb/grip>`_ (for logging)
 - `github.com/pkg/errors <https;//github.com/pkg/errors>`_ (for error annotation.)
-- `golang.org/x/net/context <https://godoc.org/golang.org/x/net/context>`_
-  (to provide context.Context for pre-go1.7 versions)
-- `gopkg.in/mgo.v2/bson <https://gopkg.in/mgo.v2/bson>`_
+- `github.com/evergreen-ci/birch <https://github.com/evergreen-ci/birch>`_ (for bson parsing)

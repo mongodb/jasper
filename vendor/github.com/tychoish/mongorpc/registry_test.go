@@ -1,6 +1,7 @@
 package mongorpc
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"testing"
@@ -8,7 +9,6 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/suite"
 	"github.com/tychoish/mongorpc/mongowire"
-	"golang.org/x/net/context"
 )
 
 type RegistrySuite struct {

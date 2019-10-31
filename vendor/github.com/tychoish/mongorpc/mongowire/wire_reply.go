@@ -6,7 +6,7 @@ import (
 )
 
 func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []*birch.Document) Message {
-	return &replyMessage{
+	return &ReplyMessage{
 		header: MessageHeader{
 			RequestID: 19,
 			OpCode:    OP_REPLY,
@@ -20,11 +20,11 @@ func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []*bi
 }
 
 // because its a response
-func (m *replyMessage) HasResponse() bool     { return false }
-func (m *replyMessage) Header() MessageHeader { return m.header }
-func (m *replyMessage) Scope() *OpScope       { return nil }
+func (m *ReplyMessage) HasResponse() bool     { return false }
+func (m *ReplyMessage) Header() MessageHeader { return m.header }
+func (m *ReplyMessage) Scope() *OpScope       { return nil }
 
-func (m *replyMessage) Serialize() []byte {
+func (m *ReplyMessage) Serialize() []byte {
 	size := 16 /* header */ + 20 /* reply header */
 	for _, d := range m.Docs {
 		size += getDocSize(d)
@@ -54,7 +54,7 @@ func (h *MessageHeader) parseReplyMessage(buf []byte) (Message, error) {
 		return nil, errors.New("invalid reply message -- message must have length of at least 20 bytes")
 	}
 
-	rm := &replyMessage{
+	rm := &ReplyMessage{
 		header: *h,
 	}
 

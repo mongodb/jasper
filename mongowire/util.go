@@ -11,7 +11,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc/mongowire"
-	"gopkg.in/mgo.v2/bson"
 )
 
 func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo {
@@ -20,7 +19,7 @@ func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo
 	return p.Info(ctx)
 }
 
-func messageToDocument(msg mongowire.Message) (*birch.Document, error) {
+func requestToDocument(msg mongowire.Message) (*birch.Document, error) {
 	cmdMsg, ok := msg.(*mongowire.CommandMessage)
 	if !ok {
 		return nil, errors.Errorf("message is not of type %s", mongowire.OP_COMMAND.String())
@@ -28,50 +27,57 @@ func messageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	return cmdMsg.CommandArgs, nil
 }
 
-func procInfosToArray(ctx context.Context, procs []jasper.Process) (*birch.Array, error) {
-	infos := birch.MakeArray(len(procs))
-	for _, proc := range procs {
-		info, err := procInfoToDocument(proc.Info(ctx))
-		if err != nil {
-			return infos, errors.Wrapf(err, "could not convert process info to document for process %s", proc.ID())
-		}
-		infos.Append(birch.VC.Document(info))
+func responseToDocument(msg mongowire.Message) (*birch.Document, error) {
+	if replyMsg, ok := msg.(*mongowire.ReplyMessage); ok {
+		return replyMsg.Docs[0], nil
 	}
-	return infos, nil
+	if cmdReplyMsg, ok := msg.(*mongowire.CommandReplyMessage); ok {
+		return cmdReplyMsg.CommandReply, nil
+	}
+	return nil, errors.Errorf("message is not of type %s nor %s", mongowire.OP_COMMAND_REPLY.String(), mongowire.OP_REPLY.String())
 }
 
-func procInfoToDocument(info jasper.ProcessInfo) (*birch.Document, error) {
-	infoBytes, err := bson.Marshal(info)
+func writeOKReply(w io.Writer, op string) {
+	resp := makeErrorResponse(true, nil)
+	msg, err := resp.Message()
 	if err != nil {
-		return nil, err
+		grip.Error(message.WrapError(err, message.Fields{
+			"message": "could not write response",
+			"op":      op,
+		}))
+		return
 	}
-	return birch.ReadDocument(infoBytes)
+	writeReply(w, msg, op)
 }
 
-func procTagsToArray(proc jasper.Process) (*birch.Array, error) {
-	procTags := proc.GetTags()
-	tags := birch.MakeArray(len(procTags))
-	for _, tag := range procTags {
-		tags.Append(birch.VC.String(tag))
+func writeNotOKReply(w io.Writer, op string) {
+	resp := makeErrorResponse(false, nil)
+	msg, err := resp.Message()
+	if err != nil {
+		grip.Error(message.WrapError(err, message.Fields{
+			"message": "could not write response",
+			"op":      op,
+		}))
+		return
 	}
-	return tags, nil
+	writeReply(w, msg, op)
 }
 
 func writeErrorReply(w io.Writer, err error, op string) {
-	errorDoc := birch.EC.String("error", err.Error())
-	doc := birch.NewDocument(notOKResp, errorDoc)
-	writeReply(w, doc, op)
+	resp := makeErrorResponse(false, err)
+	msg, err := resp.Message()
+	if err != nil {
+		grip.Error(message.WrapError(err, message.Fields{
+			"message": "could not write response",
+			"op":      op,
+		}))
+		return
+	}
+	writeReply(w, msg, op)
 }
 
-func writeSuccessReply(w io.Writer, doc *birch.Document, op string) {
-	doc.Prepend(okResp)
-	writeReply(w, doc, op)
-}
-
-func writeReply(w io.Writer, doc *birch.Document, op string) {
-	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []*birch.Document{doc})
-	_, err := w.Write(reply.Serialize())
-	grip.Error(message.WrapError(err, message.Fields{
+func writeReply(w io.Writer, msg mongowire.Message, op string) {
+	grip.Error(message.WrapError(mongowire.SendMessage(msg, w), message.Fields{
 		"message": "could not write response",
 		"op":      op,
 	}))

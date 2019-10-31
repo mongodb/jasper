@@ -5,11 +5,23 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (m *commandReplyMessage) HasResponse() bool     { return false }
-func (m *commandReplyMessage) Header() MessageHeader { return m.header }
-func (m *commandReplyMessage) Scope() *OpScope       { return nil }
+func NewCommandReply(reply, metadata *birch.Document, output []birch.Document) Message {
+	return &CommandReplyMessage{
+		header: MessageHeader{
+			OpCode:    OP_COMMAND_REPLY,
+			RequestID: 19,
+		},
+		CommandReply: reply,
+		Metadata:     metadata,
+		OutputDocs:   output,
+	}
+}
 
-func (m *commandReplyMessage) Serialize() []byte {
+func (m *CommandReplyMessage) HasResponse() bool     { return false }
+func (m *CommandReplyMessage) Header() MessageHeader { return m.header }
+func (m *CommandReplyMessage) Scope() *OpScope       { return nil }
+
+func (m *CommandReplyMessage) Serialize() []byte {
 	size := 16 /* header */
 
 	size += getDocSize(m.CommandReply)
@@ -34,7 +46,7 @@ func (m *commandReplyMessage) Serialize() []byte {
 }
 
 func (h *MessageHeader) parseCommandReplyMessage(buf []byte) (Message, error) {
-	rm := &commandReplyMessage{
+	rm := &CommandReplyMessage{
 		header: *h,
 	}
 

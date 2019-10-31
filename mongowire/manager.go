@@ -4,18 +4,15 @@ import (
 	"context"
 	"io"
 
-	"github.com/evergreen-ci/birch"
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc/mongowire"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // Constants representing manager commands.
 const (
-	ManagerIDCommand     = "managerID"
-	CreateProcessCommand = "createProcess"
+	ManagerIDCommand     = "id"
+	CreateProcessCommand = "create_process"
 	GetCommand           = "get"
 	ListCommand          = "list"
 	GroupCommand         = "group"
@@ -23,34 +20,27 @@ const (
 	CloseCommand         = "close"
 )
 
-func (s *Service) managerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp := birch.NewDocument(birch.EC.String("id", s.manager.ID()))
-	writeSuccessReply(w, resp, ManagerIDCommand)
+// managerID replies with a document of the form:
+//     {"id": string}
+func (s *service) managerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	resp, err := makeIDResponse(s.manager.ID()).Message()
+	if err != nil {
+		writeErrorReply(w, errors.New("could not make response"), ManagerIDCommand)
+		return
+	}
+	writeReply(w, resp, ManagerIDCommand)
 }
 
-func (s *Service) managerCreateProcess(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+// managerCreateProcess replies with a document of the form:
+//     {"ok": bool, "info": document}
+func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractCreateProcessRequest(msg)
 	if err != nil {
-		writeErrorReply(w, errors.New("could not read request"), CreateProcessCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not read request"), CreateProcessCommand)
 		return
 	}
-	optsValue, ok := req.Lookup(CreateProcessCommand).MutableDocumentOK()
-	if !ok {
-		writeErrorReply(w, errors.New("could not read process create options from request"), CreateProcessCommand)
-		return
-	}
-	optsBytes, err := optsValue.MarshalBSON()
-	if err != nil {
-		err = errors.Wrap(err, "could not convert process create options to BSON")
-		writeErrorReply(w, err, CreateProcessCommand)
-		return
-	}
-	opts := options.Create{}
-	err = bson.Unmarshal(optsBytes, &opts)
-	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert BSON to process create options"), CreateProcessCommand)
-		return
-	}
+
+	opts := req.Options
 
 	// Spawn a new context so that the process' context is not potentially
 	// canceled by the request's. See how rest_service.go's createProcess() does
@@ -72,54 +62,50 @@ func (s *Service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 		}
 	}
 
-	info, err := procInfoToDocument(getProcInfoNoHang(ctx, proc))
+	resp, err := makeInfoResponse(getProcInfoNoHang(ctx, proc)).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert process info to document"), CreateProcessCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), CreateProcessCommand)
 		return
 	}
-	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
-	writeSuccessReply(w, resp, CreateProcessCommand)
+	writeReply(w, resp, CreateProcessCommand)
 }
 
-func (s *Service) managerList(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+// managerList replies with a document of the form:
+//     {"ok": bool, "infos": [documents...]}
+func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractListRequest(msg)
 	if err != nil {
-		writeErrorReply(w, errors.New("could not read request"), ListCommand)
-		return
+		writeErrorReply(w, errors.Wrap(err, "could not read request"), ListCommand)
 	}
-	filter, ok := req.Lookup(ListCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.New("could not read process filter from request"), ListCommand)
-		return
-	}
+	filter := req.Filter
 
-	procs, err := s.manager.List(ctx, options.Filter(filter))
+	procs, err := s.manager.List(ctx, filter)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not list processes"), ListCommand)
 		return
 	}
 
-	infos, err := procInfosToArray(ctx, procs)
-	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert process information to BSON array"), ListCommand)
+	infos := make([]jasper.ProcessInfo, 0, len(procs))
+	for _, proc := range procs {
+		infos = append(infos, proc.Info(ctx))
 	}
-
-	resp := birch.NewDocument(birch.EC.Array("infos", infos))
-
-	writeSuccessReply(w, resp, ListCommand)
+	resp, err := makeInfosResponse(infos).Message()
+	if err != nil {
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), ListCommand)
+		return
+	}
+	writeReply(w, resp, ListCommand)
 }
 
-func (s *Service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+// managerGroup replies with a document of the form:
+//     {"ok": bool, "infos": [documents...]}
+func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractGroupRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), GroupCommand)
 		return
 	}
-	tag, ok := req.Lookup(GroupCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read group tag from request"), GroupCommand)
-		return
-	}
+	tag := req.Tag
 
 	procs, err := s.manager.Group(ctx, tag)
 	if err != nil {
@@ -127,30 +113,28 @@ func (s *Service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.M
 		return
 	}
 
-	procInfos, err := procInfosToArray(ctx, procs)
-	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "couuld not convert process information to BSON array"), GroupCommand)
-		return
+	infos := make([]jasper.ProcessInfo, 0, len(procs))
+	for _, proc := range procs {
+		infos = append(infos, proc.Info(ctx))
 	}
 
-	resp := birch.NewDocument(
-		birch.EC.Array("infos", procInfos),
-	)
-
-	writeSuccessReply(w, resp, GroupCommand)
+	resp, err := makeInfosResponse(infos).Message()
+	if err != nil {
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), GroupCommand)
+		return
+	}
+	writeReply(w, resp, GroupCommand)
 }
 
-func (s *Service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	cmdMsg, err := messageToDocument(msg)
+// managerGet replies with a document of the form:
+//     {"ok": bool, "info": document}
+func (s *service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractGetRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), GetCommand)
 		return
 	}
-	id, ok := cmdMsg.Lookup(GetCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.New("could not read process id from request"), GetCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -158,26 +142,27 @@ func (s *Service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Mes
 		return
 	}
 
-	info, err := procInfoToDocument(proc.Info(ctx))
+	resp, err := makeInfoResponse(proc.Info(ctx)).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert process info to document"), GetCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), GetCommand)
 		return
 	}
-
-	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
-
-	writeSuccessReply(w, resp, GetCommand)
+	writeReply(w, resp, GetCommand)
 }
 
-func (s *Service) managerClear(ctx context.Context, w io.Writer, msg mongowire.Message) {
+// managerClear replies with a document of the form:
+//     {"ok": bool}
+func (s *service) managerClear(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	s.manager.Clear(ctx)
-	writeSuccessReply(w, birch.NewDocument(), ClearCommand)
+	writeOKReply(w, ClearCommand)
 }
 
-func (s *Service) managerClose(ctx context.Context, w io.Writer, msg mongowire.Message) {
+// managerClose replies with a document of the form:
+//     {"ok": bool}
+func (s *service) managerClose(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	if err := s.manager.Close(ctx); err != nil {
 		writeErrorReply(w, err, CloseCommand)
 		return
 	}
-	writeSuccessReply(w, birch.NewDocument(), CloseCommand)
+	writeOKReply(w, CloseCommand)
 }

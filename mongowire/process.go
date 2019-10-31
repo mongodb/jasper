@@ -5,7 +5,6 @@ import (
 	"io"
 	"syscall"
 
-	"github.com/evergreen-ci/birch"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"github.com/tychoish/mongorpc/mongowire"
@@ -13,53 +12,26 @@ import (
 
 // Constants representing process commands.
 const (
-	ProcessIDCommand               = "processID"
+	ProcessIDCommand               = "process_id"
 	InfoCommand                    = "info"
 	RunningCommand                 = "running"
 	CompleteCommand                = "complete"
 	WaitCommand                    = "wait"
 	RespawnCommand                 = "respawn"
 	SignalCommand                  = "signal"
-	RegisterSignalTriggerIDCommand = "registerSignalTriggerID"
-	GetTagsCommand                 = "getTags"
+	RegisterSignalTriggerIDCommand = "register_signal_trigger_id"
+	GetTagsCommand                 = "get_tags"
 	TagCommand                     = "tag"
-	ResetTagsCommand               = "resetTags"
+	ResetTagsCommand               = "reset_tags"
 )
 
-func (s *Service) processID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
-	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not read request"), ProcessIDCommand)
-		return
-	}
-	id, ok := req.Lookup(ProcessIDCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), ProcessIDCommand)
-		return
-	}
-
-	proc, err := s.manager.Get(ctx, id)
-	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not get process"), ProcessIDCommand)
-		return
-	}
-
-	resp := birch.NewDocument(birch.EC.String("id", proc.ID()))
-
-	writeSuccessReply(w, resp, ProcessIDCommand)
-}
-
-func (s *Service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractProcessInfoRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), InfoCommand)
 		return
 	}
-	id, ok := req.Lookup(InfoCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), InfoCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -67,28 +39,21 @@ func (s *Service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Me
 		return
 	}
 
-	info, err := procInfoToDocument(proc.Info(ctx))
+	resp, err := makeInfoResponse(proc.Info(ctx)).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert process info to BSON document"), InfoCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), InfoCommand)
 		return
 	}
-
-	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
-
-	writeSuccessReply(w, resp, InfoCommand)
+	writeReply(w, resp, InfoCommand)
 }
 
-func (s *Service) processRunning(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processRunning(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractRunningRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), RunningCommand)
 		return
 	}
-	id, ok := req.Lookup(RunningCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), RunningCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -96,22 +61,21 @@ func (s *Service) processRunning(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	resp := birch.NewDocument(birch.EC.Boolean("running", proc.Running(ctx)))
-
-	writeSuccessReply(w, resp, RunningCommand)
+	resp, err := makeRunningResponse(proc.Running(ctx)).Message()
+	if err != nil {
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), RunningCommand)
+		return
+	}
+	writeReply(w, resp, RunningCommand)
 }
 
-func (s *Service) processComplete(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processComplete(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractCompleteRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), CompleteCommand)
 		return
 	}
-	id, ok := req.Lookup(CompleteCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), CompleteCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -119,22 +83,21 @@ func (s *Service) processComplete(ctx context.Context, w io.Writer, msg mongowir
 		return
 	}
 
-	resp := birch.NewDocument(birch.EC.Boolean("complete", proc.Complete(ctx)))
-
-	writeSuccessReply(w, resp, CompleteCommand)
+	resp, err := makeCompleteResponse(proc.Complete(ctx)).Message()
+	if err != nil {
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), CompleteCommand)
+		return
+	}
+	writeReply(w, resp, CompleteCommand)
 }
 
-func (s *Service) processWait(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processWait(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractWaitRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), WaitCommand)
 		return
 	}
-	id, ok := req.Lookup(WaitCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), WaitCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -143,25 +106,21 @@ func (s *Service) processWait(ctx context.Context, w io.Writer, msg mongowire.Me
 	}
 
 	exitCode, err := proc.Wait(ctx)
-	resp := birch.NewDocument(birch.EC.Int("exitCode", exitCode))
+	resp, err := makeWaitResponse(exitCode, err).Message()
 	if err != nil {
-		resp.Append(birch.EC.String("error", err.Error()))
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), WaitCommand)
+		return
 	}
-
-	writeSuccessReply(w, resp, WaitCommand)
+	writeReply(w, resp, WaitCommand)
 }
 
-func (s *Service) processRespawn(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractRespawnRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), RespawnCommand)
 		return
 	}
-	id, ok := req.Lookup(RespawnCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), RespawnCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -175,45 +134,22 @@ func (s *Service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	info, err := procInfoToDocument(newProc.Info(ctx))
+	resp, err := makeInfoResponse(newProc.Info(ctx)).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert process info to BSON document"), RespawnCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), RespawnCommand)
 		return
 	}
-
-	resp := birch.NewDocument(birch.EC.SubDocument("info", info))
-
-	writeSuccessReply(w, resp, RespawnCommand)
+	writeReply(w, resp, RespawnCommand)
 }
 
-func (s *Service) processSignal(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processSignal(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractSignalRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), SignalCommand)
 		return
 	}
-	signalArgs, ok := req.Lookup(SignalCommand).MutableDocumentOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process signal arguments from request"), SignalCommand)
-		return
-	}
-	id, ok := signalArgs.Lookup("id").StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.New("could not read process id from request"), SignalCommand)
-		return
-	}
-
-	sigVal := signalArgs.Lookup("signal")
-	sig, ok := sigVal.IntOK()
-	if !ok {
-		// The mongo shell treats number literals as doubles by default.
-		sigDouble, ok := sigVal.DoubleOK()
-		sig = int(sigDouble)
-		if !ok {
-			writeErrorReply(w, errors.New("could not read signal number from request"), SignalCommand)
-			return
-		}
-	}
+	id := req.Params.ID
+	sig := int(req.Params.Signal)
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -226,30 +162,17 @@ func (s *Service) processSignal(ctx context.Context, w io.Writer, msg mongowire.
 		return
 	}
 
-	writeSuccessReply(w, birch.NewDocument(), SignalCommand)
+	writeOKReply(w, SignalCommand)
 }
 
-func (s *Service) processRegisterSignalTriggerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processRegisterSignalTriggerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractRegisterSignalTriggerIDRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), RegisterSignalTriggerIDCommand)
 		return
 	}
-	signalTriggerArgs, ok := req.Lookup(RegisterSignalTriggerIDCommand).MutableDocumentOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process signal trigger arguments from request"), RegisterSignalTriggerIDCommand)
-		return
-	}
-	procID, ok := signalTriggerArgs.Lookup("id").StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), RegisterSignalTriggerIDCommand)
-		return
-	}
-	sigID, ok := signalTriggerArgs.Lookup("signal").StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read signal trigger ID from request"), RegisterSignalTriggerIDCommand)
-		return
-	}
+	procID := req.Params.ID
+	sigID := int(req.Params.SignalTriggerID)
 
 	makeTrigger, ok := jasper.GetSignalTriggerFactory(jasper.SignalTriggerID(sigID))
 	if !ok {
@@ -264,34 +187,21 @@ func (s *Service) processRegisterSignalTriggerID(ctx context.Context, w io.Write
 	}
 
 	if err := proc.RegisterSignalTrigger(ctx, makeTrigger()); err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not register signal trigger ID"), RegisterSignalTriggerIDCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not register signal trigger"), RegisterSignalTriggerIDCommand)
 		return
 	}
 
-	writeSuccessReply(w, birch.NewDocument(), RegisterSignalTriggerIDCommand)
+	writeOKReply(w, RegisterSignalTriggerIDCommand)
 }
 
-func (s *Service) processTag(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processTag(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractTagRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), TagCommand)
 		return
 	}
-	tagArgs, ok := req.Lookup(TagCommand).MutableDocumentOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process signal trigger arguments from request"), RegisterSignalTriggerIDCommand)
-		return
-	}
-	id, ok := tagArgs.Lookup("id").StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), RegisterSignalTriggerIDCommand)
-		return
-	}
-	tag, ok := tagArgs.Lookup("tag").StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read signal trigger ID from request"), RegisterSignalTriggerIDCommand)
-		return
-	}
+	id := req.Params.ID
+	tag := req.Params.Tag
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -301,20 +211,16 @@ func (s *Service) processTag(ctx context.Context, w io.Writer, msg mongowire.Mes
 
 	proc.Tag(tag)
 
-	writeSuccessReply(w, birch.NewDocument(), TagCommand)
+	writeOKReply(w, TagCommand)
 }
 
-func (s *Service) processGetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processGetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractGetTagsRequest(msg)
 	if err != nil {
 		writeErrorReply(w, errors.Wrap(err, "could not read request"), GetTagsCommand)
 		return
 	}
-	id, ok := req.Lookup(GetTagsCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), GetTagsCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
@@ -322,36 +228,29 @@ func (s *Service) processGetTags(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	tags, err := procTagsToArray(proc)
+	resp, err := makeGetTagsResponse(proc.GetTags()).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not convert process tags to BSON array"), GetTagsCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not make response"), GetTagsCommand)
 		return
 	}
-
-	resp := birch.NewDocument(birch.EC.Array("tags", tags))
-
-	writeSuccessReply(w, resp, GetTagsCommand)
+	writeReply(w, resp, GetTagsCommand)
 }
 
-func (s *Service) processResetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := messageToDocument(msg)
+func (s *service) processResetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req, err := ExtractResetTagsRequest(msg)
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not read request"), GetTagsCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not read request"), ResetTagsCommand)
 		return
 	}
-	id, ok := req.Lookup(ResetTagsCommand).StringValueOK()
-	if !ok {
-		writeErrorReply(w, errors.Wrap(err, "could not read process id from request"), GetTagsCommand)
-		return
-	}
+	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not get process"), GetTagsCommand)
+		writeErrorReply(w, errors.Wrap(err, "could not get process"), ResetTagsCommand)
 		return
 	}
 
 	proc.ResetTags()
 
-	writeSuccessReply(w, birch.NewDocument(), GetTagsCommand)
+	writeOKReply(w, ResetTagsCommand)
 }
