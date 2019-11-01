@@ -1,4 +1,4 @@
-package mongowire
+package wire
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/birch"
+	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/mongowire"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -92,7 +92,7 @@ func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	return nil, errors.Errorf("message is not of type %s nor %s", mongowire.OP_COMMAND_REPLY.String(), mongowire.OP_REPLY.String())
 }
 
-func writeOKReply(w io.Writer, op string) {
+func writeOKReply(ctx context.Context, w io.Writer, op string) {
 	resp := makeErrorResponse(true, nil)
 	msg, err := resp.Message()
 	if err != nil {
@@ -102,10 +102,10 @@ func writeOKReply(w io.Writer, op string) {
 		}))
 		return
 	}
-	writeReply(w, msg, op)
+	writeReply(ctx, w, msg, op)
 }
 
-func writeNotOKReply(w io.Writer, op string) {
+func writeNotOKReply(ctx context.Context, w io.Writer, op string) {
 	resp := makeErrorResponse(false, nil)
 	msg, err := resp.Message()
 	if err != nil {
@@ -115,10 +115,10 @@ func writeNotOKReply(w io.Writer, op string) {
 		}))
 		return
 	}
-	writeReply(w, msg, op)
+	writeReply(ctx, w, msg, op)
 }
 
-func writeErrorReply(w io.Writer, err error, op string) {
+func writeErrorReply(ctx context.Context, w io.Writer, err error, op string) {
 	resp := makeErrorResponse(false, err)
 	msg, err := resp.Message()
 	if err != nil {
@@ -128,11 +128,11 @@ func writeErrorReply(w io.Writer, err error, op string) {
 		}))
 		return
 	}
-	writeReply(w, msg, op)
+	writeReply(ctx, w, msg, op)
 }
 
-func writeReply(w io.Writer, msg mongowire.Message, op string) {
-	grip.Error(message.WrapError(mongowire.SendMessage(msg, w), message.Fields{
+func writeReply(ctx context.Context, w io.Writer, msg mongowire.Message, op string) {
+	grip.Error(message.WrapError(mongowire.SendMessage(ctx, msg, w), message.Fields{
 		"message": "could not write response",
 		"op":      op,
 	}))

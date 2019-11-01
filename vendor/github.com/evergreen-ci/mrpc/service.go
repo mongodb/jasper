@@ -1,4 +1,4 @@
-package mongorpc
+package mrpc
 
 import (
 	"context"
@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/evergreen-ci/birch"
+	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/recovery"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/mongowire"
 )
 
 type HandlerFunc func(context.Context, io.Writer, mongowire.Message)
@@ -22,6 +26,7 @@ type Service struct {
 	registry *OperationRegistry
 }
 
+// NewService starts a service listening on the given address and port.
 func NewService(listenAddr string, port int) *Service {
 	return &Service{
 		addr:     fmt.Sprintf("%s:%d", listenAddr, port),
@@ -42,6 +47,9 @@ func (s *Service) Run(ctx context.Context) error {
 	}
 	defer l.Close()
 
+	ctx, cancel := context.WithCancel(ctx)
+	go handleSignals(ctx, cancel)
+
 	grip.Infof("listening for connections on %s", s.addr)
 
 	for {
@@ -61,7 +69,7 @@ func (s *Service) Run(ctx context.Context) error {
 
 func writeErrorReply(w io.Writer, err error) error {
 	responseNotOk := birch.EC.Int32("ok", 0)
-	errorDoc := birch.EC.String("error", err.Error())
+	errorDoc := birch.EC.String("errmsg", err.Error())
 	doc := birch.NewDocument(responseNotOk, errorDoc)
 
 	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []*birch.Document{doc})
@@ -70,23 +78,22 @@ func writeErrorReply(w io.Writer, err error) error {
 }
 
 func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
 	defer func() {
 		err := recovery.HandlePanicWithError(recover(), nil, "request handling")
 		if err != nil {
 			grip.Error(message.WrapError(err, "error during request handling"))
-			if writeErr := writeErrorReply(conn, err); writeErr != nil {
+			// Attempt to reply with the given deadline.
+			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+				grip.Error(message.WrapError(err, "failed to set deadline on panic reply"))
+			} else if writeErr := writeErrorReply(conn, err); writeErr != nil {
 				grip.Error(message.WrapError(writeErr, "error writing reply after panic recovery"))
-				return
 			}
 		}
 		if err := conn.Close(); err != nil {
 			grip.Error(message.WrapErrorf(err, "error closing connection from %s", conn.RemoteAddr()))
 			return
 		}
-		grip.Infof("closed connection from %s", conn.RemoteAddr())
+		grip.Debugf("closed connection from %s", conn.RemoteAddr())
 	}()
 
 	if c, ok := conn.(*tls.Conn); ok {
@@ -99,9 +106,13 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 	}
 
 	for {
-		m, err := mongowire.ReadMessage(conn)
+		m, err := mongowire.ReadMessage(ctx, conn)
 		if err != nil {
 			if errors.Cause(err) == io.EOF {
+				// Connection was likely closed
+				return
+			}
+			if ctx.Err() != nil {
 				return
 			}
 			grip.Error(message.WrapError(err, "problem reading message"))
@@ -116,6 +127,20 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 			return
 		}
 
-		handler(ctx, conn, m)
+		go handler(ctx, conn, m)
+	}
+}
+
+func handleSignals(ctx context.Context, cancel context.CancelFunc) {
+	defer recovery.LogStackTraceAndContinue("graceful shutdown")
+	defer cancel()
+	sig := make(chan os.Signal, 2)
+	signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
+
+	select {
+	case <-sig:
+		grip.Debug("received signal")
+	case <-ctx.Done():
+		grip.Debug("context canceled")
 	}
 }

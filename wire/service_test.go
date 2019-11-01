@@ -1,4 +1,4 @@
-package mongowire
+package wire
 
 // Note: these tests are largely copied directly from the top level
 // package into this package to avoid an import cycle.

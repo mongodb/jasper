@@ -456,7 +456,6 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		cancel()
 	}
 
 	info := getProcInfoNoHang(ctx, newProc)

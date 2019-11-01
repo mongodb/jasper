@@ -1,9 +1,10 @@
-package mongowire
+package wire
 
 import (
+	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/tychoish/mongorpc/mongowire"
+	"github.com/pkg/errors"
 )
 
 func intOK(ok bool) int {
@@ -40,6 +41,12 @@ func ExtractErrorResponse(msg mongowire.Message) (ErrorResponse, error) {
 	r := ErrorResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
+	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
 	}
 	return r, nil
 }
@@ -102,6 +109,12 @@ func ExtractRunningResponse(msg mongowire.Message) (RunningResponse, error) {
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
 	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
+	}
 	return r, nil
 }
 
@@ -143,6 +156,12 @@ func ExtractCompleteResponse(msg mongowire.Message) (CompleteResponse, error) {
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
 	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
+	}
 	return r, nil
 }
 
@@ -183,6 +202,12 @@ func ExtractWaitResponse(msg mongowire.Message) (WaitResponse, error) {
 	r := WaitResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
+	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
 	}
 	return r, nil
 }
@@ -323,6 +348,12 @@ func ExtractGetTagsResponse(msg mongowire.Message) (GetTagsResponse, error) {
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
 	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
+	}
 	return r, nil
 }
 
@@ -384,6 +415,12 @@ func ExtractIDResponse(msg mongowire.Message) (IDResponse, error) {
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
 	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
+	}
 	return r, nil
 }
 
@@ -404,6 +441,12 @@ func ExtractWhatsMyURIResponse(msg mongowire.Message) (WhatsMyURIResponse, error
 	r := WhatsMyURIResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
+	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
 	}
 	return r, nil
 }
@@ -426,6 +469,12 @@ func ExtractBuildInfoResponse(msg mongowire.Message) (BuildInfoResponse, error) 
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
 	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
+	}
 	return r, nil
 }
 
@@ -446,6 +495,12 @@ func ExtractGetLogResponse(msg mongowire.Message) (GetLogResponse, error) {
 	r := GetLogResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
+	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
 	}
 	return r, nil
 }
@@ -548,6 +603,12 @@ func ExtractInfoResponse(msg mongowire.Message) (InfoResponse, error) {
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
 	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
+	}
 	return r, nil
 }
 
@@ -568,6 +629,12 @@ func ExtractInfosResponse(msg mongowire.Message) (InfosResponse, error) {
 	r := InfosResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
+	}
+	if r.Error != "" {
+		return r, errors.New(r.Error)
+	}
+	if r.OK == 0 {
+		return r, errors.New("response was not ok")
 	}
 	return r, nil
 }

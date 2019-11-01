@@ -33,8 +33,8 @@ imports:
     version: d74791c0d819b6f7908cced0dd37e6ab3fb9eeae
   - name: github.com/evergreen-ci/certdepot
     version: d2c7b2f7c9c7af6311d211fe7fb127d99bdc5d43
-  - name: github.com/tychoish/mongorpc
-    version: 8219c47f3f0c453468cd718c2a9768720e428e2c
+  - name: github.com/evergreen-ci/mrpc
+    version: c4d9beadb6cf4ad6ebef8a41bc899f55e65ea6e8
   - name: github.com/evergreen-ci/birch
     version: 5b054047680765b089c1e6f77d0896803d1fd73d
   - name: github.com/mongodb/ftdc

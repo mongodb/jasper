@@ -1,11 +1,11 @@
-=============================================================
-``mongorpc`` -- Arbitrary MongoDB Wire Protocol RPC Framework
-=============================================================
+=========================================================
+``mprc`` -- Arbitrary MongoDB Wire Protocol RPC Framework
+=========================================================
 
 Overview
 --------
 
-MongoRPC is a set of tools to support writing RPC-like services using
+MRPC is a set of tools to support writing RPC-like services using
 the MongoDB wire protocol as a transport layer. The idea is, if you
 have a MongoDB driver (or *are* a MongoDB driver,) you should be able
 to communicate with other services without needing a second client
@@ -63,7 +63,7 @@ Quirks
 
 - "Legacy" commands, which are issued as queries against a special
   collection are "up" converted to OP_COMMAND messages internally (though,
-  mongorpc does track that it has performed the conversion so you can
+  mrpc does track that it has performed the conversion so you can
   see that.) Thus, you must register an OP_COMMAND, even if your
   clients are sending OP_QUERY messages.
 
@@ -75,7 +75,7 @@ Quirks
 Dependencies
 ------------
 
-Currently, ``mongorpc`` does not vendor its dependencies, and uses:
+Currently, ``mrpc`` does not vendor its dependencies, and uses:
 
 - `github.com/mongodb/grip <https://github.com/mongodb/grip>`_ (for logging)
 - `github.com/pkg/errors <https;//github.com/pkg/errors>`_ (for error annotation.)

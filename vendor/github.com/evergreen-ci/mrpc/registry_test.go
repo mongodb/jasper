@@ -1,4 +1,4 @@
-package mongorpc
+package mrpc
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/suite"
-	"github.com/tychoish/mongorpc/mongowire"
+	"github.com/evergreen-ci/mrpc/mongowire"
 )
 
 type RegistrySuite struct {

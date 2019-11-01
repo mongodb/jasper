@@ -1,17 +1,18 @@
-package mongowire
+package wire
 
 import (
 	"context"
 	"io"
 	"net"
 	"syscall"
+	"time"
 
+	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc/mongowire"
 )
 
 type client struct {
@@ -19,11 +20,15 @@ type client struct {
 	namespace string
 }
 
-const namespace = "jasper.$cmd"
+const (
+	namespace = "jasper.$cmd"
+)
 
-// TODO: is implementing all RemoteClient functionality necessary?
-func NewClient(addr net.Addr) (jasper.RemoteClient, error) {
-	conn, err := net.Dial("tcp", addr.String())
+// NewClient returns a remote client for connection to a MongoDB wire protocol
+// service.
+func NewClient(ctx context.Context, addr net.Addr) (jasper.RemoteClient, error) {
+	dialer := net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not dial address")
 	}
@@ -32,6 +37,8 @@ func NewClient(addr net.Addr) (jasper.RemoteClient, error) {
 	return &client{conn: conn, namespace: namespace}, nil
 }
 
+// CloseConnection closes the client connection. Callers are expected to call
+// this when finished with the client.
 func (c *client) CloseConnection() error {
 	return c.conn.Close()
 }
@@ -68,35 +75,36 @@ func (c *client) WriteFile(ctx context.Context, info options.WriteFile) error {
 func (c *client) ID() string {
 	req, err := makeIDRequest().Message()
 	if err != nil {
+		grip.Warning(message.WrapError(err, "could not create request"))
 		return ""
 	}
-	if err := mongowire.SendMessage(req, c.conn); err != nil {
-		return ""
-	}
-	msg, err := mongowire.ReadMessage(c.conn)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
+		grip.Warning(message.WrapError(err, "failed during request"))
 		return ""
 	}
 	resp, err := ExtractIDResponse(msg)
 	if err != nil {
+		grip.Warning(message.WrapError(err, "problem with received response"))
 		return ""
 	}
 	return resp.ID
 }
 
-// kim: TODO: implement the remainder
 func (c *client) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	req, err := makeCreateProcessRequest(*opts).Message()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not make request")
+		return nil, errors.Wrap(err, "could not create request")
 	}
-	msg, err := doRequest(c.conn, req)
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "request failed")
+		return nil, errors.Wrap(err, "failed during request")
 	}
 	resp, err := ExtractInfoResponse(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "problem with received response")
 	}
 	return &process{info: resp.Info, conn: c.conn}, nil
 }
@@ -114,13 +122,13 @@ func (c *client) List(ctx context.Context, f options.Filter) ([]jasper.Process, 
 	if err != nil {
 		return nil, errors.Wrap(err, "could  not make request")
 	}
-	msg, err := doRequest(c.conn, req)
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "request failed")
+		return nil, errors.Wrap(err, "failed during request")
 	}
 	resp, err := ExtractInfosResponse(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "problem with received response")
 	}
 	infos := resp.Infos
 	procs := make([]jasper.Process, 0, len(infos))
@@ -135,13 +143,13 @@ func (c *client) Group(ctx context.Context, tag string) ([]jasper.Process, error
 	if err != nil {
 		return nil, errors.Wrap(err, "could  not make request")
 	}
-	msg, err := doRequest(c.conn, req)
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "request failed")
+		return nil, errors.Wrap(err, "failed during request")
 	}
 	resp, err := ExtractInfosResponse(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "problem with received response")
 	}
 	infos := resp.Infos
 	procs := make([]jasper.Process, 0, len(infos))
@@ -156,13 +164,13 @@ func (c *client) Get(ctx context.Context, id string) (jasper.Process, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could  not make request")
 	}
-	msg, err := doRequest(c.conn, req)
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "request failed")
+		return nil, errors.Wrap(err, "failed during request")
 	}
 	resp, err := ExtractInfoResponse(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "problem with received response")
 	}
 	info := resp.Info
 	return &process{info: info, conn: c.conn}, nil
@@ -171,36 +179,33 @@ func (c *client) Get(ctx context.Context, id string) (jasper.Process, error) {
 func (c *client) Clear(ctx context.Context) {
 	req, err := makeClearRequest().Message()
 	if err != nil {
-		grip.Warning(message.WrapError(err, "could not make request"))
+		grip.Warning(message.WrapError(err, "could not create request"))
 		return
 	}
-	msg, err := doRequest(c.conn, req)
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
-		grip.Warning(message.WrapError(err, "request failed"))
+		grip.Warning(message.WrapError(err, "failed during request"))
 		return
 	}
-	resp, err := ExtractInfoResponse(msg)
-	if err != nil {
-		grip.Warning(message.WrapError(err, "could not read response"))
+	if _, err := ExtractInfoResponse(msg); err != nil {
+		grip.Warning(message.WrapError(err, "problem with received response"))
 		return
 	}
-	grip.Warning(errors.New(resp.Error))
 }
 
 func (c *client) Close(ctx context.Context) error {
 	req, err := makeCloseRequest().Message()
 	if err != nil {
-		return errors.Wrap(err, "could not make request")
+		return errors.Wrap(err, "could not create request")
 	}
-	msg, err := doRequest(c.conn, req)
+	msg, err := doRequest(ctx, c.conn, req)
 	if err != nil {
-		return errors.Wrap(err, "request failed")
+		return errors.Wrap(err, "failed during request")
 	}
-	resp, err := ExtractErrorResponse(msg)
-	if err != nil {
-		return errors.Wrap(err, "could not read response")
+	if _, err := ExtractErrorResponse(msg); err != nil {
+		return errors.Wrap(err, "problem with received response")
 	}
-	return errors.New(resp.Error)
+	return nil
 }
 
 type process struct {
@@ -217,17 +222,19 @@ func (p *process) Info(ctx context.Context) jasper.ProcessInfo {
 
 	req, err := makeInfoRequest(p.ID()).Message()
 	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
 		return jasper.ProcessInfo{}
 	}
-	msg, err := doRequest(p.conn, req)
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
 		return jasper.ProcessInfo{}
 	}
 	resp, err := ExtractInfoResponse(msg)
 	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
 		return jasper.ProcessInfo{}
 	}
-	grip.Warning(errors.New(resp.Error))
 	p.info = resp.Info
 	return p.info
 }
@@ -251,47 +258,43 @@ func (p *process) Complete(ctx context.Context) bool {
 func (p *process) Signal(ctx context.Context, sig syscall.Signal) error {
 	req, err := makeSignalRequest(p.ID(), int(sig)).Message()
 	if err != nil {
-		return errors.Wrap(err, "could not make request")
+		return errors.Wrap(err, "could not create request")
 	}
-	msg, err := doRequest(p.conn, req)
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
-		return errors.Wrap(err, "request failed")
+		return errors.Wrap(err, "failed during request")
 	}
-	resp, err := ExtractErrorResponse(msg)
-	return errors.New(resp.Error)
+	if _, err := ExtractErrorResponse(msg); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *process) Wait(ctx context.Context) (int, error) {
 	req, err := makeWaitRequest(p.ID()).Message()
 	if err != nil {
-		return -1, errors.Wrap(err, "could not make request")
+		return -1, errors.Wrap(err, "could not create request")
 	}
-	msg, err := doRequest(p.conn, req)
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
-		return -1, errors.Wrap(err, "request failed")
+		return -1, errors.Wrap(err, "failed during request")
 	}
 	resp, err := ExtractWaitResponse(msg)
-	if err != nil {
-		return -1, errors.Wrap(err, "could not read response")
-	}
-	return resp.ExitCode, errors.New(resp.Error)
+	return resp.ExitCode, err
 }
 
 func (p *process) Respawn(ctx context.Context) (jasper.Process, error) {
 	req, err := makeRespawnRequest(p.ID()).Message()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not make request")
+		return nil, errors.Wrap(err, "could not create request")
 	}
-	msg, err := doRequest(p.conn, req)
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "request failed")
+		return nil, errors.Wrap(err, "failed during request")
 	}
 	resp, err := ExtractInfoResponse(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read response")
-	}
-	if resp.Error != "" {
-		return nil, errors.New(resp.Error)
+		return nil, errors.Wrap(err, "problem with received response")
 	}
 	return &process{info: resp.Info, conn: p.conn}, nil
 }
@@ -307,17 +310,16 @@ func (p *process) RegisterSignalTrigger(ctx context.Context, t jasper.SignalTrig
 func (p *process) RegisterSignalTriggerID(ctx context.Context, sigID jasper.SignalTriggerID) error {
 	req, err := makeRegisterSignalTriggerIDRequest(p.ID(), sigID).Message()
 	if err != nil {
-		return errors.Wrap(err, "could not make request")
+		return errors.Wrap(err, "could not create request")
 	}
-	msg, err := doRequest(p.conn, req)
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
-		return errors.Wrap(err, "request failed")
+		return errors.Wrap(err, "failed during request")
 	}
-	resp, err := ExtractErrorResponse(msg)
-	if err != nil {
-		return errors.Wrap(err, "could not read response")
+	if _, err := ExtractErrorResponse(msg); err != nil {
+		return errors.Wrap(err, "problem with received response")
 	}
-	return errors.New(resp.Error)
+	return nil
 }
 
 func (p *process) Tag(tag string) {
@@ -326,33 +328,37 @@ func (p *process) Tag(tag string) {
 		grip.Warningf("failed to tag process %s with tag %s", p.ID(), tag)
 		return
 	}
-	msg, err := doRequest(p.conn, req)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
 		grip.Warningf("failed to tag process %s with tag %s", p.ID(), tag)
 		return
 	}
-	resp, err := ExtractErrorResponse(msg)
-	if err != nil {
+	if _, err := ExtractErrorResponse(msg); err != nil {
 		grip.Warningf("failed to tag process %s with tag %s", p.ID(), tag)
 		return
 	}
-	grip.Warning(errors.New(resp.Error))
 }
 
 func (p *process) GetTags() []string {
 	req, err := makeGetTagsRequest(p.ID()).Message()
 	if err != nil {
+		grip.Warningf("failed to get tags for %s", p.ID())
 		return nil
 	}
-	msg, err := doRequest(p.conn, req)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
+		grip.Warningf("failed to get tags for %s", p.ID())
 		return nil
 	}
 	resp, err := ExtractGetTagsResponse(msg)
 	if err != nil {
+		grip.Warningf("failed to get tags for %s", p.ID())
 		return nil
 	}
-	grip.Warning(errors.New(resp.Error))
 	return resp.Tags
 }
 
@@ -362,26 +368,30 @@ func (p *process) ResetTags() {
 		grip.Warningf("failed to reset tags for process %s", p.ID())
 		return
 	}
-	msg, err := doRequest(p.conn, req)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
 		grip.Warningf("failed to reset tags for process %s", p.ID())
 		return
 	}
-	resp, err := ExtractErrorResponse(msg)
-	if err != nil {
+	if _, err := ExtractErrorResponse(msg); err != nil {
 		grip.Warningf("failed to reset tags for process %s", p.ID())
 		return
 	}
-	grip.Warning(errors.New(resp.Error))
 }
 
-func doRequest(rw io.ReadWriter, req mongowire.Message) (mongowire.Message, error) {
-	if err := mongowire.SendMessage(req, rw); err != nil {
-		return nil, errors.Wrap(err, "could not send request")
+// doRequest sends the given request and reads the response.
+func doRequest(ctx context.Context, rw io.ReadWriter, req mongowire.Message) (mongowire.Message, error) {
+	const requestMaxTimeout = 30 * time.Second
+	ctx, cancel := context.WithTimeout(ctx, requestMaxTimeout)
+	defer cancel()
+	if err := mongowire.SendMessage(ctx, req, rw); err != nil {
+		return nil, errors.Wrap(err, "problem sending request")
 	}
-	msg, err := mongowire.ReadMessage(rw)
+	msg, err := mongowire.ReadMessage(ctx, rw)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "problem receiving response")
 	}
 	return msg, nil
 }

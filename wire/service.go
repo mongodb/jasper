@@ -1,4 +1,4 @@
-package mongowire
+package wire
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"github.com/evergreen-ci/birch"
+	"github.com/evergreen-ci/mrpc"
+	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
-	"github.com/tychoish/mongorpc"
-	"github.com/tychoish/mongorpc/mongowire"
 )
 
 // Constants representing required commands.
@@ -32,7 +32,7 @@ var (
 )
 
 type service struct {
-	*mongorpc.Service
+	*mrpc.Service
 	manager jasper.Manager
 }
 
@@ -49,7 +49,7 @@ func NewService(m jasper.Manager, addr net.Addr) (*service, error) {
 	}
 
 	svc := &service{
-		Service: mongorpc.NewService(host, port),
+		Service: mrpc.NewService(host, port),
 		manager: m,
 	}
 	if err := svc.registerHandlers(); err != nil {
@@ -61,21 +61,19 @@ func NewService(m jasper.Manager, addr net.Addr) (*service, error) {
 func (s *service) isMaster(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	resp, err := makeErrorResponse(true, nil).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not make response"), IsMasterCommand)
+		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), IsMasterCommand)
 		return
 	}
-	writeReply(w, resp, IsMasterCommand)
+	writeReply(ctx, w, resp, IsMasterCommand)
 }
 
 func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	// resp := birch.NewDocument(birch.EC.String("you", "localhost" [>s.Address()<]))
-	// writeSuccessReply(w, resp, WhatsMyURICommand)
 	resp, err := makeWhatsMyURIResponse(s.Address()).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not make response"), WhatsMyURICommand)
+		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), WhatsMyURICommand)
 		return
 	}
-	writeReply(w, resp, WhatsMyURICommand)
+	writeReply(ctx, w, resp, WhatsMyURICommand)
 }
 
 func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
@@ -83,58 +81,35 @@ func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Mess
 	// writeSuccessReply(w, resp, BuildInfoCommand)
 	resp, err := makeBuildInfoResponse("0.0.0").Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
+		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
 		return
 	}
-	writeReply(w, resp, BuildInfoCommand)
+	writeReply(ctx, w, resp, BuildInfoCommand)
 }
 
 func (s *service) getLog(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	// resp := birch.NewDocument(birch.EC.Array("log", birch.NewArray()))
-	// writeSuccessReply(w, resp, GetLogCommand)
 	resp, err := makeGetLogResponse([]string{}).Message()
 	if err != nil {
-		writeErrorReply(w, errors.Wrap(err, "could not make response"), GetLogCommand)
+		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), GetLogCommand)
 		return
 	}
-	writeReply(w, resp, GetLogCommand)
+	writeReply(ctx, w, resp, GetLogCommand)
 }
 
 func (s *service) getFreeMonitoringStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	// resp := birch.NewDocument(notOKResp)
-	// writeSuccessReply(w, resp, GetFreeMonitoringStatusCommand)
-	// resp, err := makeErrorResponse(false, nil)
-	// if err != nil {
-	//     writeErrorReply(w, errors.Wrap(err, "could not make response"), GetFreeMonitoringStatusCommand)
-	//     return
-	// }
-	writeNotOKReply(w, GetFreeMonitoringStatusCommand)
+	writeNotOKReply(ctx, w, GetFreeMonitoringStatusCommand)
 }
 
 func (s *service) replSetGetStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	// resp := birch.NewDocument(notOKResp)
-	// writeSuccessReply(w, resp, ReplSetGetStatusCommand)
-	// resp, err := makeErrorResponse(false, nil)
-	// if err != nil {
-	//     writeErrorReply(w, errors.Wrap(err, "could not make response"), ReplSetGetStatusCommand)
-	//     return
-	// }
-	writeNotOKReply(w, ReplSetGetStatusCommand)
+	writeNotOKReply(ctx, w, ReplSetGetStatusCommand)
 }
 
 func (s *service) listCollections(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	// resp := birch.NewDocument(notOKResp)
-	// writeSuccessReply(w, resp, ListCollectionsCommand)
-	// resp, err := makeErrorResponse(false, nil)
-	// if err != nil {
-	//     writeErrorReply(w, errors.Wrap(err, "could not make response"), ReplSetGetStatusCommand)
-	//     return
-	// }
-	writeNotOKReply(w, ListCollectionsCommand)
+	writeNotOKReply(ctx, w, ListCollectionsCommand)
 }
 
 func (s *service) registerHandlers() error {
-	for name, handler := range map[string]mongorpc.HandlerFunc{
+	for name, handler := range map[string]mrpc.HandlerFunc{
 		// Required initialization commands
 		IsMasterCommand:                s.isMaster,
 		WhatsMyURICommand:              s.whatsMyURI,
