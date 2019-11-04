@@ -72,6 +72,8 @@ imports:
   - name: github.com/golang/protobuf
     version: c823c79ea1570fb5ff454033735a8e68575d1d0f
 
-  # vendoring mongo-go-driver because many dependencies use it
+  # vendoring mongo-go-driver and mgo.v2 because many dependencies use it
   - name: go.mongodb.org/mongo-driver
     version: 305bc4a5e4131420fe8ba5628e6faa9e6ade4e86
+  - name: gopkg.in/mgo.v2
+    version: a6b53ec6cb22a3699387a57a161566f9402ee85b
