@@ -11,8 +11,16 @@ import (
 )
 
 type remoteConfig struct {
-	Host          string
-	User          string
+	Host string
+	User string
+
+	// Args to the SSH binary. Only used by if UseSSHLibrary is false.
+	Args []string
+
+	// Determines whether to use the SSH binary or the SSH library.
+	UseSSHLibrary bool
+
+	// The following apply only if UseSSHLibrary is true.
 	Port          int
 	Key           string
 	KeyFile       string
@@ -23,7 +31,6 @@ type remoteConfig struct {
 }
 
 // Remote represents options to SSH into a remote machine.
-// kim: TODO: support proxy remoteConfig
 type Remote struct {
 	remoteConfig
 	Proxy *Proxy

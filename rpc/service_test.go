@@ -20,9 +20,9 @@ import (
 )
 
 func TestRPCService(t *testing.T) {
-	for managerName, makeManager := range map[string]func(trackProcs bool) (jasper.Manager, error){
-		"Basic":    jasper.NewSynchronizedManager,
-		"Blocking": jasper.NewSynchronizedManagerBlockingProcesses,
+	for managerName, makeManager := range map[string]func() (jasper.Manager, error){
+		"Basic":    func() (jasper.Manager, error) { return jasper.NewSynchronizedManager(false) },
+		"Blocking": func() (jasper.Manager, error) { return jasper.NewSynchronizedManagerBlockingProcesses(false) },
 	} {
 		t.Run(managerName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(context.Context, *testing.T, internal.JasperProcessManagerClient){
@@ -183,7 +183,7 @@ func TestRPCService(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 
-					manager, err := makeManager(false)
+					manager, err := makeManager()
 					require.NoError(t, err)
 					addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
 					require.NoError(t, err)

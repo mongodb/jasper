@@ -43,42 +43,42 @@ func MakeSSH(ctx context.Context, client *ssh.Client, session *ssh.Session, args
 	return e
 }
 
-// Args returns the arguments to the command.
+// Args returns the arguments to the process.
 func (e *execSSH) Args() []string {
 	return e.args
 }
 
-// SetEnv sets the command environment.
+// SetEnv sets the process environment.
 func (e *execSSH) SetEnv(env []string) {
 	e.env = env
 }
 
-// Env returns the command environment.
+// Env returns the process environment.
 func (e *execSSH) Env() []string {
 	return e.env
 }
 
-// SetDir sets the command working directory.
+// SetDir sets the process working directory.
 func (e *execSSH) SetDir(dir string) {
 	e.dir = dir
 }
 
-// Dir returns the command working directory.
+// Dir returns the process working directory.
 func (e *execSSH) Dir() string {
 	return e.dir
 }
 
-// SetStdin sets the command standard input.
+// SetStdin sets the process standard input.
 func (e *execSSH) SetStdin(stdin io.Reader) {
 	e.session.Stdin = stdin
 }
 
-// SetStdout sets the command standard output.
+// SetStdout sets the process standard output.
 func (e *execSSH) SetStdout(stdout io.Writer) {
 	e.session.Stdout = stdout
 }
 
-// SetStderr sets the command standard error.
+// SetStderr sets the process standard error.
 func (e *execSSH) SetStderr(stderr io.Writer) {
 	e.session.Stderr = stderr
 }
@@ -96,6 +96,7 @@ func (e *execSSH) Start() error {
 	return e.session.Start(strings.Join(args, "\n"))
 }
 
+// Wait returns the result of waiting for the remote process to finish.
 func (e *execSSH) Wait() error {
 	catcher := grip.NewBasicCatcher()
 	e.exitErr = e.session.Wait()
@@ -104,16 +105,19 @@ func (e *execSSH) Wait() error {
 	return catcher.Resolve()
 }
 
+// Signal sends a signal to the remote process.
 func (e *execSSH) Signal(sig syscall.Signal) error {
 	return e.session.Signal(syscallToSSHSignal(sig))
 }
 
+// PID is not implemented.
 func (e *execSSH) PID() int {
 	// TODO: there is no simple way of retrieving the PID of the remote process.
 	return -1
 }
 
-// ExitCode returns the exit code of the process.
+// ExitCode returns the exit code of the process, or -1 if the process is not
+// finished.
 func (e *execSSH) ExitCode() int {
 	if !e.exited {
 		return -1
@@ -128,7 +132,7 @@ func (e *execSSH) ExitCode() int {
 	return sshExitErr.Waitmsg.ExitStatus()
 }
 
-// Success returns whether or not the command ran successfully.
+// Success returns whether or not the process ran successfully.
 func (e *execSSH) Success() bool {
 	if !e.exited {
 		return false

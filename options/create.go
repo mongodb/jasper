@@ -163,7 +163,7 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	var cmd executor.Executor
 	if opts.Remote == nil {
 		cmd = executor.NewLocal(ctx, opts.Args)
-	} else {
+	} else if opts.Remote.UseSSHLibrary {
 		// The client and session will be closed by the SSH executor.
 		client, session, err := opts.Remote.Resolve()
 		if err != nil {
@@ -171,6 +171,8 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 			return nil, time.Time{}, errors.Wrap(err, "could not create SSH connection")
 		}
 		cmd = executor.MakeSSH(ctx, client, session, opts.Args)
+	} else {
+		cmd = executor.NewSSHBinary(ctx, opts.Remote.Args, opts.Args)
 	}
 
 	if opts.WorkingDirectory == "" && opts.Remote == nil {
