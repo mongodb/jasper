@@ -30,7 +30,7 @@ func NewClient(ctx context.Context, addr net.Addr) (jasper.RemoteClient, error) 
 	dialer := net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not dial address")
+		return nil, errors.Wrapf(err, "could not establish connection to %s service at address %s", addr.Network(), addr.String())
 	}
 	// <namespace>.$cmd format is required to indicate the OP_QUERY should be
 	// converted to OP_COMMAND
@@ -244,7 +244,22 @@ func (p *process) Running(ctx context.Context) bool {
 		return false
 	}
 
-	return p.Info(ctx).IsRunning
+	req, err := makeRunningRequest(p.ID()).Message()
+	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		return false
+	}
+	msg, err := doRequest(ctx, p.conn, req)
+	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		return false
+	}
+	resp, err := ExtractRunningResponse(msg)
+	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		return false
+	}
+	return resp.Running
 }
 
 func (p *process) Complete(ctx context.Context) bool {
@@ -252,7 +267,22 @@ func (p *process) Complete(ctx context.Context) bool {
 		return true
 	}
 
-	return p.Info(ctx).Complete
+	req, err := makeCompleteRequest(p.ID()).Message()
+	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		return false
+	}
+	msg, err := doRequest(ctx, p.conn, req)
+	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		return false
+	}
+	resp, err := ExtractCompleteResponse(msg)
+	if err != nil {
+		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		return false
+	}
+	return resp.Complete
 }
 
 func (p *process) Signal(ctx context.Context, sig syscall.Signal) error {

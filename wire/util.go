@@ -50,6 +50,7 @@ func messageToRequest(msg mongowire.Message, out interface{}) error {
 	return nil
 }
 
+// responseToMessage converts a response into a wire protocol reply.
 func responseToMessage(resp interface{}) (mongowire.Message, error) {
 	b, err := bson.Marshal(resp)
 	if err != nil {
@@ -62,6 +63,7 @@ func responseToMessage(resp interface{}) (mongowire.Message, error) {
 	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
 }
 
+// requestToMessage converts a request into a wire protocol query.
 func requestToMessage(req interface{}) (mongowire.Message, error) {
 	b, err := bson.Marshal(req)
 	if err != nil {
@@ -74,6 +76,8 @@ func requestToMessage(req interface{}) (mongowire.Message, error) {
 	return mongowire.NewQuery(namespace, 0, 0, 1, doc, birch.NewDocument()), nil
 }
 
+// requestMessageToDocument converts a wire protocol request message into a
+// document.
 func requestMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	cmdMsg, ok := msg.(*mongowire.CommandMessage)
 	if !ok {
@@ -82,6 +86,8 @@ func requestMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	return cmdMsg.CommandArgs, nil
 }
 
+// responseMessageToDocument converts a wire protocol response message into a
+// document.
 func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	if replyMsg, ok := msg.(*mongowire.ReplyMessage); ok {
 		return replyMsg.Docs[0], nil
@@ -92,7 +98,7 @@ func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	return nil, errors.Errorf("message is not of type %s nor %s", mongowire.OP_COMMAND_REPLY.String(), mongowire.OP_REPLY.String())
 }
 
-func writeOKReply(ctx context.Context, w io.Writer, op string) {
+func writeOKResponse(ctx context.Context, w io.Writer, op string) {
 	resp := makeErrorResponse(true, nil)
 	msg, err := resp.Message()
 	if err != nil {
@@ -102,10 +108,10 @@ func writeOKReply(ctx context.Context, w io.Writer, op string) {
 		}))
 		return
 	}
-	writeReply(ctx, w, msg, op)
+	writeResponse(ctx, w, msg, op)
 }
 
-func writeNotOKReply(ctx context.Context, w io.Writer, op string) {
+func writeNotOKResponse(ctx context.Context, w io.Writer, op string) {
 	resp := makeErrorResponse(false, nil)
 	msg, err := resp.Message()
 	if err != nil {
@@ -115,10 +121,10 @@ func writeNotOKReply(ctx context.Context, w io.Writer, op string) {
 		}))
 		return
 	}
-	writeReply(ctx, w, msg, op)
+	writeResponse(ctx, w, msg, op)
 }
 
-func writeErrorReply(ctx context.Context, w io.Writer, err error, op string) {
+func writeErrorResponse(ctx context.Context, w io.Writer, err error, op string) {
 	resp := makeErrorResponse(false, err)
 	msg, err := resp.Message()
 	if err != nil {
@@ -128,10 +134,10 @@ func writeErrorReply(ctx context.Context, w io.Writer, err error, op string) {
 		}))
 		return
 	}
-	writeReply(ctx, w, msg, op)
+	writeResponse(ctx, w, msg, op)
 }
 
-func writeReply(ctx context.Context, w io.Writer, msg mongowire.Message, op string) {
+func writeResponse(ctx context.Context, w io.Writer, msg mongowire.Message, op string) {
 	grip.Error(message.WrapError(mongowire.SendMessage(ctx, msg, w), message.Fields{
 		"message": "could not write response",
 		"op":      op,

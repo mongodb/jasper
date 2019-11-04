@@ -6,9 +6,9 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/evergreen-ci/birch"
 	"github.com/evergreen-ci/mrpc"
 	"github.com/evergreen-ci/mrpc/mongowire"
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
@@ -26,19 +26,15 @@ const (
 	ListCollectionsCommand         = "listCollections"
 )
 
-var (
-	notOKResp = birch.EC.Int32("ok", 0)
-	okResp    = birch.EC.Int32("ok", 1)
-)
-
 type service struct {
 	*mrpc.Service
 	manager jasper.Manager
 }
 
-// NewService wraps an existing Jasper manager in a mongo wire protocol
-// service.
-func NewService(m jasper.Manager, addr net.Addr) (*service, error) {
+// StartService wraps an existing Jasper manager in a mongo wire protocol
+// service and starts it. The  caller is responsible for closing the connection
+// using the returned jasper.CloseFunc.
+func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.CloseFunc, error) { //nolint: interfacer
 	host, p, err := net.SplitHostPort(addr.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid address")
@@ -55,57 +51,63 @@ func NewService(m jasper.Manager, addr net.Addr) (*service, error) {
 	if err := svc.registerHandlers(); err != nil {
 		return nil, errors.Wrap(err, "error registering handlers")
 	}
-	return svc, nil
+
+	cctx, ccancel := context.WithCancel(context.Background())
+	go func() {
+		grip.Notice(svc.Run(cctx))
+	}()
+
+	return func() error { ccancel(); return nil }, nil
 }
 
 func (s *service) isMaster(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	resp, err := makeErrorResponse(true, nil).Message()
 	if err != nil {
-		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), IsMasterCommand)
+		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), IsMasterCommand)
 		return
 	}
-	writeReply(ctx, w, resp, IsMasterCommand)
+	writeResponse(ctx, w, resp, IsMasterCommand)
 }
 
 func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	resp, err := makeWhatsMyURIResponse(s.Address()).Message()
 	if err != nil {
-		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), WhatsMyURICommand)
+		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), WhatsMyURICommand)
 		return
 	}
-	writeReply(ctx, w, resp, WhatsMyURICommand)
+	writeResponse(ctx, w, resp, WhatsMyURICommand)
 }
 
 func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	// resp := birch.NewDocument(birch.EC.String("version", "0.0.0"))
-	// writeSuccessReply(w, resp, BuildInfoCommand)
+	// writeSuccessResponse(w, resp, BuildInfoCommand)
 	resp, err := makeBuildInfoResponse("0.0.0").Message()
 	if err != nil {
-		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
+		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
 		return
 	}
-	writeReply(ctx, w, resp, BuildInfoCommand)
+	writeResponse(ctx, w, resp, BuildInfoCommand)
 }
 
 func (s *service) getLog(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	resp, err := makeGetLogResponse([]string{}).Message()
 	if err != nil {
-		writeErrorReply(ctx, w, errors.Wrap(err, "could not make response"), GetLogCommand)
+		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetLogCommand)
 		return
 	}
-	writeReply(ctx, w, resp, GetLogCommand)
+	writeResponse(ctx, w, resp, GetLogCommand)
 }
 
 func (s *service) getFreeMonitoringStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeNotOKReply(ctx, w, GetFreeMonitoringStatusCommand)
+	writeNotOKResponse(ctx, w, GetFreeMonitoringStatusCommand)
 }
 
 func (s *service) replSetGetStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeNotOKReply(ctx, w, ReplSetGetStatusCommand)
+	writeNotOKResponse(ctx, w, ReplSetGetStatusCommand)
 }
 
 func (s *service) listCollections(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeNotOKReply(ctx, w, ListCollectionsCommand)
+	writeNotOKResponse(ctx, w, ListCollectionsCommand)
 }
 
 func (s *service) registerHandlers() error {

@@ -3,9 +3,7 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evergreen-ci/certdepot"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
@@ -23,75 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeInsecureServiceAndClient(ctx context.Context, mngr jasper.Manager) (jasper.RemoteClient, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if err := startTestService(ctx, mngr, addr, nil); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return newTestClient(ctx, addr, nil)
-}
-
-func makeTLSServiceAndClient(ctx context.Context, mngr jasper.Manager) (jasper.RemoteClient, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
-	if err != nil {
-
-		return nil, errors.WithStack(err)
-	}
-	caCertFile := filepath.Join("testdata", "ca.crt")
-
-	serverCertFile := filepath.Join("testdata", "server.crt")
-	serverKeyFile := filepath.Join("testdata", "server.key")
-
-	clientCertFile := filepath.Join("testdata", "client.crt")
-	clientKeyFile := filepath.Join("testdata", "client.key")
-
-	// Make CA credentials
-	caCert, err := ioutil.ReadFile(caCertFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read cert file")
-	}
-
-	// Make server credentials
-	serverCert, err := ioutil.ReadFile(serverCertFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read cert file")
-	}
-	serverKey, err := ioutil.ReadFile(serverKeyFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read key file")
-	}
-	serverCreds, err := certdepot.NewCredentials(caCert, serverCert, serverKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize test server credentials")
-	}
-
-	if err := startTestService(ctx, mngr, addr, serverCreds); err != nil {
-		return nil, errors.Wrap(err, "failed to start test server")
-	}
-
-	clientCert, err := ioutil.ReadFile(clientCertFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read cert file")
-	}
-	clientKey, err := ioutil.ReadFile(clientKeyFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read key file")
-	}
-	clientCreds, err := certdepot.NewCredentials(caCert, clientCert, clientKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize test client credentials")
-	}
-
-	return newTestClient(ctx, addr, clientCreds)
-}
-
-// Note: these tests are largely copied directly from the top level
-// package into this package to avoid an import cycle.
+// Note: these tests are largely copied directly from the top level package into
+// this package to avoid an import cycle.
 
 func TestRPCClient(t *testing.T) {
 	assert.NotPanics(t, func() {
@@ -258,7 +188,7 @@ func TestRPCClient(t *testing.T) {
 						"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 							procs, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							for _, p := range procs {
-								_, err := p.Wait(ctx)
+								_, err = p.Wait(ctx)
 								require.NoError(t, err)
 							}
 

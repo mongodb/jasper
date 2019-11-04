@@ -2,7 +2,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest options wire
+packages := $(name) cli rpc rest options wire testutil
 testPackages := $(packages) mock
 
 _testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
