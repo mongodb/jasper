@@ -164,7 +164,7 @@ func (r RunningResponse) Message() (mongowire.Message, error) {
 // mongowire.Message. The inverse operation is (RunningResponse).Message.
 func ExtractRunningResponse(msg mongowire.Message) (RunningResponse, error) {
 	r := RunningResponse{}
-	if err := messageToRequest(msg, &r); err != nil {
+	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
 	}
 	if r.Error != "" {

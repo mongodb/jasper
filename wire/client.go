@@ -246,17 +246,17 @@ func (p *process) Running(ctx context.Context) bool {
 
 	req, err := makeRunningRequest(p.ID()).Message()
 	if err != nil {
-		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		grip.Warning(message.WrapErrorf(err, "failed to get process running status for %s", p.ID()))
 		return false
 	}
 	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
-		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		grip.Warning(message.WrapErrorf(err, "failed to get process running status for %s", p.ID()))
 		return false
 	}
 	resp, err := ExtractRunningResponse(msg)
 	if err != nil {
-		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		grip.Warning(message.WrapErrorf(err, "failed to get process running status for %s", p.ID()))
 		return false
 	}
 	return resp.Running
@@ -269,17 +269,17 @@ func (p *process) Complete(ctx context.Context) bool {
 
 	req, err := makeCompleteRequest(p.ID()).Message()
 	if err != nil {
-		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		grip.Warning(message.WrapErrorf(err, "failed to get process completion status for %s", p.ID()))
 		return false
 	}
 	msg, err := doRequest(ctx, p.conn, req)
 	if err != nil {
-		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		grip.Warning(message.WrapErrorf(err, "failed to get process completion status for %s", p.ID()))
 		return false
 	}
 	resp, err := ExtractCompleteResponse(msg)
 	if err != nil {
-		grip.Warning(message.WrapErrorf(err, "failed to get process info for %s", p.ID()))
+		grip.Warning(message.WrapErrorf(err, "failed to get process completion status for %s", p.ID()))
 		return false
 	}
 	return resp.Complete
