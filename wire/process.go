@@ -131,12 +131,12 @@ func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 	pctx, cancel := context.WithCancel(context.Background())
 	newProc, err := proc.Respawn(pctx)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "failed to register respawned process"), RespawnCommand)
+		writeErrorResponse(ctx, w, errors.Wrap(err, "failed to respawned process"), RespawnCommand)
 		cancel()
 		return
 	}
 	if err = s.manager.Register(ctx, newProc); err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "problem registering respawned process"), RespawnCommand)
+		writeErrorResponse(ctx, w, errors.Wrap(err, "failed to register respawned process"), RespawnCommand)
 		cancel()
 		return
 	}
@@ -145,6 +145,7 @@ func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 		cancel()
 	}); err != nil {
 		newProcInfo := getProcInfoNoHang(ctx, newProc)
+		cancel()
 		if !newProcInfo.Complete {
 			writeErrorResponse(ctx, w, errors.Wrap(err, "failed to register trigger on respawned process"), RespawnCommand)
 			return

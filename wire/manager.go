@@ -57,13 +57,20 @@ func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 	if err = proc.RegisterTrigger(ctx, func(_ jasper.ProcessInfo) {
 		cancel()
 	}); err != nil {
-		if info := getProcInfoNoHang(ctx, proc); !info.Complete {
-			cancel()
+		info := getProcInfoNoHang(ctx, proc)
+		cancel()
+		// If we get an error registering a trigger, then we should make sure that
+		// the reason for it isn't just because the process has exited already,
+		// since that should not be considered an error.
+		if !info.Complete {
+			writeErrorResponse(ctx, w, errors.Wrap(err, "could not register trigger"), CreateProcessCommand)
+			return
 		}
 	}
 
 	resp, err := makeInfoResponse(getProcInfoNoHang(ctx, proc)).Message()
 	if err != nil {
+		cancel()
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CreateProcessCommand)
 		return
 	}
