@@ -15,20 +15,21 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/mongodb/ftdc/bsonx/bsonerr"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDocument(t *testing.T) {
 	t.Run("NewDocument", func(t *testing.T) {
 		t.Run("TooShort", func(t *testing.T) {
-			want := NewErrTooSmall()
+			want := newErrTooSmall()
 			_, got := ReadDocument([]byte{'\x00', '\x00'})
 			if !IsTooSmall(got) {
 				t.Errorf("Did not get expected error. got %#v; want %#v", got, want)
 			}
 		})
 		t.Run("InvalidLength", func(t *testing.T) {
-			want := ErrInvalidLength
+			want := bsonerr.InvalidLength
 			b := make([]byte, 5)
 			binary.LittleEndian.PutUint32(b[0:4], 200)
 			_, got := ReadDocument(b)
@@ -37,7 +38,7 @@ func TestDocument(t *testing.T) {
 			}
 		})
 		t.Run("keyLength-error", func(t *testing.T) {
-			want := ErrInvalidKey
+			want := bsonerr.InvalidKey
 			b := make([]byte, 8)
 			binary.LittleEndian.PutUint32(b[0:4], 8)
 			b[4], b[5], b[6], b[7] = '\x02', 'f', 'o', 'o'
@@ -47,7 +48,7 @@ func TestDocument(t *testing.T) {
 			}
 		})
 		t.Run("Missing-Null-Terminator", func(t *testing.T) {
-			want := ErrInvalidReadOnlyDocument
+			want := bsonerr.InvalidReadOnlyDocument
 			b := make([]byte, 9)
 			binary.LittleEndian.PutUint32(b[0:4], 9)
 			b[4], b[5], b[6], b[7], b[8] = '\x0A', 'f', 'o', 'o', '\x00'
@@ -57,7 +58,7 @@ func TestDocument(t *testing.T) {
 			}
 		})
 		t.Run("validateValue-error", func(t *testing.T) {
-			want := NewErrTooSmall()
+			want := newErrTooSmall()
 			b := make([]byte, 11)
 			binary.LittleEndian.PutUint32(b[0:4], 11)
 			b[4], b[5], b[6], b[7], b[8], b[9], b[10] = '\x01', 'f', 'o', 'o', '\x00', '\x01', '\x02'
@@ -94,8 +95,8 @@ func TestDocument(t *testing.T) {
 			func() {
 				defer func() {
 					r := recover()
-					if r != ErrNilElement {
-						t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
+					if r != bsonerr.NilElement {
+						t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, bsonerr.NilElement)
 					}
 				}()
 				d := NewDocument()
@@ -162,8 +163,8 @@ func TestDocument(t *testing.T) {
 				func() {
 					defer func() {
 						r := recover()
-						if r != ErrNilElement {
-							t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, ErrNilElement)
+						if r != bsonerr.NilElement {
+							t.Errorf("Did not received expected error from panic. got %#v; want %#v", r, bsonerr.NilElement)
 						}
 						require.Equal(t, tc.want, got)
 
@@ -301,8 +302,8 @@ func TestDocument(t *testing.T) {
 				func() {
 					defer func() {
 						r := recover()
-						if r != ErrNilElement {
-							t.Errorf("Did not receive expected error from panic. got %#v; want %#v", r, ErrNilElement)
+						if r != bsonerr.NilElement {
+							t.Errorf("Did not receive expected error from panic. got %#v; want %#v", r, bsonerr.NilElement)
 						}
 
 						require.Equal(t, tc.want, got)
@@ -391,12 +392,12 @@ func TestDocument(t *testing.T) {
 			})
 		}
 	})
-	t.Run("Lookup", func(t *testing.T) {
+	t.Run("RecursiveLookup", func(t *testing.T) {
 		t.Run("empty key", func(t *testing.T) {
 			d := NewDocument()
-			_, err := d.LookupErr()
-			if err != ErrEmptyKey {
-				t.Errorf("Empty key lookup did not return expected result. got %#v; want %#v", err, ErrEmptyKey)
+			_, err := d.RecursiveLookupErr()
+			if err != bsonerr.EmptyKey {
+				t.Errorf("Empty key lookup did not return expected result. got %#v; want %#v", err, bsonerr.EmptyKey)
 			}
 		})
 		testCases := []struct {
@@ -415,11 +416,11 @@ func TestDocument(t *testing.T) {
 			},
 			{"invalid-depth-traversal", (&Document{}).Append(EC.Null("x")),
 				[]string{"x", "y"},
-				nil, ErrInvalidDepthTraversal,
+				nil, bsonerr.InvalidDepthTraversal,
 			},
 			{"not-found", (&Document{}).Append(EC.Null("x")),
 				[]string{"y"},
-				nil, ErrElementNotFound,
+				nil, bsonerr.ElementNotFound,
 			},
 			{"subarray",
 				NewDocument(
@@ -437,7 +438,7 @@ func TestDocument(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				got, err := tc.d.LookupElementErr(tc.key...)
+				got, err := tc.d.RecursiveLookupElementErr(tc.key...)
 				if err != tc.err {
 					t.Errorf("Returned error does not match. got %#v; want %#v", err, tc.err)
 				}
@@ -561,7 +562,7 @@ func TestDocument(t *testing.T) {
 					nil,
 				},
 				nil,
-				ErrNilDocument,
+				bsonerr.NilDocument,
 			},
 			{
 				"nil document",
@@ -570,7 +571,7 @@ func TestDocument(t *testing.T) {
 					(*Document)(nil),
 				},
 				nil,
-				ErrNilDocument,
+				bsonerr.NilDocument,
 			},
 			{
 				"concat single doc",
@@ -828,7 +829,7 @@ func TestDocument(t *testing.T) {
 			b := make([]byte, 15)
 			_, err := d.WriteDocument(0, b)
 			if !IsTooSmall(err) {
-				t.Errorf("Expected error not returned. got %s; want %s", err, NewErrTooSmall())
+				t.Errorf("Expected error not returned. got %s; want %s", err, newErrTooSmall())
 			}
 		})
 		t.Run("[]byte-too-small", func(t *testing.T) {
@@ -836,15 +837,15 @@ func TestDocument(t *testing.T) {
 			b := make([]byte, 5)
 			_, err := d.WriteDocument(0, b)
 			if !IsTooSmall(err) {
-				t.Errorf("Expected error not returned. got %s; want %s", err, NewErrTooSmall())
+				t.Errorf("Expected error not returned. got %s; want %s", err, newErrTooSmall())
 			}
 		})
 		t.Run("invalid-writer", func(t *testing.T) {
 			d := NewDocument(EC.Double("", 3.14159))
 			var buf bytes.Buffer
 			_, err := d.WriteDocument(0, buf)
-			if err != ErrInvalidWriter {
-				t.Errorf("Expected error not returned. got %s; want %s", err, NewErrTooSmall())
+			if err != bsonerr.InvalidWriter {
+				t.Errorf("Expected error not returned. got %s; want %s", err, newErrTooSmall())
 			}
 		})
 
@@ -936,7 +937,7 @@ func TestDocument(t *testing.T) {
 			}
 			_, err = NewDocument().ReadFrom(&buf)
 			if !IsTooSmall(err) {
-				t.Errorf("Expected error not returned. got %s; want %s", err, NewErrTooSmall())
+				t.Errorf("Expected error not returned. got %s; want %s", err, newErrTooSmall())
 			}
 		})
 		testCases := []struct {
@@ -999,7 +1000,7 @@ func testDocumentKeys(t *testing.T) {
 		// 		'\x0B', '\x00', '\x00', '\x00', '\x01', '1', '\x00',
 		// 		'\x0A', '2', '\x00', '\x00', '\x00',
 		// 	},
-		// 	nil, NewErrTooSmall(), true,
+		// 	nil, newErrTooSmall(), true,
 		// },
 		// {"invalid-array",
 		// 	Reader{
@@ -1009,7 +1010,7 @@ func testDocumentKeys(t *testing.T) {
 		// 		'\x0B', '\x00', '\x00', '\x00', '\x01', '1', '\x00',
 		// 		'\x0A', '2', '\x00', '\x00', '\x00',
 		// 	},
-		// 	nil, NewErrTooSmall(), true,
+		// 	nil, newErrTooSmall(), true,
 		// },
 	}
 

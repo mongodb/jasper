@@ -23,3 +23,4 @@ import:
   - package: google.golang.org/genproto
   - package: github.com/golang/protobuf
   - package: go.mongodb.org/go-driver
+  - package: github.com/evergreen-ci/poplar

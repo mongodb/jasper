@@ -53,7 +53,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "problem constructing local process")
+		return nil, errors.Wrap(err, "problem constructing process")
 	}
 
 	// This trigger is not guaranteed to be registered since the process may
@@ -64,7 +64,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.Add(proc.Info(ctx)); err != nil {
-			grip.Warning(message.WrapError(err, "problem adding local process to tracker during process creation"))
+			grip.Warning(message.WrapError(err, "problem adding process to tracker during process creation"))
 		}
 	}
 
@@ -94,7 +94,7 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.Add(proc.Info(ctx)); err != nil {
-			grip.Warning(message.WrapError(err, "problem adding local process to tracker during process registration"))
+			grip.Warning(message.WrapError(err, "problem adding process to tracker during process registration"))
 		}
 	}
 
