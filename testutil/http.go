@@ -31,7 +31,7 @@ func PutHTTPClient(client *http.Client) {
 	httpClientPool.Put(client)
 }
 
-// waitForRESTService waits until either the REST service becomes available to
+// WaitForRESTService waits until either the REST service becomes available to
 // serve requests or the context times out.
 func WaitForRESTService(ctx context.Context, url string) error {
 	client := GetHTTPClient()
@@ -67,7 +67,7 @@ func WaitForRESTService(ctx context.Context, url string) error {
 
 // WaitForWireService waits unti either the wire service becomes available to
 // serve requests or the context times ou t.
-func WaitForWireService(ctx context.Context, addr net.Addr) error {
+func WaitForWireService(ctx context.Context, addr net.Addr) error { //nolint: interfacer
 	// Block until the service comes up
 	timeoutInterval := 10 * time.Millisecond
 	timer := time.NewTimer(timeoutInterval)
