@@ -48,8 +48,8 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 		err  error
 	)
 
-	if opts.Remote != nil {
-		opts.Remote.UseSSHLibrary = m.useSSHLibrary
+	if opts.Remote != nil && m.useSSHLibrary {
+		opts.Remote.UseSSHLibrary = true
 	}
 	if m.blocking {
 		proc, err = newBlockingProcess(ctx, opts)
