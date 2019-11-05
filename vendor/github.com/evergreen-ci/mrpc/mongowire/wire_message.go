@@ -2,8 +2,8 @@ package mongowire
 
 import (
 	"github.com/evergreen-ci/birch"
-	"github.com/pkg/errors"
 	"github.com/evergreen-ci/mrpc/model"
+	"github.com/pkg/errors"
 )
 
 type opMessageSection interface {
@@ -92,7 +92,7 @@ func NewOpMessage(moreToCome bool, documents []*birch.Document, items ...model.S
 			Identifier:  item.Identifier,
 		}
 		for _, i := range item.Documents {
-			it.Size += int32(getDocSize(i))
+			it.Size += int32(getDocSize(&i))
 		}
 		msg.Items = append(msg.Items, it)
 	}

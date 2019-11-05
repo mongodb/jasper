@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/evergreen-ci/birch"
@@ -47,9 +44,6 @@ func (s *Service) Run(ctx context.Context) error {
 	}
 	defer l.Close()
 
-	ctx, cancel := context.WithCancel(ctx)
-	go handleSignals(ctx, cancel)
-
 	grip.Infof("listening for connections on %s", s.addr)
 
 	for {
@@ -68,22 +62,24 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func writeErrorReply(w io.Writer, err error) error {
-	responseNotOk := birch.EC.Int32("ok", 0)
-	errorDoc := birch.EC.String("errmsg", err.Error())
-	doc := birch.NewDocument(responseNotOk, errorDoc)
-
-	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []*birch.Document{doc})
+	responseNotOK := birch.EC.Int32("ok", 0)
+	doc := birch.NewDocument(responseNotOK)
+	if err != nil {
+		doc.Append(birch.EC.String("errmsg", err.Error()))
+	}
+	// TODO: handle OP_MSG replies for newer protocol versions.
+	reply := mongowire.NewReply(int64(0), int32(0), int32(0), int32(1), []birch.Document{*doc.Copy()})
 	_, err = w.Write(reply.Serialize())
 	return errors.Wrap(err, "could not write response")
 }
 
 func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 	defer func() {
-		err := recovery.HandlePanicWithError(recover(), nil, "request handling")
+		err := recovery.HandlePanicWithError(recover(), nil, "connection handling")
 		if err != nil {
 			grip.Error(message.WrapError(err, "error during request handling"))
 			// Attempt to reply with the given deadline.
-			if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+			if deadlineErr := conn.SetDeadline(time.Now().Add(15 * time.Second)); deadlineErr != nil {
 				grip.Error(message.WrapError(err, "failed to set deadline on panic reply"))
 			} else if writeErr := writeErrorReply(conn, err); writeErr != nil {
 				grip.Error(message.WrapError(writeErr, "error writing reply after panic recovery"))
@@ -128,19 +124,5 @@ func (s *Service) dispatchRequest(ctx context.Context, conn net.Conn) {
 		}
 
 		go handler(ctx, conn, m)
-	}
-}
-
-func handleSignals(ctx context.Context, cancel context.CancelFunc) {
-	defer recovery.LogStackTraceAndContinue("graceful shutdown")
-	defer cancel()
-	sig := make(chan os.Signal, 2)
-	signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
-
-	select {
-	case <-sig:
-		grip.Debug("received signal")
-	case <-ctx.Done():
-		grip.Debug("context canceled")
 	}
 }

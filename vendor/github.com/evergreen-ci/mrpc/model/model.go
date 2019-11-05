@@ -18,7 +18,7 @@ type Delete struct {
 
 type Insert struct {
 	Namespace string
-	Documents []*birch.Document
+	Documents []birch.Document
 }
 
 type GetMore struct {
@@ -45,7 +45,7 @@ type Update struct {
 }
 
 type Reply struct {
-	Contents       []*birch.Document
+	Contents       []birch.Document
 	CursorID       int64
 	StartingFrom   int32
 	CursorNotFound bool
@@ -63,5 +63,5 @@ type Message struct {
 
 type SequenceItem struct {
 	Identifier string
-	Documents  []*birch.Document
+	Documents  []birch.Document
 }
