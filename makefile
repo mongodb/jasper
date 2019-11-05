@@ -78,22 +78,21 @@ $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
 #    This varable includes everything that the tests actually need to
 #    run. (The "build" target is intentional and makes these targetsb
 #    rerun as expected.)
-testTimeout := -timeout=20m
-testArgs := -v $(testTimeout)
+testArgs := -v
 ifneq (,$(RUN_TEST))
 testArgs += -run='$(RUN_TEST)'
 endif
 ifneq (,$(RUN_COUNT))
 testArgs += -count=$(RUN_COUNT)
 endif
-ifneq (,$(SKIP_LONG))
-testArgs += -short
-endif
-ifeq (,$(DISABLE_COVERAGE))
+ifneq (,$(DISABLE_COVERAGE))
 testArgs += -cover
 endif
 ifneq (,$(RACE_DETECTOR))
 testArgs += -race
+endif
+ifneq (,$(SKIP_LONG))
+testArgs += -short
 endif
 # test execution and output handlers
 $(buildDir)/:
