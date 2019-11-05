@@ -20,8 +20,6 @@ const (
 	CloseCommand         = "close"
 )
 
-// managerID replies with a document of the form:
-//     {"id": string}
 func (s *service) managerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	resp, err := makeIDResponse(s.manager.ID()).Message()
 	if err != nil {
@@ -31,8 +29,6 @@ func (s *service) managerID(ctx context.Context, w io.Writer, msg mongowire.Mess
 	writeResponse(ctx, w, resp, ManagerIDCommand)
 }
 
-// managerCreateProcess replies with a document of the form:
-//     {"ok": bool, "info": document}
 func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	req, err := ExtractCreateProcessRequest(msg)
 	if err != nil {
@@ -77,8 +73,6 @@ func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 	writeResponse(ctx, w, resp, CreateProcessCommand)
 }
 
-// managerList replies with a document of the form:
-//     {"ok": bool, "infos": [documents...]}
 func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	req, err := ExtractListRequest(msg)
 	if err != nil {
@@ -104,8 +98,6 @@ func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Me
 	writeResponse(ctx, w, resp, ListCommand)
 }
 
-// managerGroup replies with a document of the form:
-//     {"ok": bool, "infos": [documents...]}
 func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	req, err := ExtractGroupRequest(msg)
 	if err != nil {
@@ -133,8 +125,6 @@ func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.M
 	writeResponse(ctx, w, resp, GroupCommand)
 }
 
-// managerGet replies with a document of the form:
-//     {"ok": bool, "info": document}
 func (s *service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	req, err := ExtractGetRequest(msg)
 	if err != nil {
@@ -157,15 +147,11 @@ func (s *service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Mes
 	writeResponse(ctx, w, resp, GetCommand)
 }
 
-// managerClear replies with a document of the form:
-//     {"ok": bool}
 func (s *service) managerClear(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	s.manager.Clear(ctx)
 	writeOKResponse(ctx, w, ClearCommand)
 }
 
-// managerClose replies with a document of the form:
-//     {"ok": bool}
 func (s *service) managerClose(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	if err := s.manager.Close(ctx); err != nil {
 		writeErrorResponse(ctx, w, err, CloseCommand)
