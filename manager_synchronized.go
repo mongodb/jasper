@@ -23,7 +23,7 @@ func NewSynchronizedManager(trackProcs bool) (Manager, error) {
 	return &synchronizedProcessManager{manager: basicManager}, nil
 }
 
-// NewSSHBinarySynchronizedManager is the same as NewSynchronizedManager but
+// NewSSHLibrarySynchronizedManager is the same as NewSynchronizedManager but
 // uses the SSH library instead of the SSH binary for remote processes.
 func NewSSHLibrarySynchronizedManager(trackProcs bool) (Manager, error) {
 	basicManager, err := newBasicProcessManager(map[string]Process{}, false, trackProcs, true)

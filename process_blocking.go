@@ -18,7 +18,6 @@ import (
 
 type blockingProcess struct {
 	id       string
-	opts     options.Create
 	ops      chan func(executor.Executor)
 	complete chan struct{}
 	err      error

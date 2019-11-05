@@ -15,8 +15,8 @@ type basicProcessManager struct {
 	id            string
 	procs         map[string]Process
 	blocking      bool
-	tracker       ProcessTracker
 	useSSHLibrary bool
+	tracker       ProcessTracker
 }
 
 func newBasicProcessManager(procs map[string]Process, blocking bool, trackProcs bool, useSSHLibrary bool) (Manager, error) {
