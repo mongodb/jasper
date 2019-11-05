@@ -26,7 +26,7 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 // given manager. If creds is non-nil, the credentials will be used to establish
 // a secure TLS connection with clients; otherwise, it will start an insecure
 // service. The caller is responsible for closing the connection using the
-// returned jasper.CloseFunc.
+// return jasper.CloseFunc.
 func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *certdepot.Credentials) (jasper.CloseFunc, error) {
 	lis, err := net.Listen(addr.Network(), addr.String())
 	if err != nil {

@@ -44,7 +44,7 @@ func NewClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials)
 
 	conn, err := grpc.DialContext(ctx, addr.String(), opts...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not establish connection to %s service at address %s", addr.Network(), addr.String())
+		return nil, errors.Wrapf(err, "could not establish connection to %s service at address '%s'", addr.Network(), addr.String())
 	}
 
 	return newRPCClient(conn), nil
@@ -263,7 +263,7 @@ func (c *rpcClient) WriteFile(ctx context.Context, jinfo options.WriteFile) erro
 		return stream.Send(info)
 	}
 
-	if err = jinfo.WriteBufferedContent(sendInfo); err != nil {
+	if err := jinfo.WriteBufferedContent(sendInfo); err != nil {
 		catcher := grip.NewBasicCatcher()
 		catcher.Wrapf(err, "error reading from content source")
 		catcher.Wrapf(stream.CloseSend(), "error closing send stream after error during read: %s", err.Error())

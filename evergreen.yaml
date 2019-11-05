@@ -85,10 +85,6 @@ tasks:
     name: test-rpc
 
   - <<: *run-build
-    tags: ["test"]
-    name: test-wire
-
-  - <<: *run-build
     tags: ["legacy-check"]
     name: compile-base
 
