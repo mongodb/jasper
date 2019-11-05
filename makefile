@@ -129,6 +129,7 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint build test coverage coverage-html
+phony += lint build test coverage coverage-html
 .PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
