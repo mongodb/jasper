@@ -26,6 +26,7 @@ const (
 	ListCollectionsCommand         = "listCollections"
 )
 
+// TODO: support jasper.RemoteClient functionality
 type service struct {
 	*mrpc.Service
 	manager jasper.Manager
