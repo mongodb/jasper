@@ -16,7 +16,8 @@ func init() {
 	}()
 }
 
-// GetPortNumber returns a new port number.
+// GetPortNumber returns a new port number that has not been used in the current
+// runtime.
 func GetPortNumber() int {
 	return <-intSource
 }
