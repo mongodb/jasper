@@ -74,6 +74,19 @@ func TestProcessImplementations(t *testing.T) {
 					tags := proc.GetTags()
 					assert.Contains(t, tags, "foo")
 				},
+				"InfoTagsMatchGetTags": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
+					opts.Tags = []string{"foo"}
+					proc, err := makep(ctx, opts)
+					require.NoError(t, err)
+					tags := proc.GetTags()
+					assert.Contains(t, tags, "foo")
+					assert.Equal(t, tags, proc.Info(ctx).Options.Tags)
+
+					proc.ResetTags()
+					tags = proc.GetTags()
+					assert.Empty(t, tags)
+					assert.Empty(t, proc.Info(ctx).Options.Tags)
+				},
 				"InfoHasMatchingID": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)

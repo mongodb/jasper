@@ -60,7 +60,7 @@ func responseToMessage(resp interface{}) (mongowire.Message, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert BSON response to document")
 	}
-	return mongowire.NewReply(0, 0, 0, 1, []*birch.Document{doc}), nil
+	return mongowire.NewReply(0, 0, 0, 1, []birch.Document{*doc}), nil
 }
 
 // requestToMessage converts a request into a wire protocol query.
@@ -90,7 +90,7 @@ func requestMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 // document.
 func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	if replyMsg, ok := msg.(*mongowire.ReplyMessage); ok {
-		return replyMsg.Docs[0], nil
+		return &replyMsg.Docs[0], nil
 	}
 	if cmdReplyMsg, ok := msg.(*mongowire.CommandReplyMessage); ok {
 		return cmdReplyMsg.CommandReply, nil

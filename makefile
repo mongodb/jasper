@@ -2,7 +2,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest options wire testutil
+packages := $(name) cli rpc rest options testutil wire
 testPackages := $(packages) mock
 
 _testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
@@ -78,22 +78,21 @@ $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
 #    This varable includes everything that the tests actually need to
 #    run. (The "build" target is intentional and makes these targetsb
 #    rerun as expected.)
-testTimeout := -timeout=20m
-testArgs := -v $(testTimeout)
+testArgs := -v
 ifneq (,$(RUN_TEST))
 testArgs += -run='$(RUN_TEST)'
 endif
 ifneq (,$(RUN_COUNT))
 testArgs += -count=$(RUN_COUNT)
 endif
-ifneq (,$(SKIP_LONG))
-testArgs += -short
-endif
-ifeq (,$(DISABLE_COVERAGE))
+ifneq (,$(DISABLE_COVERAGE))
 testArgs += -cover
 endif
 ifneq (,$(RACE_DETECTOR))
 testArgs += -race
+endif
+ifneq (,$(SKIP_LONG))
+testArgs += -short
 endif
 # test execution and output handlers
 $(buildDir)/:
@@ -125,18 +124,17 @@ proto:
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
 lint:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 test:build $(buildDir)/output.test
-benchmarks:$(buildDir)/run-benchmarks $(buildDir)/ .FORCE
+benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
-phony += lint build race test coverage coverage-html
-.PHONY: $(phony)
+phony += lint build test coverage coverage-html
+.PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 .PRECIOUS:$(buildDir)/output.lint
 # end front-ends
-
 .FORCE:
 
 clean:
@@ -168,11 +166,11 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/satori/go.uuid/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
+	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/montanaflynn/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
@@ -195,7 +193,6 @@ vendor-clean:
 	rm -rf vendor/github.com/mholt/archiver/tarxz.go
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/evergreen-ci/aviation/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/golang/protobuf/
@@ -204,6 +201,7 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/net/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/text/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/montanaflynn/stats/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pkg/errors/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/stretchr/testify/
@@ -224,6 +222,7 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/gopkg.in/mgo.v2/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor/ -type d -empty | xargs rm -rf
