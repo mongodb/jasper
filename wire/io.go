@@ -64,7 +64,7 @@ type InfoRequest struct {
 	ID string `bson:"info"`
 }
 
-func makeInfoRequest(id string) InfoRequest {
+func makeInfoRequest(id string) InfoRequest { //nolint
 	return InfoRequest{ID: id}
 }
 
@@ -123,7 +123,7 @@ type RunningRequest struct {
 	ID string `bson:"running"`
 }
 
-func makeRunningRequest(id string) RunningRequest {
+func makeRunningRequest(id string) RunningRequest { //nolint
 	return RunningRequest{ID: id}
 }
 
@@ -182,7 +182,7 @@ type CompleteRequest struct {
 	ID string `bson:"complete"`
 }
 
-func makeCompleteRequest(id string) CompleteRequest {
+func makeCompleteRequest(id string) CompleteRequest { //nolint
 	return CompleteRequest{ID: id}
 }
 
@@ -241,7 +241,7 @@ type WaitRequest struct {
 	ID string `bson:"wait"`
 }
 
-func makeWaitRequest(id string) WaitRequest {
+func makeWaitRequest(id string) WaitRequest { //nolint
 	return WaitRequest{ID: id}
 }
 
@@ -299,7 +299,7 @@ type RespawnRequest struct {
 	ID string `bson:"respawn"`
 }
 
-func makeRespawnRequest(id string) RespawnRequest {
+func makeRespawnRequest(id string) RespawnRequest { //nolint
 	return RespawnRequest{ID: id}
 }
 
@@ -328,7 +328,7 @@ type SignalRequest struct {
 	} `bson:"signal"`
 }
 
-func makeSignalRequest(id string, signal int) SignalRequest {
+func makeSignalRequest(id string, signal int) SignalRequest { //nolint
 	req := SignalRequest{}
 	req.Params.ID = id
 	req.Params.Signal = float64(signal)
@@ -360,7 +360,7 @@ type RegisterSignalTriggerIDRequest struct {
 	} `bson:"register_signal_trigger_id"`
 }
 
-func makeRegisterSignalTriggerIDRequest(id string, sigID jasper.SignalTriggerID) RegisterSignalTriggerIDRequest {
+func makeRegisterSignalTriggerIDRequest(id string, sigID jasper.SignalTriggerID) RegisterSignalTriggerIDRequest { //nolint
 	req := RegisterSignalTriggerIDRequest{}
 	req.Params.ID = id
 	req.Params.SignalTriggerID = sigID
@@ -394,7 +394,7 @@ type TagRequest struct {
 	} `bson:"tag"`
 }
 
-func makeTagRequest(id, tag string) TagRequest {
+func makeTagRequest(id, tag string) TagRequest { //nolint
 	req := TagRequest{}
 	req.Params.ID = id
 	req.Params.Tag = tag
@@ -423,7 +423,7 @@ type GetTagsRequest struct {
 	ID string `bson:"get_tags"`
 }
 
-func makeGetTagsRequest(id string) GetTagsRequest {
+func makeGetTagsRequest(id string) GetTagsRequest { //nolint
 	return GetTagsRequest{ID: id}
 }
 
@@ -481,7 +481,7 @@ type ResetTagsRequest struct {
 	ID string `bson:"reset_tags"`
 }
 
-func makeResetTagsRequest(id string) ResetTagsRequest {
+func makeResetTagsRequest(id string) ResetTagsRequest { //nolint
 	return ResetTagsRequest{ID: id}
 }
 
@@ -507,7 +507,7 @@ type IDRequest struct {
 	ID int `bson:"id"`
 }
 
-func makeIDRequest() IDRequest {
+func makeIDRequest() IDRequest { //nolint
 	return IDRequest{ID: 1}
 }
 
@@ -565,7 +565,7 @@ type CreateProcessRequest struct {
 	Options options.Create `bson:"create_process"`
 }
 
-func makeCreateProcessRequest(opts options.Create) CreateProcessRequest {
+func makeCreateProcessRequest(opts options.Create) CreateProcessRequest { //nolint
 	return CreateProcessRequest{Options: opts}
 }
 
@@ -591,7 +591,7 @@ type ListRequest struct {
 	Filter options.Filter `bson:"list"`
 }
 
-func makeListRequest(filter options.Filter) ListRequest {
+func makeListRequest(filter options.Filter) ListRequest { //nolint
 	return ListRequest{Filter: filter}
 }
 
@@ -617,7 +617,7 @@ type GroupRequest struct {
 	Tag string `bson:"group"`
 }
 
-func makeGroupRequest(tag string) GroupRequest {
+func makeGroupRequest(tag string) GroupRequest { //nolint
 	return GroupRequest{Tag: tag}
 }
 
@@ -643,7 +643,7 @@ type GetRequest struct {
 	ID string `bson:"get"`
 }
 
-func makeGetRequest(id string) GetRequest {
+func makeGetRequest(id string) GetRequest { //nolint
 	return GetRequest{ID: id}
 }
 
@@ -702,7 +702,7 @@ type ClearRequest struct {
 	Clear int `bson:"clear"`
 }
 
-func makeClearRequest() ClearRequest {
+func makeClearRequest() ClearRequest { //nolint
 	return ClearRequest{Clear: 1}
 }
 
@@ -727,7 +727,7 @@ type CloseRequest struct {
 	Close int `bson:"close"`
 }
 
-func makeCloseRequest() CloseRequest {
+func makeCloseRequest() CloseRequest { //nolint
 	return CloseRequest{Close: 1}
 }
 
