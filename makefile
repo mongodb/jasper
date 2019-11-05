@@ -129,12 +129,13 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 coverage:build $(coverageOutput)
 coverage-html:build $(coverageHtmlOutput)
 phony += lint build test coverage coverage-html
-.PHONY: $(phony)
+.PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 .PRECIOUS:$(buildDir)/output.lint
 # end front-ends
+.FORCE:
 
 clean:
 	rm -rf *.pb.go
