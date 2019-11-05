@@ -21,7 +21,7 @@ type ReplyMessage struct {
 	StartingFrom   int32
 	NumberReturned int32
 
-	Docs []*birch.Document
+	Docs []birch.Document
 }
 
 // OP_UPDATE
@@ -66,7 +66,7 @@ type insertMessage struct {
 	Flags     int32
 	Namespace string
 
-	Docs []*birch.Document
+	Docs []birch.Document
 }
 
 // OP_DELETE

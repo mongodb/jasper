@@ -10,24 +10,26 @@ import (
 const MaxInt32 = 2147483647
 
 func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
-	// read header
-	sizeBuf := make([]byte, 4)
 	type readResult struct {
 		n   int
 		err error
 	}
 
-	doRead := func(readFinished chan readResult, out []byte) {
-		defer close(readFinished)
-		n, err := reader.Read(out)
-		readFinished <- readResult{n: n, err: err}
-	}
+	// read header
+	sizeBuf := make([]byte, 4)
 
 	readFinished := make(chan readResult)
-	go doRead(readFinished, sizeBuf)
+	go func() {
+		defer close(readFinished)
+		n, err := reader.Read(sizeBuf)
+		select {
+		case readFinished <- readResult{n: n, err: err}:
+		case <-ctx.Done():
+		}
+	}()
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errors.WithStack(ctx.Err())
 	case res := <-readFinished:
 		if res.err != nil {
 			return nil, errors.WithStack(res.err)
@@ -55,10 +57,17 @@ func ReadMessage(ctx context.Context, reader io.Reader) (Message, error) {
 
 	for read := 0; int32(read) < header.Size-4; {
 		readFinished = make(chan readResult)
-		go doRead(readFinished, restBuf)
+		go func() {
+			defer close(readFinished)
+			n, err := reader.Read(restBuf)
+			select {
+			case readFinished <- readResult{n: n, err: err}:
+			case <-ctx.Done():
+			}
+		}()
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, errors.WithStack(ctx.Err())
 		case res := <-readFinished:
 			if res.err != nil {
 				return nil, errors.WithStack(res.err)
@@ -92,11 +101,14 @@ func SendMessage(ctx context.Context, m Message, writer io.Writer) error {
 		go func() {
 			defer close(writeFinished)
 			n, err := writer.Write(buf)
-			writeFinished <- writeRes{n: n, err: err}
+			select {
+			case writeFinished <- writeRes{n: n, err: err}:
+			case <-ctx.Done():
+			}
 		}()
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return errors.WithStack(ctx.Err())
 		case res := <-writeFinished:
 			if res.err != nil {
 				return errors.Wrap(res.err, "error writing message to client")

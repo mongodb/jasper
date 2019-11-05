@@ -7,14 +7,17 @@ import (
 )
 
 func NewInsert(ns string, docs ...*birch.Document) Message {
-	return &insertMessage{
+	msg := &insertMessage{
 		header: MessageHeader{
 			RequestID: 19,
 			OpCode:    OP_INSERT,
 		},
 		Namespace: ns,
-		Docs:      docs,
 	}
+	for _, d := range docs {
+		msg.Docs = append(msg.Docs, *d.Copy())
+	}
+	return msg
 }
 
 func (m *insertMessage) HasResponse() bool     { return false }
@@ -25,7 +28,7 @@ func (m *insertMessage) Serialize() []byte {
 	size := 16 /* header */ + 4 /* update header */
 	size += len(m.Namespace) + 1
 	for _, d := range m.Docs {
-		size += int(getDocSize(d))
+		size += int(getDocSize(&d))
 	}
 
 	m.header.Size = int32(size)
@@ -41,7 +44,7 @@ func (m *insertMessage) Serialize() []byte {
 	writeCString(m.Namespace, buf, &loc)
 
 	for _, d := range m.Docs {
-		loc += writeDocAt(loc, d, buf)
+		loc += writeDocAt(loc, &d, buf)
 	}
 
 	return buf
@@ -75,7 +78,7 @@ func (h *MessageHeader) parseInsertMessage(buf []byte) (Message, error) {
 		if err != nil {
 			return nil, err
 		}
-		m.Docs = append(m.Docs, doc.Copy())
+		m.Docs = append(m.Docs, *doc.Copy())
 		loc += getDocSize(doc)
 	}
 

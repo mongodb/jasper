@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []*birch.Document) Message {
+func NewReply(cursorID int64, flags, startingFrom, numReturned int32, docs []birch.Document) Message {
 	return &ReplyMessage{
 		header: MessageHeader{
 			RequestID: 19,
@@ -27,7 +27,7 @@ func (m *ReplyMessage) Scope() *OpScope       { return nil }
 func (m *ReplyMessage) Serialize() []byte {
 	size := 16 /* header */ + 20 /* reply header */
 	for _, d := range m.Docs {
-		size += getDocSize(d)
+		size += getDocSize(&d)
 	}
 	m.header.Size = int32(size)
 
@@ -41,7 +41,7 @@ func (m *ReplyMessage) Serialize() []byte {
 
 	loc := 36
 	for _, d := range m.Docs {
-		loc += writeDocAt(loc, d, buf)
+		loc += writeDocAt(loc, &d, buf)
 	}
 
 	return buf
@@ -75,7 +75,7 @@ func (h *MessageHeader) parseReplyMessage(buf []byte) (Message, error) {
 		if err != nil {
 			return nil, err
 		}
-		rm.Docs = append(rm.Docs, doc)
+		rm.Docs = append(rm.Docs, *doc.Copy())
 		loc += getDocSize(doc)
 	}
 
