@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RunLogBenchmarks runs the logging benchmark suite.
 func RunLogBenchmarks(ctx context.Context) error {
 	prefix := filepath.Join(
 		"build",
