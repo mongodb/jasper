@@ -51,6 +51,7 @@ func messageToRequest(msg mongowire.Message, out interface{}) error {
 }
 
 // responseToMessage converts a response into a wire protocol reply.
+// TODO: support OP_MSG
 func responseToMessage(resp interface{}) (mongowire.Message, error) {
 	b, err := bson.Marshal(resp)
 	if err != nil {
@@ -64,7 +65,12 @@ func responseToMessage(resp interface{}) (mongowire.Message, error) {
 }
 
 // requestToMessage converts a request into a wire protocol query.
+// TODO: support OP_MSG
 func requestToMessage(req interface{}) (mongowire.Message, error) {
+	// <namespace.$cmd  format is required to indicate that the OP_QUERY should
+	// be interpreted as an OP_COMMAND.
+	const namespace = "jasper.$cmd"
+
 	b, err := bson.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert response to BSON")
@@ -78,6 +84,7 @@ func requestToMessage(req interface{}) (mongowire.Message, error) {
 
 // requestMessageToDocument converts a wire protocol request message into a
 // document.
+// TODO: support OP_MSG
 func requestMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	cmdMsg, ok := msg.(*mongowire.CommandMessage)
 	if !ok {
@@ -88,6 +95,7 @@ func requestMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 
 // responseMessageToDocument converts a wire protocol response message into a
 // document.
+// TODO: support OP_MSG
 func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 	if replyMsg, ok := msg.(*mongowire.ReplyMessage); ok {
 		return &replyMsg.Docs[0], nil
