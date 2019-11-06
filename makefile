@@ -2,7 +2,8 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest options testutil wire
+packages := $(name) cli rpc rest options wire
+lintPackages := $(packages) mock testutil
 testPackages := $(packages) mock
 
 _testPackages := $(subst $(name),,$(foreach target,$(testPackages),./$(target)))
@@ -113,7 +114,7 @@ $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 	@./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 $(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
-	@./$< --output="$@" --lintArgs='$(lintArgs)' --packages="$(packages)"
+	@./$< --output="$@" --lintArgs='$(lintArgs)' --packages="$(lintPackages)"
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
@@ -122,7 +123,7 @@ $(buildDir)/output.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 proto:
 	@mkdir -p rpc/internal
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
-lint:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)
+lint:$(foreach target,$(lintPackages),$(buildDir)/output.$(target).lint)
 test:build $(buildDir)/output.test
 benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
