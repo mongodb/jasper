@@ -10,6 +10,7 @@ import (
 
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ import (
 // AttachService attaches the given manager to the jasper GRPC server. This
 // function eventually calls generated Protobuf code for registering the
 // GRPC Jasper server with the given Manager.
-func AttachService(manager jasper.Manager, s *grpc.Server) error {
+func AttachService(ctx context.Context, manager jasper.Manager, s *grpc.Server) error {
 	hn, err := os.Hostname()
 	if err != nil {
 		return errors.WithStack(err)
@@ -39,26 +40,38 @@ func AttachService(manager jasper.Manager, s *grpc.Server) error {
 
 	RegisterJasperProcessManagerServer(s, srv)
 
-	go srv.backgroundPrune()
+	go srv.pruneCache(ctx)
 
 	return nil
 }
 
-func (s *jasperService) backgroundPrune() {
+func (s *jasperService) pruneCache(ctx context.Context) {
+	defer func() {
+		err := recovery.HandlePanicWithError(recover(), nil, "cache pruning")
+		if ctx.Err() != nil || err == nil {
+			return
+		}
+		go s.pruneCache(ctx)
+	}()
+
 	s.cacheMutex.RLock()
 	timer := time.NewTimer(s.cacheOpts.PruneDelay)
 	s.cacheMutex.RUnlock()
 
 	for {
-		<-timer.C
-		s.cacheMutex.RLock()
-		if !s.cacheOpts.Disabled {
-			if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
-				grip.Error(errors.Wrap(err, "error during cache pruning"))
+		select {
+		case <-timer.C:
+			s.cacheMutex.RLock()
+			if !s.cacheOpts.Disabled {
+				if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
+					grip.Error(errors.Wrap(err, "error during cache pruning"))
+				}
 			}
+			timer.Reset(s.cacheOpts.PruneDelay)
+			s.cacheMutex.RUnlock()
+		case <-ctx.Done():
+			return
 		}
-		timer.Reset(s.cacheOpts.PruneDelay)
-		s.cacheMutex.RUnlock()
 	}
 }
 
