@@ -17,7 +17,8 @@ import (
 const (
 	IsMasterCommand   = "isMaster"
 	WhatsMyURICommand = "whatsmyuri"
-	// Dumb, but the shell sends commands with different casing
+	// The shell sends commands with different casing so we need two different
+	// handlers for the different "buildinfo" commands
 	BuildInfoCommand               = "buildInfo"
 	BuildinfoCommand               = "buildinfo"
 	GetLogCommand                  = "getLog"
@@ -75,8 +76,6 @@ func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Mes
 }
 
 func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	// resp := birch.NewDocument(birch.EC.String("version", "0.0.0"))
-	// writeSuccessResponse(w, resp, BuildInfoCommand)
 	resp, err := makeBuildInfoResponse("0.0.0").Message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
