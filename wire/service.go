@@ -62,12 +62,7 @@ func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.
 }
 
 func (s *service) isMaster(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeErrorResponse(true, nil).Message()
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), IsMasterCommand)
-		return
-	}
-	writeResponse(ctx, w, resp, IsMasterCommand)
+	writeOKResponse(ctx, w, IsMasterCommand)
 }
 
 func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Message) {
