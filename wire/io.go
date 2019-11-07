@@ -323,15 +323,15 @@ func ExtractRespawnRequest(msg mongowire.Message) (RespawnRequest, error) {
 // ID.
 type SignalRequest struct {
 	Params struct {
-		ID     string  `bson:"id"`
-		Signal float64 `bson:"signal"` // The mongo shell sends integers as doubles by default
+		ID     string `bson:"id"`
+		Signal int    `bson:"signal"`
 	} `bson:"signal"`
 }
 
 func makeSignalRequest(id string, signal int) SignalRequest { //nolint
 	req := SignalRequest{}
 	req.Params.ID = id
-	req.Params.Signal = float64(signal)
+	req.Params.Signal = signal
 	return req
 }
 

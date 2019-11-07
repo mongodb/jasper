@@ -167,7 +167,7 @@ func (s *service) processSignal(ctx context.Context, w io.Writer, msg mongowire.
 		return
 	}
 	id := req.Params.ID
-	sig := int(req.Params.Signal)
+	sig := req.Params.Signal
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
