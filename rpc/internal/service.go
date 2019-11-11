@@ -374,22 +374,22 @@ func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) 
 	return &OperationOutcome{Success: true, Text: "cache configured"}, nil
 }
 
-func (s *jasperService) DownloadFile(ctx context.Context, info *DownloadInfo) (*OperationOutcome, error) {
-	jinfo := info.Export()
+func (s *jasperService) DownloadFile(ctx context.Context, opts *DownloadInfo) (*OperationOutcome, error) {
+	jopts := opts.Export()
 
-	if err := jinfo.Validate(); err != nil {
-		err = errors.Wrap(err, "problem validating download info")
+	if err := jopts.Validate(); err != nil {
+		err = errors.Wrap(err, "problem validating download options")
 		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -2}, nil
 	}
 
-	if err := jinfo.Download(); err != nil {
-		err = errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jinfo.URL, jinfo.Path)
+	if err := jopts.Download(); err != nil {
+		err = errors.Wrapf(err, "problem occurred during file download for URL %s to path %s", jopts.URL, jopts.Path)
 		return &OperationOutcome{Success: false, Text: err.Error(), ExitCode: -3}, nil
 	}
 
 	return &OperationOutcome{
 		Success: true,
-		Text:    fmt.Sprintf("downloaded file %s to path %s", jinfo.URL, jinfo.Path),
+		Text:    fmt.Sprintf("downloaded file %s to path %s", jopts.URL, jopts.Path),
 	}, nil
 }
 
@@ -487,11 +487,9 @@ func (s *jasperService) SignalEvent(ctx context.Context, name *EventName) (*Oper
 }
 
 func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) error {
-	var jinfo options.WriteFile
+	var jopts options.WriteFile
 
-	numRecvs := 0
-	for info, err := stream.Recv(); err == nil; info, err = stream.Recv() {
-		numRecvs++
+	for opts, err := stream.Recv(); err == nil; opts, err = stream.Recv() {
 		if err == io.EOF {
 			break
 		}
@@ -506,12 +504,12 @@ func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) e
 			return nil
 		}
 
-		jinfo = info.Export()
+		jopts = opts.Export()
 
-		if err := jinfo.Validate(); err != nil {
+		if err := jopts.Validate(); err != nil {
 			if sendErr := stream.SendAndClose(&OperationOutcome{
 				Success:  false,
-				Text:     errors.Wrap(err, "problem validating file write info").Error(),
+				Text:     errors.Wrap(err, "problem validating file write options").Error(),
 				ExitCode: -3,
 			}); sendErr != nil {
 				return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
@@ -519,10 +517,10 @@ func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) e
 			return nil
 		}
 
-		if err := jinfo.DoWrite(); err != nil {
+		if err := jopts.DoWrite(); err != nil {
 			if sendErr := stream.SendAndClose(&OperationOutcome{
 				Success:  false,
-				Text:     errors.Wrap(err, "problem validating file write info").Error(),
+				Text:     errors.Wrap(err, "problem validating file write opts").Error(),
 				ExitCode: -4,
 			}); sendErr != nil {
 				return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
@@ -531,10 +529,10 @@ func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) e
 		}
 	}
 
-	if err := jinfo.SetPerm(); err != nil {
+	if err := jopts.SetPerm(); err != nil {
 		if sendErr := stream.SendAndClose(&OperationOutcome{
 			Success:  false,
-			Text:     errors.Wrapf(err, "problem setting permissions for file %s", jinfo.Path).Error(),
+			Text:     errors.Wrapf(err, "problem setting permissions for file %s", jopts.Path).Error(),
 			ExitCode: -5,
 		}); sendErr != nil {
 			return errors.Wrapf(sendErr, "could not send error response to client: %s", err.Error())
@@ -544,6 +542,6 @@ func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) e
 
 	return errors.Wrap(stream.SendAndClose(&OperationOutcome{
 		Success: true,
-		Text:    fmt.Sprintf("file %s successfully written", jinfo.Path),
+		Text:    fmt.Sprintf("file %s successfully written", jopts.Path),
 	}), "could not send success response to client")
 }
