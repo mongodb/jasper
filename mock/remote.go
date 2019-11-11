@@ -24,10 +24,10 @@ type RemoteClient struct {
 	CacheOptions options.Cache
 
 	// DownloadFile input
-	DownloadOpts options.Download
+	DownloadOptions options.Download
 
 	// WriteFile input
-	WriteFileOpts options.WriteFile
+	WriteFileOptions options.WriteFile
 
 	// DownloadMongoDB input
 	MongoDBDownloadOptions options.MongoDBDownload
@@ -71,7 +71,7 @@ func (c *RemoteClient) DownloadFile(ctx context.Context, opts options.Download) 
 		return mockFail()
 	}
 
-	c.DownloadOpts = opts
+	c.DownloadOptions = opts
 
 	return nil
 }
@@ -98,8 +98,9 @@ func (c *RemoteClient) GetBuildloggerURLs(ctx context.Context, id string) ([]str
 	return c.BuildloggerURLs, nil
 }
 
-// GetLogStream stores the given log stream ID and count. If FailGetLogStream is
-// set, it returns an error.
+// GetLogStream stores the given log stream ID and count and returns a
+// jasper.LogStream indicating that it is done. If FailGetLogStream is set, it
+// returns an error.
 func (c *RemoteClient) GetLogStream(ctx context.Context, id string, count int) (jasper.LogStream, error) {
 	if c.FailGetLogStream {
 		return jasper.LogStream{Done: true}, mockFail()
@@ -130,7 +131,7 @@ func (c *RemoteClient) WriteFile(ctx context.Context, opts options.WriteFile) er
 		return mockFail()
 	}
 
-	c.WriteFileOpts = opts
+	c.WriteFileOptions = opts
 
 	return nil
 }
