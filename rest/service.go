@@ -79,7 +79,7 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/clear").Version(1).Post().Handler(s.clearManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
 
-	go s.backgroundPrune(ctx)
+	go s.pruneCache(ctx)
 
 	return app
 }
@@ -111,13 +111,13 @@ func (s *Service) SetPruneDelay(dur time.Duration) {
 	s.cacheOpts.PruneDelay = dur
 }
 
-func (s *Service) backgroundPrune(ctx context.Context) {
+func (s *Service) pruneCache(ctx context.Context) {
 	defer func() {
 		err := recovery.HandlePanicWithError(recover(), nil, "background pruning")
 		if ctx.Err() != nil || err == nil {
 			return
 		}
-		go s.backgroundPrune(ctx)
+		go s.pruneCache(ctx)
 	}()
 
 	s.cacheMutex.RLock()
