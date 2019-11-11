@@ -9,6 +9,7 @@ import (
 	"github.com/evergreen-ci/mrpc"
 	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
@@ -56,6 +57,9 @@ func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.
 
 	cctx, ccancel := context.WithCancel(context.Background())
 	go func() {
+		defer func() {
+			grip.Error(recovery.HandlePanicWithError(recover(), nil, "running wire service"))
+		}()
 		grip.Notice(svc.Run(cctx))
 	}()
 

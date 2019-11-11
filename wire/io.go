@@ -14,7 +14,7 @@ func intOK(ok bool) int {
 	return 0
 }
 
-// ErrorResponse represents a response indicating whether the operation was okay
+// errorResponse represents a response indicating whether the operation was okay
 // and errors, if any.
 type ErrorResponse struct {
 	OK    int    `bson:"ok"`
@@ -36,15 +36,15 @@ func makeSuccessResponse() ErrorResponse {
 	return ErrorResponse{OK: intOK(true)}
 }
 
-// Message returns the ErrorResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractErrorResponse.
-func (r ErrorResponse) Message() (mongowire.Message, error) {
+// message returns the ErrorResponse as an equivalent mongowire.Message. The
+// inverse operation is extractErrorResponse.
+func (r ErrorResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractErrorResponse extracts an ErrorResponse from the given
-// mongowire.Message. The inverse operation is (ErrorResponse).Message.
-func ExtractErrorResponse(msg mongowire.Message) (ErrorResponse, error) {
+// extractErrorResponse extracts an ErrorResponse from the given
+// mongowire.Message. The inverse operation is (ErrorResponse).message.
+func extractErrorResponse(msg mongowire.Message) (ErrorResponse, error) {
 	r := ErrorResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -68,15 +68,15 @@ func makeInfoRequest(id string) InfoRequest { //nolint
 	return InfoRequest{ID: id}
 }
 
-// Message returns the InfoRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractInfoRequest.
-func (r InfoRequest) Message() (mongowire.Message, error) {
+// message returns the InfoRequest as an equivalent mongowire.Message. The
+// inverse operation is extractInfoRequest.
+func (r InfoRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractInfoRequest extracts an InfoRequest from the given mongowire.Message.
-// The inverse operation is (InfoRequest).Message.
-func ExtractInfoRequest(msg mongowire.Message) (InfoRequest, error) {
+// extractInfoRequest extracts an InfoRequest from the given mongowire.Message.
+// The inverse operation is (InfoRequest).message.
+func extractInfoRequest(msg mongowire.Message) (InfoRequest, error) {
 	r := InfoRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -95,15 +95,15 @@ func makeInfoResponse(info jasper.ProcessInfo) InfoResponse {
 	return InfoResponse{Info: info, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the InfoResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractInfoResponse.
-func (r InfoResponse) Message() (mongowire.Message, error) {
+// message returns the InfoResponse as an equivalent mongowire.Message. The
+// inverse operation is extractInfoResponse.
+func (r InfoResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractInfoResponse extracts an InfoResponse from the given
-// mongowire.Message. The inverse operation is (InfoResponse).Message.
-func ExtractInfoResponse(msg mongowire.Message) (InfoResponse, error) {
+// extractInfoResponse extracts an InfoResponse from the given
+// mongowire.Message. The inverse operation is (InfoResponse).message.
+func extractInfoResponse(msg mongowire.Message) (InfoResponse, error) {
 	r := InfoResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -127,15 +127,15 @@ func makeRunningRequest(id string) RunningRequest { //nolint
 	return RunningRequest{ID: id}
 }
 
-// Message returns the RunningRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractRunningRequest.
-func (r RunningRequest) Message() (mongowire.Message, error) {
+// message returns the RunningRequest as an equivalent mongowire.Message. The
+// inverse operation is extractRunningRequest.
+func (r RunningRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractRunningRequest extracts a RunningRequest from the given
-// mongowire.Message. The inverse operation is (RunningRequest).Message.
-func ExtractRunningRequest(msg mongowire.Message) (RunningRequest, error) {
+// extractRunningRequest extracts a RunningRequest from the given
+// mongowire.Message. The inverse operation is (RunningRequest).message.
+func extractRunningRequest(msg mongowire.Message) (RunningRequest, error) {
 	r := RunningRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -154,15 +154,15 @@ func makeRunningResponse(running bool) RunningResponse {
 	return RunningResponse{Running: running, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the RunningResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractRunningResponse.
-func (r RunningResponse) Message() (mongowire.Message, error) {
+// message returns the RunningResponse as an equivalent mongowire.Message. The
+// inverse operation is extractRunningResponse.
+func (r RunningResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractRunningResponse extracts a RunningResponse from the given
-// mongowire.Message. The inverse operation is (RunningResponse).Message.
-func ExtractRunningResponse(msg mongowire.Message) (RunningResponse, error) {
+// extractRunningResponse extracts a RunningResponse from the given
+// mongowire.Message. The inverse operation is (RunningResponse).message.
+func extractRunningResponse(msg mongowire.Message) (RunningResponse, error) {
 	r := RunningResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -186,15 +186,15 @@ func makeCompleteRequest(id string) CompleteRequest { //nolint
 	return CompleteRequest{ID: id}
 }
 
-// Message returns the CompleteRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractCompleteRequest.
-func (r CompleteRequest) Message() (mongowire.Message, error) {
+// message returns the CompleteRequest as an equivalent mongowire.Message. The
+// inverse operation is extractCompleteRequest.
+func (r CompleteRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractCompleteRequest extracts a CompleteRequest from the given
-// mongowire.Message. The inverse operation is (CompleteRequest).Message.
-func ExtractCompleteRequest(msg mongowire.Message) (CompleteRequest, error) {
+// extractCompleteRequest extracts a CompleteRequest from the given
+// mongowire.Message. The inverse operation is (CompleteRequest).message.
+func extractCompleteRequest(msg mongowire.Message) (CompleteRequest, error) {
 	r := CompleteRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -213,15 +213,15 @@ func makeCompleteResponse(complete bool) CompleteResponse {
 	return CompleteResponse{Complete: complete, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the CompleteResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractCompleteResponse.
-func (r CompleteResponse) Message() (mongowire.Message, error) {
+// message returns the CompleteResponse as an equivalent mongowire.Message. The
+// inverse operation is extractCompleteResponse.
+func (r CompleteResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractCompleteResponse extracts a CompleteResponse from the given
-// mongowire.Message. The inverse operation is (CompleteResponse).Message.
-func ExtractCompleteResponse(msg mongowire.Message) (CompleteResponse, error) {
+// extractCompleteResponse extracts a CompleteResponse from the given
+// mongowire.Message. The inverse operation is (CompleteResponse).message.
+func extractCompleteResponse(msg mongowire.Message) (CompleteResponse, error) {
 	r := CompleteResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -245,15 +245,15 @@ func makeWaitRequest(id string) WaitRequest { //nolint
 	return WaitRequest{ID: id}
 }
 
-// Message returns the WaitRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractWaitRequest.
-func (r WaitRequest) Message() (mongowire.Message, error) {
+// message returns the WaitRequest as an equivalent mongowire.Message. The
+// inverse operation is extractWaitRequest.
+func (r WaitRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractWaitRequest extracts a WaitRequest from the given mongowire.Message.
-// The inverse operation is (WaitRequest).Message.
-func ExtractWaitRequest(msg mongowire.Message) (WaitRequest, error) {
+// extractWaitRequest extracts a WaitRequest from the given mongowire.Message.
+// The inverse operation is (WaitRequest).message.
+func extractWaitRequest(msg mongowire.Message) (WaitRequest, error) {
 	r := WaitRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -272,15 +272,15 @@ func makeWaitResponse(exitCode int, err error) WaitResponse {
 	return WaitResponse{ExitCode: exitCode, ErrorResponse: makeErrorResponse(true, err)}
 }
 
-// Message returns the WaitResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractWaitResponse.
-func (r WaitResponse) Message() (mongowire.Message, error) {
+// message returns the WaitResponse as an equivalent mongowire.Message. The
+// inverse operation is extractWaitResponse.
+func (r WaitResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractWaitResponse extracts a WaitResponse from the given
-// mongowire.Message. The inverse operation is (WaitResponse).Message.
-func ExtractWaitResponse(msg mongowire.Message) (WaitResponse, error) {
+// extractWaitResponse extracts a WaitResponse from the given
+// mongowire.Message. The inverse operation is (WaitResponse).message.
+func extractWaitResponse(msg mongowire.Message) (WaitResponse, error) {
 	r := WaitResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -303,15 +303,15 @@ func makeRespawnRequest(id string) RespawnRequest { //nolint
 	return RespawnRequest{ID: id}
 }
 
-// Message returns the RespawnRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractRespawnRequest.
-func (r RespawnRequest) Message() (mongowire.Message, error) {
+// message returns the RespawnRequest as an equivalent mongowire.Message. The
+// inverse operation is extractRespawnRequest.
+func (r RespawnRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractRespawnRequest extracts a RespawnRequest from the given
-// mongowire.Message. The inverse operation is (RespawnRequest).Message.
-func ExtractRespawnRequest(msg mongowire.Message) (RespawnRequest, error) {
+// extractRespawnRequest extracts a RespawnRequest from the given
+// mongowire.Message. The inverse operation is (RespawnRequest).message.
+func extractRespawnRequest(msg mongowire.Message) (RespawnRequest, error) {
 	r := RespawnRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -335,15 +335,15 @@ func makeSignalRequest(id string, signal int) SignalRequest { //nolint
 	return req
 }
 
-// Message returns the SignalRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractSignalRequest.
-func (r SignalRequest) Message() (mongowire.Message, error) {
+// message returns the SignalRequest as an equivalent mongowire.Message. The
+// inverse operation is extractSignalRequest.
+func (r SignalRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractSignalRequest extracts a SignalRequest from the given
-// mongowire.Message. The inverse operation is (SignalRequest).Message.
-func ExtractSignalRequest(msg mongowire.Message) (SignalRequest, error) {
+// extractSignalRequest extracts a SignalRequest from the given
+// mongowire.Message. The inverse operation is (SignalRequest).message.
+func extractSignalRequest(msg mongowire.Message) (SignalRequest, error) {
 	r := SignalRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -367,17 +367,17 @@ func makeRegisterSignalTriggerIDRequest(id string, sigID jasper.SignalTriggerID)
 	return req
 }
 
-// Message returns the RegisterSignalTriggerIDRequest as an equivalent
+// message returns the RegisterSignalTriggerIDRequest as an equivalent
 // mongowire.Message. The inverse operation is
-// ExtractRegisterSignalTriggerIDRequest.
-func (r RegisterSignalTriggerIDRequest) Message() (mongowire.Message, error) {
+// extractRegisterSignalTriggerIDRequest.
+func (r RegisterSignalTriggerIDRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractRegisterSignalTriggerIDRequest extracts a
+// extractRegisterSignalTriggerIDRequest extracts a
 // RegisterSignalTriggerIDRequest from the given mongowire.Message. The inverse
-// operation is (RegisterSignalTriggerIDRequest).Message.
-func ExtractRegisterSignalTriggerIDRequest(msg mongowire.Message) (RegisterSignalTriggerIDRequest, error) {
+// operation is (RegisterSignalTriggerIDRequest).message.
+func extractRegisterSignalTriggerIDRequest(msg mongowire.Message) (RegisterSignalTriggerIDRequest, error) {
 	r := RegisterSignalTriggerIDRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -401,15 +401,15 @@ func makeTagRequest(id, tag string) TagRequest { //nolint
 	return req
 }
 
-// Message returns the TagRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractTagRequest.
-func (r TagRequest) Message() (mongowire.Message, error) {
+// message returns the TagRequest as an equivalent mongowire.Message. The
+// inverse operation is extractTagRequest.
+func (r TagRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractTagRequest extracts a TagRequest from the given mongowire.Message. The
-// inverse operation is (TagRequest).Message.
-func ExtractTagRequest(msg mongowire.Message) (TagRequest, error) {
+// extractTagRequest extracts a TagRequest from the given mongowire.Message. The
+// inverse operation is (TagRequest).message.
+func extractTagRequest(msg mongowire.Message) (TagRequest, error) {
 	r := TagRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -427,15 +427,15 @@ func makeGetTagsRequest(id string) GetTagsRequest { //nolint
 	return GetTagsRequest{ID: id}
 }
 
-// Message returns the GetTagsRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractGetTagsRequest.
-func (r GetTagsRequest) Message() (mongowire.Message, error) {
+// message returns the GetTagsRequest as an equivalent mongowire.Message. The
+// inverse operation is extractGetTagsRequest.
+func (r GetTagsRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractGetTagsRequest extracts a GetTagsRequest from the given
-// mongowire.Message. The inverse operation is (GetTagsRequest).Message.
-func ExtractGetTagsRequest(msg mongowire.Message) (GetTagsRequest, error) {
+// extractGetTagsRequest extracts a GetTagsRequest from the given
+// mongowire.Message. The inverse operation is (GetTagsRequest).message.
+func extractGetTagsRequest(msg mongowire.Message) (GetTagsRequest, error) {
 	r := GetTagsRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -453,15 +453,15 @@ func makeGetTagsResponse(tags []string) GetTagsResponse {
 	return GetTagsResponse{Tags: tags, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the GetTagsResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractGetTagsResponse.
-func (r GetTagsResponse) Message() (mongowire.Message, error) {
+// message returns the GetTagsResponse as an equivalent mongowire.Message. The
+// inverse operation is extractGetTagsResponse.
+func (r GetTagsResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractGetTagsResponse extracts a GetTagsResponse from the given
-// mongowire.Message. The inverse operation is (GetTagsResponse).Message.
-func ExtractGetTagsResponse(msg mongowire.Message) (GetTagsResponse, error) {
+// extractGetTagsResponse extracts a GetTagsResponse from the given
+// mongowire.Message. The inverse operation is (GetTagsResponse).message.
+func extractGetTagsResponse(msg mongowire.Message) (GetTagsResponse, error) {
 	r := GetTagsResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -485,15 +485,15 @@ func makeResetTagsRequest(id string) ResetTagsRequest { //nolint
 	return ResetTagsRequest{ID: id}
 }
 
-// Message returns the ResetTagsRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractResetTagsRequest.
-func (r ResetTagsRequest) Message() (mongowire.Message, error) {
+// message returns the ResetTagsRequest as an equivalent mongowire.Message. The
+// inverse operation is extractResetTagsRequest.
+func (r ResetTagsRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractResetTagsRequest extracts a ResetTagsRequest from the given
-// mongowire.Message. The inverse operation is (ResetTagsRequest).Message.
-func ExtractResetTagsRequest(msg mongowire.Message) (ResetTagsRequest, error) {
+// extractResetTagsRequest extracts a ResetTagsRequest from the given
+// mongowire.Message. The inverse operation is (ResetTagsRequest).message.
+func extractResetTagsRequest(msg mongowire.Message) (ResetTagsRequest, error) {
 	r := ResetTagsRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -511,15 +511,15 @@ func makeIDRequest() IDRequest { //nolint
 	return IDRequest{ID: 1}
 }
 
-// Message returns the IDRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractIDRequest.
-func (r IDRequest) Message() (mongowire.Message, error) {
+// message returns the IDRequest as an equivalent mongowire.Message. The
+// inverse operation is extractIDRequest.
+func (r IDRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractIDRequest extracts a IDRequest from the given
-// mongowire.Message. The inverse operation is (IDRequest).Message.
-func ExtractIDRequest(msg mongowire.Message) (IDRequest, error) {
+// extractIDRequest extracts a IDRequest from the given
+// mongowire.Message. The inverse operation is (IDRequest).message.
+func extractIDRequest(msg mongowire.Message) (IDRequest, error) {
 	r := IDRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -537,15 +537,15 @@ func makeIDResponse(id string) IDResponse {
 	return IDResponse{ID: id, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the IDResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractIDResponse.
-func (r IDResponse) Message() (mongowire.Message, error) {
+// message returns the IDResponse as an equivalent mongowire.Message. The
+// inverse operation is extractIDResponse.
+func (r IDResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractIDResponse extracts a IDResponse from the given
-// mongowire.Message. The inverse operation is (IDResponse).Message.
-func ExtractIDResponse(msg mongowire.Message) (IDResponse, error) {
+// extractIDResponse extracts a IDResponse from the given
+// mongowire.Message. The inverse operation is (IDResponse).message.
+func extractIDResponse(msg mongowire.Message) (IDResponse, error) {
 	r := IDResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -569,15 +569,15 @@ func makeCreateProcessRequest(opts options.Create) CreateProcessRequest { //noli
 	return CreateProcessRequest{Options: opts}
 }
 
-// Message returns the CreateProcessRequest as an equivalent mongowire.Message.
-// The inverse operation is ExtractCreateProcessRequest.
-func (r CreateProcessRequest) Message() (mongowire.Message, error) {
+// message returns the CreateProcessRequest as an equivalent mongowire.Message.
+// The inverse operation is extractCreateProcessRequest.
+func (r CreateProcessRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractCreateProcessRequest extracts a CreateProcessRequest from the given
-// mongowire.Message. The inverse operation is (CreateProcessRequest).Message.
-func ExtractCreateProcessRequest(msg mongowire.Message) (CreateProcessRequest, error) {
+// extractCreateProcessRequest extracts a CreateProcessRequest from the given
+// mongowire.Message. The inverse operation is (CreateProcessRequest).message.
+func extractCreateProcessRequest(msg mongowire.Message) (CreateProcessRequest, error) {
 	r := CreateProcessRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -595,15 +595,15 @@ func makeListRequest(filter options.Filter) ListRequest { //nolint
 	return ListRequest{Filter: filter}
 }
 
-// Message returns the ListRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractListRequest.
-func (r ListRequest) Message() (mongowire.Message, error) {
+// message returns the ListRequest as an equivalent mongowire.Message. The
+// inverse operation is extractListRequest.
+func (r ListRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractListRequest extracts a ListRequest from the given mongowire.Message.
-// The inverse operation is (ListRequest).Message.
-func ExtractListRequest(msg mongowire.Message) (ListRequest, error) {
+// extractListRequest extracts a ListRequest from the given mongowire.Message.
+// The inverse operation is (ListRequest).message.
+func extractListRequest(msg mongowire.Message) (ListRequest, error) {
 	r := ListRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -621,15 +621,15 @@ func makeGroupRequest(tag string) GroupRequest { //nolint
 	return GroupRequest{Tag: tag}
 }
 
-// Message returns the GroupRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractGroupRequest.
-func (r GroupRequest) Message() (mongowire.Message, error) {
+// message returns the GroupRequest as an equivalent mongowire.Message. The
+// inverse operation is extractGroupRequest.
+func (r GroupRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractGroupRequest extracts a GroupRequest from the given mongowire.Message.
-// The inverse operation is (GroupRequest).Message.
-func ExtractGroupRequest(msg mongowire.Message) (GroupRequest, error) {
+// extractGroupRequest extracts a GroupRequest from the given mongowire.Message.
+// The inverse operation is (GroupRequest).message.
+func extractGroupRequest(msg mongowire.Message) (GroupRequest, error) {
 	r := GroupRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -647,15 +647,15 @@ func makeGetRequest(id string) GetRequest { //nolint
 	return GetRequest{ID: id}
 }
 
-// Message returns the GetRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractGetRequest.
-func (r GetRequest) Message() (mongowire.Message, error) {
+// message returns the GetRequest as an equivalent mongowire.Message. The
+// inverse operation is extractGetRequest.
+func (r GetRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractGetRequest extracts a GetRequest from the given mongowire.Message.
-// The inverse operation is (GetRequest).Message.
-func ExtractGetRequest(msg mongowire.Message) (GetRequest, error) {
+// extractGetRequest extracts a GetRequest from the given mongowire.Message.
+// The inverse operation is (GetRequest).message.
+func extractGetRequest(msg mongowire.Message) (GetRequest, error) {
 	r := GetRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -674,15 +674,15 @@ func makeInfosResponse(infos []jasper.ProcessInfo) InfosResponse {
 	return InfosResponse{Infos: infos, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the InfosResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractInfosResponse.
-func (r InfosResponse) Message() (mongowire.Message, error) {
+// message returns the InfosResponse as an equivalent mongowire.Message. The
+// inverse operation is extractInfosResponse.
+func (r InfosResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractInfosResponse extracts a InfosResponse from the given mongowire.Message.
-// The inverse operation is (InfosResponse).Message.
-func ExtractInfosResponse(msg mongowire.Message) (InfosResponse, error) {
+// extractInfosResponse extracts a InfosResponse from the given mongowire.Message.
+// The inverse operation is (InfosResponse).message.
+func extractInfosResponse(msg mongowire.Message) (InfosResponse, error) {
 	r := InfosResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -706,15 +706,15 @@ func makeClearRequest() ClearRequest { //nolint
 	return ClearRequest{Clear: 1}
 }
 
-// Message returns the ClearRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractClearRequest.
-func (r ClearRequest) Message() (mongowire.Message, error) {
+// message returns the ClearRequest as an equivalent mongowire.Message. The
+// inverse operation is extractClearRequest.
+func (r ClearRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractClearRequest extracts a ClearRequest from the given mongowire.Message.
-// The inverse operation is (ClearRequest).Message.
-func ExtractClearRequest(msg mongowire.Message) (ClearRequest, error) {
+// extractClearRequest extracts a ClearRequest from the given mongowire.Message.
+// The inverse operation is (ClearRequest).message.
+func extractClearRequest(msg mongowire.Message) (ClearRequest, error) {
 	r := ClearRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -731,15 +731,15 @@ func makeCloseRequest() CloseRequest { //nolint
 	return CloseRequest{Close: 1}
 }
 
-// Message returns the CloseRequest as an equivalent mongowire.Message. The
-// inverse operation is ExtractCloseRequest.
-func (r CloseRequest) Message() (mongowire.Message, error) {
+// message returns the CloseRequest as an equivalent mongowire.Message. The
+// inverse operation is extractCloseRequest.
+func (r CloseRequest) message() (mongowire.Message, error) {
 	return requestToMessage(r)
 }
 
-// ExtractCloseRequest extracts a CloseRequest from the given mongowire.Message.
-// The inverse operation is (CloseRequest).Message.
-func ExtractCloseRequest(msg mongowire.Message) (CloseRequest, error) {
+// extractCloseRequest extracts a CloseRequest from the given mongowire.Message.
+// The inverse operation is (CloseRequest).message.
+func extractCloseRequest(msg mongowire.Message) (CloseRequest, error) {
 	r := CloseRequest{}
 	if err := messageToRequest(msg, &r); err != nil {
 		return r, err
@@ -757,15 +757,15 @@ func makeWhatsMyURIResponse(uri string) WhatsMyURIResponse {
 	return WhatsMyURIResponse{You: uri, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the WhatsMyURIResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractWhatsMyURIResponse.
-func (r WhatsMyURIResponse) Message() (mongowire.Message, error) {
+// message returns the WhatsMyURIResponse as an equivalent mongowire.Message. The
+// inverse operation is extractWhatsMyURIResponse.
+func (r WhatsMyURIResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractWhatsMyURIResponse extracts a WhatsMyURIResponse from the given
-// mongowire.Message. The inverse operation is (WhatsMyURIResponse).Message.
-func ExtractWhatsMyURIResponse(msg mongowire.Message) (WhatsMyURIResponse, error) {
+// extractWhatsMyURIResponse extracts a WhatsMyURIResponse from the given
+// mongowire.Message. The inverse operation is (WhatsMyURIResponse).message.
+func extractWhatsMyURIResponse(msg mongowire.Message) (WhatsMyURIResponse, error) {
 	r := WhatsMyURIResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -790,15 +790,15 @@ func makeBuildInfoResponse(version string) BuildInfoResponse {
 	return BuildInfoResponse{Version: version, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the BuildInfoResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractBuildInfoResponse.
-func (r BuildInfoResponse) Message() (mongowire.Message, error) {
+// message returns the BuildInfoResponse as an equivalent mongowire.Message. The
+// inverse operation is extractBuildInfoResponse.
+func (r BuildInfoResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractBuildInfoResponse extracts a BuildInfoResponse from the given
-// mongowire.Message. The inverse operation is (BuildInfoResponse).Message.
-func ExtractBuildInfoResponse(msg mongowire.Message) (BuildInfoResponse, error) {
+// extractBuildInfoResponse extracts a BuildInfoResponse from the given
+// mongowire.Message. The inverse operation is (BuildInfoResponse).message.
+func extractBuildInfoResponse(msg mongowire.Message) (BuildInfoResponse, error) {
 	r := BuildInfoResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
@@ -823,15 +823,15 @@ func makeGetLogResponse(log []string) GetLogResponse {
 	return GetLogResponse{Log: log, ErrorResponse: makeSuccessResponse()}
 }
 
-// Message returns the GetLogResponse as an equivalent mongowire.Message. The
-// inverse operation is ExtractGetLogResponse.
-func (r GetLogResponse) Message() (mongowire.Message, error) {
+// message returns the GetLogResponse as an equivalent mongowire.Message. The
+// inverse operation is extractGetLogResponse.
+func (r GetLogResponse) message() (mongowire.Message, error) {
 	return responseToMessage(r)
 }
 
-// ExtractGetLogResponse extracts a GetLogResponse from the given
-// mongowire.Message. The inverse operation is (GetLogResponse).Message.
-func ExtractGetLogResponse(msg mongowire.Message) (GetLogResponse, error) {
+// extractGetLogResponse extracts a GetLogResponse from the given
+// mongowire.Message. The inverse operation is (GetLogResponse).message.
+func extractGetLogResponse(msg mongowire.Message) (GetLogResponse, error) {
 	r := GetLogResponse{}
 	if err := messageToResponse(msg, &r); err != nil {
 		return r, err
