@@ -108,7 +108,7 @@ func responseMessageToDocument(msg mongowire.Message) (*birch.Document, error) {
 
 func writeOKResponse(ctx context.Context, w io.Writer, op string) {
 	resp := makeErrorResponse(true, nil)
-	msg, err := resp.Message()
+	msg, err := resp.message()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
 			"message": "could not write response",
@@ -121,7 +121,7 @@ func writeOKResponse(ctx context.Context, w io.Writer, op string) {
 
 func writeNotOKResponse(ctx context.Context, w io.Writer, op string) {
 	resp := makeErrorResponse(false, nil)
-	msg, err := resp.Message()
+	msg, err := resp.message()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
 			"message": "could not write response",
@@ -134,7 +134,7 @@ func writeNotOKResponse(ctx context.Context, w io.Writer, op string) {
 
 func writeErrorResponse(ctx context.Context, w io.Writer, err error, op string) {
 	resp := makeErrorResponse(false, err)
-	msg, err := resp.Message()
+	msg, err := resp.message()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
 			"message": "could not write response",

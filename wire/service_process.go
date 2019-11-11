@@ -26,7 +26,7 @@ const (
 )
 
 func (s *service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractInfoRequest(msg)
+	req, err := extractInfoRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), InfoCommand)
 		return
@@ -39,7 +39,7 @@ func (s *service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Me
 		return
 	}
 
-	resp, err := makeInfoResponse(proc.Info(ctx)).Message()
+	resp, err := makeInfoResponse(proc.Info(ctx)).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), InfoCommand)
 		return
@@ -48,7 +48,7 @@ func (s *service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Me
 }
 
 func (s *service) processRunning(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractRunningRequest(msg)
+	req, err := extractRunningRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RunningCommand)
 		return
@@ -61,7 +61,7 @@ func (s *service) processRunning(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	resp, err := makeRunningResponse(proc.Running(ctx)).Message()
+	resp, err := makeRunningResponse(proc.Running(ctx)).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), RunningCommand)
 		return
@@ -70,7 +70,7 @@ func (s *service) processRunning(ctx context.Context, w io.Writer, msg mongowire
 }
 
 func (s *service) processComplete(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractCompleteRequest(msg)
+	req, err := extractCompleteRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), CompleteCommand)
 		return
@@ -83,7 +83,7 @@ func (s *service) processComplete(ctx context.Context, w io.Writer, msg mongowir
 		return
 	}
 
-	resp, err := makeCompleteResponse(proc.Complete(ctx)).Message()
+	resp, err := makeCompleteResponse(proc.Complete(ctx)).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CompleteCommand)
 		return
@@ -92,7 +92,7 @@ func (s *service) processComplete(ctx context.Context, w io.Writer, msg mongowir
 }
 
 func (s *service) processWait(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractWaitRequest(msg)
+	req, err := extractWaitRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), WaitCommand)
 		return
@@ -106,7 +106,7 @@ func (s *service) processWait(ctx context.Context, w io.Writer, msg mongowire.Me
 	}
 
 	exitCode, err := proc.Wait(ctx)
-	resp, err := makeWaitResponse(exitCode, err).Message()
+	resp, err := makeWaitResponse(exitCode, err).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), WaitCommand)
 		return
@@ -115,7 +115,7 @@ func (s *service) processWait(ctx context.Context, w io.Writer, msg mongowire.Me
 }
 
 func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractRespawnRequest(msg)
+	req, err := extractRespawnRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RespawnCommand)
 		return
@@ -152,7 +152,7 @@ func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 		}
 	}
 
-	resp, err := makeInfoResponse(newProc.Info(ctx)).Message()
+	resp, err := makeInfoResponse(newProc.Info(ctx)).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), RespawnCommand)
 		return
@@ -161,7 +161,7 @@ func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 }
 
 func (s *service) processSignal(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractSignalRequest(msg)
+	req, err := extractSignalRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), SignalCommand)
 		return
@@ -184,7 +184,7 @@ func (s *service) processSignal(ctx context.Context, w io.Writer, msg mongowire.
 }
 
 func (s *service) processRegisterSignalTriggerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractRegisterSignalTriggerIDRequest(msg)
+	req, err := extractRegisterSignalTriggerIDRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RegisterSignalTriggerIDCommand)
 		return
@@ -213,7 +213,7 @@ func (s *service) processRegisterSignalTriggerID(ctx context.Context, w io.Write
 }
 
 func (s *service) processTag(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractTagRequest(msg)
+	req, err := extractTagRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), TagCommand)
 		return
@@ -233,7 +233,7 @@ func (s *service) processTag(ctx context.Context, w io.Writer, msg mongowire.Mes
 }
 
 func (s *service) processGetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractGetTagsRequest(msg)
+	req, err := extractGetTagsRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GetTagsCommand)
 		return
@@ -246,7 +246,7 @@ func (s *service) processGetTags(ctx context.Context, w io.Writer, msg mongowire
 		return
 	}
 
-	resp, err := makeGetTagsResponse(proc.GetTags()).Message()
+	resp, err := makeGetTagsResponse(proc.GetTags()).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetTagsCommand)
 		return
@@ -255,7 +255,7 @@ func (s *service) processGetTags(ctx context.Context, w io.Writer, msg mongowire
 }
 
 func (s *service) processResetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractResetTagsRequest(msg)
+	req, err := extractResetTagsRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), ResetTagsCommand)
 		return

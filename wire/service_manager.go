@@ -21,7 +21,7 @@ const (
 )
 
 func (s *service) managerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeIDResponse(s.manager.ID()).Message()
+	resp, err := makeIDResponse(s.manager.ID()).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.New("could not make response"), ManagerIDCommand)
 		return
@@ -30,7 +30,7 @@ func (s *service) managerID(ctx context.Context, w io.Writer, msg mongowire.Mess
 }
 
 func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractCreateProcessRequest(msg)
+	req, err := extractCreateProcessRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), CreateProcessCommand)
 		return
@@ -64,7 +64,7 @@ func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 		}
 	}
 
-	resp, err := makeInfoResponse(getProcInfoNoHang(ctx, proc)).Message()
+	resp, err := makeInfoResponse(getProcInfoNoHang(ctx, proc)).message()
 	if err != nil {
 		cancel()
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CreateProcessCommand)
@@ -74,7 +74,7 @@ func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 }
 
 func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractListRequest(msg)
+	req, err := extractListRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), ListCommand)
 	}
@@ -90,7 +90,7 @@ func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Me
 	for _, proc := range procs {
 		infos = append(infos, proc.Info(ctx))
 	}
-	resp, err := makeInfosResponse(infos).Message()
+	resp, err := makeInfosResponse(infos).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), ListCommand)
 		return
@@ -99,7 +99,7 @@ func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Me
 }
 
 func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractGroupRequest(msg)
+	req, err := extractGroupRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GroupCommand)
 		return
@@ -117,7 +117,7 @@ func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.M
 		infos = append(infos, proc.Info(ctx))
 	}
 
-	resp, err := makeInfosResponse(infos).Message()
+	resp, err := makeInfosResponse(infos).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GroupCommand)
 		return
@@ -126,7 +126,7 @@ func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.M
 }
 
 func (s *service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := ExtractGetRequest(msg)
+	req, err := extractGetRequest(msg)
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GetCommand)
 		return
@@ -139,7 +139,7 @@ func (s *service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Mes
 		return
 	}
 
-	resp, err := makeInfoResponse(proc.Info(ctx)).Message()
+	resp, err := makeInfoResponse(proc.Info(ctx)).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetCommand)
 		return

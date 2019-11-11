@@ -71,7 +71,7 @@ func (s *service) isMaster(ctx context.Context, w io.Writer, msg mongowire.Messa
 }
 
 func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeWhatsMyURIResponse(s.Address()).Message()
+	resp, err := makeWhatsMyURIResponse(s.Address()).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), WhatsMyURICommand)
 		return
@@ -80,7 +80,7 @@ func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Mes
 }
 
 func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeBuildInfoResponse("0.0.0").Message()
+	resp, err := makeBuildInfoResponse("0.0.0").message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
 		return
@@ -89,7 +89,7 @@ func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Mess
 }
 
 func (s *service) getLog(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeGetLogResponse([]string{}).Message()
+	resp, err := makeGetLogResponse([]string{}).message()
 	if err != nil {
 		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetLogCommand)
 		return
