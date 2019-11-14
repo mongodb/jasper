@@ -317,6 +317,9 @@ func makeUserEnvironment(user string, vars []string) map[string]string {
 		}
 	}
 
+	if user == "" {
+		return env
+	}
 	system := service.ChosenSystem()
 	if system == nil || (system.String() != "linux-upstart" && system.String() != "unix-systemv") {
 		return env
