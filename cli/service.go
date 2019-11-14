@@ -343,10 +343,10 @@ func makeUserEnvironment(user string, vars []string) map[string]string {
 					env["LOGNAME"] = user
 				}
 				if _, ok := env["HOME"]; !ok {
-					env["HOME"] = fields[6]
+					env["HOME"] = fields[numEtcPasswdFields-2]
 				}
 				if _, ok := env["SHELL"]; !ok {
-					env["SHELL"] = fields[7]
+					env["SHELL"] = fields[numEtcPasswdFields-1]
 				}
 				return env
 			}
