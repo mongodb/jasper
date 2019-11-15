@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// RemoteConfig represents the arguments to connect to a remote host.
 type RemoteConfig struct {
 	Host string
 	User string
