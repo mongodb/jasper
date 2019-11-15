@@ -11,7 +11,7 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo {
