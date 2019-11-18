@@ -89,6 +89,10 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 	})
 }
 
+func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+	return nil, errors.New("scripting environment is not supported")
+}
+
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register existing processes on remote manager")
 }
@@ -197,7 +201,7 @@ func (c *sshClient) DownloadFile(ctx context.Context, opts options.Download) err
 }
 
 func (c *sshClient) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	sendOpts := func(opts options.WriteFile) error {
+	return opts.WriteBufferedContent(func(opts options.WriteFile) error {
 		output, err := c.runRemoteCommand(ctx, WriteFileCommand, &opts)
 		if err != nil {
 			return errors.WithStack(err)
@@ -208,8 +212,7 @@ func (c *sshClient) WriteFile(ctx context.Context, opts options.WriteFile) error
 		}
 
 		return nil
-	}
-	return opts.WriteBufferedContent(sendOpts)
+	})
 }
 
 func (c *sshClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {

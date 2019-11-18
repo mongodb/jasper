@@ -69,6 +69,13 @@ func (m *synchronizedProcessManager) CreateCommand(ctx context.Context) *Command
 	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
+func (m *synchronizedProcessManager) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (ScriptingEnvironment, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.CreateScripting(ctx, opts)
+}
+
 func (m *synchronizedProcessManager) Register(ctx context.Context, proc Process) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

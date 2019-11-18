@@ -96,6 +96,9 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
+func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+	return nil, errors.New("scripting environment is not supported")
+}
 func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register extant processes on remote process managers")
 }

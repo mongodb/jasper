@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mongodb/jasper/options"
+	"github.com/pkg/errors"
 )
 
 type remoteOverrideMgr struct {
@@ -26,6 +27,10 @@ func (m *remoteOverrideMgr) ID() string { return m.mgr.ID() }
 func (m *remoteOverrideMgr) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.Remote = m.remote
 	return m.mgr.CreateProcess(ctx, opts)
+}
+
+func (m *remoteOverrideMgr) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (ScriptingEnvironment, error) {
+	return nil, errors.New("scripting environment is not supported")
 }
 
 func (m *remoteOverrideMgr) CreateCommand(ctx context.Context) *Command {

@@ -32,7 +32,9 @@ type Manager interface {
 	ID() string
 	CreateProcess(context.Context, *options.Create) (Process, error)
 	CreateCommand(context.Context) *Command
+	CreateScripting(context.Context, options.ScriptingEnvironment) (ScriptingEnvironment, error)
 	Register(context.Context, Process) error
+	WriteFile(context.Context, options.WriteFile) error
 
 	List(context.Context, options.Filter) ([]Process, error)
 	Group(context.Context, string) ([]Process, error)
@@ -132,4 +134,22 @@ type ProcessInfo struct {
 	Options    options.Create `json:"options" bson:"options"`
 	StartAt    time.Time      `json:"start_at" bson:"start_at"`
 	EndAt      time.Time      `json:"end_at" bson:"end_at"`
+}
+
+// ScriptingEnvironment provides an interface to execute code in a
+// scripting environment such as a Python Virtual
+// Environment. Implementations should be make it possible to execute
+// either locally or on remote systems.
+type ScriptingEnvironment interface {
+	// Setup initializes the environment, and should be safe to
+	// call multiple times.
+	Setup(context.Context) error
+	// Run executes a command (as arguments) with the environment's
+	// interpreter.
+	Run(context.Context, []string) error
+	// RunScript takes the body of a script and should write that
+	// data to a file and then runs that script directly.
+	RunScript(context.Context, string) error
+	// Cleanup should remove
+	Cleanup(context.Context) error
 }

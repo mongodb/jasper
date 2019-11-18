@@ -135,6 +135,10 @@ func (c *restClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
+func (c *restClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+	return nil, errors.New("scripting environment is not supported")
+}
+
 func (c *restClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register a local process on a remote service")
 }

@@ -14,6 +14,7 @@ import (
 type basicProcessManager struct {
 	id            string
 	procs         map[string]Process
+	senv          map[string]ScriptingEnvironment
 	blocking      bool
 	useSSHLibrary bool
 	tracker       ProcessTracker
@@ -22,6 +23,7 @@ type basicProcessManager struct {
 func newBasicProcessManager(procs map[string]Process, blocking bool, trackProcs bool, useSSHLibrary bool) (Manager, error) {
 	m := basicProcessManager{
 		procs:         procs,
+		senv:          make(map[string]ScriptingEnvironment),
 		blocking:      blocking,
 		id:            uuid.Must(uuid.NewV4()).String(),
 		useSSHLibrary: useSSHLibrary,
@@ -38,6 +40,22 @@ func newBasicProcessManager(procs map[string]Process, blocking bool, trackProcs 
 
 func (m *basicProcessManager) ID() string {
 	return m.id
+}
+
+func (m *basicProcessManager) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (ScriptingEnvironment, error) {
+	if se, ok := m[opts.ID()]; ok {
+		return se, nil
+	}
+
+	se, err := scriptingEnvironmentFactory(m, opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if err = se.Setup(ctx); err != nil {
+		return nil, errors.Wrap(err, "problem setting up scripting environment")
+	}
+
+	return se, nil
 }
 
 func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
@@ -80,6 +98,14 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 
 func (m *basicProcessManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)
+}
+
+func (m *basicProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	if err := m.opts.Validate(); err != nil {
+		return errors.Wrap(err, "invalid file options")
+	}
+
+	return m.opts.DoWrite()
 }
 
 func (m *basicProcessManager) Register(ctx context.Context, proc Process) error {
