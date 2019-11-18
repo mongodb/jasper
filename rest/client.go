@@ -136,6 +136,7 @@ func (c *restClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *restClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+
 	return nil, errors.New("scripting environment is not supported")
 }
 

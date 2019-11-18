@@ -17,8 +17,8 @@ type ScriptingRoswell struct {
 	cachedHash     string
 }
 
-func (opts *ScriptingRoswell) Type() string       { return "roswell" }
-func (opts *ScriptingRoswell) Interpeter() string { return "ros" }
+func (opts *ScriptingRoswell) Type() string        { return "roswell" }
+func (opts *ScriptingRoswell) Interpreter() string { return "ros" }
 
 func (opts *ScriptingRoswell) ID() string {
 	if opts.cachedHash != "" && time.Since(opts.cachedAt) < opts.CachedDuration {

@@ -66,14 +66,24 @@ func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *op
 }
 
 func (m *synchronizedProcessManager) CreateCommand(ctx context.Context) *Command {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	return NewCommand().ProcConstructor(m.CreateProcess)
+}
+
+func (m *synchronizedProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return errors.WithStack(m.manager.WriteFile(ctx, opts))
 }
 
 func (m *synchronizedProcessManager) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (ScriptingEnvironment, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return m.CreateScripting(ctx, opts)
+	return m.manager.CreateScripting(ctx, opts)
 }
 
 func (m *synchronizedProcessManager) Register(ctx context.Context, proc Process) error {

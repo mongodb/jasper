@@ -150,6 +150,11 @@ type ScriptingEnvironment interface {
 	// RunScript takes the body of a script and should write that
 	// data to a file and then runs that script directly.
 	RunScript(context.Context, string) error
-	// Cleanup should remove
+	// Build will run the environments native build system to
+	// generate some kind of build artifact from the scripting
+	// environment. Pass a directory in addition to a list of
+	// arguments to describe any arguments to the build system.
+	Build(context.Context, string, []string) error
+	// Cleanup should remove the files created by the scripting environment.
 	Cleanup(context.Context) error
 }

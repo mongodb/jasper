@@ -43,7 +43,7 @@ func (m *basicProcessManager) ID() string {
 }
 
 func (m *basicProcessManager) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (ScriptingEnvironment, error) {
-	if se, ok := m[opts.ID()]; ok {
+	if se, ok := m.senv[opts.ID()]; ok {
 		return se, nil
 	}
 
@@ -51,6 +51,7 @@ func (m *basicProcessManager) CreateScripting(ctx context.Context, opts options.
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	if err = se.Setup(ctx); err != nil {
 		return nil, errors.Wrap(err, "problem setting up scripting environment")
 	}
@@ -101,11 +102,11 @@ func (m *basicProcessManager) CreateCommand(ctx context.Context) *Command {
 }
 
 func (m *basicProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	if err := m.opts.Validate(); err != nil {
+	if err := opts.Validate(); err != nil {
 		return errors.Wrap(err, "invalid file options")
 	}
 
-	return m.opts.DoWrite()
+	return errors.Wrap(opts.DoWrite(), "problem writing data")
 }
 
 func (m *basicProcessManager) Register(ctx context.Context, proc Process) error {

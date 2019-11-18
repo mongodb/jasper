@@ -29,11 +29,12 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 	}
 
 	if e.opts.VirtualEnvPath == "" {
-		e.opts.VirtualEnvPath = filepath.Join(uuid.Must(uuid.NewV4()).String())
+		e.opts.VirtualEnvPath = filepath.Join("venv", uuid.Must(uuid.NewV4()).String())
 	}
 	if e.opts.HostPythonInterpeter == "" {
 		e.opts.HostPythonInterpeter = "python3"
 	}
+	e.cachedHash = e.opts.ID()
 
 	cmd := e.manager.CreateCommand(ctx)
 	venvpy := e.opts.Interpreter()
@@ -74,7 +75,7 @@ func (e *pythonEnvironment) Run(ctx context.Context, args []string) error {
 func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error {
 	scriptChecksum := fmt.Sprintf("%x", sha1.Sum([]byte(script)))
 	wo := options.WriteFile{
-		Path:    filepath.Join(e.opts.VirtualEnvPath, "tmp", strings.Join([]string{e.manager.ID(), scriptChecksum}, "_")+".py"),
+		Path:    filepath.Join(e.opts.VirtualEnvPath, "tmp", strings.Join([]string{e.manager.ID(), scriptChecksum}, "-")+".lisp"),
 		Content: []byte(script),
 	}
 
@@ -85,10 +86,14 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 	return e.manager.CreateCommand(ctx).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
 }
 
+func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) error {
+	return e.manager.CreateCommand(ctx).Directory(dir).Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).Run(ctx)
+}
+
 func (e *pythonEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case RemoteClient:
-		return errors.Wrapf(mgr.CreateCommand(ctx).Add("rm", "-rf", e.opts.VirtualEnvPath).Run(ctx),
+		return errors.Wrapf(mgr.CreateCommand(ctx).AppendArgs("rm", "-rf", e.opts.VirtualEnvPath).Run(ctx),
 			"problem removing remote python environment '%s'", e.opts.VirtualEnvPath)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.VirtualEnvPath),

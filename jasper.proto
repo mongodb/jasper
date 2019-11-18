@@ -230,6 +230,25 @@ message EventName {
   string value = 1;
 }
 
+message ScriptingEnvironmentID {
+  string id = 1;
+  bool setup = 2;
+}
+
+message ScriptingOptions {
+    
+}
+
+message ScriptingEnvironmentRun {
+  string id = 1; 
+  repeated string args = 2; 
+}
+
+message ScriptingEnvironmentRunScript {
+  string id = 1;
+  string script = 2;
+}
+
 service JasperProcessManager {
   // Manager functions
   rpc ID(google.protobuf.Empty) returns (IDResponse);
@@ -248,6 +267,13 @@ service JasperProcessManager {
   rpc RegisterSignalTriggerID(SignalTriggerParams) returns (OperationOutcome);
   rpc Wait(JasperProcessID) returns (OperationOutcome);
   rpc Respawn(JasperProcessID) returns (ProcessInfo);
+
+  // ScriptingEnvironment functions
+  rpc CreateScriptingEnvironment(ScriptingOptions) returns (ScriptingEnvironmentID); 
+  rpc ScriptingEnvironmentSetup(ScriptingEnvironmentID) returns (OperationOutcome);
+  rpc ScriptingEnvironmentCleanup(ScriptingEnvironmentID) returns (OperationOutcome);
+  rpc ScriptingEnvironmentRun(ScriptingEnvironmentRun) returns (OperationOutcome);
+  rpc ScriptingEnvironmentRunScript(ScriptingEnvironmentRunScript) returns (OperationOutcome);
 
   // RPC-specific functions
   rpc Status(google.protobuf.Empty) returns (StatusResponse);

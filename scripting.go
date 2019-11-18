@@ -9,6 +9,10 @@ func scriptingEnvironmentFactory(m Manager, env options.ScriptingEnvironment) (S
 	switch t := env.(type) {
 	case *options.ScriptingPython:
 		return &pythonEnvironment{opts: t, manager: m}, nil
+	case *options.ScriptingGolang:
+		return &golangEnvironment{opts: t, manager: m}, nil
+	case *options.ScriptingRoswell:
+		return &roswellEnvironment{opts: t, manager: m}, nil
 	default:
 		return nil, errors.Errorf("scripting environment %T (%s) is not supported", t, env.Type())
 	}
