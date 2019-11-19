@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 type ScriptingGolang struct {
@@ -16,6 +18,8 @@ type ScriptingGolang struct {
 	Context        string
 	WithUpdate     bool
 	CachedDuration time.Duration
+	Environment    map[string]string
+	Output         Output
 
 	cachedAt   time.Time
 	cachedHash string
@@ -23,6 +27,18 @@ type ScriptingGolang struct {
 
 func (opts *ScriptingGolang) Type() string        { return "go" }
 func (opts *ScriptingGolang) Interpreter() string { return filepath.Join(opts.Goroot, "bin", "go") }
+
+func (opts *ScriptingGolang) Validate() error {
+	if opts.CachedDuration == 0 {
+		opts.CachedDuration = 10 * time.Minute
+	}
+
+	if opts.Gopath == "" {
+		opts.Gopath = filepath.Join("go", uuid.Must(uuid.NewV4()).String())
+	}
+
+	return nil
+}
 
 func (opts *ScriptingGolang) ID() string {
 	if opts.cachedHash != "" && time.Since(opts.cachedAt) < opts.CachedDuration {

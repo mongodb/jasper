@@ -10,7 +10,6 @@ import (
 
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 type golangEnvironment struct {
@@ -27,13 +26,12 @@ func (e *golangEnvironment) Setup(ctx context.Context) error {
 		return nil
 	}
 
-	if e.opts.Gopath == "" {
-		e.opts.Gopath = filepath.Join("go", uuid.Must(uuid.NewV4()).String())
-	}
 	e.cachedHash = e.opts.ID()
 
 	gobin := e.opts.Interpreter()
-	cmd := e.manager.CreateCommand(ctx)
+	cmd := e.manager.CreateCommand(ctx).
+		AddEnv("GOPATH", e.opts.Gopath).
+		AddEnv("GOROOT", e.opts.Goroot)
 
 	for _, pkg := range e.opts.Packages {
 		if e.opts.WithUpdate {
@@ -50,13 +48,14 @@ func (e *golangEnvironment) Setup(ctx context.Context) error {
 		return nil
 	})
 
-	return cmd.Run(ctx)
+	return cmd.SetOutputOptions(e.opts.Output).Run(ctx)
 }
 
 func (e *golangEnvironment) Run(ctx context.Context, args []string) error {
 	cmd := e.manager.CreateCommand(ctx).
 		AddEnv("GOPATH", e.opts.Gopath).
 		AddEnv("GOROOT", e.opts.Goroot).
+		SetOutputOptions(e.opts.Output).
 		Add(append([]string{e.opts.Interpreter(), "run"}, args...))
 
 	if e.opts.Context != "" {
@@ -71,8 +70,8 @@ func (e *golangEnvironment) Build(ctx context.Context, dir string, args []string
 		Directory(dir).
 		AddEnv("GOPATH", e.opts.Gopath).
 		AddEnv("GOROOT", e.opts.Goroot).
+		SetOutputOptions(e.opts.Output).
 		Add(append([]string{e.opts.Interpreter(), "build"}, args...)).Run(ctx)
-
 }
 
 func (e *golangEnvironment) RunScript(ctx context.Context, script string) error {
@@ -94,13 +93,13 @@ func (e *golangEnvironment) RunScript(ctx context.Context, script string) error 
 		return errors.Wrap(err, "problem writing file")
 	}
 
-	return e.manager.CreateCommand(ctx).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
+	return e.manager.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs(e.opts.Interpreter(), "run", wo.Path).Run(ctx)
 }
 
 func (e *golangEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case RemoteClient:
-		return errors.Wrapf(mgr.CreateCommand(ctx).AppendArgs("rm", "-rf", e.opts.Gopath).Run(ctx),
+		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Gopath).Run(ctx),
 			"problem removing remote golang environment '%s'", e.opts.Gopath)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Gopath),

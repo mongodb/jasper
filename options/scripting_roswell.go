@@ -4,8 +4,11 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"path/filepath"
 	"sort"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 type ScriptingRoswell struct {
@@ -13,8 +16,27 @@ type ScriptingRoswell struct {
 	Systems        []string
 	Lisp           string
 	CachedDuration time.Duration
-	cachedAt       time.Time
-	cachedHash     string
+	Environment    map[string]string
+	Output         Output
+
+	cachedAt   time.Time
+	cachedHash string
+}
+
+func (opts *ScriptingRoswell) Validate() error {
+	if opts.CachedDuration == 0 {
+		opts.CachedDuration = 10 * time.Minute
+	}
+
+	if opts.Path == "" {
+		opts.Path = filepath.Join("roswell", uuid.Must(uuid.NewV4()).String())
+	}
+
+	if opts.Lisp == "" {
+		opts.Lisp = "sbcl-bin"
+	}
+
+	return nil
 }
 
 func (opts *ScriptingRoswell) Type() string        { return "roswell" }

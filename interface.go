@@ -141,6 +141,10 @@ type ProcessInfo struct {
 // Environment. Implementations should be make it possible to execute
 // either locally or on remote systems.
 type ScriptingEnvironment interface {
+	// ID returns a unique ID for the underlying enviroment. This
+	// should match the ID produced by the underlying options
+	// implementation.
+	ID() string
 	// Setup initializes the environment, and should be safe to
 	// call multiple times.
 	Setup(context.Context) error

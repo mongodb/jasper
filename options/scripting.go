@@ -6,4 +6,5 @@ type ScriptingEnvironment interface {
 	ID() string
 	Type() string
 	Interpreter() string
+	Validate() error
 }

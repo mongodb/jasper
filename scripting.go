@@ -6,6 +6,10 @@ import (
 )
 
 func scriptingEnvironmentFactory(m Manager, env options.ScriptingEnvironment) (ScriptingEnvironment, error) {
+	if err := env.Validate(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	switch t := env.(type) {
 	case *options.ScriptingPython:
 		return &pythonEnvironment{opts: t, manager: m}, nil
@@ -13,6 +17,8 @@ func scriptingEnvironmentFactory(m Manager, env options.ScriptingEnvironment) (S
 		return &golangEnvironment{opts: t, manager: m}, nil
 	case *options.ScriptingRoswell:
 		return &roswellEnvironment{opts: t, manager: m}, nil
+	case nil:
+		return nil, errors.New("scripting environment must be non-nil")
 	default:
 		return nil, errors.Errorf("scripting environment %T (%s) is not supported", t, env.Type())
 	}

@@ -412,6 +412,11 @@ func TestManagerInterface(t *testing.T) {
 						assert.True(t, findIDInProcList(procID))
 					}
 				},
+				"NilScriptingEnvironment": func(ctx context.Context, t *testing.T, manager Manager) {
+					se, err := manager.CreateScripting(ctx, nil)
+					require.Error(t, err)
+					require.Nil(t, se)
+				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {

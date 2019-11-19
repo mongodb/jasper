@@ -10,7 +10,6 @@ import (
 
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 type pythonEnvironment struct {
@@ -28,20 +27,10 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 		return nil
 	}
 
-	if e.opts.VirtualEnvPath == "" {
-		e.opts.VirtualEnvPath = filepath.Join("venv", uuid.Must(uuid.NewV4()).String())
-	}
-	if e.opts.HostPythonInterpeter == "" {
-		e.opts.HostPythonInterpeter = "python3"
-	}
 	e.cachedHash = e.opts.ID()
-
-	cmd := e.manager.CreateCommand(ctx)
 	venvpy := e.opts.Interpreter()
 
-	if _, err := os.Stat(venvpy); os.IsNotExist(err) {
-		cmd = cmd.AppendArgs(e.opts.HostPythonInterpeter, "-m", e.venvMod(), e.opts.VirtualEnvPath)
-	}
+	cmd := e.manager.CreateCommand(ctx).AppendArgs(e.opts.HostPythonInterpreter, "-m", e.venvMod(), e.opts.VirtualEnvPath)
 
 	if e.opts.RequirementsFilePath != "" {
 		cmd.AppendArgs(venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsFilePath)
@@ -58,7 +47,7 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 		return nil
 	})
 
-	return cmd.Run(ctx)
+	return cmd.SetOutputOptions(e.opts.Output).Run(ctx)
 }
 
 func (e *pythonEnvironment) venvMod() string {
@@ -83,17 +72,18 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 		return errors.Wrap(err, "problem writing file")
 	}
 
-	return e.manager.CreateCommand(ctx).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
+	return e.manager.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
 }
 
 func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) error {
-	return e.manager.CreateCommand(ctx).Directory(dir).Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).Run(ctx)
+	return e.manager.CreateCommand(ctx).Directory(dir).Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).
+		SetOutputOptions(e.opts.Output).Run(ctx)
 }
 
 func (e *pythonEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case RemoteClient:
-		return errors.Wrapf(mgr.CreateCommand(ctx).AppendArgs("rm", "-rf", e.opts.VirtualEnvPath).Run(ctx),
+		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.VirtualEnvPath).Run(ctx),
 			"problem removing remote python environment '%s'", e.opts.VirtualEnvPath)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.VirtualEnvPath),

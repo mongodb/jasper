@@ -8,11 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/level"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 type roswellEnvironment struct {
@@ -29,14 +26,8 @@ func (e *roswellEnvironment) Setup(ctx context.Context) error {
 		return nil
 	}
 
-	if e.opts.Path == "" {
-		e.opts.Path = filepath.Join("roswell", uuid.Must(uuid.NewV4()).String())
-	}
-	if e.opts.Lisp == "" {
-		e.opts.Lisp = "sbcl-bin"
-	}
-
-	cmd := e.manager.CreateCommand(ctx).AddEnv("ROSWELL_HOME", e.opts.Path).AppendArgs(e.opts.Interpreter(), "install", e.opts.Lisp)
+	cmd := e.manager.CreateCommand(ctx).Environment(e.opts.Environment).AddEnv("ROSWELL_HOME", e.opts.Path).
+		SetOutputOptions(e.opts.Output).AppendArgs(e.opts.Interpreter(), "install", e.opts.Lisp)
 	for _, sys := range e.opts.Systems {
 		cmd.AppendArgs(e.opts.Interpreter(), "install", sys)
 	}
@@ -46,7 +37,7 @@ func (e *roswellEnvironment) Setup(ctx context.Context) error {
 			e.isConfigured = true
 		}
 		return nil
-	}).SetCombinedSender(level.Notice, grip.GetSender())
+	})
 
 	return cmd.Run(ctx)
 }
@@ -60,7 +51,8 @@ func (e *roswellEnvironment) Run(ctx context.Context, forms []string) error {
 	}
 	ros = append(ros, "-q")
 
-	return e.manager.CreateCommand(ctx).AddEnv("ROSWELL_HOME", e.opts.Path).Add(ros).Run(ctx)
+	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).AddEnv("ROSWELL_HOME", e.opts.Path).
+		SetOutputOptions(e.opts.Output).Add(ros).Run(ctx)
 }
 
 func (e *roswellEnvironment) RunScript(ctx context.Context, script string) error {
@@ -74,17 +66,19 @@ func (e *roswellEnvironment) RunScript(ctx context.Context, script string) error
 		return errors.Wrap(err, "problem writing file")
 	}
 
-	return e.manager.CreateCommand(ctx).AddEnv("ROSWELL_HOME", e.opts.Path).AppendArgs(e.opts.Interpreter(), "run", wo.Path).Run(ctx)
+	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).AddEnv("ROSWELL_HOME", e.opts.Path).
+		SetOutputOptions(e.opts.Output).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
 }
 
 func (e *roswellEnvironment) Build(ctx context.Context, dir string, args []string) error {
-	return e.manager.CreateCommand(ctx).Directory(dir).AddEnv("ROSWELL_HOME", e.opts.Path).Add(append([]string{e.opts.Interpreter(), "dump", "executable"}, args...)).Run(ctx)
+	return e.manager.CreateCommand(ctx).Directory(dir).Environment(e.opts.Environment).AddEnv("ROSWELL_HOME", e.opts.Path).
+		SetOutputOptions(e.opts.Output).Add(append([]string{e.opts.Interpreter(), "dump", "executable"}, args...)).Run(ctx)
 }
 
 func (e *roswellEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case RemoteClient:
-		return errors.Wrapf(mgr.CreateCommand(ctx).AppendArgs("rm", "-rf", e.opts.Path).Run(ctx),
+		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Path).Run(ctx),
 			"problem removing remote python environment '%s'", e.opts.Path)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Path),

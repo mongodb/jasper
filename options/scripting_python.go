@@ -9,16 +9,20 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // ScriptingPython defines the configuration of a python environment.
 type ScriptingPython struct {
-	VirtualEnvPath       string        `bson:"virtual_env_path" json:"virtual_env_path" yaml:"virtual_env_path"`
-	RequirementsFilePath string        `bson:"requirements_path" json:"requirements_path" yaml:"requirements_path"`
-	HostPythonInterpeter string        `bson:"host_python" json:"host_python" yaml:"host_python"`
-	Packages             []string      `bson:"packages" json:"packages" yaml:"packages"`
-	CachedDuration       time.Duration `bson:"cache_duration" json:"cache_duration" yaml:"cache_duration"`
-	LegacyPython         bool          `bson:"legacy_python" json:"legacy_python" yaml:"legacy_python"`
+	VirtualEnvPath        string            `bson:"virtual_env_path" json:"virtual_env_path" yaml:"virtual_env_path"`
+	RequirementsFilePath  string            `bson:"requirements_path" json:"requirements_path" yaml:"requirements_path"`
+	HostPythonInterpreter string            `bson:"host_python" json:"host_python" yaml:"host_python"`
+	Packages              []string          `bson:"packages" json:"packages" yaml:"packages"`
+	CachedDuration        time.Duration     `bson:"cache_duration" json:"cache_duration" yaml:"cache_duration"`
+	LegacyPython          bool              `bson:"legacy_python" json:"legacy_python" yaml:"legacy_python"`
+	Environment           map[string]string `bson:"env" json:"env" yaml:"env"`
+	Output                Output            `bson:"output" json:"output" yaml:"output"`
 
 	requirementsMTime time.Time
 	cachedAt          time.Time
@@ -32,11 +36,11 @@ type ScriptingPython struct {
 // the environment configuration.
 func NewPythonScriptingEnvironmnet(path, reqtxt string, packages ...string) ScriptingEnvironment {
 	return &ScriptingPython{
-		CachedDuration:       time.Hour,
-		HostPythonInterpeter: "python3",
-		Packages:             packages,
-		VirtualEnvPath:       path,
-		RequirementsFilePath: reqtxt,
+		CachedDuration:        time.Hour,
+		HostPythonInterpreter: "python3",
+		Packages:              packages,
+		VirtualEnvPath:        path,
+		RequirementsFilePath:  reqtxt,
 	}
 }
 
@@ -46,13 +50,29 @@ func (opts *ScriptingPython) Interpreter() string {
 
 func (opts *ScriptingPython) Type() string { return "python" }
 
+func (opts *ScriptingPython) Validate() error {
+	if opts.CachedDuration == 0 {
+		opts.CachedDuration = 10 * time.Minute
+	}
+
+	if opts.VirtualEnvPath == "" {
+		opts.VirtualEnvPath = filepath.Join("venv", uuid.Must(uuid.NewV4()).String())
+	}
+
+	if opts.HostPythonInterpreter == "" {
+		opts.HostPythonInterpreter = "python3"
+	}
+
+	return nil
+}
+
 func (opts *ScriptingPython) ID() string {
 	if opts.cachedHash != "" && time.Since(opts.cachedAt) < opts.CachedDuration {
 		return opts.cachedHash
 	}
 	hash := sha1.New()
 
-	_, _ = io.WriteString(hash, opts.HostPythonInterpeter)
+	_, _ = io.WriteString(hash, opts.HostPythonInterpreter)
 	_, _ = io.WriteString(hash, opts.VirtualEnvPath)
 
 	if opts.requrementsHash == "" {
