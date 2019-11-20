@@ -437,7 +437,6 @@ func (p *rpcProcess) ResetTags() {
 type rpcScripting struct {
 	id     string
 	client internal.JasperProcessManagerClient
-	info   *internal.ProcessInfo
 }
 
 func (s *rpcScripting) ID() string { return s.id }

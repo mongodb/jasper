@@ -22,10 +22,11 @@ import (
 
 func isInPath(binary string) bool {
 	_, err := exec.LookPath(binary)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
+}
+
+func evgTaskContains(subs string) bool {
+	return strings.Contains(os.Getenv("EVR_TASK_ID"), subs)
 }
 
 const doCleanTesting = false
@@ -123,7 +124,7 @@ func TestScriptingEnvironment(t *testing.T) {
 		},
 		{
 			Name:      "Python3",
-			Supported: isInPath("python3"),
+			Supported: isInPath("python3") && !evgTaskContains("ubuntu"),
 			DefaultOptions: &options.ScriptingPython{
 				VirtualEnvPath:        filepath.Join(tmpdir, "python3"),
 				LegacyPython:          false,
@@ -163,7 +164,7 @@ func TestScriptingEnvironment(t *testing.T) {
 		},
 		{
 			Name:      "Python2",
-			Supported: isInPath("python"),
+			Supported: isInPath("python") && !evgTaskContains("windows"),
 			DefaultOptions: &options.ScriptingPython{
 				VirtualEnvPath:        filepath.Join(tmpdir, "python2"),
 				LegacyPython:          true,

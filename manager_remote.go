@@ -43,7 +43,7 @@ func (m *remoteOverrideMgr) CreateCommand(ctx context.Context) *Command {
 }
 
 func (m *remoteOverrideMgr) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	return m.WriteFile(ctx, opts)
+	return m.mgr.WriteFile(ctx, opts)
 }
 
 func (m *remoteOverrideMgr) Register(ctx context.Context, p Process) error {
