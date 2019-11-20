@@ -204,7 +204,7 @@ func TestScriptingEnvironment(t *testing.T) {
 		},
 		{
 			Name:      "Golang",
-			Supported: isInPath("go"),
+			Supported: isInPath("go") && !evgTaskContains("windows"),
 			DefaultOptions: &options.ScriptingGolang{
 				Gopath: filepath.Join(tmpdir, "gopath"),
 				Goroot: runtime.GOROOT(),
