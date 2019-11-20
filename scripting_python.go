@@ -64,7 +64,7 @@ func (e *pythonEnvironment) Run(ctx context.Context, args []string) error {
 func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error {
 	scriptChecksum := fmt.Sprintf("%x", sha1.Sum([]byte(script)))
 	wo := options.WriteFile{
-		Path:    filepath.Join(e.opts.VirtualEnvPath, "tmp", strings.Join([]string{e.manager.ID(), scriptChecksum}, "-")+".lisp"),
+		Path:    filepath.Join(e.opts.VirtualEnvPath, "tmp", strings.Join([]string{e.manager.ID(), scriptChecksum}, "-")+".py"),
 		Content: []byte(script),
 	}
 

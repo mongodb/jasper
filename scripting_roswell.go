@@ -79,9 +79,9 @@ func (e *roswellEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case RemoteClient:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Path).Run(ctx),
-			"problem removing remote python environment '%s'", e.opts.Path)
+			"problem removing remote roswell environment '%s'", e.opts.Path)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Path),
-			"problem removing local python environment '%s'", e.opts.Path)
+			"problem removing local roswell environment '%s'", e.opts.Path)
 	}
 }
