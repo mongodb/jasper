@@ -239,6 +239,9 @@ func TestScriptingEnvironment(t *testing.T) {
 				{
 					Name: "RunScript",
 					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+						if runtime.GOOS == "windows" {
+							t.Skip("windows paths")
+						}
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						err := manager.CreateCommand(ctx).
 							AddEnv("GOPATH", filepath.Join(tmpdir, "gopath")).
