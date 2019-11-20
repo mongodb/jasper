@@ -4,6 +4,7 @@ srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name 
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
 packages := $(name) cli rpc rest options mock testutil internal-executor
 testPackages := $(packages)
+projectPath := github.com/mongodb/jasper
 
 _compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages),./$(target))))
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)

@@ -410,6 +410,10 @@ func (c *Command) Sh(script string) *Command { return c.ShellScript("sh", script
 // in the form of arguments.
 func (c *Command) AppendArgs(args ...string) *Command { return c.Add(args) }
 
+// SetHook allows you to add a function that's always called (locally)
+// after the command completes.
+func (c *Command) SetHook(h func(error) error) *Command { c.opts.Hook = h; return c }
+
 func (c *Command) setupEnv() {
 	if c.opts.Process.Environment == nil {
 		c.opts.Process.Environment = map[string]string{}
@@ -448,8 +452,10 @@ func (c *Command) Run(ctx context.Context) error {
 		}
 
 		err := c.exec(ctx, opt, idx)
-		if !c.opts.IgnoreError {
-			catcher.Add(err)
+		catcher.AddWhen(!c.opts.IgnoreError, err)
+
+		if c.opts.Hook != nil {
+			catcher.AddWhen(!c.opts.IgnoreError, c.opts.Hook(err))
 		}
 
 		if err != nil && !c.opts.ContinueOnError {
@@ -751,7 +757,8 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 			_, err = proc.Wait(ctx)
 			waitCatcher.Add(errors.Wrapf(err, "error waiting on process '%s'", proc.ID()))
 		}
-		msg["err"] = waitCatcher.Resolve()
+		err = waitCatcher.Resolve()
+		msg["err"] = err
 		grip.Log(c.opts.Priority, writeOutput(msg))
 	}
 
