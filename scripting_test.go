@@ -260,7 +260,7 @@ func TestScriptingEnvironment(t *testing.T) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						err := se.Build(ctx, testutil.GetDirectoryOfFile(), []string{
 							"-o", filepath.Join(tmpdir, "gopath", "bin", "run-linter"),
-							filepath.Join(".", "cmd", "run-linter"),
+							filepath.Join(testutil.GetDirectoryOfFile(), "cmd", "run-linter"),
 							"./cmd/run-linter",
 						})
 						require.NoError(t, err)
