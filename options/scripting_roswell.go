@@ -11,7 +11,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// ScrptingRoswell describes the options needed to configure Roswell,
+// ScriptingRoswell describes the options needed to configure Roswell,
 // a Common Lisp-based scripting and environment management tool, as
 // a jasper.ScriptingEnvironment. Roswell uses Quicklip and must be
 // installed on your systems to use with jasper.
@@ -27,7 +27,7 @@ type ScriptingRoswell struct {
 	cachedHash string
 }
 
-// NewRoswell generates a ScriptingEnvironment
+// NewRoswellScriptingEnvironment generates a ScriptingEnvironment
 // based on the arguments provided. Use this function for
 // simple cases when you do not need or want to set as many aspects of
 // the environment configuration.

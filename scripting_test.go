@@ -257,7 +257,7 @@ func TestScriptingEnvironment(t *testing.T) {
 				{
 					Name: "Build",
 					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
-						if runtime.GOOS() == "windows" {
+						if runtime.GOOS == "windows" {
 							t.Skip("windows paths")
 						}
 						se := makeScriptingEnv(ctx, t, manager, opts)
