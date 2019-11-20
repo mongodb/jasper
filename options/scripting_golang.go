@@ -35,7 +35,7 @@ func NewGolangScriptingEnvironment(gopath, goroot string, packages ...string) Sc
 	return &ScriptingGolang{
 		Gopath:         gopath,
 		Goroot:         goroot,
-		CachedDuration: time.Duration,
+		CachedDuration: time.Hour,
 		Packages:       packages,
 	}
 }
