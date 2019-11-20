@@ -153,6 +153,15 @@ func (c *Command) Port(p int) *Command {
 	return c
 }
 
+// ExtendRemoteArgs allows you to add arguments, when needed, to the
+// Password sets the password in order to authenticate to a remote host.
+// underlying ssh command, for remote commands.
+func (c *Command) ExtendRemoteArgs(args ...string) *Command {
+	c.initRemote()
+	c.opts.Remote.Args = append(c.opts.Remote.Args, args...)
+	return c
+}
+
 // PrivKey sets the private key in order to authenticate to a remote host.
 func (c *Command) PrivKey(key string) *Command {
 	c.initRemote()
