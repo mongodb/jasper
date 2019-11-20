@@ -17,8 +17,6 @@ func scriptingEnvironmentFactory(m Manager, env options.ScriptingEnvironment) (S
 		return &golangEnvironment{opts: t, manager: m}, nil
 	case *options.ScriptingRoswell:
 		return &roswellEnvironment{opts: t, manager: m}, nil
-	case nil:
-		return nil, errors.New("scripting environment must be non-nil")
 	default:
 		return nil, errors.Errorf("scripting environment %T (%s) is not supported", t, env.Type())
 	}
