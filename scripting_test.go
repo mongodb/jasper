@@ -248,7 +248,7 @@ func TestScriptingEnvironment(t *testing.T) {
 						require.NoError(t, err)
 						err = se.Run(ctx, []string{
 							filepath.Join("cmd", "run-linter", "run-linter.go"),
-							"--packages='mock'",
+							"--packages=mock",
 							"--lintArgs='--disable-all'",
 						})
 						require.NoError(t, err)
@@ -257,10 +257,12 @@ func TestScriptingEnvironment(t *testing.T) {
 				{
 					Name: "Build",
 					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+						if runtime.GOOS() == "windows" {
+							t.Skip("windows paths")
+						}
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						err := se.Build(ctx, testutil.GetDirectoryOfFile(), []string{
 							"-o", filepath.Join(tmpdir, "gopath", "bin", "run-linter"),
-							filepath.Join(testutil.GetDirectoryOfFile(), "cmd", "run-linter"),
 							"./cmd/run-linter",
 						})
 						require.NoError(t, err)
