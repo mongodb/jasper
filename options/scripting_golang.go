@@ -11,23 +11,46 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// ScriptingGolang describes a Go environment for building and running
+// arbitrary code.
 type ScriptingGolang struct {
-	Gopath         string
-	Goroot         string
-	Packages       []string
-	Context        string
-	WithUpdate     bool
-	CachedDuration time.Duration
-	Environment    map[string]string
-	Output         Output
+	Gopath         string            `bson:"gopath" json:"gopath" yaml:"gopath"`
+	Goroot         string            `bson:"goroot" json:"goroot" yaml:"goroot"`
+	Packages       []string          `bson:"packages" json:"packages" yaml:"packages"`
+	Context        string            `bson:"context" json:"context" yaml:"context"`
+	WithUpdate     bool              `bson:"with_update" json:"with_update" yaml:"with_update"`
+	CachedDuration time.Duration     `bson:"cached_duration" json:"cached_duration" yaml:"cached_duration"`
+	Environment    map[string]string `bson:"environment" json:"environment" yaml:"environment"`
+	Output         Output            `bson:"output" json:"output" yaml:"output"`
 
 	cachedAt   time.Time
 	cachedHash string
 }
 
-func (opts *ScriptingGolang) Type() string        { return "go" }
+// NewGolangScriptingEnvironment generates a ScriptingEnvironment
+// based on the arguments provided. Use this function for
+// simple cases when you do not need or want to set as many aspects of
+// the environment configuration.
+func NewGolangScriptingEnvironment(gopath, goroot string, packages ...string) ScriptingEnvironment {
+	return &ScriptingGolang{
+		Gopath:         gopath,
+		Goroot:         goroot,
+		CachedDuration: time.Duration,
+		Packages:       packages,
+	}
+}
+
+// Type is part of the options.ScriptingEnvironment interface and
+// returns the type of the interface.
+func (opts *ScriptingGolang) Type() string { return "go" }
+
+// Interpreter is part of the options.ScriptingEnvironment interface
+// and returns the path to the interpreter or binary that runs scripts.
 func (opts *ScriptingGolang) Interpreter() string { return filepath.Join(opts.Goroot, "bin", "go") }
 
+// Validate is part of the options.ScriptingEnvironment interface and
+// both ensures that the values are permissible and sets, where
+// possible, good defaults.
 func (opts *ScriptingGolang) Validate() error {
 	if opts.CachedDuration == 0 {
 		opts.CachedDuration = 10 * time.Minute
@@ -40,6 +63,7 @@ func (opts *ScriptingGolang) Validate() error {
 	return nil
 }
 
+// ID returns a hash value that uniquely summarizes the environment.
 func (opts *ScriptingGolang) ID() string {
 	if opts.cachedHash != "" && time.Since(opts.cachedAt) < opts.CachedDuration {
 		return opts.cachedHash

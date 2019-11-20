@@ -65,11 +65,12 @@ func (m *Manager) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(m.CreateProcess)
 }
 
+// GetScripting returns a cached scripting environment.
 func (m *Manager) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
 	return nil, nil
 }
 
-// CreateScripting constructs an attached scripting environment
+// CreateScripting constructs an attached scripting environment.
 func (m *Manager) CreateScripting(ctx context.Context, o options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
 	return nil, nil
 }

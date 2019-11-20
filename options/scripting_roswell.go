@@ -11,18 +11,46 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// ScrptingRoswell describes the options needed to configure Roswell,
+// a Common Lisp-based scripting and environment management tool, as
+// a jasper.ScriptingEnvironment. Roswell uses Quicklip and must be
+// installed on your systems to use with jasper.
 type ScriptingRoswell struct {
-	Path           string
-	Systems        []string
-	Lisp           string
-	CachedDuration time.Duration
-	Environment    map[string]string
-	Output         Output
+	Path           string            `bson:"path" json:"path" yaml:"path"`
+	Systems        []string          `bson:"systems" json:"systems" yaml:"systems"`
+	Lisp           string            `bson:"lisp" json:"lisp" yaml:"lisp"`
+	CachedDuration time.Duration     `bson:"cached_duration" json:"cached_duration" yaml:"cached_duration"`
+	Environment    map[string]string `bson:"environment" json:"environment" yaml:"environment"`
+	Output         Output            `bson:"output" json:"output" yaml:"output"`
 
 	cachedAt   time.Time
 	cachedHash string
 }
 
+// NewRoswell generates a ScriptingEnvironment
+// based on the arguments provided. Use this function for
+// simple cases when you do not need or want to set as many aspects of
+// the environment configuration.
+func NewRoswellScriptingEnvironment(path string, systems ...string) ScriptingEnvironment {
+	return &ScriptingRoswell{
+		Path:           path,
+		Systems:        systems,
+		CachedDuration: time.Hour,
+		Lisp:           "sbcl-bin",
+	}
+}
+
+// Type is part of the options.ScriptingEnvironment interface and
+// returns the type of the interface.
+func (opts *ScriptingRoswell) Type() string { return "roswell" }
+
+// Interpreter is part of the options.ScriptingEnvironment interface
+// and returns the path to the interpreter or binary that runs scripts.
+func (opts *ScriptingRoswell) Interpreter() string { return "ros" }
+
+// Validate is part of the options.ScriptingEnvironment interface and
+// both ensures that the values are permissible and sets, where
+// possible, good defaults.
 func (opts *ScriptingRoswell) Validate() error {
 	if opts.CachedDuration == 0 {
 		opts.CachedDuration = 10 * time.Minute
@@ -39,9 +67,7 @@ func (opts *ScriptingRoswell) Validate() error {
 	return nil
 }
 
-func (opts *ScriptingRoswell) Type() string        { return "roswell" }
-func (opts *ScriptingRoswell) Interpreter() string { return "ros" }
-
+// ID returns a hash value that uniquely summarizes the environment.
 func (opts *ScriptingRoswell) ID() string {
 	if opts.cachedHash != "" && time.Since(opts.cachedAt) < opts.CachedDuration {
 		return opts.cachedHash

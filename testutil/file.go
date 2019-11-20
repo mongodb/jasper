@@ -48,6 +48,8 @@ func AddFileToDirectory(dir string, fileName string, fileContents string) error 
 	return file.Close()
 }
 
+// GetDirectoryOfFile returns the directory of the file where this
+// function is called from.
 func GetDirectoryOfFile() string {
 	_, file, _, _ := runtime.Caller(1)
 

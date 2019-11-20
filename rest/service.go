@@ -775,7 +775,7 @@ func (s *Service) scriptingCreate(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := gimlet.GetJSON(r.Body, seopt); err != nil {
+	if err = gimlet.GetJSON(r.Body, seopt); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),

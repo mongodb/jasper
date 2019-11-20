@@ -31,7 +31,7 @@ type ScriptingPython struct {
 }
 
 // NewPythonScriptingEnvironmnet generates a ScriptingEnvironment
-// taking the arguments given for later use. Use this function for
+// based on the arguments provided. Use this function for
 // simple cases when you do not need or want to set as many aspects of
 // the environment configuration.
 func NewPythonScriptingEnvironmnet(path, reqtxt string, packages ...string) ScriptingEnvironment {
@@ -44,12 +44,19 @@ func NewPythonScriptingEnvironmnet(path, reqtxt string, packages ...string) Scri
 	}
 }
 
+// Type is part of the options.ScriptingEnvironment interface and
+// returns the type of the interface.
+func (opts *ScriptingPython) Type() string { return "python" }
+
+// Interpreter is part of the options.ScriptingEnvironment interface
+// and returns the path to the interpreter or binary that runs scripts.
 func (opts *ScriptingPython) Interpreter() string {
 	return filepath.Join(opts.VirtualEnvPath, "bin", "python")
 }
 
-func (opts *ScriptingPython) Type() string { return "python" }
-
+// Validate is part of the options.ScriptingEnvironment interface and
+// both ensures that the values are permissible and sets, where
+// possible, good defaults.
 func (opts *ScriptingPython) Validate() error {
 	if opts.CachedDuration == 0 {
 		opts.CachedDuration = 10 * time.Minute
@@ -66,6 +73,7 @@ func (opts *ScriptingPython) Validate() error {
 	return nil
 }
 
+// ID returns a hash value that uniquely summarizes the environment.
 func (opts *ScriptingPython) ID() string {
 	if opts.cachedHash != "" && time.Since(opts.cachedAt) < opts.CachedDuration {
 		return opts.cachedHash
