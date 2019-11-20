@@ -204,7 +204,7 @@ func TestScriptingEnvironment(t *testing.T) {
 		},
 		{
 			Name:      "Golang",
-			Supported: isInPath("go") && !evgTaskContains("windows"),
+			Supported: isInPath("go"),
 			DefaultOptions: &options.ScriptingGolang{
 				Gopath: filepath.Join(tmpdir, "gopath"),
 				Goroot: runtime.GOROOT(),
@@ -246,7 +246,8 @@ func TestScriptingEnvironment(t *testing.T) {
 							SetOutputOptions(output).Run(ctx)
 
 						require.NoError(t, err)
-						err = se.Run(ctx, []string{"cmd/run-linter/run-linter.go",
+						err = se.Run(ctx, []string{
+							filepath.Join("cmd", "run-linter", "run-linter.go"),
 							"--packages='mock'",
 							"--lintArgs='--disable-all'",
 						})
@@ -259,6 +260,7 @@ func TestScriptingEnvironment(t *testing.T) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						err := se.Build(ctx, testutil.GetDirectoryOfFile(), []string{
 							"-o", filepath.Join(tmpdir, "gopath", "bin", "run-linter"),
+							filepath.Join(".", "cmd", "run-linter"),
 							"./cmd/run-linter",
 						})
 						require.NoError(t, err)
