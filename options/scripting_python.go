@@ -19,8 +19,8 @@ type ScriptingPython struct {
 	RequirementsFilePath  string            `bson:"requirements_path" json:"requirements_path" yaml:"requirements_path"`
 	HostPythonInterpreter string            `bson:"host_python" json:"host_python" yaml:"host_python"`
 	Packages              []string          `bson:"packages" json:"packages" yaml:"packages"`
-	CachedDuration        time.Duration     `bson:"cache_duration" json:"cache_duration" yaml:"cache_duration"`
 	LegacyPython          bool              `bson:"legacy_python" json:"legacy_python" yaml:"legacy_python"`
+	CachedDuration        time.Duration     `bson:"cache_duration" json:"cache_duration" yaml:"cache_duration"`
 	Environment           map[string]string `bson:"env" json:"env" yaml:"env"`
 	Output                Output            `bson:"output" json:"output" yaml:"output"`
 

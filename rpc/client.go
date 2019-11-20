@@ -97,8 +97,26 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
-	return nil, errors.New("scripting environment is not supported")
+	seid, err := c.client.ScriptingEnvironmentCreate(ctx, internal.ConvertScriptingOptions(opts))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &rpcScripting{client: c.client, id: seid.Id}, nil
 }
+
+func (c *rpcClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
+	resp, err := c.client.ScriptingEnvironmentCheck(ctx, &internal.ScriptingEnvironmentID{Id: id})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if !resp.Success {
+		return nil, errors.New(resp.Text)
+	}
+
+	return &rpcScripting{client: c.client, id: id}, nil
+}
+
 func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register extant processes on remote process managers")
 }
@@ -414,4 +432,77 @@ func (p *rpcProcess) GetTags() []string {
 
 func (p *rpcProcess) ResetTags() {
 	_, _ = p.client.ResetTags(context.Background(), &internal.JasperProcessID{Value: p.info.Id})
+}
+
+type rpcScripting struct {
+	id     string
+	client internal.JasperProcessManagerClient
+	info   *internal.ProcessInfo
+}
+
+func (s *rpcScripting) ID() string { return s.id }
+
+func (s *rpcScripting) Run(ctx context.Context, args []string) error {
+	resp, err := s.client.ScriptingEnvironmentRun(ctx, &internal.ScriptingEnvironmentRunArgs{Id: s.id, Args: args})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
+}
+
+func (s *rpcScripting) Setup(ctx context.Context) error {
+	resp, err := s.client.ScriptingEnvironmentSetup(ctx, &internal.ScriptingEnvironmentID{Id: s.id})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
+}
+
+func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
+	resp, err := s.client.ScriptingEnvironmentRunScript(ctx, &internal.ScriptingEnvironmentRunScriptArgs{Id: s.id, Script: script})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
+}
+
+func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) error {
+	resp, err := s.client.ScriptingEnvironmentBuild(ctx, &internal.ScriptingEnvironmentBuildArgs{Id: s.id, Directory: dir, Args: args})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
+}
+
+func (s *rpcScripting) Cleanup(ctx context.Context) error {
+	resp, err := s.client.ScriptingEnvironmentCleanup(ctx, &internal.ScriptingEnvironmentID{Id: s.id})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.Success {
+		return nil
+	}
+
+	return errors.New(resp.Text)
 }

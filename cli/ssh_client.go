@@ -93,6 +93,10 @@ func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingE
 	return nil, errors.New("scripting environment is not supported")
 }
 
+func (c *sshClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
+	return nil, errors.New("scripting environment is not supported")
+}
+
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register existing processes on remote manager")
 }

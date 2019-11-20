@@ -32,6 +32,10 @@ func (m *remoteOverrideMgr) CreateScripting(ctx context.Context, opts options.Sc
 	return m.mgr.CreateScripting(ctx, opts)
 }
 
+func (m *remoteOverrideMgr) GetScripting(ctx context.Context, id string) (ScriptingEnvironment, error) {
+	return m.mgr.GetScripting(ctx, id)
+}
+
 func (m *remoteOverrideMgr) CreateCommand(ctx context.Context) *Command {
 	cmd := m.mgr.CreateCommand(ctx)
 	cmd.opts.Remote = m.remote

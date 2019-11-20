@@ -39,6 +39,7 @@ type Manager interface {
 	List(context.Context, options.Filter) ([]Process, error)
 	Group(context.Context, string) ([]Process, error)
 	Get(context.Context, string) (Process, error)
+	GetScripting(context.Context, string) (ScriptingEnvironment, error)
 	Clear(context.Context)
 	Close(context.Context) error
 }

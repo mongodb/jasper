@@ -59,6 +59,14 @@ func (m *basicProcessManager) CreateScripting(ctx context.Context, opts options.
 	return se, nil
 }
 
+func (m *basicProcessManager) GetScripting(ctx context.Context, id string) (ScriptingEnvironment, error) {
+	se, ok := m.senv[id]
+	if !ok {
+		return nil, errors.Errorf("could not find scripting environment named '%s'", id)
+	}
+	return se, nil
+}
+
 func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.AddEnvVar(ManagerEnvironID, m.id)
 
