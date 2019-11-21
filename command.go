@@ -190,7 +190,7 @@ func (c *Command) ProxyHost(h string) *Command {
 	return c
 }
 
-// ProxyUser sets the proxy username for conencting to a proxy host.
+// ProxyUser sets the proxy username for connecting to a proxy host.
 func (c *Command) ProxyUser(u string) *Command {
 	c.initRemoteProxy()
 	c.opts.Remote.Proxy.User = u

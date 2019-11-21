@@ -10,11 +10,11 @@ _compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
 coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
+# start environment setup
 gobin := ${GO_BIN_PATH}
 ifeq (,$(gobin))
 gobin := go
 endif
-# start environment setup
 gopath := ${GOPATH}
 gocache := $(abspath $(buildDir)/.cache)
 ifeq ($(OS),Windows_NT)
@@ -50,7 +50,7 @@ lintDeps := github.com/alecthomas/gometalinter
 lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
-lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
+lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports" --enable="misspell"
 #  add and configure additional linters
 lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
 #  golint doesn't handle splitting package comments between multiple files.
@@ -96,7 +96,6 @@ endif
 # test execution and output handlers
 $(buildDir):
 	@mkdir -p $@
-
 $(buildDir)/output.%.test:$(buildDir) .FORCE
 	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
 	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@

@@ -142,7 +142,7 @@ type ProcessInfo struct {
 // Environment. Implementations should be make it possible to execute
 // either locally or on remote systems.
 type ScriptingEnvironment interface {
-	// ID returns a unique ID for the underlying enviroment. This
+	// ID returns a unique ID for the underlying environment. This
 	// should match the ID produced by the underlying options
 	// implementation.
 	ID() string
