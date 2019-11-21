@@ -24,13 +24,10 @@ endif
 goEnv := GOPATH=$(gopath) GOCACHE=$(gocache) $(if $(GO_BIN_PATH),PATH="$(shell dirname $(GO_BIN_PATH)):${PATH}")
 # end environment setup
 
-
 compile:
 	$(goEnv) $(gobin) build $(_compilePackages)
 compile-base:
-	$(goEnv) $(gobin) build  ./...
-build:compile
-
+	$(goEnv) $(gobin) build  ./
 
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
@@ -43,7 +40,6 @@ html-coverage-%:$(buildDir)/output.%.coverage.html
 lint-%:$(buildDir)/output.%.lint
 	
 # end convienence targets
-
 
 # start linting configuration
 #   package, testing, and linter dependencies specified
