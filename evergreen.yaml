@@ -87,7 +87,7 @@ buildvariants:
     display_name: Race Detector (Arch Linux)
     expansions:
       DISABLE_COVERAGE: true
-      GOROOT: /opt/golang/go1.10
+      GOROOT: /opt/golang/go1.13
       RACE_DETECTOR: true
       make_args: -k
     run_on:
