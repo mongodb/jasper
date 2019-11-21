@@ -256,13 +256,13 @@ func TestCreate(t *testing.T) {
 			assert.Equal(t, 1, opts.TimeoutSecs)
 		},
 		"ResolveFailsWithInvalidLoggingConfiguration": func(t *testing.T, opts *Create) {
-			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic, Options: Log{Format: LogFormatPlain}}}
+			opts.Output.Loggers = []Logger{{Type: LogSumologic, Options: Log{Format: LogFormatPlain}}}
 			cmd, _, err := opts.Resolve(ctx)
 			assert.Error(t, err)
 			assert.Nil(t, cmd)
 		},
 		"ResolveFailsWithInvalidErrorLoggingConfiguration": func(t *testing.T, opts *Create) {
-			opts.Output.Loggers = []Logger{Logger{Type: LogSumologic, Options: Log{Format: LogFormatPlain}}}
+			opts.Output.Loggers = []Logger{{Type: LogSumologic, Options: Log{Format: LogFormatPlain}}}
 			opts.Output.SuppressOutput = true
 			cmd, _, err := opts.Resolve(ctx)
 			assert.Error(t, err)
@@ -309,17 +309,17 @@ func TestFileLogging(t *testing.T) {
 		usesBadFile  bool
 	}
 	commands := map[string]Command{
-		"Output": Command{
+		"Output": {
 			args:         []string{"cat", goodFileName},
 			usesGoodFile: true,
 			usesBadFile:  false,
 		},
-		"Error": Command{
+		"Error": {
 			args:         []string{"cat", badFileName},
 			usesGoodFile: false,
 			usesBadFile:  true,
 		},
-		"OutputAndError": Command{
+		"OutputAndError": {
 			args:         []string{"cat", goodFileName, badFileName},
 			usesGoodFile: true,
 			usesBadFile:  true,
