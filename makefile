@@ -10,7 +10,7 @@ _compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
 coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
-gobin := $(if ${GOROOT},${GOROOT}/bin/go)
+gobin := ${GO_BIN_PATH}
 ifeq (,$(gobin))
 gobin := go
 endif
@@ -21,7 +21,7 @@ ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
-goEnv := GOPATH=$(gopath) GOCACHE=$(gocache) $(if ${GOROOT},PATH="$(shell dirname ${GOROOT}/bin):${PATH}")
+goEnv := GOPATH=$(gopath) GOCACHE=$(gocache) $(if ${GO_BIN_PATH},PATH="$(shell dirname ${GO_BIN_PATH}):${PATH}")
 # end environment setup
 
 compile:
@@ -63,7 +63,7 @@ $(gopath)/src/%:
 	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
 	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
-	$(buildEnv) $(gobin) build -o $@ $<
+	$(goEnv) $(gobin) build -o $@ $<
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions

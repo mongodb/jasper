@@ -88,6 +88,7 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.13
+      GO_BIN_PATH: /opt/golang/go1.13/bin/go
       RACE_DETECTOR: true
       make_args: -k
     run_on:
@@ -102,6 +103,7 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.11
+      GO_BIN_PATH: /opt/golang/go1.11/bin/go
       make_args: -k
     run_on:
       - ubuntu1604-test
@@ -114,6 +116,7 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.9
+      GO_BIN_PATH: /opt/golang/go1.9/bin/go
       make_args: -k
     run_on:
       - ubuntu1604-test
@@ -126,6 +129,7 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.11
+      GO_BIN_PATH: /opt/golang/go1.11/bin/go
       make_args: -k
     run_on:
       - macos-1014
@@ -146,6 +150,7 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: C:/golang/go1.11
+      GO_BIN_PATH: /cygdrive/c/golang/go1.11/bin/go
       make_args: -k
     tasks:
       - name: ".test"
