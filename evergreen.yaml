@@ -154,5 +154,6 @@ buildvariants:
       disable_coverage: true
       goroot: C:/golang/go1.11
       go_bin_path: /cygdrive/c/golang/go1.11/bin/go
+      make_args: -k
     tasks:
       - name: ".test"
