@@ -50,9 +50,11 @@ lintDeps := github.com/alecthomas/gometalinter
 lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
-lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports" --enable="misspell"
+lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo"
+lintArgs += --enable="goimports" --enable="misspell" --enable="gofmt" --enable="ineffassign"
+
 #  add and configure additional linters
-lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
+lintArgs += --line-length=100 --dupl-threshold=175
 #  golint doesn't handle splitting package comments between multiple files.
 lintArgs += --exclude="package comment should be of the form \"Package .* \(golint\)"
 #  no need to check the error of closer read operations in defer cases

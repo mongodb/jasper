@@ -71,7 +71,7 @@ func (opts *remoteConfig) resolve() (*ssh.ClientConfig, error) {
 	if opts.Key != "" || opts.KeyFile != "" {
 		pubkey, err := opts.publicKeyAuth()
 		if err != nil {
-			return nil, errors.Wrap(err, "coudl not get public key")
+			return nil, errors.Wrap(err, "could not get public key")
 		}
 		auth = append(auth, pubkey)
 	}
