@@ -412,7 +412,7 @@ func TestManagerInterface(t *testing.T) {
 						assert.True(t, findIDInProcList(procID))
 					}
 				},
-				"NonExistantScripting": func(ctx context.Context, t *testing.T, manager Manager) {
+				"NonExistentScripting": func(ctx context.Context, t *testing.T, manager Manager) {
 					se, err := manager.GetScripting(ctx, "foo")
 					require.Error(t, err)
 					require.Nil(t, se)

@@ -12,16 +12,21 @@ import (
 // Manager implements the Manager interface with exported fields to
 // configure and introspect the mock's behavior.
 type Manager struct {
-	FailCreate   bool
-	FailRegister bool
-	FailList     bool
-	FailGroup    bool
-	FailGet      bool
-	FailClose    bool
-	Create       func(*options.Create) Process
-	CreateConfig Process
-	ManagerID    string
-	Procs        []jasper.Process
+	FailCreate          bool
+	FailRegister        bool
+	FailList            bool
+	FailGroup           bool
+	FailGet             bool
+	FailClose           bool
+	FailCreateScripting bool
+	FailGetScripting    bool
+	FailWriteFile       bool
+	Create              func(*options.Create) Process
+	CreateConfig        Process
+	ManagerID           string
+	Procs               []jasper.Process
+	ScriptingEnv        jasper.ScriptingEnvironment
+	WriteFileOptions    options.WriteFile
 }
 
 func mockFail() error {
@@ -65,19 +70,34 @@ func (m *Manager) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(m.CreateProcess)
 }
 
-// GetScripting returns a cached scripting environment.
+// GetScripting returns a cached scripting environment. If FailGetScripting is
+// set, it returns an error.
 func (m *Manager) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
-	return nil, nil
+	if m.FailGetScripting {
+		return nil, mockFail()
+	}
+	return m.ScriptingEnv, nil
 }
 
-// CreateScripting constructs an attached scripting environment.
-func (m *Manager) CreateScripting(ctx context.Context, o options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
-	return nil, nil
+// CreateScripting constructs an attached scripting environment. If
+// FailCreateScripting is set, it returns an error.
+func (m *Manager) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+	if m.FailCreateScripting {
+		return nil, mockFail()
+	}
+	return m.ScriptingEnv, nil
 }
 
-// WriteFile writes a file, and provides a common abstraction for
-// writing files between remote and local systems.
-func (m *Manager) WriteFile(ctx context.Context, wf options.WriteFile) error { return nil }
+// WriteFile saves the options.WriteFile. If FailWriteFile is set, it returns an
+// error.
+func (m *Manager) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	if m.FailWriteFile {
+		return mockFail()
+	}
+
+	m.WriteFileOptions = opts
+	return nil
+}
 
 // Register adds the process to Procs. If FailRegister is set, it returns an
 // error.

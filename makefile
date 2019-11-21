@@ -11,21 +11,23 @@ coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).
 coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
 # start environment setup
-gopath := $(GOPATH)
+gobin := ${GO_BIN_PATH}
+ifeq (,$(gobin))
+gobin := go
+endif
+gopath := ${GOPATH}
 gocache := $(abspath $(buildDir)/.cache)
 ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
-buildEnv := GOCACHE=$(gocache)
+goEnv := GOPATH=$(gopath) GOCACHE=$(gocache) $(if ${GO_BIN_PATH},PATH="$(shell dirname ${GO_BIN_PATH}):${PATH}")
 # end environment setup
 
 compile:
-	go build $(_compilePackages)
+	$(goEnv) $(gobin) build $(_compilePackages)
 compile-base:
-	go build ./
-build:compile
-
+	$(goEnv) $(gobin) build  ./
 
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
@@ -39,7 +41,6 @@ lint-%:$(buildDir)/output.%.lint
 	
 # end convienence targets
 
-
 # start linting configuration
 #   package, testing, and linter dependencies specified
 #   separately. This is a temporary solution: eventually we should
@@ -49,10 +50,11 @@ lintDeps := github.com/alecthomas/gometalinter
 lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
-lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
-lintArgs += --skip="$(buildDir)" --skip="buildscripts"
+lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo"
+lintArgs += --enable="goimports" --enable="misspell" --enable="gofmt" --enable="ineffassign"
+
 #  add and configure additional linters
-lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
+lintArgs += --line-length=100 --dupl-threshold=175
 #  golint doesn't handle splitting package comments between multiple files.
 lintArgs += --exclude="package comment should be of the form \"Package .* \(golint\)"
 #  no need to check the error of closer read operations in defer cases
@@ -61,18 +63,16 @@ lintArgs += --exclude="should check returned error before deferring .*\.Close"
 lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
 $(gopath)/src/%:
 	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
-	go get $(subst $(gopath)/src/,,$@)
-$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
-	$(buildEnv) go build -o $@ $<
-$(buildDir)/.lintSetup:$(lintDeps)
-	@mkdir -p $(buildDir)
-	@-$(gopath)/bin/gometalinter --install >/dev/null && touch $@
+	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
+$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
+	$(goEnv) $(gobin) build -o $@ $<
+$(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
+	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
 
 # benchmark setup targets
-$(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
-	@mkdir -p $(buildDir)
-	go build -o $@ $<
+$(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
+	$(goEnv) $(gobin) build -o $@ $<
 # end benchmark setup targets
 
 # start test and coverage artifacts
@@ -80,36 +80,35 @@ $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
 #    run. (The "build" target is intentional and makes these targetsb
 #    rerun as expected.)
 testArgs := -v
-ifneq (,$(RUN_TEST))
-testArgs += -run='$(RUN_TEST)'
+ifneq (,${RUN_TEST})
+testArgs += -run='${RUN_TEST}'
 endif
-ifneq (,$(RUN_COUNT))
-testArgs += -count=$(RUN_COUNT)
+ifneq (,${RUN_COUNT})
+testArgs += -count=${RUN_COUNT}
 endif
-ifneq (,$(DISABLE_COVERAGE))
+ifeq (,${DISABLE_COVERAGE})
 testArgs += -cover
 endif
-ifneq (,$(RACE_DETECTOR))
+ifneq (,${RACE_DETECTOR})
 testArgs += -race
 endif
-ifneq (,$(SKIP_LONG))
+ifneq (,${SKIP_LONG})
 testArgs += -short
 endif
 # test execution and output handlers
-$(buildDir)/:
-	mkdir -p $@
-
-$(buildDir)/output.%.test:$(buildDir)/ .FORCE
-	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
+$(buildDir):
+	@mkdir -p $@
+$(buildDir)/output.%.test:$(buildDir) .FORCE
+	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
 	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
-$(buildDir)/output.%.coverage:$(buildDir)/ .FORCE
-	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
-	@-[ -f $@ ] && go tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
+$(buildDir)/output.%.coverage:$(buildDir) .FORCE
+	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
+	@-[ -f $@ ] && $(goEnv) $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
-	go tool cover -html=$< -o $@
+	$(goEnv) $(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
-$(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
-	@./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
+$(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
+	@$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
@@ -118,16 +117,15 @@ $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
 proto:
 	@mkdir -p rpc/internal
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
-lint:build $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
+lint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 	
-test:build $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
+test:$(buildDir) $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 	
 benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
-coverage:build $(coverageOutput)
-coverage-html:build $(coverageHtmlOutput)
-phony += lint build test coverage coverage-html
-phony += lint build test coverage coverage-html
+coverage:$(buildDir) $(coverageOutput)
+coverage-html:$(buildDir) $(coverageHtmlOutput)
+phony += lint $(buildDir) test coverage coverage-html
 .PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
