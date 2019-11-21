@@ -303,95 +303,78 @@ func TestFileLogging(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, numBytes)
 
-	type Command struct {
-		args         []string
-		usesGoodFile bool
-		usesBadFile  bool
-	}
-	commands := map[string]Command{
-		"Output": {
-			args:         []string{"cat", goodFileName},
-			usesGoodFile: true,
-			usesBadFile:  false,
-		},
-		"Error": {
-			args:         []string{"cat", badFileName},
-			usesGoodFile: false,
-			usesBadFile:  true,
-		},
-		"OutputAndError": {
-			args:         []string{"cat", goodFileName, badFileName},
-			usesGoodFile: true,
-			usesBadFile:  true,
-		},
+	args := map[string][]string{
+		"Output":         []string{"cat", goodFileName},
+		"Error":          []string{"cat", badFileName},
+		"OutputAndError": []string{"cat", goodFileName, badFileName},
 	}
 
 	for _, testParams := range []struct {
 		id               string
-		command          Command
+		command          []string
 		numBytesExpected int64
 		numLogs          int
 		outOpts          Output
 	}{
 		{
 			id:               "LoggerWritesOutputToOneFileEndpoint",
-			command:          commands["Output"],
+			command:          args["Output"],
 			numBytesExpected: outputSize,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: false, SuppressError: false},
 		},
 		{
 			id:               "LoggerWritesOutputToMultipleFileEndpoints",
-			command:          commands["Output"],
+			command:          args["Output"],
 			numBytesExpected: outputSize,
 			numLogs:          2,
 			outOpts:          Output{SuppressOutput: false, SuppressError: false},
 		},
 		{
 			id:               "LoggerWritesErrorToFileEndpoint",
-			command:          commands["Error"],
+			command:          args["Error"],
 			numBytesExpected: errorSize,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: true, SuppressError: false},
 		},
 		{
 			id:               "LoggerReadsFromBothStandardOutputAndStandardError",
-			command:          commands["OutputAndError"],
+			command:          args["OutputAndError"],
 			numBytesExpected: outputSize + errorSize,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: false, SuppressError: false},
 		},
 		{
 			id:               "LoggerIgnoresOutputWhenSuppressed",
-			command:          commands["Output"],
+			command:          args["Output"],
 			numBytesExpected: 0,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: true, SuppressError: false},
 		},
 		{
 			id:               "LoggerIgnoresErrorWhenSuppressed",
-			command:          commands["Error"],
+			command:          args["Error"],
 			numBytesExpected: 0,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: false, SuppressError: true},
 		},
 		{
 			id:               "LoggerIgnoresOutputAndErrorWhenSuppressed",
-			command:          commands["OutputAndError"],
+			command:          args["OutputAndError"],
 			numBytesExpected: 0,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: true, SuppressError: true},
 		},
 		{
 			id:               "LoggerReadsFromRedirectedOutput",
-			command:          commands["Output"],
+			command:          args["Output"],
 			numBytesExpected: outputSize,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: false, SuppressError: false, SendOutputToError: true},
 		},
 		{
 			id:               "LoggerReadsFromRedirectedError",
-			command:          commands["Error"],
+			command:          args["Error"],
 			numBytesExpected: errorSize,
 			numLogs:          1,
 			outOpts:          Output{SuppressOutput: false, SuppressError: false, SendErrorToOutput: true},
@@ -424,7 +407,7 @@ func TestFileLogging(t *testing.T) {
 				}
 				opts.Output.Loggers = append(opts.Output.Loggers, logger)
 			}
-			opts.Args = testParams.command.args
+			opts.Args = testParams.command
 
 			cmd, _, err := opts.Resolve(ctx)
 			require.NoError(t, err)
