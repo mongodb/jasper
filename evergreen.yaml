@@ -89,8 +89,8 @@ buildvariants:
   - name: race-detector
     display_name: Race Detector (Arch Linux)
     expansions:
-      goroot: /opt/golang/go1.11
-      go_bin_path: /opt/golang/go1.11/bin/go
+      goroot: /opt/golang/go1.10
+      go_bin_path: /opt/golang/go1.10/bin/go
       disable_coverage: true
       race_detector: true
       make_args: -k

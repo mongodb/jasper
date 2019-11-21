@@ -21,7 +21,7 @@ ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
-goEnv := GOPATH=$(gopath) GOCACHE=$(gocache)
+goEnv := GOPATH=$(gopath) GOCACHE=$(gocache) $(if $(GO_BIN_PATH),PATH="$(shell dirname $(GO_BIN_PATH)):${PATH}")
 # end environment setup
 
 
@@ -56,6 +56,7 @@ lintArgs := --tests --deadline=5m --vendor
 #   are rarely up to date.
 lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
 lintArgs += --disable="varcheck" --disable="structcheck" --disable="interfacer"
+lintArgs += --disable="maligned" --disable="unconvert"
 #  add and configure additional linters
 lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
 #  golint doesn't handle splitting package comments between multiple files.
@@ -70,7 +71,7 @@ $(gopath)/src/%:
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
 	$(buildEnv) $(gobin) build -o $@ $<
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
-	$(if $(GO_BIN_PATH),export PATH="$(shell dirname $(GO_BIN_PATH)):${PATH}" && ,)$(gopath)/bin/gometalinter --install >/dev/null && touch $@
+	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
 
 # benchmark setup targets
@@ -89,7 +90,7 @@ endif
 ifneq (,$(RUN_COUNT))
 testArgs += -count=$(RUN_COUNT)
 endif
-ifneq (,$(DISABLE_COVERAGE))
+ifeq (,$(DISABLE_COVERAGE))
 testArgs += -cover
 endif
 ifneq (,$(RACE_DETECTOR))
@@ -100,7 +101,7 @@ testArgs += -short
 endif
 # test execution and output handlers
 $(buildDir):
-	mkdir -p $@
+	@mkdir -p $@
 
 $(buildDir)/output.%.test:$(buildDir) .FORCE
 	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
