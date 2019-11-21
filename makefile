@@ -55,7 +55,6 @@ lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
 lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
-lintArgs += --disable="varcheck" --disable="structcheck" --disable="interfacer"
 #  add and configure additional linters
 lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
 #  golint doesn't handle splitting package comments between multiple files.
