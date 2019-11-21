@@ -32,12 +32,9 @@ functions:
       working_dir: gopath/src/github.com/mongodb/jasper
       binary: make
       args: ["${make_args|}", "${target}"]
+      add_expansions_to_env: true
       env:
         GOPATH: ${workdir}/gopath
-        GOROOT: ${goroot}
-        GO_BIN_PATH: ${go_bin_path}
-        RACE_DETECTOR: ${race_detector}
-        DISABLE_COVERAGE: ${disable_coverage}
 
 #######################################
 #                Tasks                #
@@ -89,10 +86,9 @@ buildvariants:
   - name: race-detector
     display_name: Race Detector (Arch Linux)
     expansions:
-      goroot: /opt/golang/go1.10
-      go_bin_path: /opt/golang/go1.10/bin/go
-      disable_coverage: true
-      race_detector: true
+      DISABLE_COVERAGE: true
+      GOROOT: /opt/golang/go1.10
+      RACE_DETECTOR: true
       make_args: -k
     run_on:
       - archlinux-test
@@ -104,9 +100,8 @@ buildvariants:
   - name: ubuntu1604
     display_name: Ubuntu 16.04
     expansions:
-      disable_coverage: true
-      goroot: /opt/golang/go1.11
-      go_bin_path: /opt/golang/go1.11/bin/go
+      DISABLE_COVERAGE: true
+      GOROOT: /opt/golang/go1.11
       make_args: -k
     run_on:
       - ubuntu1604-test
@@ -117,9 +112,8 @@ buildvariants:
   - name: ubuntu1604-go1.9
     display_name: Ubuntu 16.04 (go1.9)
     expansions:
-      disable_coverage: true
-      goroot: /opt/golang/go1.9
-      go_bin_path: /opt/golang/go1.9/bin/go
+      DISABLE_COVERAGE: true
+      GOROOT: /opt/golang/go1.9
       make_args: -k
     run_on:
       - ubuntu1604-test
@@ -130,9 +124,8 @@ buildvariants:
   - name: macos
     display_name: macOS
     expansions:
-      disable_coverage: true
-      goroot: /opt/golang/go1.11
-      go_bin_path: /opt/golang/go1.11/bin/go
+      DISABLE_COVERAGE: true
+      GOROOT: /opt/golang/go1.11
       make_args: -k
     run_on:
       - macos-1014
@@ -151,9 +144,8 @@ buildvariants:
       - windows-64-vs2013-compile
       - windows-64-vs2013-test
     expansions:
-      disable_coverage: true
-      goroot: C:/golang/go1.11
-      go_bin_path: /cygdrive/c/golang/go1.11/bin/go
+      DISABLE_COVERAGE: true
+      GOROOT: C:/golang/go1.11
       make_args: -k
     tasks:
       - name: ".test"
