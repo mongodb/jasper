@@ -102,7 +102,7 @@ $(buildDir)/output.%.test:$(buildDir) .FORCE
 	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
 $(buildDir)/output.%.coverage:$(buildDir) .FORCE
 	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
-	@-[ -f $@ ] && $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
+	@-[ -f $@ ] && $(goEnv) $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 	$(goEnv) $(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
