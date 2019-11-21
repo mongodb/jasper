@@ -18,16 +18,12 @@ type RemoteClient struct {
 	FailGetLogStream       bool
 	FailGetBuildloggerURLs bool
 	FailSignalEvent        bool
-	FailWriteFile          bool
 
 	// ConfigureCache input
 	CacheOptions options.Cache
 
 	// DownloadFile input
 	DownloadOptions options.Download
-
-	// WriteFile input
-	WriteFileOptions options.WriteFile
 
 	// DownloadMongoDB input
 	MongoDBDownloadOptions options.MongoDBDownload
@@ -119,18 +115,6 @@ func (c *RemoteClient) SignalEvent(ctx context.Context, name string) error {
 	}
 
 	c.EventName = name
-
-	return nil
-}
-
-// WriteFile saves the WriteFileOptions. If FailWriteFile is set, it returns an
-// error.
-func (c *RemoteClient) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	if c.FailWriteFile {
-		return mockFail()
-	}
-
-	c.WriteFileOptions = opts
 
 	return nil
 }

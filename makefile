@@ -10,6 +10,10 @@ _compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
 coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
+gobin := $(GO_BIN_PATH)
+ifeq (,$(gobin))
+gobin := go
+endif
 # start environment setup
 gopath := $(GOPATH)
 gocache := $(abspath $(buildDir)/.cache)
@@ -17,13 +21,14 @@ ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
-buildEnv := GOCACHE=$(gocache)
+goEnv := GOPATH=$(gopath) GOCACHE=$(gocache)
 # end environment setup
 
+
 compile:
-	go build $(_compilePackages)
+	$(goEnv) $(gobin) build $(_compilePackages)
 compile-base:
-	go build ./
+	$(goEnv) $(gobin) build ./
 build:compile
 
 
@@ -50,7 +55,8 @@ lintArgs := --tests --deadline=5m --vendor
 #   gotype produces false positives because it reads .a files which
 #   are rarely up to date.
 lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
-lintArgs += --skip="$(buildDir)" --skip="buildscripts"
+lintArgs += --disable="varcheck" --disable="structcheck" --disable="interfacer"
+lintArgs += --skip="buildscripts"
 #  add and configure additional linters
 lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
 #  golint doesn't handle splitting package comments between multiple files.
@@ -61,18 +67,16 @@ lintArgs += --exclude="should check returned error before deferring .*\.Close"
 lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
 $(gopath)/src/%:
 	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
-	go get $(subst $(gopath)/src/,,$@)
+	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
-	$(buildEnv) go build -o $@ $<
-$(buildDir)/.lintSetup:$(lintDeps)
-	@mkdir -p $(buildDir)
-	@-$(gopath)/bin/gometalinter --install >/dev/null && touch $@
+	$(buildEnv) $(gobin) build -o $@ $<
+$(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
+	$(if $(GO_BIN_PATH),export PATH="$(shell dirname $(GO_BIN_PATH)):${PATH}" && ,)$(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
 
 # benchmark setup targets
-$(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go
-	@mkdir -p $(buildDir)
-	go build -o $@ $<
+$(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
+	$(goEnv) $(gobin) build -o $@ $<
 # end benchmark setup targets
 
 # start test and coverage artifacts
@@ -96,20 +100,20 @@ ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
 # test execution and output handlers
-$(buildDir)/:
+$(buildDir):
 	mkdir -p $@
 
-$(buildDir)/output.%.test:$(buildDir)/ .FORCE
-	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
+$(buildDir)/output.%.test:$(buildDir) .FORCE
+	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
 	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
-$(buildDir)/output.%.coverage:$(buildDir)/ .FORCE
-	go test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
-	@-[ -f $@ ] && go tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
+$(buildDir)/output.%.coverage:$(buildDir) .FORCE
+	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
+	@-[ -f $@ ] && $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
-	go tool cover -html=$< -o $@
+	$(goEnv) $(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
-$(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir)/ .FORCE
-	@./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
+$(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
+	@$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
