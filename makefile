@@ -28,7 +28,7 @@ goEnv := GOPATH=$(gopath) GOCACHE=$(gocache)
 compile:
 	$(goEnv) $(gobin) build $(_compilePackages)
 compile-base:
-	$(goEnv) $(gobin) build ./
+	$(goEnv) $(gobin) build  ./...
 build:compile
 
 
@@ -56,7 +56,6 @@ lintArgs := --tests --deadline=5m --vendor
 #   are rarely up to date.
 lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo" --enable="goimports"
 lintArgs += --disable="varcheck" --disable="structcheck" --disable="interfacer"
-lintArgs += --skip="buildscripts"
 #  add and configure additional linters
 lintArgs += --line-length=100 --dupl-threshold=175 --cyclo-over=30
 #  golint doesn't handle splitting package comments between multiple files.
@@ -68,7 +67,7 @@ lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
 $(gopath)/src/%:
 	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
 	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
-$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup
+$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
 	$(buildEnv) $(gobin) build -o $@ $<
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	$(if $(GO_BIN_PATH),export PATH="$(shell dirname $(GO_BIN_PATH)):${PATH}" && ,)$(gopath)/bin/gometalinter --install >/dev/null && touch $@
@@ -122,16 +121,15 @@ $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
 proto:
 	@mkdir -p rpc/internal
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
-lint:build $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
+lint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 	
-test:build $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
+test:$(buildDir) $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 	
 benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
-coverage:build $(coverageOutput)
-coverage-html:build $(coverageHtmlOutput)
-phony += lint build test coverage coverage-html
-phony += lint build test coverage coverage-html
+coverage:$(buildDir) $(coverageOutput)
+coverage-html:$(buildDir) $(coverageHtmlOutput)
+phony += lint $(buildDir) test coverage coverage-html
 .PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
