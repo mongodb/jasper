@@ -304,9 +304,9 @@ func TestFileLogging(t *testing.T) {
 	require.NotZero(t, numBytes)
 
 	args := map[string][]string{
-		"Output":         []string{"cat", goodFileName},
-		"Error":          []string{"cat", badFileName},
-		"OutputAndError": []string{"cat", goodFileName, badFileName},
+		"Output":         {"cat", goodFileName},
+		"Error":          {"cat", badFileName},
+		"OutputAndError": {"cat", goodFileName, badFileName},
 	}
 
 	for _, testParams := range []struct {
