@@ -163,12 +163,6 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/pkg/errors/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/satori/go.uuid/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/stretchr/testify/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/montanaflynn/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
@@ -211,7 +205,6 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/aviation/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/golang/protobuf/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/amboy/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/stretchr/testify/
@@ -222,6 +215,7 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor/ -type d -empty | xargs rm -rf
 	find vendor/ -type d -name '.git' | xargs rm -rf
