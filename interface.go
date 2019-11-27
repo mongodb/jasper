@@ -32,11 +32,14 @@ type Manager interface {
 	ID() string
 	CreateProcess(context.Context, *options.Create) (Process, error)
 	CreateCommand(context.Context) *Command
+	CreateScripting(context.Context, options.ScriptingEnvironment) (ScriptingEnvironment, error)
 	Register(context.Context, Process) error
+	WriteFile(context.Context, options.WriteFile) error
 
 	List(context.Context, options.Filter) ([]Process, error)
 	Group(context.Context, string) ([]Process, error)
 	Get(context.Context, string) (Process, error)
+	GetScripting(context.Context, string) (ScriptingEnvironment, error)
 	Clear(context.Context)
 	Close(context.Context) error
 }
@@ -132,4 +135,31 @@ type ProcessInfo struct {
 	Options    options.Create `json:"options" bson:"options"`
 	StartAt    time.Time      `json:"start_at" bson:"start_at"`
 	EndAt      time.Time      `json:"end_at" bson:"end_at"`
+}
+
+// ScriptingEnvironment provides an interface to execute code in a
+// scripting environment such as a Python Virtual
+// Environment. Implementations should be make it possible to execute
+// either locally or on remote systems.
+type ScriptingEnvironment interface {
+	// ID returns a unique ID for the underlying environment. This
+	// should match the ID produced by the underlying options
+	// implementation.
+	ID() string
+	// Setup initializes the environment, and should be safe to
+	// call multiple times.
+	Setup(context.Context) error
+	// Run executes a command (as arguments) with the environment's
+	// interpreter.
+	Run(context.Context, []string) error
+	// RunScript takes the body of a script and should write that
+	// data to a file and then runs that script directly.
+	RunScript(context.Context, string) error
+	// Build will run the environments native build system to
+	// generate some kind of build artifact from the scripting
+	// environment. Pass a directory in addition to a list of
+	// arguments to describe any arguments to the build system.
+	Build(context.Context, string, []string) error
+	// Cleanup should remove the files created by the scripting environment.
+	Cleanup(context.Context) error
 }
