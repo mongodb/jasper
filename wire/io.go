@@ -179,7 +179,7 @@ func makeResetTagsRequest(id string) resetTagsRequest { //nolint
 
 // idRequest represents a request to get the ID associated with the service
 // manager.
-type idRequest struct {
+type idRequest struct { //nolint
 	ID int `bson:"id"`
 }
 
@@ -250,7 +250,7 @@ func makeInfosResponse(infos []jasper.ProcessInfo) infosResponse {
 
 // clearRequest represents a request to clear the current processes that have
 // completed.
-type clearRequest struct {
+type clearRequest struct { //nolint
 	Clear int `bson:"clear"`
 }
 
@@ -259,7 +259,7 @@ func makeClearRequest() clearRequest { //nolint
 }
 
 // closeRequest represents a request to terminate all processes.
-type closeRequest struct {
+type closeRequest struct { //nolint
 	Close int `bson:"close"`
 }
 
