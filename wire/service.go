@@ -2,40 +2,26 @@ package wire
 
 import (
 	"context"
-	"io"
 	"net"
 	"strconv"
 
 	"github.com/evergreen-ci/mrpc"
 	"github.com/evergreen-ci/mrpc/mongowire"
+	"github.com/evergreen-ci/mrpc/shell"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
 
-// Constants representing required commands.
-const (
-	IsMasterCommand   = "isMaster"
-	WhatsMyURICommand = "whatsmyuri"
-	// The shell sends commands with different casing so we need two different
-	// handlers for the different "buildinfo" commands
-	BuildInfoCommand               = "buildInfo"
-	BuildinfoCommand               = "buildinfo"
-	GetLogCommand                  = "getLog"
-	GetFreeMonitoringStatusCommand = "getFreeMonitoringStatus"
-	ReplSetGetStatusCommand        = "replSetGetStatus"
-	ListCollectionsCommand         = "listCollections"
-)
-
 // TODO: support jasper.RemoteClient functionality
 type service struct {
-	*mrpc.Service
+	mrpc.Service
 	manager jasper.Manager
 }
 
 // StartService wraps an existing Jasper manager in a mongo wire protocol
-// service and starts it. The  caller is responsible for closing the connection
+// service and starts it. The caller is responsible for closing the connection
 // using the returned jasper.CloseFunc.
 func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.CloseFunc, error) { //nolint: interfacer
 	host, p, err := net.SplitHostPort(addr.String())
@@ -47,8 +33,12 @@ func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.
 		return nil, errors.Wrap(err, "port is not a number")
 	}
 
+	baseSvc, err := shell.NewShellService(host, port)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create base service")
+	}
 	svc := &service{
-		Service: mrpc.NewService(host, port),
+		Service: baseSvc,
 		manager: m,
 	}
 	if err := svc.registerHandlers(); err != nil {
@@ -66,61 +56,8 @@ func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.
 	return func() error { ccancel(); return nil }, nil
 }
 
-func (s *service) isMaster(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeOKResponse(ctx, w, IsMasterCommand)
-}
-
-func (s *service) whatsMyURI(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeWhatsMyURIResponse(s.Address()).message()
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), WhatsMyURICommand)
-		return
-	}
-	writeResponse(ctx, w, resp, WhatsMyURICommand)
-}
-
-func (s *service) buildInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeBuildInfoResponse("0.0.0").message()
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), BuildInfoCommand)
-		return
-	}
-	writeResponse(ctx, w, resp, BuildInfoCommand)
-}
-
-func (s *service) getLog(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeGetLogResponse([]string{}).message()
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetLogCommand)
-		return
-	}
-	writeResponse(ctx, w, resp, GetLogCommand)
-}
-
-func (s *service) getFreeMonitoringStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeNotOKResponse(ctx, w, GetFreeMonitoringStatusCommand)
-}
-
-func (s *service) replSetGetStatus(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeNotOKResponse(ctx, w, ReplSetGetStatusCommand)
-}
-
-func (s *service) listCollections(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	writeNotOKResponse(ctx, w, ListCollectionsCommand)
-}
-
 func (s *service) registerHandlers() error {
 	for name, handler := range map[string]mrpc.HandlerFunc{
-		// Required initialization commands
-		IsMasterCommand:                s.isMaster,
-		WhatsMyURICommand:              s.whatsMyURI,
-		BuildinfoCommand:               s.buildInfo,
-		BuildInfoCommand:               s.buildInfo,
-		GetLogCommand:                  s.getLog,
-		ReplSetGetStatusCommand:        s.replSetGetStatus,
-		GetFreeMonitoringStatusCommand: s.getFreeMonitoringStatus,
-		ListCollectionsCommand:         s.listCollections,
-
 		// Manager commands
 		ManagerIDCommand:     s.managerID,
 		CreateProcessCommand: s.managerCreateProcess,

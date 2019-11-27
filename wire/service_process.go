@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/evergreen-ci/mrpc/mongowire"
+	"github.com/evergreen-ci/mrpc/shell"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
@@ -26,117 +27,117 @@ const (
 )
 
 func (s *service) processInfo(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractInfoRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), InfoCommand)
+	req := infoRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), InfoCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), InfoCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), InfoCommand)
 		return
 	}
 
-	resp, err := makeInfoResponse(proc.Info(ctx)).message()
+	resp, err := shell.ResponseToMessage(makeInfoResponse(proc.Info(ctx)))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), InfoCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), InfoCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, InfoCommand)
+	shell.WriteResponse(ctx, w, resp, InfoCommand)
 }
 
 func (s *service) processRunning(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractRunningRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RunningCommand)
+	req := runningRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RunningCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), RunningCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), RunningCommand)
 		return
 	}
 
-	resp, err := makeRunningResponse(proc.Running(ctx)).message()
+	resp, err := shell.ResponseToMessage(makeRunningResponse(proc.Running(ctx)))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), RunningCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), RunningCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, RunningCommand)
+	shell.WriteResponse(ctx, w, resp, RunningCommand)
 }
 
 func (s *service) processComplete(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractCompleteRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), CompleteCommand)
+	req := &completeRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), CompleteCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), CompleteCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), CompleteCommand)
 		return
 	}
 
-	resp, err := makeCompleteResponse(proc.Complete(ctx)).message()
+	resp, err := shell.ResponseToMessage(makeCompleteResponse(proc.Complete(ctx)))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CompleteCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CompleteCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, CompleteCommand)
+	shell.WriteResponse(ctx, w, resp, CompleteCommand)
 }
 
 func (s *service) processWait(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractWaitRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), WaitCommand)
+	req := waitRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), WaitCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), WaitCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), WaitCommand)
 		return
 	}
 
 	exitCode, err := proc.Wait(ctx)
-	resp, err := makeWaitResponse(exitCode, err).message()
+	resp, err := shell.ResponseToMessage(makeWaitResponse(exitCode, err))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), WaitCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), WaitCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, WaitCommand)
+	shell.WriteResponse(ctx, w, resp, WaitCommand)
 }
 
 func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractRespawnRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RespawnCommand)
+	req := respawnRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RespawnCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), RespawnCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), RespawnCommand)
 		return
 	}
 
 	pctx, cancel := context.WithCancel(context.Background())
 	newProc, err := proc.Respawn(pctx)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "failed to respawned process"), RespawnCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "failed to respawned process"), RespawnCommand)
 		cancel()
 		return
 	}
 	if err = s.manager.Register(ctx, newProc); err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "failed to register respawned process"), RespawnCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "failed to register respawned process"), RespawnCommand)
 		cancel()
 		return
 	}
@@ -147,23 +148,23 @@ func (s *service) processRespawn(ctx context.Context, w io.Writer, msg mongowire
 		newProcInfo := getProcInfoNoHang(ctx, newProc)
 		cancel()
 		if !newProcInfo.Complete {
-			writeErrorResponse(ctx, w, errors.Wrap(err, "failed to register trigger on respawned process"), RespawnCommand)
+			shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "failed to register trigger on respawned process"), RespawnCommand)
 			return
 		}
 	}
 
-	resp, err := makeInfoResponse(newProc.Info(ctx)).message()
+	resp, err := shell.ResponseToMessage(makeInfoResponse(newProc.Info(ctx)))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), RespawnCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), RespawnCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, RespawnCommand)
+	shell.WriteResponse(ctx, w, resp, RespawnCommand)
 }
 
 func (s *service) processSignal(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractSignalRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), SignalCommand)
+	req := signalRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), SignalCommand)
 		return
 	}
 	id := req.Params.ID
@@ -171,22 +172,22 @@ func (s *service) processSignal(ctx context.Context, w io.Writer, msg mongowire.
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), SignalCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), SignalCommand)
 		return
 	}
 
 	if err := proc.Signal(ctx, syscall.Signal(sig)); err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not signal process"), SignalCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not signal process"), SignalCommand)
 		return
 	}
 
-	writeOKResponse(ctx, w, SignalCommand)
+	shell.WriteOKResponse(ctx, w, SignalCommand)
 }
 
 func (s *service) processRegisterSignalTriggerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractRegisterSignalTriggerIDRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RegisterSignalTriggerIDCommand)
+	req := registerSignalTriggerIDRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), RegisterSignalTriggerIDCommand)
 		return
 	}
 	procID := req.Params.ID
@@ -194,28 +195,28 @@ func (s *service) processRegisterSignalTriggerID(ctx context.Context, w io.Write
 
 	makeTrigger, ok := jasper.GetSignalTriggerFactory(sigID)
 	if !ok {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get signal trigger for ID"), RegisterSignalTriggerIDCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Errorf("could not get signal trigger ID %s", sigID), RegisterSignalTriggerIDCommand)
 		return
 	}
 
 	proc, err := s.manager.Get(ctx, procID)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), RegisterSignalTriggerIDCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), RegisterSignalTriggerIDCommand)
 		return
 	}
 
 	if err := proc.RegisterSignalTrigger(ctx, makeTrigger()); err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not register signal trigger"), RegisterSignalTriggerIDCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not register signal trigger"), RegisterSignalTriggerIDCommand)
 		return
 	}
 
-	writeOKResponse(ctx, w, RegisterSignalTriggerIDCommand)
+	shell.WriteOKResponse(ctx, w, RegisterSignalTriggerIDCommand)
 }
 
 func (s *service) processTag(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractTagRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), TagCommand)
+	req := tagRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), TagCommand)
 		return
 	}
 	id := req.Params.ID
@@ -223,52 +224,52 @@ func (s *service) processTag(ctx context.Context, w io.Writer, msg mongowire.Mes
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), TagCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), TagCommand)
 		return
 	}
 
 	proc.Tag(tag)
 
-	writeOKResponse(ctx, w, TagCommand)
+	shell.WriteOKResponse(ctx, w, TagCommand)
 }
 
 func (s *service) processGetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractGetTagsRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GetTagsCommand)
+	req := &getTagsRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GetTagsCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), GetTagsCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), GetTagsCommand)
 		return
 	}
 
-	resp, err := makeGetTagsResponse(proc.GetTags()).message()
+	resp, err := shell.ResponseToMessage(makeGetTagsResponse(proc.GetTags()))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetTagsCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetTagsCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, GetTagsCommand)
+	shell.WriteResponse(ctx, w, resp, GetTagsCommand)
 }
 
 func (s *service) processResetTags(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractResetTagsRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), ResetTagsCommand)
+	req := resetTagsRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), ResetTagsCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), ResetTagsCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), ResetTagsCommand)
 		return
 	}
 
 	proc.ResetTags()
 
-	writeOKResponse(ctx, w, ResetTagsCommand)
+	shell.WriteOKResponse(ctx, w, ResetTagsCommand)
 }

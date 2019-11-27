@@ -3,8 +3,10 @@ package wire
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/evergreen-ci/mrpc/mongowire"
+	"github.com/evergreen-ci/mrpc/shell"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
@@ -21,21 +23,20 @@ const (
 )
 
 func (s *service) managerID(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	resp, err := makeIDResponse(s.manager.ID()).message()
+	resp, err := shell.ResponseToMessage(makeIDResponse(s.manager.ID()))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.New("could not make response"), ManagerIDCommand)
+		shell.WriteErrorResponse(ctx, w, errors.New("could not make response"), ManagerIDCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, ManagerIDCommand)
+	shell.WriteResponse(ctx, w, resp, ManagerIDCommand)
 }
 
 func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractCreateProcessRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), CreateProcessCommand)
+	req := createProcessRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), CreateProcessCommand)
 		return
 	}
-
 	opts := req.Options
 
 	// Spawn a new context so that the process' context is not potentially
@@ -46,7 +47,7 @@ func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 	proc, err := s.manager.CreateProcess(pctx, &opts)
 	if err != nil {
 		cancel()
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not create process"), CreateProcessCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not create process"), CreateProcessCommand)
 		return
 	}
 
@@ -59,30 +60,31 @@ func (s *service) managerCreateProcess(ctx context.Context, w io.Writer, msg mon
 		// the reason for it isn't just because the process has exited already,
 		// since that should not be considered an error.
 		if !info.Complete {
-			writeErrorResponse(ctx, w, errors.Wrap(err, "could not register trigger"), CreateProcessCommand)
+			shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not register trigger"), CreateProcessCommand)
 			return
 		}
 	}
 
-	resp, err := makeInfoResponse(getProcInfoNoHang(ctx, proc)).message()
+	resp, err := shell.ResponseToMessage(makeInfoResponse(getProcInfoNoHang(ctx, proc)))
 	if err != nil {
 		cancel()
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CreateProcessCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), CreateProcessCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, CreateProcessCommand)
+	shell.WriteResponse(ctx, w, resp, CreateProcessCommand)
 }
 
 func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractListRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), ListCommand)
+	req := listRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), ListCommand)
+		return
 	}
 	filter := req.Filter
 
 	procs, err := s.manager.List(ctx, filter)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not list processes"), ListCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not list processes"), ListCommand)
 		return
 	}
 
@@ -90,25 +92,25 @@ func (s *service) managerList(ctx context.Context, w io.Writer, msg mongowire.Me
 	for _, proc := range procs {
 		infos = append(infos, proc.Info(ctx))
 	}
-	resp, err := makeInfosResponse(infos).message()
+	resp, err := shell.ResponseToMessage(makeInfosResponse(infos))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), ListCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), ListCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, ListCommand)
+	shell.WriteResponse(ctx, w, resp, ListCommand)
 }
 
 func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractGroupRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GroupCommand)
+	req := groupRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GroupCommand)
 		return
 	}
 	tag := req.Tag
 
 	procs, err := s.manager.Group(ctx, tag)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process group"), GroupCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process group"), GroupCommand)
 		return
 	}
 
@@ -117,45 +119,51 @@ func (s *service) managerGroup(ctx context.Context, w io.Writer, msg mongowire.M
 		infos = append(infos, proc.Info(ctx))
 	}
 
-	resp, err := makeInfosResponse(infos).message()
+	resp, err := shell.ResponseToMessage(makeInfosResponse(infos))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GroupCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GroupCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, GroupCommand)
+	shell.WriteResponse(ctx, w, resp, GroupCommand)
 }
 
 func (s *service) managerGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req, err := extractGetRequest(msg)
-	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GetCommand)
+	req := getRequest{}
+	if err := shell.MessageToRequest(msg, &req); err != nil {
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not read request"), GetCommand)
 		return
 	}
 	id := req.ID
 
 	proc, err := s.manager.Get(ctx, id)
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), GetCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not get process"), GetCommand)
 		return
 	}
 
-	resp, err := makeInfoResponse(proc.Info(ctx)).message()
+	resp, err := shell.ResponseToMessage(makeInfoResponse(proc.Info(ctx)))
 	if err != nil {
-		writeErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetCommand)
+		shell.WriteErrorResponse(ctx, w, errors.Wrap(err, "could not make response"), GetCommand)
 		return
 	}
-	writeResponse(ctx, w, resp, GetCommand)
+	shell.WriteResponse(ctx, w, resp, GetCommand)
 }
 
 func (s *service) managerClear(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	s.manager.Clear(ctx)
-	writeOKResponse(ctx, w, ClearCommand)
+	shell.WriteOKResponse(ctx, w, ClearCommand)
 }
 
 func (s *service) managerClose(ctx context.Context, w io.Writer, msg mongowire.Message) {
 	if err := s.manager.Close(ctx); err != nil {
-		writeErrorResponse(ctx, w, err, CloseCommand)
+		shell.WriteErrorResponse(ctx, w, err, CloseCommand)
 		return
 	}
-	writeOKResponse(ctx, w, CloseCommand)
+	shell.WriteOKResponse(ctx, w, CloseCommand)
+}
+
+func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo {
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	return p.Info(ctx)
 }
