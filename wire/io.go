@@ -6,8 +6,6 @@ import (
 	"github.com/mongodb/jasper/options"
 )
 
-// kim: TODO: remove make* functions
-
 // infoRequest represents a request for runtime information regarding the
 // process given by ID.
 type infoRequest struct {
