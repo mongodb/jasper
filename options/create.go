@@ -19,6 +19,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	ProcessImplementationBlocking = "blocking"
+	ProcessImplementationBasic    = "basic"
+)
+
 // Create contains options related to starting a process. This includes
 // execution configuration, post-execution triggers, and output configuration.
 // It is not safe for concurrent access.
@@ -41,6 +46,9 @@ type Create struct {
 	// interfaces, StandardInputBytes should be set instead of StandardInput.
 	StandardInput      io.Reader `bson:"-" json:"-" yaml:"-"`
 	StandardInputBytes []byte    `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
+
+	Unsynchronized bool   `bson:"unsynchronized" json:"unsynchronized" yaml:"unsynchronized"`
+	Implementation string `bson:"implementation" json:"implementation" yaml:"implementation"`
 
 	closers []func() error
 }
@@ -88,6 +96,10 @@ func (opts *Create) Validate() error {
 		opts.Timeout = time.Duration(opts.TimeoutSecs) * time.Second
 	} else if opts.Timeout != 0 {
 		opts.TimeoutSecs = int(opts.Timeout.Seconds())
+	}
+
+	if opts.Implementation == "" {
+		opts.Implementation = ProcessImplementationBlocking
 	}
 
 	if err := opts.Output.Validate(); err != nil {
