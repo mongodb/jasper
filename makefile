@@ -7,7 +7,7 @@ lintPackages := $(packages) mock testutil
 testPackages := $(packages) mock
 projectPath := github.com/mongodb/jasper
 
-_compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages) benchmarks,./$(target)))) 
+_compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages),./$(target))))
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
 coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
@@ -25,7 +25,7 @@ endif
 goEnv := GOPATH=$(gopath) GOCACHE=$(gocache)$(if $(GO_BIN_PATH), PATH="$(shell dirname $(GO_BIN_PATH)):$(PATH)")
 # end environment setup
 
-compile build:.FORCE
+compile:
 	$(goEnv) $(gobin) build $(_compilePackages)
 compile-base:
 	$(goEnv) $(gobin) build  ./
@@ -33,9 +33,13 @@ compile-base:
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
 test-%:$(buildDir)/output.%.test
+	
 coverage-%:$(buildDir)/output.%.coverage
+	
 html-coverage-%:$(buildDir)/output.%.coverage.html
+	
 lint-%:$(buildDir)/output.%.lint
+	
 # end convienence targets
 
 # start linting configuration
@@ -63,7 +67,7 @@ $(gopath)/src/%:
 	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
 	$(goEnv) $(gobin) build -o $@ $<
-$(buildDir)/.lintSetup:$(lintDeps) $(buildDir)/
+$(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
 
@@ -93,14 +97,12 @@ ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
 # test execution and output handlers
-$(tmpDir):$(buildDir)/
-	mkdir -p $@
-$(buildDir)/:
+$(buildDir):
 	@mkdir -p $@
-$(buildDir)/output.%.test:$(tmpDir) .FORCE
+$(buildDir)/output.%.test:$(buildDir) .FORCE
 	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) | tee $@
 	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
-$(buildDir)/output.%.coverage:$(tmpDir) .FORCE
+$(buildDir)/output.%.coverage:$(buildDir) .FORCE
 	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
 	@-[ -f $@ ] && $(goEnv) $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
@@ -117,12 +119,14 @@ proto:
 	@mkdir -p rpc/internal
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
 lint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
+	
 test:$(buildDir) $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
-benchmarks:$(buildDir)/run-benchmarks $(buildDir)/ .FORCE
+	
+benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	./$(buildDir)/run-benchmarks $(run-benchmark)
-coverage:$(buildDir)/ $(coverageOutput)
-coverage-html:$(buildDir)/ $(coverageHtmlOutput)
-phony += lint $(buildDir)/ test coverage coverage-html
+coverage:$(buildDir) $(coverageOutput)
+coverage-html:$(buildDir) $(coverageHtmlOutput)
+phony += lint $(buildDir) test coverage coverage-html
 .PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
