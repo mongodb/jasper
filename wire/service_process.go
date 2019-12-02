@@ -22,7 +22,7 @@ const (
 	SignalCommand                  = "signal"
 	RegisterSignalTriggerIDCommand = "register_signal_trigger_id"
 	GetTagsCommand                 = "get_tags"
-	TagCommand                     = "tag"
+	TagCommand                     = "add_tag"
 	ResetTagsCommand               = "reset_tags"
 )
 

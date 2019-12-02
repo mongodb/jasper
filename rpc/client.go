@@ -118,7 +118,7 @@ func (c *rpcClient) GetScripting(ctx context.Context, id string) (jasper.Scripti
 }
 
 func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
-	return errors.New("cannot register extant processes on remote process managers")
+	return errors.New("cannot register local processes on remote process managers")
 }
 
 func (c *rpcClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
