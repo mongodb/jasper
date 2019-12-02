@@ -20,8 +20,17 @@ import (
 )
 
 const (
+	// ProcessImplementationBlocking suggests that the process
+	// constructor use a blocking implementation. Some managers
+	// may override this option. Blocking implementations
+	// typically require the manager to maintain multiple
+	// go routines.
 	ProcessImplementationBlocking = "blocking"
-	ProcessImplementationBasic    = "basic"
+	// ProcessImplementationBasic suggests that the process
+	// constructor use a basic implementation. Some managers
+	// may override this option. Basic implementations are more
+	// simple than blocking implementations.
+	ProcessImplementationBasic = "basic"
 )
 
 // Create contains options related to starting a process. This includes
@@ -31,6 +40,8 @@ type Create struct {
 	Args             []string          `bson:"args" json:"args" yaml:"args"`
 	Environment      map[string]string `bson:"env,omitempty" json:"env,omitempty" yaml:"env,omitempty"`
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
+	Unsynchronized   bool              `bson:"unsynchronized" json:"unsynchronized" yaml:"unsynchronized"`
+	Implementation   string            `bson:"implementation" json:"implementation" yaml:"implementation"`
 	WorkingDirectory string            `bson:"working_directory,omitempty" json:"working_directory,omitempty" yaml:"working_directory,omitempty"`
 	Output           Output            `bson:"output" json:"output" yaml:"output"`
 	Remote           *Remote           `bson:"remote,omitempty" json:"remote,omitempty" yaml:"remote,omitempty"`
@@ -46,9 +57,6 @@ type Create struct {
 	// interfaces, StandardInputBytes should be set instead of StandardInput.
 	StandardInput      io.Reader `bson:"-" json:"-" yaml:"-"`
 	StandardInputBytes []byte    `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
-
-	Unsynchronized bool   `bson:"unsynchronized" json:"unsynchronized" yaml:"unsynchronized"`
-	Implementation string `bson:"implementation" json:"implementation" yaml:"implementation"`
 
 	closers []func() error
 }
