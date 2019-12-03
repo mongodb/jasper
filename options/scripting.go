@@ -20,7 +20,7 @@ type ScriptingHarness interface {
 	Validate() error
 }
 
-// NewScriptingEnvironment provides a factory to generate concrete
+// NewScriptingHarness provides a factory to generate concrete
 // implementations of the ScriptingEnvironment interface for use in
 // marshaling arbitrary values for a known environment exists.
 func NewScriptingHarness(se string) (ScriptingHarness, error) {
