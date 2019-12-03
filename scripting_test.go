@@ -31,13 +31,13 @@ func evgTaskContains(subs string) bool {
 
 const doCleanTesting = false
 
-func makeScriptingEnv(ctx context.Context, t *testing.T, mgr Manager, opts options.ScriptingEnvironment) ScriptingEnvironment {
+func makeScriptingEnv(ctx context.Context, t *testing.T, mgr Manager, opts options.ScriptingHarness) ScriptingHarness {
 	se, err := mgr.CreateScripting(ctx, opts)
 	require.NoError(t, err)
 	return se
 }
 
-func TestScriptingEnvironment(t *testing.T) {
+func TestScriptingHarness(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -74,13 +74,13 @@ func TestScriptingEnvironment(t *testing.T) {
 
 	type seTest struct {
 		Name string
-		Case func(*testing.T, options.ScriptingEnvironment)
+		Case func(*testing.T, options.ScriptingHarness)
 	}
 
 	for _, env := range []struct {
 		Name           string
 		Supported      bool
-		DefaultOptions options.ScriptingEnvironment
+		DefaultOptions options.ScriptingHarness
 		Tests          []seTest
 	}{
 		{
@@ -94,28 +94,28 @@ func TestScriptingEnvironment(t *testing.T) {
 			Tests: []seTest{
 				{
 					Name: "Options",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						require.Equal(t, "ros", opts.Interpreter())
 						require.NotZero(t, opts.ID())
 					},
 				},
 				{
 					Name: "HelloWorldScript",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.RunScript(ctx, `(defun main () (print "hello world"))`))
 					},
 				},
 				{
 					Name: "RunHelloWorld",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.Run(ctx, []string{`(print "hello world")`}))
 					},
 				},
 				{
 					Name: "ScriptExitError",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.Error(t, se.RunScript(ctx, `(sb-ext:exit :code 42)`))
 					},
@@ -134,28 +134,28 @@ func TestScriptingEnvironment(t *testing.T) {
 			Tests: []seTest{
 				{
 					Name: "Options",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						require.True(t, strings.HasSuffix(opts.Interpreter(), "python"))
 						require.NotZero(t, opts.ID())
 					},
 				},
 				{
 					Name: "HelloWorldScript",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.RunScript(ctx, `print("hello world")`))
 					},
 				},
 				{
 					Name: "RunHelloWorld",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.Run(ctx, []string{"-c", `print("hello world")`}))
 					},
 				},
 				{
 					Name: "ScriptExitError",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.Error(t, se.RunScript(ctx, `exit(42)`))
 					},
@@ -174,28 +174,28 @@ func TestScriptingEnvironment(t *testing.T) {
 			Tests: []seTest{
 				{
 					Name: "Options",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						require.True(t, strings.HasSuffix(opts.Interpreter(), "python"))
 						require.NotZero(t, opts.ID())
 					},
 				},
 				{
 					Name: "HelloWorldScript",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.RunScript(ctx, `print("hello world")`))
 					},
 				},
 				{
 					Name: "RunHelloWorld",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.Run(ctx, []string{"-c", `print("hello world")`}))
 					},
 				},
 				{
 					Name: "ScriptExitError",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.Error(t, se.RunScript(ctx, `exit(42)`))
 					},
@@ -217,28 +217,28 @@ func TestScriptingEnvironment(t *testing.T) {
 			Tests: []seTest{
 				{
 					Name: "Options",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						require.True(t, strings.HasSuffix(opts.Interpreter(), "go"))
 						require.NotZero(t, opts.ID())
 					},
 				},
 				{
 					Name: "HelloWorldScript",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.NoError(t, se.RunScript(ctx, `package main; import "fmt"; func main() { fmt.Println("Hello World")}`))
 					},
 				},
 				{
 					Name: "ScriptExitError",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						se := makeScriptingEnv(ctx, t, manager, opts)
 						require.Error(t, se.RunScript(ctx, `package main; import "os"; func main() { os.Exit(42) }`))
 					},
 				},
 				{
 					Name: "RunScript",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						if runtime.GOOS == "windows" {
 							t.Skip("windows paths")
 						}
@@ -259,7 +259,7 @@ func TestScriptingEnvironment(t *testing.T) {
 				},
 				{
 					Name: "Build",
-					Case: func(t *testing.T, opts options.ScriptingEnvironment) {
+					Case: func(t *testing.T, opts options.ScriptingHarness) {
 						if runtime.GOOS == "windows" {
 							t.Skip("windows paths")
 						}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/rest"
@@ -101,6 +102,7 @@ func (d *restDaemon) Start(s service.Service) error {
 	go handleDaemonSignals(ctx, cancel, d.exit)
 
 	go func(ctx context.Context, d *restDaemon) {
+		defer recovery.LogStackTraceAndContinue("rest service")
 		grip.Error(errors.Wrap(d.run(ctx), "error running REST service"))
 	}(ctx, d)
 
@@ -138,6 +140,7 @@ func newRESTService(ctx context.Context, host string, port int, manager jasper.M
 	}
 
 	go func() {
+		defer recovery.LogStackTraceAndContinue("rest service")
 		grip.Warning(errors.Wrap(app.Run(ctx), "error running REST app"))
 	}()
 

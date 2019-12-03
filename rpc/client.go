@@ -96,7 +96,7 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
-func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
 	seid, err := c.client.ScriptingEnvironmentCreate(ctx, internal.ConvertScriptingOptions(opts))
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -105,7 +105,7 @@ func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingE
 	return &rpcScripting{client: c.client, id: seid.Id}, nil
 }
 
-func (c *rpcClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
+func (c *rpcClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
 	resp, err := c.client.ScriptingEnvironmentCheck(ctx, &internal.ScriptingEnvironmentID{Id: id})
 	if err != nil {
 		return nil, errors.WithStack(err)

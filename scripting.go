@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func scriptingEnvironmentFactory(m Manager, env options.ScriptingEnvironment) (ScriptingEnvironment, error) {
+func newScriptingHarness(m Manager, env options.ScriptingHarness) (ScriptingHarness, error) {
 	if err := env.Validate(); err != nil {
 		return nil, errors.WithStack(err)
 	}

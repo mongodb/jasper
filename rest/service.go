@@ -766,7 +766,7 @@ func (s *Service) oomTrackerList(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) scriptingCreate(rw http.ResponseWriter, r *http.Request) {
-	seopt, err := options.NewScriptingEnvironment(gimlet.GetVars(r)["type"])
+	seopt, err := options.NewScriptingHarness(gimlet.GetVars(r)["type"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,

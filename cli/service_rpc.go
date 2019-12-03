@@ -7,6 +7,7 @@ import (
 
 	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/rpc"
@@ -108,6 +109,7 @@ func (d *rpcDaemon) Start(s service.Service) error {
 	go handleDaemonSignals(ctx, cancel, d.exit)
 
 	go func(ctx context.Context, d *rpcDaemon) {
+		defer recovery.LogStackTraceAndContinue("rpc service")
 		grip.Error(errors.Wrap(d.run(ctx), "error running RPC service"))
 	}(ctx, d)
 

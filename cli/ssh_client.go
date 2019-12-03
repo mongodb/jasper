@@ -89,11 +89,11 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 	})
 }
 
-func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
 	return nil, errors.New("scripting environment is not supported")
 }
 
-func (c *sshClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
+func (c *sshClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
 	return nil, errors.New("scripting environment is not supported")
 }
 
