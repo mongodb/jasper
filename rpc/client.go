@@ -480,17 +480,17 @@ func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
 	return errors.New(resp.Text)
 }
 
-func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) error {
+func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) (string, error) {
 	resp, err := s.client.ScriptingEnvironmentBuild(ctx, &internal.ScriptingEnvironmentBuildArgs{Id: s.id, Directory: dir, Args: args})
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Outcome.Success {
+		return "", errors.New(resp.Outcome.Text)
 	}
 
-	return errors.New(resp.Text)
+	return resp.Path, nil
 }
 
 func (s *rpcScripting) Cleanup(ctx context.Context) error {

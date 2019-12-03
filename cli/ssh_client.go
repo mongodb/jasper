@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"sync"
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
@@ -16,6 +17,10 @@ import (
 type sshClient struct {
 	manager jasper.Manager
 	opts    sshClientOptions
+	seCache struct {
+		mutex sync.Mutex
+		envs  map[string]jasper.ScriptingHarness
+	}
 }
 
 // NewSSHClient creates a new Jasper manager that connects to a remote
@@ -90,11 +95,49 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
-	return nil, errors.New("scripting environment is not supported")
+	c.seCache.mutex.Lock()
+	defer c.seCache.mutex.Unlock()
+
+	sh, ok := c.seCache.envs[opts.ID()]
+	if ok {
+		return sh, nil
+	}
+
+	cliOpts, err := BuildScriptingOptions(opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	output, err := c.runManagerCommand(ctx, CreateScriptingCommand, cliOpts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	_, err = ExtractInfoResponse(output)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	sh, err = jasper.NewScriptingHarness(c, opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	c.seCache.envs[sh.ID()] = sh
+
+	return sh, nil
 }
 
 func (c *sshClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
-	return nil, errors.New("scripting environment is not supported")
+	c.seCache.mutex.Lock()
+	defer c.seCache.mutex.Unlock()
+
+	sh, ok := c.seCache.envs[id]
+	if !ok {
+		return nil, errors.Errorf("no locally cached value for %s", id)
+	}
+
+	return sh, nil
 }
 
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {

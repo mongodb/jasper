@@ -586,11 +586,19 @@ func (s *restScripting) Build(ctx context.Context, dir string, args []string) (s
 
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/build", s.id), body)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return "", errors.Wrap(err, "request returned error")
 	}
 	defer resp.Body.Close()
 
-	return nil
+	out := struct {
+		Path string `json:"path"`
+	}{}
+
+	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
+		return "", errors.Wrap(err, "problem reading response")
+	}
+
+	return out.Path, nil
 }
 
 func (s *restScripting) Cleanup(ctx context.Context) error {

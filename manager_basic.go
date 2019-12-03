@@ -47,7 +47,7 @@ func (m *basicProcessManager) CreateScripting(ctx context.Context, opts options.
 		return se, nil
 	}
 
-	se, err := newScriptingHarness(m, opts)
+	se, err := NewScriptingHarness(m, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -55,6 +55,8 @@ func (m *basicProcessManager) CreateScripting(ctx context.Context, opts options.
 	if err = se.Setup(ctx); err != nil {
 		return nil, errors.Wrap(err, "problem setting up scripting environment")
 	}
+
+	m.senv[se.ID()] = se
 
 	return se, nil
 }

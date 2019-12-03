@@ -926,8 +926,8 @@ func (s *Service) scriptingBuild(rw http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	if err := se.Build(ctx, args.Directory, args.Args); err != nil {
+	path, err := se.Build(ctx, args.Directory, args.Args)
+	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
@@ -935,7 +935,11 @@ func (s *Service) scriptingBuild(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gimlet.WriteJSON(rw, struct{}{})
+	gimlet.WriteJSON(rw, struct {
+		Path string `json:"path"`
+	}{
+		Path: path,
+	})
 }
 
 func (s *Service) scriptingCleanup(rw http.ResponseWriter, r *http.Request) {
@@ -957,6 +961,5 @@ func (s *Service) scriptingCleanup(rw http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
 	gimlet.WriteJSON(rw, struct{}{})
 }

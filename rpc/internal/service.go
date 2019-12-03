@@ -684,28 +684,31 @@ func (s *jasperService) ScriptingEnvironmentRunScript(ctx context.Context, args 
 	}, nil
 }
 
-func (s *jasperService) ScriptingEnvironmentBuild(ctx context.Context, args *ScriptingEnvironmentBuildArgs) (*OperationOutcome, error) {
+func (s *jasperService) ScriptingEnvironmentBuild(ctx context.Context, args *ScriptingEnvironmentBuildArgs) (*ScriptingEnvironmentBuildResponse, error) {
 	se, err := s.manager.GetScripting(ctx, args.Id)
 	if err != nil {
-		return &OperationOutcome{
-			Success:  false,
-			Text:     err.Error(),
-			ExitCode: 1,
-		}, nil
+		return &ScriptingEnvironmentBuildResponse{
+			Outcome: &OperationOutcome{
+				Success:  false,
+				Text:     err.Error(),
+				ExitCode: 1,
+			}}, nil
 	}
 
-	err = se.Build(ctx, args.Directory, args.Args)
+	path, err := se.Build(ctx, args.Directory, args.Args)
 	if err != nil {
-		return &OperationOutcome{
-			Success:  false,
-			Text:     err.Error(),
-			ExitCode: 1,
-		}, nil
+		return &ScriptingEnvironmentBuildResponse{
+			Outcome: &OperationOutcome{
+				Success:  false,
+				Text:     err.Error(),
+				ExitCode: 1,
+			}}, nil
 	}
-
-	return &OperationOutcome{
-		Success:  true,
-		Text:     se.ID(),
-		ExitCode: 0,
-	}, nil
+	fmt.Print(path)
+	return &ScriptingEnvironmentBuildResponse{
+		Outcome: &OperationOutcome{
+			Success:  true,
+			Text:     se.ID(),
+			ExitCode: 0,
+		}}, nil
 }

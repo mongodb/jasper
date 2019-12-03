@@ -279,6 +279,12 @@ message ScriptingEnvironmentBuildArgs {
   repeated string args = 3; 
 }
 
+message ScriptingEnvironmentBuildResponse {
+  OperationOutcome outcome = 1;
+  string path = 2; 
+}
+
+
 message ScriptingEnvironmentRunScriptArgs {
   string id = 1;
   string script = 2;
@@ -309,7 +315,7 @@ service JasperProcessManager {
   rpc ScriptingEnvironmentSetup(ScriptingEnvironmentID) returns (OperationOutcome);
   rpc ScriptingEnvironmentCleanup(ScriptingEnvironmentID) returns (OperationOutcome);
   rpc ScriptingEnvironmentRun(ScriptingEnvironmentRunArgs) returns (OperationOutcome);
-  rpc ScriptingEnvironmentBuild(ScriptingEnvironmentBuildArgs) returns (OperationOutcome);
+  rpc ScriptingEnvironmentBuild(ScriptingEnvironmentBuildArgs) returns (ScriptingEnvironmentBuildResponse);
   rpc ScriptingEnvironmentRunScript(ScriptingEnvironmentRunScriptArgs) returns (OperationOutcome);
 
   // RPC-specific functions
