@@ -16,6 +16,10 @@ func NewProcess(ctx context.Context, opts *options.Create) (Process, error) {
 		err  error
 	)
 
+	if err := opts.Validate(); err != nil {
+		return nil, errors.WithStack((err))
+	}
+
 	switch opts.Implementation {
 	case options.ProcessImplementationBlocking:
 		proc, err = newBlockingProcess(ctx, opts)

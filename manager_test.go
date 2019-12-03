@@ -542,7 +542,9 @@ func TestTrackedManager(t *testing.T) {
 					assert.Len(t, mockTracker.Infos, 0)
 				},
 				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
+					cmd := manager.CreateCommand(ctx).Background(true)
+					cmd.opts.Process = *opts
+					require.NoError(t, cmd.Run(ctx))
 					assert.Len(t, manager.procs, 1)
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
@@ -564,7 +566,9 @@ func TestTrackedManager(t *testing.T) {
 					assert.Len(t, mockTracker.Infos, 0)
 				},
 				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					require.NoError(t, manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx))
+					cmd := manager.CreateCommand(ctx).Background(true)
+					cmd.opts.Process = *opts
+					require.NoError(t, cmd.Run(ctx))
 					assert.Len(t, manager.procs, 1)
 
 					mockTracker, ok := manager.tracker.(*mockProcessTracker)
