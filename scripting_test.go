@@ -264,7 +264,7 @@ func TestScriptingHarness(t *testing.T) {
 							t.Skip("windows paths")
 						}
 						se := makeScriptingEnv(ctx, t, manager, opts)
-						err := se.Build(ctx, testutil.GetDirectoryOfFile(), []string{
+						_, err := se.Build(ctx, testutil.GetDirectoryOfFile(), []string{
 							"-o", filepath.Join(tmpdir, "gopath", "bin", "run-linter"),
 							"./cmd/run-linter",
 						})

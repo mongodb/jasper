@@ -247,11 +247,16 @@ type IDInput struct {
 	ID string `json:"id"`
 }
 
+// ScriptingOptions is a way to serialize implementations of the
+// options.ScriptingHarness type by wrapping a type name for the
+// implementation name to pass to the factory.
 type ScriptingOptions struct {
 	ImplementationType string          `json:"type"`
 	Payload            json.RawMessage `json:"payload"`
 }
 
+// Validate ensures that the ScriptingOptions instance is
+// validated.
 func (opts *ScriptingOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(opts.ImplementationType == "", "implementation type must be defined")
@@ -260,6 +265,7 @@ func (opts *ScriptingOptions) Validate() error {
 	return catcher.Resolve()
 }
 
+// BuildScriptingOptions constructs a ScriptingOptions value.
 func BuildScriptingOptions(in options.ScriptingHarness) (*ScriptingOptions, error) {
 	out := &ScriptingOptions{}
 
@@ -287,6 +293,7 @@ func BuildScriptingOptions(in options.ScriptingHarness) (*ScriptingOptions, erro
 	return out, nil
 }
 
+// Export builds a native scripting harness container.
 func (opts *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 	harness, err := options.NewScriptingHarness(opts.ImplementationType)
 	if err != nil {
