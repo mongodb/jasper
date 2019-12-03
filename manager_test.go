@@ -20,18 +20,10 @@ func TestManagerInterface(t *testing.T) {
 	defer cancel()
 
 	for mname, factory := range map[string]func(context.Context, *testing.T) Manager{
-		"Basic/NoLock/BasicProcs": func(_ context.Context, _ *testing.T) Manager {
+		"Basic/NoLock": func(_ context.Context, _ *testing.T) Manager {
 			return &basicProcessManager{
-				id:       "id",
-				procs:    map[string]Process{},
-				blocking: false,
-			}
-		},
-		"Basic/NoLock/BlockingProcs": func(_ context.Context, _ *testing.T) Manager {
-			return &basicProcessManager{
-				id:       "id",
-				procs:    map[string]Process{},
-				blocking: true,
+				id:    "id",
+				procs: map[string]Process{},
 			}
 		},
 		"Basic/Lock/BasicProcs": func(_ context.Context, t *testing.T) Manager {
@@ -39,30 +31,19 @@ func TestManagerInterface(t *testing.T) {
 			require.NoError(t, err)
 			return synchronizedManager
 		},
-		"Basic/Lock/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			synchronizedBlockingManager, err := NewSynchronizedManagerBlockingProcesses(false)
-			require.NoError(t, err)
-			return synchronizedBlockingManager
-		},
 		"SelfClearing/BasicProcs": func(ctx context.Context, t *testing.T) Manager {
 			selfClearingManager, err := NewSelfClearingProcessManager(10, false)
 			require.NoError(t, err)
 			return selfClearingManager
 		},
-		"SelfClearing/BlockingProcs": func(ctx context.Context, t *testing.T) Manager {
-			selfClearingBlockingManager, err := NewSelfClearingProcessManagerBlockingProcesses(10, false)
-			require.NoError(t, err)
-			return selfClearingBlockingManager
-		},
-		"Basic/NoLock/RemoteNil/BasicProcs": func(_ context.Context, _ *testing.T) Manager {
+		"Basic/NoLock/RemoteNil": func(_ context.Context, _ *testing.T) Manager {
 			m := &basicProcessManager{
-				id:       "id",
-				procs:    map[string]Process{},
-				blocking: false,
+				id:    "id",
+				procs: map[string]Process{},
 			}
 			return NewRemoteManager(m, nil)
 		},
-		"Basic/Lock/RemoteNil/BasicProcs": func(_ context.Context, t *testing.T) Manager {
+		"Basic/Lock/RemoteNil": func(_ context.Context, t *testing.T) Manager {
 			m, err := NewSynchronizedManager(false)
 			require.NoError(t, err)
 			return NewRemoteManager(m, nil)
@@ -436,19 +417,9 @@ func TestTrackedManager(t *testing.T) {
 	defer cancel()
 
 	for managerName, makeManager := range map[string]func() *basicProcessManager{
-		"Basic/NoLock/BasicProcs": func() *basicProcessManager {
+		"Basic": func() *basicProcessManager {
 			return &basicProcessManager{
-				procs:    map[string]Process{},
-				blocking: false,
-				tracker: &mockProcessTracker{
-					Infos: []ProcessInfo{},
-				},
-			}
-		},
-		"Basic/NoLock/BlockingProcs": func() *basicProcessManager {
-			return &basicProcessManager{
-				procs:    map[string]Process{},
-				blocking: true,
+				procs: map[string]Process{},
 				tracker: &mockProcessTracker{
 					Infos: []ProcessInfo{},
 				},
@@ -542,7 +513,16 @@ func TestTrackedManager(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 					defer cancel()
-					test(tctx, t, makeManager(), testutil.YesCreateOpts(testutil.ManagerTestTimeout))
+					t.Run("Blocking", func(t *testing.T) {
+						opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
+						opts.Implementation = options.ProcessImplementationBlocking
+						test(tctx, t, makeManager(), opts)
+					})
+					t.Run("Basic", func(t *testing.T) {
+						opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
+						opts.Implementation = options.ProcessImplementationBasic
+						test(tctx, t, makeManager(), opts)
+					})
 				})
 			}
 		})
