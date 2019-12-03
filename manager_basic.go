@@ -72,10 +72,6 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 		opts.Remote.UseSSHLibrary = true
 	}
 
-	if err := opts.Validate(); err != nil {
-		return nil, errors.WithStack((err))
-	}
-
 	proc, err := NewProcess(ctx, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem constructing process")

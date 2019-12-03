@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"testing"
 
@@ -455,33 +456,26 @@ func TestManagerInterface(t *testing.T) {
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager, mod optsModify) {},
 			} {
-				t.Run("Basic", func(t *testing.T) {
-					t.Run(name, func(t *testing.T) {
-						tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-						defer cancel()
-						test(tctx, t, factory(tctx, t), func(o *options.Create) {
-							o.Implementation = options.ProcessImplementationBlocking
-						})
+				t.Run(name+"/Basic", func(t *testing.T) {
+					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
+					defer cancel()
+					test(tctx, t, factory(tctx, t), func(o *options.Create) {
+						o.Implementation = options.ProcessImplementationBlocking
 					})
 				})
-				t.Run("Blocking", func(t *testing.T) {
-					t.Run(name, func(t *testing.T) {
-						tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-						defer cancel()
-						test(tctx, t, factory(tctx, t), func(o *options.Create) {
-							o.Implementation = options.ProcessImplementationBlocking
-						})
+				t.Run(name+"/Blocking", func(t *testing.T) {
+					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
+					defer cancel()
+					test(tctx, t, factory(tctx, t), func(o *options.Create) {
+						o.Implementation = options.ProcessImplementationBlocking
 					})
 				})
-
 			}
 		})
 	}
 }
 
 func TestTrackedManager(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -533,7 +527,9 @@ func TestTrackedManager(t *testing.T) {
 				},
 				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					opts.Args = []string{"foo"}
-					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
+					cmd := manager.CreateCommand(ctx).Add(opts.Args).Background(true)
+					cmd.opts.Process = *opts
+					err := cmd.Run(ctx)
 					require.Error(t, err)
 					assert.Len(t, manager.procs, 0)
 
@@ -542,7 +538,7 @@ func TestTrackedManager(t *testing.T) {
 					assert.Len(t, mockTracker.Infos, 0)
 				},
 				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					cmd := manager.CreateCommand(ctx).Background(true)
+					cmd := manager.CreateCommand(ctx).Background(true).Add(opts.Args)
 					cmd.opts.Process = *opts
 					require.NoError(t, cmd.Run(ctx))
 					assert.Len(t, manager.procs, 1)
@@ -566,8 +562,10 @@ func TestTrackedManager(t *testing.T) {
 					assert.Len(t, mockTracker.Infos, 0)
 				},
 				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					cmd := manager.CreateCommand(ctx).Background(true)
+					cmd := manager.CreateCommand(ctx).Background(true).Add(opts.Args)
 					cmd.opts.Process = *opts
+
+					fmt.Println(cmd.opts.Process)
 					require.NoError(t, cmd.Run(ctx))
 					assert.Len(t, manager.procs, 1)
 
@@ -583,19 +581,17 @@ func TestTrackedManager(t *testing.T) {
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager, mod optsModify) {},
 			} {
-				t.Run(name, func(t *testing.T) {
-					tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-					defer cancel()
-					t.Run("Blocking", func(t *testing.T) {
-						opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
-						opts.Implementation = options.ProcessImplementationBlocking
-						test(tctx, t, makeManager(), opts)
-					})
-					t.Run("Basic", func(t *testing.T) {
-						opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
-						opts.Implementation = options.ProcessImplementationBasic
-						test(tctx, t, makeManager(), opts)
-					})
+				tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
+				defer cancel()
+				t.Run(name+"Manager/BlockingProcess", func(t *testing.T) {
+					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
+					opts.Implementation = options.ProcessImplementationBlocking
+					test(tctx, t, makeManager(), opts)
+				})
+				t.Run(name+"Manager/BasicProcess", func(t *testing.T) {
+					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
+					opts.Implementation = options.ProcessImplementationBasic
+					test(tctx, t, makeManager(), opts)
 				})
 			}
 		})
