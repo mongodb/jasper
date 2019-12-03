@@ -21,6 +21,8 @@ func NewProcess(ctx context.Context, opts *options.Create) (Process, error) {
 		proc, err = newBlockingProcess(ctx, opts)
 	case options.ProcessImplementationBasic:
 		proc, err = newBasicProcess(ctx, opts)
+	default:
+		err = errors.Errorf("cannot create '%s' type of process", opts.Implementation)
 	}
 
 	if err != nil {
