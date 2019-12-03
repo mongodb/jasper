@@ -919,7 +919,7 @@ func (s *Service) scriptingBuild(rw http.ResponseWriter, r *http.Request) {
 		Directory string   `json:"directory"`
 		Args      []string `json:"args"`
 	}{}
-	if err := gimlet.GetJSON(r.Body, args); err != nil {
+	if err = gimlet.GetJSON(r.Body, args); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),
