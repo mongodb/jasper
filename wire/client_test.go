@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
@@ -538,7 +539,8 @@ func TestWireProcess(t *testing.T) {
 					case <-ctx.Done():
 						assert.Fail(t, "call to Wait() took too long to finish")
 					}
-					require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
+					grip.Warning(jasper.Terminate(ctx, proc)) // Clean up.
+
 				},
 				"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(100)
