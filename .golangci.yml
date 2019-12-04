@@ -3,6 +3,7 @@
 linters:
   disable-all: true
   enable:
+    - deadcode
     - errcheck
     # - gocognit
     - goconst
@@ -13,9 +14,11 @@ linters:
     - govet
     - ineffassign
     - interfacer
+    - maligned
     - misspell
     - staticcheck
     - structcheck
+    - typecheck
     - unconvert
     - varcheck
 
