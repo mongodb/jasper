@@ -83,10 +83,6 @@ tasks:
     tags: ["report"]
     name: lint
 
-  - <<: *run-build
-    tags: ["report"]
-    name: newlint
-
 #######################################
 #           Buildvariants             #
 #######################################

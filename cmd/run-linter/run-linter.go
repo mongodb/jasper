@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -56,25 +55,22 @@ func main() {
 		packages       []string
 		results        []*result
 		hasFailingTest bool
-
-		gopath = os.Getenv("GOPATH")
 	)
+	gopath := os.Getenv("GOPATH")
 
-	flag.StringVar(&lintArgs, "lintArgs", "", "args to pass to gometalinter")
-	flag.StringVar(&lintBin, "lintBin", filepath.Join(gopath, "bin", "gometalinter"), "path to go metalinter")
-	flag.StringVar(&packageList, "packages", "", "list of space separated packages")
-	flag.StringVar(&output, "output", "", "output file for to write results.")
+	flag.StringVar(&lintArgs, "lintArgs", "", "additional args to pass to the linter")
+	flag.StringVar(&lintBin, "lintBin", filepath.Join(gopath, "bin", "golangci-lint"), "path to linter")
+	flag.StringVar(&packageList, "packages", "", "list of space-separated packages")
+	flag.StringVar(&output, "output", "", "output file to write results")
 	flag.Parse()
 
 	packages = strings.Split(strings.Replace(packageList, "-", "/", -1), " ")
 	dirname, _ := os.Getwd()
-	cwd := filepath.Base(dirname)
-	lintArgs += fmt.Sprintf(" --concurrency=%d", runtime.NumCPU()/2)
 
 	for _, pkg := range packages {
-		args := []string{lintBin, lintArgs}
-		if cwd == pkg {
-			args = append(args, ".")
+		args := []string{lintBin, "run", lintArgs}
+		if pkg == filepath.Base(dirname) {
+			args = append(args, "./")
 		} else {
 			args = append(args, "./"+pkg)
 		}
