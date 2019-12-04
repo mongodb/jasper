@@ -43,8 +43,6 @@ func (m *synchronizedProcessManager) ID() string {
 }
 
 func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
-	opts.Synchronized = true
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -52,6 +50,8 @@ func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *op
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	opts.Synchronized = true
 
 	return &synchronizedProcess{proc: proc}, nil
 }
