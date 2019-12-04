@@ -37,7 +37,7 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 	}
 
 	for _, pkg := range e.opts.Packages {
-		cmd.AppendArgs(venvpy, "-m", "pip", "install", "-r", pkg)
+		cmd.AppendArgs(venvpy, "-m", "pip", "install", pkg)
 	}
 
 	cmd.SetHook(func(res error) error {

@@ -32,14 +32,6 @@ func TestWireManager(t *testing.T) {
 			require.NoError(t, err)
 			return client
 		},
-		"Blocking": func(ctx context.Context, t *testing.T) jasper.RemoteClient {
-			mngr, err := jasper.NewSynchronizedManagerBlockingProcesses(false)
-			require.NoError(t, err)
-
-			client, err := makeTestServiceAndClient(ctx, mngr)
-			require.NoError(t, err)
-			return client
-		},
 	} {
 		t.Run(mname, func(t *testing.T) {
 			for name, test := range map[string]func(context.Context, *testing.T, jasper.RemoteClient){
@@ -311,19 +303,6 @@ func TestWireProcess(t *testing.T) {
 
 			return client.CreateProcess(ctx, opts)
 		},
-		"Blocking": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-			mngr, err := jasper.NewSynchronizedManagerBlockingProcesses(false)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			client, err := makeTestServiceAndClient(ctx, mngr)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			return client.CreateProcess(ctx, opts)
-		},
 	} {
 		t.Run(cname, func(t *testing.T) {
 			for name, testCase := range map[string]func(context.Context, *testing.T, *options.Create, jasper.ProcessConstructor){
@@ -559,7 +538,7 @@ func TestWireProcess(t *testing.T) {
 					case <-ctx.Done():
 						assert.Fail(t, "call to Wait() took too long to finish")
 					}
-					require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
+					assert.Error(t, jasper.Terminate(ctx, proc)) // Clean up.
 				},
 				"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(100)
