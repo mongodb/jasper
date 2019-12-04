@@ -23,10 +23,10 @@ gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
 
-export GOPATH=$(gopath)
-export GOCACHE=$(gocache)
+export GOPATH := $(gopath)
+export GOCACHE := $(gocache)
 ifneq ($(GO_BIN_PATH),)
-	export PATH="$(shell dirname $(GO_BIN_PATH)):$(PATH)"
+	export PATH := "$(shell dirname $(GO_BIN_PATH)):$(shell printenv PATH)"
 endif
 # end environment setup
 
