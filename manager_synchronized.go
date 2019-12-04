@@ -97,6 +97,7 @@ func (m *synchronizedProcessManager) List(ctx context.Context, f options.Filter)
 
 	procs, err := m.manager.List(ctx, f)
 	syncedProcs := make([]Process, 0, len(procs))
+	var syncedProcs []Process
 	for _, proc := range procs {
 		syncedProcs = append(syncedProcs, &synchronizedProcess{proc: proc})
 	}
@@ -108,6 +109,9 @@ func (m *synchronizedProcessManager) Get(ctx context.Context, id string) (Proces
 	defer m.mu.RUnlock()
 
 	proc, err := m.manager.Get(ctx, id)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	return &synchronizedProcess{proc: proc}, errors.WithStack(err)
 }
 
@@ -130,7 +134,7 @@ func (m *synchronizedProcessManager) Group(ctx context.Context, name string) ([]
 	defer m.mu.RUnlock()
 
 	procs, err := m.manager.Group(ctx, name)
-	syncedProcs := make([]Process, 0, len(procs))
+	var syncedProcs []Process
 	for _, proc := range procs {
 		syncedProcs = append(syncedProcs, &synchronizedProcess{proc: proc})
 	}
