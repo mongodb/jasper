@@ -169,6 +169,7 @@ func TestScriptingHarness(t *testing.T) {
 				VirtualEnvPath:        filepath.Join(tmpdir, "python2"),
 				LegacyPython:          true,
 				HostPythonInterpreter: "python",
+				Packages:              []string{"wheel"},
 				Output:                output,
 			},
 			Tests: []seTest{
