@@ -67,6 +67,8 @@ $(gopath)/src/%:
 	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
 	$(goEnv) $(gobin) build -o $@ $<
+$(buildDir)/run-new-linter:cmd/run-new-linter/run-new-linter.go $(buildDir)
+	$(goEnv) $(gobin) build -o $@ $<
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
 # end lint suppressions
@@ -110,6 +112,8 @@ $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 #  targets to generate gotest output from the linter.
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
 	@$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
+$(buildDir)/output.%.new.lint:$(buildDir)/run-new-linter $(buildDir) .FORCE
+	$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
