@@ -44,7 +44,7 @@ func TestWireManager(t *testing.T) {
 			},
 		},
 		{
-			Name: "Blocking",
+			Name: "Basic",
 			Options: func(opts *options.Create) {
 				opts.Implementation = options.ProcessImplementationBasic
 			},
@@ -363,7 +363,7 @@ func TestWireProcess(t *testing.T) {
 			},
 		},
 		{
-			Name: "Blocking",
+			Name: "Basic",
 			Options: func(opts *options.Create) {
 				opts.Implementation = options.ProcessImplementationBasic
 			},
