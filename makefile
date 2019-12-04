@@ -112,7 +112,7 @@ $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 #  targets to generate gotest output from the linter.
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
 	@$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
-$(buildDir)/output.%.new.lint:$(buildDir)/run-new-linter $(buildDir) .FORCE
+$(buildDir)/output.%.newlint:$(buildDir)/run-new-linter $(buildDir) .FORCE
 	$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
@@ -124,6 +124,8 @@ proto:
 	protoc --go_out=plugins=grpc:rpc/internal *.proto
 lint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 	
+newlint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).newlint)
+
 test:$(buildDir) $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 	
 benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
