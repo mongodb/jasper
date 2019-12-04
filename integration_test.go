@@ -139,7 +139,7 @@ func TestMongod(t *testing.T) {
 					id:          "With30MongodsAndSigkill",
 					numProcs:    30,
 					signal:      syscall.SIGKILL,
-					sleep:       4000 * time.Millisecond,
+					sleep:       3000 * time.Millisecond,
 					expectError: true,
 				},
 			} {
@@ -169,7 +169,7 @@ func TestMongod(t *testing.T) {
 					time.Sleep(test.sleep)
 					for _, proc := range procs {
 						err := proc.Signal(ctx, test.signal)
-						assert.NoError(t, err)
+						require.NoError(t, err)
 					}
 
 					// Check that the processes all received signal

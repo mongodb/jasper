@@ -81,12 +81,8 @@ func newRESTDaemon(host string, port int, manager jasper.Manager, logger *option
 
 func (d *restDaemon) Start(s service.Service) error {
 	if d.Logger != nil {
-		sender, err := d.Logger.Configure()
-		if err != nil {
-			return errors.Wrap(err, "could not configure logging")
-		}
-		if err := grip.SetSender(sender); err != nil {
-			return errors.Wrap(err, "could not set logging sender")
+		if err := setupLogger(d.Logger); err != nil {
+			return errors.Wrap(err, "failed to set up logging")
 		}
 	}
 

@@ -88,12 +88,8 @@ func newRPCDaemon(host string, port int, manager jasper.Manager, credsFilePath s
 
 func (d *rpcDaemon) Start(s service.Service) error {
 	if d.Logger != nil {
-		sender, err := d.Logger.Configure()
-		if err != nil {
-			return errors.Wrap(err, "could not configure logging")
-		}
-		if err := grip.SetSender(sender); err != nil {
-			return errors.Wrap(err, "could not set logging sender")
+		if err := setupLogger(d.Logger); err != nil {
+			return errors.Wrap(err, "")
 		}
 	}
 
@@ -147,6 +143,5 @@ func newRPCService(ctx context.Context, host string, port int, manager jasper.Ma
 	if err != nil {
 		return nil, errors.Wrap(err, "error starting RPC service")
 	}
-
 	return closeService, nil
 }

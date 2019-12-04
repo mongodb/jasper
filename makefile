@@ -2,8 +2,9 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest options mock testutil internal-executor
-testPackages := $(packages)
+packages := $(name) cli rpc rest wire options mock testutil internal-executor
+lintPackages := $(packages) mock testutil
+testPackages := $(packages) mock
 projectPath := github.com/mongodb/jasper
 
 _compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(testPackages),./$(target))))
@@ -11,17 +12,17 @@ coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).
 coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
 
 # start environment setup
-gobin := ${GO_BIN_PATH}
+gobin := $(GO_BIN_PATH)
 ifeq (,$(gobin))
 gobin := go
 endif
-gopath := ${GOPATH}
+gopath := $(GOPATH)
 gocache := $(abspath $(buildDir)/.cache)
 ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
-goEnv := GOPATH=$(gopath) GOCACHE=$(gocache) $(if ${GO_BIN_PATH},PATH="$(shell dirname ${GO_BIN_PATH}):${PATH}")
+goEnv := GOPATH=$(gopath) GOCACHE=$(gocache)$(if $(GO_BIN_PATH), PATH="$(shell dirname $(GO_BIN_PATH)):$(PATH)")
 # end environment setup
 
 compile:
@@ -80,19 +81,19 @@ $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
 #    run. (The "build" target is intentional and makes these targetsb
 #    rerun as expected.)
 testArgs := -v
-ifneq (,${RUN_TEST})
-testArgs += -run='${RUN_TEST}'
+ifneq (,$(RUN_TEST))
+testArgs += -run='$(RUN_TEST)'
 endif
-ifneq (,${RUN_COUNT})
-testArgs += -count=${RUN_COUNT}
+ifneq (,$(RUN_COUNT))
+testArgs += -count=$(RUN_COUNT)
 endif
-ifeq (,${DISABLE_COVERAGE})
+ifeq (,$(DISABLE_COVERAGE))
 testArgs += -cover
 endif
-ifneq (,${RACE_DETECTOR})
+ifneq (,$(RACE_DETECTOR))
 testArgs += -race
 endif
-ifneq (,${SKIP_LONG})
+ifneq (,$(SKIP_LONG))
 testArgs += -short
 endif
 # test execution and output handlers
@@ -157,18 +158,12 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/certdepot/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/evergreen-ci/gimlet/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/golang.org/x/tools/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/urfave/cli/
-	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/pkg/errors/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/satori/go.uuid/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/github.com/stretchr/testify/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/gopkg.in/mgo.v2/
-	rm -rf vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/montanaflynn/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
@@ -211,7 +206,6 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/aviation/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/golang/protobuf/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/amboy/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/stretchr/testify/
@@ -220,8 +214,10 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/text/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor/ -type d -empty | xargs rm -rf
 	find vendor/ -type d -name '.git' | xargs rm -rf

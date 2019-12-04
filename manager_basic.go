@@ -15,16 +15,14 @@ type basicProcessManager struct {
 	id            string
 	procs         map[string]Process
 	senv          map[string]ScriptingHarness
-	blocking      bool
 	useSSHLibrary bool
 	tracker       ProcessTracker
 }
 
-func newBasicProcessManager(procs map[string]Process, blocking bool, trackProcs bool, useSSHLibrary bool) (Manager, error) {
+func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLibrary bool) (Manager, error) {
 	m := basicProcessManager{
 		procs:         procs,
 		senv:          make(map[string]ScriptingHarness),
-		blocking:      blocking,
 		id:            uuid.Must(uuid.NewV4()).String(),
 		useSSHLibrary: useSSHLibrary,
 	}
@@ -72,20 +70,11 @@ func (m *basicProcessManager) GetScripting(ctx context.Context, id string) (Scri
 func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.AddEnvVar(ManagerEnvironID, m.id)
 
-	var (
-		proc Process
-		err  error
-	)
-
 	if opts.Remote != nil && m.useSSHLibrary {
 		opts.Remote.UseSSHLibrary = true
 	}
-	if m.blocking {
-		proc, err = newBlockingProcess(ctx, opts)
-	} else {
-		proc, err = newBasicProcess(ctx, opts)
-	}
 
+	proc, err := NewProcess(ctx, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem constructing process")
 	}
