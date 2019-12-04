@@ -61,16 +61,17 @@ lintArgs += --exclude="package comment should be of the form \"Package .* \(goli
 #  no need to check the error of closer read operations in defer cases
 lintArgs += --exclude="error return value not checked \(defer.*"
 lintArgs += --exclude="should check returned error before deferring .*\.Close"
-lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
 $(gopath)/src/%:
 	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
 	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
 	$(goEnv) $(gobin) build -o $@ $<
-$(buildDir)/run-new-linter:cmd/run-new-linter/run-new-linter.go $(buildDir)
-	$(goEnv) $(gobin) build -o $@ $<
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
+newLintDeps: .FORCE
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0
+$(buildDir)/run-new-linter:cmd/run-new-linter/run-new-linter.go $(newLintDeps) $(buildDir)
+	$(goEnv) $(gobin) build -o $@ $<
 # end lint suppressions
 
 # benchmark setup targets
@@ -113,7 +114,7 @@ $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
 	@$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
 $(buildDir)/output.%.newlint:$(buildDir)/run-new-linter $(buildDir) .FORCE
-	$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
+	$(goEnv) ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
