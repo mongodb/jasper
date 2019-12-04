@@ -698,6 +698,7 @@ func (s *jasperService) ScriptingHarnessBuild(ctx context.Context, args *Scripti
 	path, err := se.Build(ctx, args.Directory, args.Args)
 	if err != nil {
 		return &ScriptingHarnessBuildResponse{
+			Path: path,
 			Outcome: &OperationOutcome{
 				Success:  false,
 				Text:     err.Error(),
@@ -706,6 +707,7 @@ func (s *jasperService) ScriptingHarnessBuild(ctx context.Context, args *Scripti
 	}
 
 	return &ScriptingHarnessBuildResponse{
+		Path: path,
 		Outcome: &OperationOutcome{
 			Success:  true,
 			Text:     se.ID(),
