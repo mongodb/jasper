@@ -39,13 +39,15 @@ func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProc
 		return nil, errors.Wrap(err, "problem creating underlying manager")
 	}
 
-	return &sshClient{
+	client := &sshClient{
 		opts: sshClientOptions{
 			Machine: remoteOpts,
 			Client:  clientOpts,
 		},
 		manager: manager,
-	}, nil
+	}
+	client.shCache.envs = make(map[string]jasper.ScriptingHarness)
+	return client, nil
 }
 
 func (c *sshClient) ID() string {
