@@ -70,7 +70,7 @@ $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
 newLintDeps: .FORCE
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0
-$(buildDir)/run-new-linter:cmd/run-new-linter/run-new-linter.go $(newLintDeps) $(buildDir)
+$(buildDir)/run-new-linter:cmd/run-new-linter/run-new-linter.go newLintDeps $(buildDir)
 	$(goEnv) $(gobin) build -o $@ $<
 # end lint suppressions
 
