@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha1"
 	"fmt"
@@ -75,9 +76,28 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 	return e.manager.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
 }
 
-func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) error {
-	return e.manager.CreateCommand(ctx).Directory(dir).Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).
-		SetOutputOptions(e.opts.Output).Run(ctx)
+func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) (string, error) {
+	output := &localBuffer{}
+
+	err := e.manager.CreateCommand(ctx).Directory(dir).RedirectErrorToOutput(true).
+		Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).
+		SetOutputWriter(output).SetOutputOptions(e.opts.Output).Run(ctx)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	scanner := bufio.NewScanner(output)
+	for scanner.Scan() {
+		ln := scanner.Text()
+		if strings.Contains("whl", ln) {
+			parts := strings.Split(ln, " ")
+			if len(parts) > 2 {
+				return strings.Trim(parts[1], "'"), nil
+			}
+			break
+		}
+	}
+	return "", nil
 }
 
 func (e *pythonEnvironment) Cleanup(ctx context.Context) error {

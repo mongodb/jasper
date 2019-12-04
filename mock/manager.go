@@ -25,7 +25,7 @@ type Manager struct {
 	CreateConfig        Process
 	ManagerID           string
 	Procs               []jasper.Process
-	ScriptingEnv        jasper.ScriptingEnvironment
+	ScriptingEnv        jasper.ScriptingHarness
 	WriteFileOptions    options.WriteFile
 }
 
@@ -72,7 +72,7 @@ func (m *Manager) CreateCommand(ctx context.Context) *jasper.Command {
 
 // GetScripting returns a cached scripting environment. If FailGetScripting is
 // set, it returns an error.
-func (m *Manager) GetScripting(ctx context.Context, id string) (jasper.ScriptingEnvironment, error) {
+func (m *Manager) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
 	if m.FailGetScripting {
 		return nil, mockFail()
 	}
@@ -81,7 +81,7 @@ func (m *Manager) GetScripting(ctx context.Context, id string) (jasper.Scripting
 
 // CreateScripting constructs an attached scripting environment. If
 // FailCreateScripting is set, it returns an error.
-func (m *Manager) CreateScripting(ctx context.Context, opts options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+func (m *Manager) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
 	if m.FailCreateScripting {
 		return nil, mockFail()
 	}

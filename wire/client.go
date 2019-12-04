@@ -86,11 +86,11 @@ func (c *client) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
-func (c *client) CreateScripting(_ context.Context, _ options.ScriptingEnvironment) (jasper.ScriptingEnvironment, error) {
+func (c *client) CreateScripting(_ context.Context, _ options.ScriptingHarness) (jasper.ScriptingHarness, error) {
 	return nil, errors.New("scripting environment is not supported")
 }
 
-func (c *client) GetScripting(_ context.Context, _ string) (jasper.ScriptingEnvironment, error) {
+func (c *client) GetScripting(_ context.Context, _ string) (jasper.ScriptingHarness, error) {
 	return nil, errors.New("scripting environment is not supported")
 }
 
