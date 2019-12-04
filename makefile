@@ -13,7 +13,7 @@ coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(targ
 
 # start environment setup
 gobin := $(GO_BIN_PATH)
-ifeq (,$(gobin))
+ifeq ($(gobin),)
 gobin := go
 endif
 gopath := $(GOPATH)
@@ -22,6 +22,7 @@ ifeq ($(OS),Windows_NT)
 gocache := $(shell cygpath -m $(gocache))
 gopath := $(shell cygpath -m $(gopath))
 endif
+
 goEnv := GOPATH=$(gopath) GOCACHE=$(gocache)$(if $(GO_BIN_PATH), PATH="$(shell dirname $(GO_BIN_PATH)):$(PATH)")
 # end environment setup
 
@@ -43,33 +44,11 @@ lint-%:$(buildDir)/output.%.lint
 # end convienence targets
 
 # start linting configuration
-#   package, testing, and linter dependencies specified
-#   separately. This is a temporary solution: eventually we should
-#   vendorize all of these dependencies.
-lintDeps := github.com/alecthomas/gometalinter
-#   include test files and give linters 40s to run to avoid timeouts
-lintArgs := --tests --deadline=5m --vendor
-#   gotype produces false positives because it reads .a files which
-#   are rarely up to date.
-lintArgs += --disable="gotype" --disable="gosec" --disable="gocyclo"
-lintArgs += --enable="goimports" --enable="misspell" --enable="gofmt" --enable="ineffassign"
-
-#  add and configure additional linters
-lintArgs += --line-length=100 --dupl-threshold=175
-#  golint doesn't handle splitting package comments between multiple files.
-lintArgs += --exclude="package comment should be of the form \"Package .* \(golint\)"
-#  no need to check the error of closer read operations in defer cases
-lintArgs += --exclude="error return value not checked \(defer.*"
-lintArgs += --exclude="should check returned error before deferring .*\.Close"
-lintDeps := $(addprefix $(gopath)/src/,$(lintDeps))
-$(gopath)/src/%:
-	@-[ ! -d $(gopath) ] && mkdir -p $(gopath) || true
-	$(goEnv) $(gobin) get $(subst $(gopath)/src/,,$@)
-$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir) $(buildDir)/.lintSetup
-	$(goEnv) $(gobin) build -o $@ $<
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
-	$(goEnv) $(gopath)/bin/gometalinter --install >/dev/null && touch $@
-# end lint suppressions
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0 >/dev/null 2>&1
+$(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup $(buildDir)
+	@$(goEnv) $(gobin) build -o $@ $<
+# end lint configuration
 
 # benchmark setup targets
 $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
@@ -104,12 +83,12 @@ $(buildDir)/output.%.test:$(buildDir) .FORCE
 	@(! grep -s -q -e "^FAIL" $@ && ! grep -s -q "^WARNING: DATA RACE" $@) || ! grep -s -q "no test files" $@
 $(buildDir)/output.%.coverage:$(buildDir) .FORCE
 	$(goEnv) $(gobin) test $(testArgs) ./$(if $(subst $(name),,$*),$(subst -,/,$*),) -covermode=count -coverprofile $@ | tee $(buildDir)/output.$*.test
-	@-[ -f $@ ] && $(goEnv) $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
+	@-[ -f $@ ] && $(gobin) tool cover -func=$@ | sed 's%$(projectPath)/%%' | column -t
 $(buildDir)/output.%.coverage.html:$(buildDir)/output.%.coverage
 	$(goEnv) $(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
 $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
-	@$(goEnv) ./$< --output=$@ --lintArgs='$(lintArgs)' --packages='$*'
+	@$(goEnv) ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
@@ -123,7 +102,7 @@ lint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
 test:$(buildDir) $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 	
 benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
-	./$(buildDir)/run-benchmarks $(run-benchmark)
+	$(goEnv) ./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:$(buildDir) $(coverageOutput)
 coverage-html:$(buildDir) $(coverageHtmlOutput)
 phony += lint $(buildDir) test coverage coverage-html
