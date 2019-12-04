@@ -51,8 +51,7 @@ lint-%:$(buildDir)/output.%.lint
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup $(buildDir)
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0
-	@ $(gobin) build -o $@ $<
+	@$(gobin) build -o $@ $<
 # end lint configuration
 
 # benchmark setup targets
