@@ -39,7 +39,7 @@ func downloadMongoDB(t *testing.T) (string, string) {
 		edition = "enterprise"
 		target = platform
 	}
-	arch := bond.MongoDBArch("x86_64")
+	arch := "x86_64"
 	release := "4.0-stable"
 
 	dir, err := ioutil.TempDir("", "mongodb")
@@ -57,7 +57,7 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	catalog, err := bond.NewCatalog(ctx, dir)
 	require.NoError(t, err)
 
-	path, err := catalog.Get("4.0-current", string(edition), target, string(arch), false)
+	path, err := catalog.Get("4.0-current", edition, target, arch, false)
 	require.NoError(t, err)
 
 	var mongodPath string
