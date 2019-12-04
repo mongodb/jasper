@@ -26,7 +26,7 @@ endif
 export GOPATH := $(gopath)
 export GOCACHE := $(gocache)
 ifneq ($(GO_BIN_PATH),)
-	export PATH := "$(shell dirname $(GO_BIN_PATH)):$(shell printenv PATH)"
+	export PATH := $(shell dirname $(GO_BIN_PATH)):$(shell printenv PATH)
 endif
 # end environment setup
 
@@ -49,7 +49,7 @@ lint-%:$(buildDir)/output.%.lint
 
 # start linting configuration
 $(buildDir)/.lintSetup:$(lintDeps) $(buildDir)
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/c87c37210f99021721d039a9176fabd25d326843/install.sh | sh -s -- -b $(buildDir) v1.21.0 >/dev/null 2>&1
 $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup $(buildDir)
 	@$(gobin) build -o $@ $<
 # end lint configuration
