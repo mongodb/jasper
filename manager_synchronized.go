@@ -137,5 +137,5 @@ func (m *synchronizedProcessManager) Group(ctx context.Context, name string) ([]
 	for _, proc := range procs {
 		syncedProcs = append(syncedProcs, &synchronizedProcess{proc: proc})
 	}
-	return procs, errors.WithStack(err)
+	return syncedProcs, errors.WithStack(err)
 }
