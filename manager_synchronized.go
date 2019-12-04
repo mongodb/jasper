@@ -51,8 +51,6 @@ func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *op
 		return nil, errors.WithStack(err)
 	}
 
-	opts.Synchronized = true
-
 	return &synchronizedProcess{proc: proc}, nil
 }
 
