@@ -97,7 +97,7 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
-	seid, err := c.client.ScriptingEnvironmentCreate(ctx, internal.ConvertScriptingOptions(opts))
+	seid, err := c.client.ScriptingHarnessCreate(ctx, internal.ConvertScriptingOptions(opts))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -106,7 +106,7 @@ func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 }
 
 func (c *rpcClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
-	resp, err := c.client.ScriptingEnvironmentCheck(ctx, &internal.ScriptingEnvironmentID{Id: id})
+	resp, err := c.client.ScriptingHarnessCheck(ctx, &internal.ScriptingHarnessID{Id: id})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -442,7 +442,7 @@ type rpcScripting struct {
 func (s *rpcScripting) ID() string { return s.id }
 
 func (s *rpcScripting) Run(ctx context.Context, args []string) error {
-	resp, err := s.client.ScriptingEnvironmentRun(ctx, &internal.ScriptingEnvironmentRunArgs{Id: s.id, Args: args})
+	resp, err := s.client.ScriptingHarnessRun(ctx, &internal.ScriptingHarnessRunArgs{Id: s.id, Args: args})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -455,7 +455,7 @@ func (s *rpcScripting) Run(ctx context.Context, args []string) error {
 }
 
 func (s *rpcScripting) Setup(ctx context.Context) error {
-	resp, err := s.client.ScriptingEnvironmentSetup(ctx, &internal.ScriptingEnvironmentID{Id: s.id})
+	resp, err := s.client.ScriptingHarnessSetup(ctx, &internal.ScriptingHarnessID{Id: s.id})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -468,7 +468,7 @@ func (s *rpcScripting) Setup(ctx context.Context) error {
 }
 
 func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
-	resp, err := s.client.ScriptingEnvironmentRunScript(ctx, &internal.ScriptingEnvironmentRunScriptArgs{Id: s.id, Script: script})
+	resp, err := s.client.ScriptingHarnessRunScript(ctx, &internal.ScriptingHarnessRunScriptArgs{Id: s.id, Script: script})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -481,7 +481,7 @@ func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
 }
 
 func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) (string, error) {
-	resp, err := s.client.ScriptingEnvironmentBuild(ctx, &internal.ScriptingEnvironmentBuildArgs{Id: s.id, Directory: dir, Args: args})
+	resp, err := s.client.ScriptingHarnessBuild(ctx, &internal.ScriptingHarnessBuildArgs{Id: s.id, Directory: dir, Args: args})
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -494,7 +494,7 @@ func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) (st
 }
 
 func (s *rpcScripting) Cleanup(ctx context.Context) error {
-	resp, err := s.client.ScriptingEnvironmentCleanup(ctx, &internal.ScriptingEnvironmentID{Id: s.id})
+	resp, err := s.client.ScriptingHarnessCleanup(ctx, &internal.ScriptingHarnessID{Id: s.id})
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -17,7 +17,7 @@ import (
 type sshClient struct {
 	manager jasper.Manager
 	opts    sshClientOptions
-	seCache struct {
+	shCache struct {
 		mutex sync.Mutex
 		envs  map[string]jasper.ScriptingHarness
 	}
@@ -95,10 +95,10 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
-	c.seCache.mutex.Lock()
-	defer c.seCache.mutex.Unlock()
+	c.shCache.mutex.Lock()
+	defer c.shCache.mutex.Unlock()
 
-	sh, ok := c.seCache.envs[opts.ID()]
+	sh, ok := c.shCache.envs[opts.ID()]
 	if ok {
 		return sh, nil
 	}
@@ -113,7 +113,7 @@ func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 		return nil, errors.WithStack(err)
 	}
 
-	_, err = ExtractInfoResponse(output)
+	_, err = ExtractIDResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -123,16 +123,16 @@ func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 		return nil, errors.WithStack(err)
 	}
 
-	c.seCache.envs[sh.ID()] = sh
+	c.shCache.envs[sh.ID()] = sh
 
 	return sh, nil
 }
 
 func (c *sshClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
-	c.seCache.mutex.Lock()
-	defer c.seCache.mutex.Unlock()
+	c.shCache.mutex.Lock()
+	defer c.shCache.mutex.Unlock()
 
-	sh, ok := c.seCache.envs[id]
+	sh, ok := c.shCache.envs[id]
 	if !ok {
 		return nil, errors.Errorf("no locally cached value for %s", id)
 	}

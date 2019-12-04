@@ -87,12 +87,12 @@ func managerCreateScripting() cli.Command {
 			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client jasper.RemoteClient) interface{} {
 				harnessOpts, err := opts.Export()
 				if err != nil {
-					return &IDResponse{ID: client.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating process"))}
+					return &IDResponse{ID: client.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating scripting harness"))}
 				}
 
 				env, err := client.CreateScripting(ctx, harnessOpts)
 				if err != nil {
-					return &IDResponse{ID: harnessOpts.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating process"))}
+					return &IDResponse{ID: harnessOpts.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating scripting harness"))}
 				}
 				return &IDResponse{ID: env.ID(), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
