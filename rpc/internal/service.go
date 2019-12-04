@@ -704,7 +704,7 @@ func (s *jasperService) ScriptingHarnessBuild(ctx context.Context, args *Scripti
 				ExitCode: 1,
 			}}, nil
 	}
-	fmt.Print(path)
+
 	return &ScriptingHarnessBuildResponse{
 		Outcome: &OperationOutcome{
 			Success:  true,
