@@ -77,7 +77,7 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 }
 
 func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) (string, error) {
-	output := &writeCloser{}
+	output := &localBuffer{}
 
 	err := e.manager.CreateCommand(ctx).Directory(dir).RedirectErrorToOutput(true).
 		Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).

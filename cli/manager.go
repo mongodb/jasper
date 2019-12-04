@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/jasper"
@@ -83,8 +84,10 @@ func managerCreateScripting() cli.Command {
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
+			fmt.Println("HERE WE ARE")
 			opts := &ScriptingOptions{}
 			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client jasper.RemoteClient) interface{} {
+				fmt.Println("PROGRESS")
 				harnessOpts, err := opts.Export()
 				if err != nil {
 					return &IDResponse{ID: client.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating scripting harness"))}

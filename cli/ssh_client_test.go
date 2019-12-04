@@ -510,6 +510,20 @@ func TestSSHClient(t *testing.T) {
 			opts := options.WriteFile{Path: filepath.Join(buildDir(t), "write_file"), Content: []byte("foo")}
 			assert.Error(t, client.WriteFile(ctx, opts))
 		},
+		"ScriptingError": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+
+			opts := &options.ScriptingPython{
+				VirtualEnvPath: "build",
+				Packages:       []string{"pymongo"},
+			}
+
+			sh, err := client.CreateScripting(ctx, opts)
+			require.NoError(t, err)
+			require.NotNil(t, sh)
+			assert.NotZero(t, sh.ID())
+
+		},
+		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
 		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
