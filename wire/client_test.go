@@ -24,17 +24,37 @@ func TestWireManager(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.RemoteClient{
-		"Basic": func(ctx context.Context, t *testing.T) jasper.RemoteClient {
-			mngr, err := jasper.NewSynchronizedManager(false)
-			require.NoError(t, err)
+	factory := func(ctx context.Context, t *testing.T) jasper.RemoteClient {
+		mngr, err := jasper.NewSynchronizedManager(false)
+		require.NoError(t, err)
 
-			client, err := makeTestServiceAndClient(ctx, mngr)
-			require.NoError(t, err)
-			return client
+		client, err := makeTestServiceAndClient(ctx, mngr)
+		require.NoError(t, err)
+		return client
+	}
+
+	for _, modify := range []struct {
+		Name    string
+		Options testutil.OptsModify
+	}{
+		{
+			Name: "Blocking",
+			Options: func(opts *options.Create) {
+				opts.Implementation = options.ProcessImplementationBlocking
+			},
+		},
+		{
+			Name: "Basic",
+			Options: func(opts *options.Create) {
+				opts.Implementation = options.ProcessImplementationBasic
+			},
+		},
+		{
+			Name:    "Default",
+			Options: func(opts *options.Create) {},
 		},
 	} {
-		t.Run(mname, func(t *testing.T) {
+		t.Run(modify.Name, func(t *testing.T) {
 			for name, test := range map[string]func(context.Context, *testing.T, jasper.RemoteClient){
 				"ValidateFixture": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					assert.NotNil(t, ctx)
@@ -45,6 +65,8 @@ func TestWireManager(t *testing.T) {
 				},
 				"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+
 					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					info := proc.Info(ctx)
@@ -57,13 +79,17 @@ func TestWireManager(t *testing.T) {
 					assert.Len(t, all, 0)
 				},
 				"CreateProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					proc, err := client.CreateProcess(ctx, &options.Create{})
+					opts := &options.Create{}
+					modify.Options(opts)
+					proc, err := client.CreateProcess(ctx)
 					require.Error(t, err)
 					assert.Nil(t, proc)
 				},
 				"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					cctx, cancel := context.WithCancel(ctx)
-					created, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					created, err := createProcs(ctx, opts, client, 10)
 					require.NoError(t, err)
 					assert.Len(t, created, 10)
 					cancel()
@@ -72,7 +98,9 @@ func TestWireManager(t *testing.T) {
 					assert.Nil(t, output)
 				},
 				"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					procs, err := createProcs(ctx, testutil.SleepCreateOpts(20), client, 10)
+					opts := testutil.SleepCreateOpts(20)
+					modify.Options(opts)
+					procs, err := createProcs(ctx, opts, client, 10)
 					require.NoError(t, err)
 					assert.Len(t, procs, 10)
 
@@ -89,7 +117,9 @@ func TestWireManager(t *testing.T) {
 					assert.Len(t, procs, 0)
 				},
 				"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
 					_, err = proc.Wait(ctx)
@@ -108,7 +138,9 @@ func TestWireManager(t *testing.T) {
 					assert.Nil(t, proc)
 				},
 				"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
 					ret, err := client.Get(ctx, proc.ID())
@@ -121,7 +153,9 @@ func TestWireManager(t *testing.T) {
 					assert.Len(t, procs, 0)
 				},
 				"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					_, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					_, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
 					cctx, cancel := context.WithCancel(ctx)
@@ -132,7 +166,9 @@ func TestWireManager(t *testing.T) {
 					assert.Contains(t, err.Error(), "canceled")
 				},
 				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
 					proc.Tag("foo")
@@ -149,13 +185,17 @@ func TestWireManager(t *testing.T) {
 					if runtime.GOOS == "windows" {
 						t.Skip("the sleep tests don't block correctly on windows")
 					}
-
-					_, err := createProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
+					opts := testutil.SleepCreateOpts(100)
+					modify.Options(opts)
+					_, err := createProcs(ctx, opts, client, 10)
 					require.NoError(t, err)
 					assert.NoError(t, client.Close(ctx))
 				},
 				"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					_, err := createProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
+					opts := testutil.SleepCreateOpts(100)
+					modify.Options(opts)
+
+					_, err := createProcs(ctx, opts, client, 10)
 					require.NoError(t, err)
 
 					cctx, cancel := context.WithCancel(ctx)
@@ -190,6 +230,7 @@ func TestWireManager(t *testing.T) {
 				},
 				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					sameProc, err := client.Get(ctx, proc.ID())
@@ -204,6 +245,7 @@ func TestWireManager(t *testing.T) {
 				},
 				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					opts := testutil.SleepCreateOpts(20)
+					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					client.Clear(ctx)
@@ -214,10 +256,12 @@ func TestWireManager(t *testing.T) {
 				},
 				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					trueOpts := testutil.TrueCreateOpts()
+					modify.Options(trueOpts)
 					lsProc, err := client.CreateProcess(ctx, trueOpts)
 					require.NoError(t, err)
 
 					sleepOpts := testutil.SleepCreateOpts(20)
+					modify.Options(sleepOpts)
 					sleepProc, err := client.CreateProcess(ctx, sleepOpts)
 					require.NoError(t, err)
 
@@ -248,7 +292,9 @@ func TestWireManager(t *testing.T) {
 					assert.Contains(t, err.Error(), "cannot register")
 				},
 				"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					assert.NotNil(t, proc)
 					assert.NotZero(t, proc.ID())
@@ -259,7 +305,9 @@ func TestWireManager(t *testing.T) {
 					assert.Equal(t, proc.ID(), fetched.ID())
 				},
 				"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
-					proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(100))
+					opts := testutil.SleepCreateOpts(100)
+					modify.Options(opts)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					require.NotZero(t, proc.ID())
@@ -290,22 +338,42 @@ func TestWireProcess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for cname, makeProc := range map[string]jasper.ProcessConstructor{
-		"Basic": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-			mngr, err := jasper.NewSynchronizedManager(false)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
+	makeProc := func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		mngr, err := jasper.NewSynchronizedManager(false)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 
-			client, err := makeTestServiceAndClient(ctx, mngr)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
+		client, err := makeTestServiceAndClient(ctx, mngr)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 
-			return client.CreateProcess(ctx, opts)
+		return client.CreateProcess(ctx, opts)
+	}
+
+	for _, modify := range []struct {
+		Name    string
+		Options testutil.OptsModify
+	}{
+		{
+			Name: "Blocking",
+			Options: func(opts *options.Create) {
+				opts.Implementation = options.ProcessImplementationBlocking
+			},
+		},
+		{
+			Name: "Basic",
+			Options: func(opts *options.Create) {
+				opts.Implementation = options.ProcessImplementationBasic
+			},
+		},
+		{
+			Name:    "Default",
+			Options: func(opts *options.Create) {},
 		},
 	} {
-		t.Run(cname, func(t *testing.T) {
+		t.Run(modify.Name, func(t *testing.T) {
 			for name, testCase := range map[string]func(context.Context, *testing.T, *options.Create, jasper.ProcessConstructor){
 				"WithPopulatedArgsCommandCreationPasses": func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
 					assert.NotZero(t, opts.Args)
@@ -331,6 +399,7 @@ func TestWireProcess(t *testing.T) {
 					defer pcancel()
 					startAt := time.Now()
 					opts := testutil.SleepCreateOpts(20)
+					modify.Options(opts)
 					proc, err := makep(pctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -412,12 +481,14 @@ func TestWireProcess(t *testing.T) {
 				},
 				"RegisterSignalTriggerIDFailsWithInvalidTriggerID": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(3)
+					modify.Options(opts)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					assert.Error(t, proc.RegisterSignalTriggerID(ctx, jasper.SignalTriggerID(-1)))
 				},
 				"RegisterSignalTriggerIDPassesWithValidTriggerID": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(3)
+					modify.Options(opts)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					assert.NoError(t, proc.RegisterSignalTriggerID(ctx, jasper.CleanTerminationSignalTrigger))
@@ -464,6 +535,7 @@ func TestWireProcess(t *testing.T) {
 				},
 				"RespawningRunningProcessIsOK": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(2)
+					modify.Options(opts)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -476,6 +548,7 @@ func TestWireProcess(t *testing.T) {
 				},
 				"RespawnShowsConsistentStateValues": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(3)
+					modify.Options(opts)
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
@@ -489,24 +562,29 @@ func TestWireProcess(t *testing.T) {
 					require.NoError(t, err)
 					assert.True(t, proc.Complete(ctx))
 				},
-				"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-					proc, err := makep(ctx, testutil.TrueCreateOpts())
+				"WaitGivesSuccessfulExitCode": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
+					opts := testutil.TrueCreateOpts()
+					modify.Options(opts)
+					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					exitCode, err := proc.Wait(ctx)
 					assert.NoError(t, err)
 					assert.Equal(t, 0, exitCode)
 				},
-				"WaitGivesFailureExitCode": func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-					proc, err := makep(ctx, testutil.FalseCreateOpts())
+				"WaitGivesFailureExitCode": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
+					opts := testutil.FalseCreateOpts()
+					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					exitCode, err := proc.Wait(ctx)
 					require.Error(t, err)
 					assert.Equal(t, 1, exitCode)
 				},
-				"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-					proc, err := makep(ctx, testutil.SleepCreateOpts(100))
+				"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
+					opts := testutil.SleepCreateOpts(100)
+					modify.Options(opts)
+					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 					sig := syscall.SIGTERM
@@ -519,9 +597,11 @@ func TestWireProcess(t *testing.T) {
 						assert.Equal(t, int(sig), exitCode)
 					}
 				},
-				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
+				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					cctx, cancel := context.WithCancel(ctx)
-					proc, err := makep(ctx, testutil.SleepCreateOpts(100))
+					opts := testutil.SleepCreateOpts(100)
+					modify.Options(opts)
+					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 					require.NotNil(t, proc)
 
@@ -549,6 +629,7 @@ func TestWireProcess(t *testing.T) {
 				},
 				"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
 					opts := testutil.SleepCreateOpts(100)
+					modify.Options(opts)
 					opts.Timeout = time.Second
 					opts.TimeoutSecs = 1
 					proc, err := makep(ctx, opts)
@@ -581,10 +662,10 @@ func TestWireProcess(t *testing.T) {
 					defer cancel()
 
 					opts := &options.Create{Args: []string{"ls"}}
+					modify.Options(opts)
 					testCase(tctx, t, opts, makeProc)
 				})
 			}
 		})
 	}
-
 }
