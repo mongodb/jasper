@@ -201,7 +201,7 @@ func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*Operat
 	return &OperationOutcome{
 		Success:  true,
 		Text:     fmt.Sprintf("sending '%s' to '%s'", sig.Signal, sig.ProcessID),
-		ExitCode: int32(getProcInfoNoHang(ctx, proc).ExitCode),
+		ExitCode: getProcInfoNoHang(ctx, proc).ExitCode,
 	}, nil
 }
 

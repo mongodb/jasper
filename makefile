@@ -2,7 +2,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli rpc rest wire options mock testutil internal-executor
+packages := $(name) cli rpc rpc-internal rest wire options mock testutil internal-executor
 lintPackages := $(packages) mock testutil
 testPackages := $(packages) mock
 projectPath := github.com/mongodb/jasper
@@ -116,6 +116,9 @@ phony += lint $(buildDir) test coverage coverage-html
 
 clean:
 	rm -rf *.pb.go
+
+clean-results:
+	rm -rf $(buildDir)/output.*
 
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
