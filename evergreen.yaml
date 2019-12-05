@@ -10,14 +10,10 @@ ignore:
 #######################################
 variables:
   - &run-build
-    # runs a build operations. The task name in evergreen should
+    # runs a build operation. The task name in evergreen should
     # correspond to a make target for the build operation.
     name: test
     commands:
-      - command: git.get_project
-        type: system
-        params:
-          directory: gopath/src/github.com/mongodb/jasper
       - func: run-make
         vars: { target: "${task_name}" }
 
@@ -25,6 +21,11 @@ variables:
 #              Functions              #
 #######################################
 functions:
+  get-project:
+    command: git.get_project
+    type: system
+    params:
+      directory: gopath/src/github.com/mongodb/jasper
   run-make:
     command: subprocess.exec
     type: test
@@ -35,17 +36,16 @@ functions:
       add_expansions_to_env: true
       env:
         GOPATH: ${workdir}/gopath
-
-#######################################
-#                Tasks                #
-#######################################
-post:
-  - command: gotest.parse_files
+  parse-results:
+    command: gotest.parse_files
     type: setup
     params:
       files:
         - "gopath/src/github.com/mongodb/jasper/build/output.*"
 
+#######################################
+#                Tasks                #
+#######################################
 tasks:
   - <<: *run-build
     tags: ["test"]
@@ -119,9 +119,23 @@ task_groups:
   - name: lintGroup
     tasks: [ ".report"]
     max_hosts: 2
+    setup_group:
+      - func: get-project
+    setup_task:
+      - func: run-make
+        vars: { target: "clean-results" }
+    teardown_task:
+      - func: parse-results
   - name: testGroup
     tasks: [ ".test"]
     max_hosts: 2
+    setup_group:
+      - func: get-project
+    setup_task:
+      - func: run-make
+        vars: { target: "clean-results" }
+    teardown_task:
+      - func: parse-results
 
 #######################################
 #           Buildvariants             #

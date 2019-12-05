@@ -117,6 +117,9 @@ phony += lint $(buildDir) test coverage coverage-html
 clean:
 	rm -rf *.pb.go
 
+clean-results:
+	rm -rf $(buildDir)/output.*
+
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/mongodb/grip/
