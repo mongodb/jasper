@@ -75,9 +75,12 @@ tasks:
     tags: ["test"]
     name: test-wire
 
-  - <<: *run-build
+  - name: compile-base
     tags: ["legacy-check"]
-    name: compile-base
+    commands:
+      - func: get-project
+      - func: run-make
+        vars: { target: "${task_name}" }
 
   - <<: *run-build
     tags: ["report"]
