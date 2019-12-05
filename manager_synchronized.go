@@ -43,8 +43,6 @@ func (m *synchronizedProcessManager) ID() string {
 }
 
 func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
-	opts.Unsynchronized = false
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -96,7 +94,11 @@ func (m *synchronizedProcessManager) List(ctx context.Context, f options.Filter)
 	defer m.mu.RUnlock()
 
 	procs, err := m.manager.List(ctx, f)
-	return procs, errors.WithStack(err)
+	var syncedProcs []Process
+	for _, proc := range procs {
+		syncedProcs = append(syncedProcs, &synchronizedProcess{proc: proc})
+	}
+	return syncedProcs, errors.WithStack(err)
 }
 
 func (m *synchronizedProcessManager) Get(ctx context.Context, id string) (Process, error) {
@@ -104,7 +106,10 @@ func (m *synchronizedProcessManager) Get(ctx context.Context, id string) (Proces
 	defer m.mu.RUnlock()
 
 	proc, err := m.manager.Get(ctx, id)
-	return proc, errors.WithStack(err)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &synchronizedProcess{proc: proc}, errors.WithStack(err)
 }
 
 func (m *synchronizedProcessManager) Clear(ctx context.Context) {
@@ -126,5 +131,9 @@ func (m *synchronizedProcessManager) Group(ctx context.Context, name string) ([]
 	defer m.mu.RUnlock()
 
 	procs, err := m.manager.Group(ctx, name)
-	return procs, errors.WithStack(err)
+	var syncedProcs []Process
+	for _, proc := range procs {
+		syncedProcs = append(syncedProcs, &synchronizedProcess{proc: proc})
+	}
+	return syncedProcs, errors.WithStack(err)
 }

@@ -40,7 +40,7 @@ type Create struct {
 	Args             []string          `bson:"args" json:"args" yaml:"args"`
 	Environment      map[string]string `bson:"env,omitempty" json:"env,omitempty" yaml:"env,omitempty"`
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
-	Unsynchronized   bool              `bson:"unsynchronized" json:"unsynchronized" yaml:"unsynchronized"`
+	Synchronized     bool              `bson:"synchronized" json:"synchronized" yaml:"synchronized"`
 	Implementation   string            `bson:"implementation" json:"implementation" yaml:"implementation"`
 	WorkingDirectory string            `bson:"working_directory,omitempty" json:"working_directory,omitempty" yaml:"working_directory,omitempty"`
 	Output           Output            `bson:"output" json:"output" yaml:"output"`
@@ -107,7 +107,7 @@ func (opts *Create) Validate() error {
 	}
 
 	if opts.Implementation == "" {
-		opts.Implementation = ProcessImplementationBlocking
+		opts.Implementation = ProcessImplementationBasic
 	}
 
 	if err := opts.Output.Validate(); err != nil {

@@ -33,9 +33,8 @@ func NewProcess(ctx context.Context, opts *options.Create) (Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if opts.Unsynchronized {
+	if !opts.Synchronized {
 		return proc, nil
 	}
-
 	return &synchronizedProcess{proc: proc}, nil
 }

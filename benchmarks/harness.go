@@ -61,14 +61,14 @@ func procMap() map[string]func(context.Context, *options.Create) (jasper.Process
 			opts.Implementation = options.ProcessImplementationBlocking
 			return jasper.NewProcess(ctx, opts)
 		},
-		"BasicUnsynchronized": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		"BasicSynchronized": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			opts.Implementation = options.ProcessImplementationBasic
-			opts.Unsynchronized = true
+			opts.Synchronized = true
 			return jasper.NewProcess(ctx, opts)
 		},
-		"BlockingUnsynchronixed": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		"BlockingSynchronized": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			opts.Implementation = options.ProcessImplementationBlocking
-			opts.Unsynchronized = true
+			opts.Synchronized = true
 			return jasper.NewProcess(ctx, opts)
 		},
 	}
