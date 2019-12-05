@@ -81,7 +81,48 @@ tasks:
 
   - <<: *run-build
     tags: ["report"]
-    name: lint
+    name: lint-cli
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-internal-executor
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-mock
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-options
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-rest
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-rpc
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-rpc-internal
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-testutil
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-wire
+
+task_groups:
+
+  - name: lintGroup
+    tasks: [ ".report"]
+    max_hosts: 2
+  - name: testGroup
+    tasks: [ ".test"]
+    max_hosts: 2
 
 #######################################
 #           Buildvariants             #
@@ -99,8 +140,20 @@ buildvariants:
       - archlinux-test
       - archlinux-build
     tasks:
-      - name: ".test"
-      - name: ".report"
+      - name: "testGroup"
+
+  - name: lint
+    display_name: Lint (Arch Linux)
+    expansions:
+      DISABLE_COVERAGE: true
+      GOROOT: /opt/golang/go1.13
+      GO_BIN_PATH: /opt/golang/go1.13/bin/go
+      make_args: -k
+    run_on:
+      - archlinux-test
+      - archlinux-build
+    tasks: 
+      - name: "lintGroup"
 
   - name: ubuntu1604
     display_name: Ubuntu 16.04
@@ -113,7 +166,7 @@ buildvariants:
       - ubuntu1604-test
       - ubuntu1604-build
     tasks:
-      - name: ".test"
+      - name: "testGroup"
 
   - name: ubuntu1604-go1.9
     display_name: Ubuntu 16.04 (go1.9)
@@ -138,7 +191,7 @@ buildvariants:
     run_on:
       - macos-1014
     tasks:
-      - name: ".test"
+      - name: "testGroup"
 
   - name: windows
     display_name: Windows
@@ -157,4 +210,4 @@ buildvariants:
       GO_BIN_PATH: /cygdrive/c/golang/go1.11/bin/go
       make_args: -k
     tasks:
-      - name: ".test"
+      - name: "testGroup"
