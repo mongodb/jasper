@@ -116,7 +116,6 @@ tasks:
     name: lint-wire
 
 task_groups:
-
   - name: lintGroup
     tasks: [ ".report"]
     max_hosts: 2
