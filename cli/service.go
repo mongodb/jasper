@@ -245,7 +245,7 @@ func setupLogger(opts *options.Logger) error {
 // buildRunCommand builds the command arguments to run the Jasper service with
 // the flags set in the cli.Context.
 func buildRunCommand(c *cli.Context, serviceType string) []string {
-	args := unparseFlagSet(c)
+	args := unparseFlagSet(c, serviceType)
 	subCmd := []string{JasperCommand, ServiceCommand, RunCommand, serviceType}
 	return append(subCmd, args...)
 }
