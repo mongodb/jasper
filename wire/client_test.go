@@ -80,7 +80,7 @@ func TestWireManager(t *testing.T) {
 				"CreateProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
 					opts := &options.Create{}
 					modify.Options(opts)
-					proc, err := client.CreateProcess(ctx)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.Error(t, err)
 					assert.Nil(t, proc)
 				},

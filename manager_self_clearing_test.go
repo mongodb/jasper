@@ -43,20 +43,20 @@ func TestSelfClearingManager(t *testing.T) {
 	} {
 		t.Run(mname, func(t *testing.T) {
 
-			for name, test := range map[string]func(context.Context, *testing.T, *selfClearingProcessManager, optsModify){
-				"SucceedsWhenFree": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod optsModify) {
+			for name, test := range map[string]func(context.Context, *testing.T, *selfClearingProcessManager, testutil.OptsModify){
+				"SucceedsWhenFree": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
 					proc, err := createFunc(ctx, manager, t, testutil.TrueCreateOpts())
 					assert.NoError(t, err)
 					assert.NotNil(t, proc)
 				},
-				"ErrorsWhenFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod optsModify) {
+				"ErrorsWhenFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
 					fillUp(ctx, t, manager, manager.maxProcs)
 
 					sleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
 					assert.Error(t, err)
 					assert.Nil(t, sleep)
 				},
-				"PartiallySucceedsWhenAlmostFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod optsModify) {
+				"PartiallySucceedsWhenAlmostFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
 					fillUp(ctx, t, manager, manager.maxProcs-1)
 					firstSleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
 					assert.NoError(t, err)
@@ -65,7 +65,7 @@ func TestSelfClearingManager(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, secondSleep)
 				},
-				"InitialFailureIsResolvedByWaiting": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod optsModify) {
+				"InitialFailureIsResolvedByWaiting": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
 					fillUp(ctx, t, manager, manager.maxProcs)
 					sleepOpts := testutil.SleepCreateOpts(100)
 					sleepProc, err := createFunc(ctx, manager, t, sleepOpts)
