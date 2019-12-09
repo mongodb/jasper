@@ -1,4 +1,4 @@
-package rest
+package remote
 
 import (
 	"context"
@@ -24,7 +24,7 @@ outerRetry:
 			if err != nil {
 				return nil, -1, errors.WithStack(err)
 			}
-			srv := NewManagerService(synchronizedManager)
+			srv := NewRestService(synchronizedManager)
 			app := srv.App(ctx)
 			app.SetPrefix("jasper")
 

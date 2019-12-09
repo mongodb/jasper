@@ -13,6 +13,7 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
 	context "golang.org/x/net/context"
@@ -84,6 +85,7 @@ func getProcInfoNoHang(ctx context.Context, p jasper.Process) *ProcessInfo {
 type jasperService struct {
 	hostID     string
 	manager    jasper.Manager
+	scripting  scripting.HarnessCache
 	cache      *lru.Cache
 	cacheOpts  options.Cache
 	cacheMutex sync.RWMutex
@@ -552,7 +554,7 @@ func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *Script
 		return nil, errors.Wrap(err, "problem converting options")
 	}
 
-	se, err := s.manager.CreateScripting(ctx, xopts)
+	se, err := s.scripting.Create(s.manager, xopts)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem generating scripting environment")
 	}
@@ -562,7 +564,7 @@ func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *Script
 	}, nil
 }
 func (s *jasperService) ScriptingHarnessCheck(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
-	se, err := s.manager.GetScripting(ctx, id.Id)
+	se, err := s.scripting.Get(id.Id)
 	if err != nil {
 		return &OperationOutcome{
 			Success:  false,
@@ -579,7 +581,7 @@ func (s *jasperService) ScriptingHarnessCheck(ctx context.Context, id *Scripting
 }
 
 func (s *jasperService) ScriptingHarnessSetup(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
-	se, err := s.manager.GetScripting(ctx, id.Id)
+	se, err := s.scripting.Get(id.Id)
 	if err != nil {
 		return &OperationOutcome{
 			Success:  false,
@@ -606,7 +608,7 @@ func (s *jasperService) ScriptingHarnessSetup(ctx context.Context, id *Scripting
 }
 
 func (s *jasperService) ScriptingHarnessCleanup(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
-	se, err := s.manager.GetScripting(ctx, id.Id)
+	se, err := s.scripting.Get(id.Id)
 	if err != nil {
 		return &OperationOutcome{
 			Success:  false,
@@ -633,7 +635,7 @@ func (s *jasperService) ScriptingHarnessCleanup(ctx context.Context, id *Scripti
 }
 
 func (s *jasperService) ScriptingHarnessRun(ctx context.Context, args *ScriptingHarnessRunArgs) (*OperationOutcome, error) {
-	se, err := s.manager.GetScripting(ctx, args.Id)
+	se, err := s.scripting.Get(args.Id)
 	if err != nil {
 		return &OperationOutcome{
 			Success:  false,
@@ -659,7 +661,7 @@ func (s *jasperService) ScriptingHarnessRun(ctx context.Context, args *Scripting
 }
 
 func (s *jasperService) ScriptingHarnessRunScript(ctx context.Context, args *ScriptingHarnessRunScriptArgs) (*OperationOutcome, error) {
-	se, err := s.manager.GetScripting(ctx, args.Id)
+	se, err := s.scripting.Get(args.Id)
 	if err != nil {
 		return &OperationOutcome{
 			Success:  false,
@@ -685,7 +687,7 @@ func (s *jasperService) ScriptingHarnessRunScript(ctx context.Context, args *Scr
 }
 
 func (s *jasperService) ScriptingHarnessBuild(ctx context.Context, args *ScriptingHarnessBuildArgs) (*ScriptingHarnessBuildResponse, error) {
-	se, err := s.manager.GetScripting(ctx, args.Id)
+	se, err := s.scripting.Get(args.Id)
 	if err != nil {
 		return &ScriptingHarnessBuildResponse{
 			Outcome: &OperationOutcome{

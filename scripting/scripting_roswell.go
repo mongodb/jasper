@@ -1,4 +1,4 @@
-package jasper
+package scripting
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
@@ -17,7 +18,7 @@ type roswellEnvironment struct {
 
 	isConfigured bool
 	cachedHash   string
-	manager      Manager
+	manager      jasper.Manager
 }
 
 func (e *roswellEnvironment) ID() string { e.cachedHash = e.opts.ID(); return e.cachedHash }
@@ -86,7 +87,7 @@ func (e *roswellEnvironment) Build(ctx context.Context, dir string, args []strin
 
 func (e *roswellEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
-	case RemoteClient:
+	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Path).Run(ctx),
 			"problem removing remote roswell environment '%s'", e.opts.Path)
 	default:

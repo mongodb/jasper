@@ -1,9 +1,8 @@
-package wire
+package remote
 
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/evergreen-ci/mrpc/shell"
@@ -181,10 +180,4 @@ func (s *service) managerWriteFile(ctx context.Context, w io.Writer, msg mongowi
 	}
 
 	shell.WriteOKResponse(ctx, w, WriteFileCommand)
-}
-
-func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo {
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-	defer cancel()
-	return p.Info(ctx)
 }

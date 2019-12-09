@@ -1,4 +1,4 @@
-package rest
+package remote
 
 import (
 	"bytes"
@@ -16,13 +16,14 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 	"github.com/tychoish/bond"
 )
 
-// NewClient creates a REST client that connecst to the given address
+// NewRestClient creates a REST client that connecst to the given address
 // running the Jasper REST service.
-func NewClient(addr net.Addr) jasper.RemoteClient {
+func NewRestClient(addr net.Addr) Manager {
 	return &restClient{
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr),
 		client: bond.GetHTTPClient(),
@@ -135,7 +136,7 @@ func (c *restClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
-func (c *restClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
+func (c *restClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating input")
 	}
@@ -165,7 +166,7 @@ func (c *restClient) CreateScripting(ctx context.Context, opts options.Scripting
 	}, nil
 }
 
-func (c *restClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
+func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/scripting/%s", id), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "request returned error")

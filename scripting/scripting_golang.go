@@ -1,4 +1,4 @@
-package jasper
+package scripting
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
@@ -17,7 +18,7 @@ type golangEnvironment struct {
 
 	isConfigured bool
 	cachedHash   string
-	manager      Manager
+	manager      jasper.Manager
 }
 
 func (e *golangEnvironment) ID() string { e.cachedHash = e.opts.ID(); return e.cachedHash }
@@ -113,7 +114,7 @@ func (e *golangEnvironment) RunScript(ctx context.Context, script string) error 
 
 func (e *golangEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
-	case RemoteClient:
+	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Gopath).Run(ctx),
 			"problem removing remote golang environment '%s'", e.opts.Gopath)
 	default:

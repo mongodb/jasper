@@ -11,7 +11,10 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/remote"
 	internal "github.com/mongodb/jasper/rpc/internal"
+	"github.com/mongodb/jasper/scripting"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -19,7 +22,7 @@ import (
 
 type rpcClient struct {
 	client       internal.JasperProcessManagerClient
-	clientCloser jasper.CloseFunc
+	clientCloser util.CloseFunc
 }
 
 // NewClient creates a connection to the RPC service with the specified address
@@ -27,7 +30,7 @@ type rpcClient struct {
 // TLS connection with the service; otherwise, it will establish an insecure
 // connection. The caller is responsible for closing the connection using the
 // returned jasper.CloseFunc.
-func NewClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (jasper.RemoteClient, error) {
+func NewClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (remote.Manager, error) {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
@@ -54,7 +57,7 @@ func NewClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials)
 // be read from the file given by filePath if the filePath is non-empty. The
 // credentials file should contain the JSON-encoded bytes from
 // (*Credentials).Export().
-func NewClientWithFile(ctx context.Context, addr net.Addr, filePath string) (jasper.RemoteClient, error) {
+func NewClientWithFile(ctx context.Context, addr net.Addr, filePath string) (remote.Manager, error) {
 	var creds *certdepot.Credentials
 	if filePath != "" {
 		var err error
@@ -68,7 +71,7 @@ func NewClientWithFile(ctx context.Context, addr net.Addr, filePath string) (jas
 }
 
 // newRPCClient is a constructor for an RPC client.
-func newRPCClient(cc *grpc.ClientConn) jasper.RemoteClient {
+func newRPCClient(cc *grpc.ClientConn) remote.Manager {
 	return &rpcClient{
 		client:       internal.NewJasperProcessManagerClient(cc),
 		clientCloser: cc.Close,
@@ -96,7 +99,7 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
-func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (jasper.ScriptingHarness, error) {
+func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
 	seid, err := c.client.ScriptingHarnessCreate(ctx, internal.ConvertScriptingOptions(opts))
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -105,7 +108,7 @@ func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 	return &rpcScripting{client: c.client, id: seid.Id}, nil
 }
 
-func (c *rpcClient) GetScripting(ctx context.Context, id string) (jasper.ScriptingHarness, error) {
+func (c *rpcClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
 	resp, err := c.client.ScriptingHarnessCheck(ctx, &internal.ScriptingHarnessID{Id: id})
 	if err != nil {
 		return nil, errors.WithStack(err)

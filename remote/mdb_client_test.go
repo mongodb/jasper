@@ -1,4 +1,4 @@
-package wire
+package remote
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func TestWireManager(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	factory := func(ctx context.Context, t *testing.T) jasper.RemoteClient {
+	factory := func(ctx context.Context, t *testing.T) Manager {
 		mngr, err := jasper.NewSynchronizedManager(false)
 		require.NoError(t, err)
 
@@ -54,15 +54,15 @@ func TestWireManager(t *testing.T) {
 		},
 	} {
 		t.Run(modify.Name, func(t *testing.T) {
-			for name, test := range map[string]func(context.Context, *testing.T, jasper.RemoteClient){
-				"ValidateFixture": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+			for name, test := range map[string]func(context.Context, *testing.T, Manager){
+				"ValidateFixture": func(ctx context.Context, t *testing.T, client Manager) {
 					assert.NotNil(t, ctx)
 					assert.NotNil(t, client)
 				},
-				"IDReturnsNonempty": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"IDReturnsNonempty": func(ctx context.Context, t *testing.T, client Manager) {
 					assert.NotEmpty(t, client.ID())
 				},
-				"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 
@@ -72,19 +72,19 @@ func TestWireManager(t *testing.T) {
 					require.NotEmpty(t, info.Options.Environment)
 					assert.Equal(t, client.ID(), info.Options.Environment[jasper.ManagerEnvironID])
 				},
-				"ListDoesNotErrorWhenEmpty": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ListDoesNotErrorWhenEmpty": func(ctx context.Context, t *testing.T, client Manager) {
 					all, err := client.List(ctx, options.All)
 					require.NoError(t, err)
 					assert.Len(t, all, 0)
 				},
-				"CreateProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"CreateProcessFails": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := &options.Create{}
 					modify.Options(opts)
-					proc, err := client.CreateProcess(ctx)
+					proc, err := client.CreateProcess(ctx, opts)
 					require.Error(t, err)
 					assert.Nil(t, proc)
 				},
-				"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client Manager) {
 					cctx, cancel := context.WithCancel(ctx)
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
@@ -96,7 +96,7 @@ func TestWireManager(t *testing.T) {
 					require.Error(t, err)
 					assert.Nil(t, output)
 				},
-				"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.SleepCreateOpts(20)
 					modify.Options(opts)
 					procs, err := createProcs(ctx, opts, client, 10)
@@ -115,7 +115,7 @@ func TestWireManager(t *testing.T) {
 					require.NoError(t, err)
 					assert.Len(t, procs, 0)
 				},
-				"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -131,12 +131,12 @@ func TestWireManager(t *testing.T) {
 						assert.Equal(t, listOut[0].ID(), proc.ID())
 					}
 				},
-				"GetMethodErrorsWithNoResponse": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GetMethodErrorsWithNoResponse": func(ctx context.Context, t *testing.T, client Manager) {
 					proc, err := client.Get(ctx, "foo")
 					require.Error(t, err)
 					assert.Nil(t, proc)
 				},
-				"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -146,12 +146,12 @@ func TestWireManager(t *testing.T) {
 					require.NoError(t, err)
 					assert.Equal(t, ret.ID(), proc.ID())
 				},
-				"GroupDoesNotErrorWithoutResults": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GroupDoesNotErrorWithoutResults": func(ctx context.Context, t *testing.T, client Manager) {
 					procs, err := client.Group(ctx, "foo")
 					require.NoError(t, err)
 					assert.Len(t, procs, 0)
 				},
-				"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 					_, err := client.CreateProcess(ctx, opts)
@@ -164,7 +164,7 @@ func TestWireManager(t *testing.T) {
 					assert.Len(t, procs, 0)
 					assert.Contains(t, err.Error(), "canceled")
 				},
-				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -177,10 +177,10 @@ func TestWireManager(t *testing.T) {
 					require.Len(t, procs, 1)
 					assert.Equal(t, procs[0].ID(), proc.ID())
 				},
-				"CloseEmptyManagerNoops": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"CloseEmptyManagerNoops": func(ctx context.Context, t *testing.T, client Manager) {
 					require.NoError(t, client.Close(ctx))
 				},
-				"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 					if runtime.GOOS == "windows" {
 						t.Skip("the sleep tests don't block correctly on windows")
 					}
@@ -190,7 +190,7 @@ func TestWireManager(t *testing.T) {
 					require.NoError(t, err)
 					assert.NoError(t, client.Close(ctx))
 				},
-				"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.SleepCreateOpts(100)
 					modify.Options(opts)
 
@@ -204,7 +204,7 @@ func TestWireManager(t *testing.T) {
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "canceled")
 				},
-				"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 					procs, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 					for _, p := range procs {
 						_, err = p.Wait(ctx)
@@ -214,7 +214,7 @@ func TestWireManager(t *testing.T) {
 					require.NoError(t, err)
 					assert.NoError(t, client.Close(ctx))
 				},
-				"WaitingOnNonExistentProcessErrors": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"WaitingOnNonExistentProcessErrors": func(ctx context.Context, t *testing.T, client Manager) {
 					proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 					require.NoError(t, err)
 
@@ -227,7 +227,7 @@ func TestWireManager(t *testing.T) {
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "could not get process")
 				},
-				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -242,7 +242,7 @@ func TestWireManager(t *testing.T) {
 					require.Error(t, err)
 					assert.Nil(t, nilProc)
 				},
-				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.SleepCreateOpts(20)
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -253,7 +253,7 @@ func TestWireManager(t *testing.T) {
 					assert.Equal(t, proc.ID(), sameProc.ID())
 					require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up
 				},
-				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 					trueOpts := testutil.TrueCreateOpts()
 					modify.Options(trueOpts)
 					lsProc, err := client.CreateProcess(ctx, trueOpts)
@@ -278,19 +278,19 @@ func TestWireManager(t *testing.T) {
 					assert.Nil(t, nilProc)
 					require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
 				},
-				// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
+				// "": func(ctx context.Context, t *testing.T, client Manager) {},
 
 				///////////////////////////////////
 				//
 				// The following test cases are added
 				// specifically for the MongoDB wire protocol case
 
-				"RegisterIsDisabled": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"RegisterIsDisabled": func(ctx context.Context, t *testing.T, client Manager) {
 					err := client.Register(ctx, nil)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "cannot register")
 				},
-				"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.TrueCreateOpts()
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -303,7 +303,7 @@ func TestWireManager(t *testing.T) {
 					assert.NotNil(t, fetched)
 					assert.Equal(t, proc.ID(), fetched.ID())
 				},
-				"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+				"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, client Manager) {
 					opts := testutil.SleepCreateOpts(100)
 					modify.Options(opts)
 					proc, err := client.CreateProcess(ctx, opts)
@@ -321,7 +321,7 @@ func TestWireManager(t *testing.T) {
 						assert.Equal(t, 9, exitCode)
 					}
 				},
-				// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
+				// "": func(ctx context.Context, t *testing.T, client Manager) {},
 			} {
 				t.Run(name, func(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)

@@ -1,4 +1,4 @@
-package wire
+package remote
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 )
 
@@ -27,7 +28,7 @@ const (
 // NewClient returns a remote client for connection to a MongoDB wire protocol
 // service. reqTimeout specifies the timeout for a request, or uses a default
 // timeout if zero.
-func NewClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) (jasper.RemoteClient, error) {
+func NewClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) (Manager, error) {
 	dialer := net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
@@ -86,11 +87,11 @@ func (c *client) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
 }
 
-func (c *client) CreateScripting(_ context.Context, _ options.ScriptingHarness) (jasper.ScriptingHarness, error) {
+func (c *client) CreateScripting(_ context.Context, _ options.ScriptingHarness) (scripting.Harness, error) {
 	return nil, errors.New("scripting environment is not supported")
 }
 
-func (c *client) GetScripting(_ context.Context, _ string) (jasper.ScriptingHarness, error) {
+func (c *client) GetScripting(_ context.Context, _ string) (scripting.Harness, error) {
 	return nil, errors.New("scripting environment is not supported")
 }
 

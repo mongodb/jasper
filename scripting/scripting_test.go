@@ -1,4 +1,4 @@
-package jasper
+package scripting
 
 import (
 	"context"

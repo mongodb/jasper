@@ -1,4 +1,4 @@
-package wire
+package remote
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
 )
@@ -31,7 +32,7 @@ type service struct {
 // StartService wraps an existing Jasper manager in a mongo wire protocol
 // service and starts it. The caller is responsible for closing the connection
 // using the returned jasper.CloseFunc.
-func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (jasper.CloseFunc, error) { //nolint: interfacer
+func StartService(ctx context.Context, m jasper.Manager, addr net.Addr) (util.CloseFunc, error) { //nolint: interfacer
 	host, p, err := net.SplitHostPort(addr.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid address")

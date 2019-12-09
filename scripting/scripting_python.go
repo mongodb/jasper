@@ -1,4 +1,4 @@
-package jasper
+package scripting
 
 import (
 	"bufio"
@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -18,7 +20,7 @@ type pythonEnvironment struct {
 
 	isConfigured bool
 	cachedHash   string
-	manager      Manager
+	manager      jasper.Manager
 }
 
 func (e *pythonEnvironment) ID() string { e.cachedHash = e.opts.ID(); return e.cachedHash }
@@ -77,7 +79,7 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 }
 
 func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) (string, error) {
-	output := &localBuffer{}
+	output := &util.LocalBuffer{}
 
 	err := e.manager.CreateCommand(ctx).Directory(dir).RedirectErrorToOutput(true).
 		Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).
@@ -102,7 +104,7 @@ func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string
 
 func (e *pythonEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
-	case RemoteClient:
+	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.VirtualEnvPath).Run(ctx),
 			"problem removing remote python environment '%s'", e.opts.VirtualEnvPath)
 	default:

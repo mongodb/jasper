@@ -1,4 +1,4 @@
-package wire
+package remote
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func makeTestServiceAndClient(ctx context.Context, mngr jasper.Manager) (jasper.RemoteClient, error) {
+func makeTestServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
 	if err != nil {
 		return nil, errors.WithStack(err)

@@ -11,6 +11,7 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/rpc/internal"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -28,7 +29,7 @@ func AttachService(ctx context.Context, manager jasper.Manager, s *grpc.Server) 
 // a secure TLS connection with clients; otherwise, it will start an insecure
 // service. The caller is responsible for closing the connection using the
 // returned jasper.CloseFunc.
-func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *certdepot.Credentials) (jasper.CloseFunc, error) {
+func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *certdepot.Credentials) (util.CloseFunc, error) {
 	lis, err := net.Listen(addr.Network(), addr.String())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error listening on %s", addr.String())
@@ -65,7 +66,7 @@ func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, cr
 // read from the file given by filePath if the filePath is non-empty. The
 // credentials file should contain the JSON-encoded bytes from
 // (*Credentials).Export().
-func StartServiceWithFile(ctx context.Context, manager jasper.Manager, addr net.Addr, filePath string) (jasper.CloseFunc, error) {
+func StartServiceWithFile(ctx context.Context, manager jasper.Manager, addr net.Addr, filePath string) (util.CloseFunc, error) {
 	var creds *certdepot.Credentials
 	if filePath != "" {
 		var err error

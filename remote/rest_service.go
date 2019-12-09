@@ -1,4 +1,4 @@
-package rest
+package remote
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 	"github.com/tychoish/lru"
 )
@@ -26,6 +27,7 @@ import (
 type Service struct {
 	hostID     string
 	manager    jasper.Manager
+	harnesses  scripting.HarnessCache
 	cache      *lru.Cache
 	cacheOpts  options.Cache
 	cacheMutex sync.RWMutex
@@ -35,7 +37,7 @@ type Service struct {
 // manager. You must access the application and routes via the App()
 // method separately. The constructor wraps basic managers with a
 // manager implementation that does locking.
-func NewManagerService(m jasper.Manager) *Service {
+func NewRestService(m jasper.Manager) *Service {
 	return &Service{
 		manager: m,
 	}
@@ -783,7 +785,7 @@ func (s *Service) scriptingCreate(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	se, err := s.manager.CreateScripting(r.Context(), seopt)
+	se, err := s.harnesses.Create(s.manager, seopt)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -800,9 +802,7 @@ func (s *Service) scriptingCreate(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) scriptingCheck(rw http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	_, err := s.manager.GetScripting(ctx, gimlet.GetVars(r)["id"])
+	_, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -817,7 +817,7 @@ func (s *Service) scriptingCheck(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) scriptingSetup(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	se, err := s.manager.GetScripting(ctx, gimlet.GetVars(r)["id"])
+	se, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -840,7 +840,7 @@ func (s *Service) scriptingSetup(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) scriptingRun(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	se, err := s.manager.GetScripting(ctx, gimlet.GetVars(r)["id"])
+	se, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -874,7 +874,7 @@ func (s *Service) scriptingRun(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) scriptingRunScript(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	se, err := s.manager.GetScripting(ctx, gimlet.GetVars(r)["id"])
+	se, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -906,7 +906,7 @@ func (s *Service) scriptingRunScript(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) scriptingBuild(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	se, err := s.manager.GetScripting(ctx, gimlet.GetVars(r)["id"])
+	se, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
@@ -945,7 +945,7 @@ func (s *Service) scriptingBuild(rw http.ResponseWriter, r *http.Request) {
 func (s *Service) scriptingCleanup(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	se, err := s.manager.GetScripting(ctx, gimlet.GetVars(r)["id"])
+	se, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,
