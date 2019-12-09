@@ -10,7 +10,7 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/rpc"
+	"github.com/mongodb/jasper/remote"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -140,7 +140,7 @@ func newRPCService(ctx context.Context, host string, port int, manager jasper.Ma
 		return nil, errors.Wrap(err, "failed to resolve RPC address")
 	}
 
-	closeService, err := rpc.StartServiceWithFile(ctx, manager, addr, credsFilePath)
+	closeService, err := remote.StartRPCServiceWithFile(ctx, manager, addr, credsFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error starting RPC service")
 	}

@@ -1,4 +1,4 @@
-package rpc
+package remote
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/mongodb/grip/logging"
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/rpc/internal"
+	"github.com/mongodb/jasper/remote/internal"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
@@ -24,12 +24,12 @@ func AttachService(ctx context.Context, manager jasper.Manager, s *grpc.Server) 
 	return errors.WithStack(internal.AttachService(ctx, manager, s))
 }
 
-// StartService starts an RPC server with the specified address addr around the
+// StartRPCService starts an RPC server with the specified address addr around the
 // given manager. If creds is non-nil, the credentials will be used to establish
 // a secure TLS connection with clients; otherwise, it will start an insecure
 // service. The caller is responsible for closing the connection using the
 // returned jasper.CloseFunc.
-func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *certdepot.Credentials) (util.CloseFunc, error) {
+func StartRPCService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *certdepot.Credentials) (util.CloseFunc, error) {
 	lis, err := net.Listen(addr.Network(), addr.String())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error listening on %s", addr.String())
@@ -62,11 +62,11 @@ func StartService(ctx context.Context, manager jasper.Manager, addr net.Addr, cr
 	return func() error { service.Stop(); cancel(); return nil }, nil
 }
 
-// StartServiceWithFile is the same as StartService, but the credentials will be
+// StartRPCServiceWithFile is the same as StartService, but the credentials will be
 // read from the file given by filePath if the filePath is non-empty. The
 // credentials file should contain the JSON-encoded bytes from
 // (*Credentials).Export().
-func StartServiceWithFile(ctx context.Context, manager jasper.Manager, addr net.Addr, filePath string) (util.CloseFunc, error) {
+func StartRPCServiceWithFile(ctx context.Context, manager jasper.Manager, addr net.Addr, filePath string) (util.CloseFunc, error) {
 	var creds *certdepot.Credentials
 	if filePath != "" {
 		var err error
@@ -76,5 +76,5 @@ func StartServiceWithFile(ctx context.Context, manager jasper.Manager, addr net.
 		}
 	}
 
-	return StartService(ctx, manager, addr, creds)
+	return StartRPCService(ctx, manager, addr, creds)
 }

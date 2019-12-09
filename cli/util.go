@@ -17,7 +17,6 @@ import (
 	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/remote"
-	"github.com/mongodb/jasper/rpc"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -112,7 +111,7 @@ func newRemoteClient(ctx context.Context, service, host string, port int, credsF
 	if service == RESTService {
 		return remote.NewRestClient(addr), nil
 	} else if service == RPCService {
-		return rpc.NewClientWithFile(ctx, addr, credsFilePath)
+		return remote.NewRPCClientWithFile(ctx, addr, credsFilePath)
 	}
 	return nil, errors.Errorf("unrecognized service type '%s'", service)
 }

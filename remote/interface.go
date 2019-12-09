@@ -8,7 +8,7 @@ import (
 	"github.com/mongodb/jasper/scripting"
 )
 
-// RemoteClient provides an interface to access all functionality from a Jasper
+// Manager provides an interface to access all functionality from a Jasper
 // service. It includes an interface to interact with Jasper Managers and
 // Processes remotely as well as access to remote-specific functionality.
 type Manager interface {

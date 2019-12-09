@@ -1,4 +1,4 @@
-package rpc
+package remote
 
 import (
 	"context"
@@ -11,8 +11,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/remote"
-	internal "github.com/mongodb/jasper/rpc/internal"
+	internal "github.com/mongodb/jasper/remote/internal"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
@@ -30,7 +29,7 @@ type rpcClient struct {
 // TLS connection with the service; otherwise, it will establish an insecure
 // connection. The caller is responsible for closing the connection using the
 // returned jasper.CloseFunc.
-func NewClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (remote.Manager, error) {
+func NewRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (Manager, error) {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
@@ -57,7 +56,7 @@ func NewClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials)
 // be read from the file given by filePath if the filePath is non-empty. The
 // credentials file should contain the JSON-encoded bytes from
 // (*Credentials).Export().
-func NewClientWithFile(ctx context.Context, addr net.Addr, filePath string) (remote.Manager, error) {
+func NewRPCClientWithFile(ctx context.Context, addr net.Addr, filePath string) (Manager, error) {
 	var creds *certdepot.Credentials
 	if filePath != "" {
 		var err error
@@ -67,11 +66,11 @@ func NewClientWithFile(ctx context.Context, addr net.Addr, filePath string) (rem
 		}
 	}
 
-	return NewClient(ctx, addr, creds)
+	return NewRPCClient(ctx, addr, creds)
 }
 
 // newRPCClient is a constructor for an RPC client.
-func newRPCClient(cc *grpc.ClientConn) remote.Manager {
+func newRPCClient(cc *grpc.ClientConn) Manager {
 	return &rpcClient{
 		client:       internal.NewJasperProcessManagerClient(cc),
 		clientCloser: cc.Close,

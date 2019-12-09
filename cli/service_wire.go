@@ -120,7 +120,7 @@ func (d *wireDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
 		return nil, errors.Wrap(err, "failed to resolve wire address")
 	}
 
-	closeService, err := remote.StartService(ctx, d.Manager, addr)
+	closeService, err := remote.StartMDBService(ctx, d.Manager, addr)
 	if err != nil {
 		return nil, errors.Wrap(err, "error starting wire service")
 	}
