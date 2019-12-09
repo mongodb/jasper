@@ -31,13 +31,13 @@ func TestRPCClient(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for setupMethod, makeTestServiceAndClient := range map[string]func(ctx context.Context, mngr jasper.Manager) (jasper.RemoteClient, error){
+	for setupMethod, makeTestServiceAndClient := range map[string]func(ctx context.Context, mngr jasper.Manager) (Manager, error){
 		"Insecure": makeInsecureServiceAndClient,
 		"TLS":      makeTLSServiceAndClient,
 	} {
 		t.Run(setupMethod, func(t *testing.T) {
-			for mname, factory := range map[string]func(ctx context.Context, t *testing.T) jasper.RemoteClient{
-				"Basic": func(ctx context.Context, t *testing.T) jasper.RemoteClient {
+			for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
+				"Basic": func(ctx context.Context, t *testing.T) Manager {
 					mngr, err := jasper.NewSynchronizedManager(false)
 					require.NoError(t, err)
 
@@ -47,15 +47,15 @@ func TestRPCClient(t *testing.T) {
 				},
 			} {
 				t.Run(mname, func(t *testing.T) {
-					for name, test := range map[string]func(context.Context, *testing.T, jasper.RemoteClient){
-						"ValidateFixture": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+					for name, test := range map[string]func(context.Context, *testing.T, Manager){
+						"ValidateFixture": func(ctx context.Context, t *testing.T, client Manager) {
 							assert.NotNil(t, ctx)
 							assert.NotNil(t, client)
 						},
-						"IDReturnsNonempty": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"IDReturnsNonempty": func(ctx context.Context, t *testing.T, client Manager) {
 							assert.NotEmpty(t, client.ID())
 						},
-						"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ProcEnvVarMatchesManagerID": func(ctx context.Context, t *testing.T, client Manager) {
 							opts := testutil.TrueCreateOpts()
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
@@ -63,17 +63,17 @@ func TestRPCClient(t *testing.T) {
 							require.NotEmpty(t, info.Options.Environment)
 							assert.Equal(t, client.ID(), info.Options.Environment[jasper.ManagerEnvironID])
 						},
-						"ListDoesNotErrorWhenEmpty": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ListDoesNotErrorWhenEmpty": func(ctx context.Context, t *testing.T, client Manager) {
 							all, err := client.List(ctx, options.All)
 							require.NoError(t, err)
 							assert.Len(t, all, 0)
 						},
-						"CreateProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"CreateProcessFails": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, &options.Create{})
 							require.Error(t, err)
 							assert.Nil(t, proc)
 						},
-						"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ListAllReturnsErrorWithCanceledContext": func(ctx context.Context, t *testing.T, client Manager) {
 							cctx, cancel := context.WithCancel(ctx)
 							created, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestRPCClient(t *testing.T) {
 							require.Error(t, err)
 							assert.Nil(t, output)
 						},
-						"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"LongRunningOperationsAreListedAsRunning": func(ctx context.Context, t *testing.T, client Manager) {
 							procs, err := createProcs(ctx, testutil.SleepCreateOpts(20), client, 10)
 							require.NoError(t, err)
 							assert.Len(t, procs, 10)
@@ -100,7 +100,7 @@ func TestRPCClient(t *testing.T) {
 							require.NoError(t, err)
 							assert.Len(t, procs, 0)
 						},
-						"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ListReturnsOneSuccessfulCommand": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
@@ -114,12 +114,12 @@ func TestRPCClient(t *testing.T) {
 								assert.Equal(t, listOut[0].ID(), proc.ID())
 							}
 						},
-						"GetMethodErrorsWithNoResponse": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GetMethodErrorsWithNoResponse": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.Get(ctx, "foo")
 							require.Error(t, err)
 							assert.Nil(t, proc)
 						},
-						"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GetMethodReturnsMatchingDoc": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
@@ -127,12 +127,12 @@ func TestRPCClient(t *testing.T) {
 							require.NoError(t, err)
 							assert.Equal(t, ret.ID(), proc.ID())
 						},
-						"GroupDoesNotErrorWithoutResults": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GroupDoesNotErrorWithoutResults": func(ctx context.Context, t *testing.T, client Manager) {
 							procs, err := client.Group(ctx, "foo")
 							require.NoError(t, err)
 							assert.Len(t, procs, 0)
 						},
-						"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GroupErrorsForCanceledContexts": func(ctx context.Context, t *testing.T, client Manager) {
 							_, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
@@ -143,7 +143,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Len(t, procs, 0)
 							assert.Contains(t, err.Error(), "canceled")
 						},
-						"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GroupPropagatesMatching": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
@@ -154,10 +154,10 @@ func TestRPCClient(t *testing.T) {
 							require.Len(t, procs, 1)
 							assert.Equal(t, procs[0].ID(), proc.ID())
 						},
-						"CloseEmptyManagerNoops": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"CloseEmptyManagerNoops": func(ctx context.Context, t *testing.T, client Manager) {
 							require.NoError(t, client.Close(ctx))
 						},
-						"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ClosersWithoutTriggersTerminatesProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 							if runtime.GOOS == "windows" {
 								t.Skip("the sleep tests don't block correctly on windows")
 							}
@@ -166,7 +166,7 @@ func TestRPCClient(t *testing.T) {
 							require.NoError(t, err)
 							assert.NoError(t, client.Close(ctx))
 						},
-						"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"CloseErrorsWithCanceledContext": func(ctx context.Context, t *testing.T, client Manager) {
 							_, err := createProcs(ctx, testutil.SleepCreateOpts(100), client, 10)
 							require.NoError(t, err)
 
@@ -177,7 +177,7 @@ func TestRPCClient(t *testing.T) {
 							require.Error(t, err)
 							assert.Contains(t, err.Error(), "canceled")
 						},
-						"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"CloseSucceedsWithTerminatedProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 							procs, err := createProcs(ctx, testutil.TrueCreateOpts(), client, 10)
 							for _, p := range procs {
 								_, err = p.Wait(ctx)
@@ -187,7 +187,7 @@ func TestRPCClient(t *testing.T) {
 							require.NoError(t, err)
 							assert.NoError(t, client.Close(ctx))
 						},
-						"WaitingOnNonExistentProcessErrors": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WaitingOnNonExistentProcessErrors": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 
@@ -200,7 +200,7 @@ func TestRPCClient(t *testing.T) {
 							require.Error(t, err)
 							assert.True(t, strings.Contains(err.Error(), "problem finding process"))
 						},
-						"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ClearCausesDeletionOfProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 							opts := testutil.TrueCreateOpts()
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
@@ -214,7 +214,7 @@ func TestRPCClient(t *testing.T) {
 							require.Error(t, err)
 							assert.Nil(t, nilProc)
 						},
-						"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ClearIsANoopForActiveProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 							opts := testutil.SleepCreateOpts(20)
 							proc, err := client.CreateProcess(ctx, opts)
 							require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestRPCClient(t *testing.T) {
 							assert.Equal(t, proc.ID(), sameProc.ID())
 							require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up
 						},
-						"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"ClearSelectivelyDeletesOnlyDeadProcesses": func(ctx context.Context, t *testing.T, client Manager) {
 							trueOpts := testutil.TrueCreateOpts()
 							lsProc, err := client.CreateProcess(ctx, trueOpts)
 							require.NoError(t, err)
@@ -251,7 +251,7 @@ func TestRPCClient(t *testing.T) {
 						// The following test cases are added specifically for the
 						// RemoteClient.
 
-						"WithInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WithInMemoryLogger": func(ctx context.Context, t *testing.T, client Manager) {
 							output := "foo"
 							opts := &options.Create{
 								Args: []string{"echo", output},
@@ -292,12 +292,12 @@ func TestRPCClient(t *testing.T) {
 								})
 							}
 						},
-						"GetLogStreamFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GetLogStreamFromNonexistentProcessFails": func(ctx context.Context, t *testing.T, client Manager) {
 							stream, err := client.GetLogStream(ctx, "foo", 1)
 							assert.Error(t, err)
 							assert.Zero(t, stream)
 						},
-						"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, client Manager) {
 							opts := &options.Create{Args: []string{"echo", "foo"}}
 
 							proc, err := client.CreateProcess(ctx, opts)
@@ -311,19 +311,19 @@ func TestRPCClient(t *testing.T) {
 							assert.Error(t, err)
 							assert.Zero(t, stream)
 						},
-						// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
+						// "": func(ctx context.Context, t *testing.T, client Manager) {},
 
 						///////////////////////////////////
 						//
 						// The following test cases are added
 						// specifically for the rpc case
 
-						"RegisterIsDisabled": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"RegisterIsDisabled": func(ctx context.Context, t *testing.T, client Manager) {
 							err := client.Register(ctx, nil)
 							require.Error(t, err)
 							assert.Contains(t, err.Error(), "cannot register")
 						},
-						"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"CreateProcessReturnsCorrectExample": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
 							require.NoError(t, err)
 							assert.NotNil(t, proc)
@@ -334,7 +334,7 @@ func TestRPCClient(t *testing.T) {
 							assert.NotNil(t, fetched)
 							assert.Equal(t, proc.ID(), fetched.ID())
 						},
-						"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WaitOnSigKilledProcessReturnsProperExitCode": func(ctx context.Context, t *testing.T, client Manager) {
 							proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(100))
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -350,7 +350,7 @@ func TestRPCClient(t *testing.T) {
 								assert.Equal(t, 9, exitCode)
 							}
 						},
-						"StandardInput": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"StandardInput": func(ctx context.Context, t *testing.T, client Manager) {
 							for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte){
 								"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
 									opts.StandardInput = bytes.NewBuffer(stdin)
@@ -421,7 +421,7 @@ func TestRPCClient(t *testing.T) {
 								})
 							}
 						},
-						"WriteFileSucceeds": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WriteFileSucceeds": func(ctx context.Context, t *testing.T, client Manager) {
 							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, err)
 							defer func() {
@@ -437,7 +437,7 @@ func TestRPCClient(t *testing.T) {
 
 							assert.Equal(t, opts.Content, content)
 						},
-						"WriteFileAcceptsContentFromReader": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WriteFileAcceptsContentFromReader": func(ctx context.Context, t *testing.T, client Manager) {
 							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, err)
 							defer func() {
@@ -454,7 +454,7 @@ func TestRPCClient(t *testing.T) {
 
 							assert.Equal(t, buf, content)
 						},
-						"WriteFileSucceedsWithLargeContent": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WriteFileSucceedsWithLargeContent": func(ctx context.Context, t *testing.T, client Manager) {
 							tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, err)
 							defer func() {
@@ -471,11 +471,11 @@ func TestRPCClient(t *testing.T) {
 
 							assert.Equal(t, opts.Content, content)
 						},
-						"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WriteFileFailsWithInvalidPath": func(ctx context.Context, t *testing.T, client Manager) {
 							opts := options.WriteFile{Content: []byte("foo")}
 							assert.Error(t, client.WriteFile(ctx, opts))
 						},
-						"WriteFileSucceedsWithNoContent": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {
+						"WriteFileSucceedsWithNoContent": func(ctx context.Context, t *testing.T, client Manager) {
 							path := filepath.Join(buildDir(t), filepath.Base(t.Name()))
 							require.NoError(t, os.RemoveAll(path))
 							defer func() {
@@ -490,7 +490,7 @@ func TestRPCClient(t *testing.T) {
 
 							assert.Zero(t, stat.Size())
 						},
-						// "": func(ctx context.Context, t *testing.T, client jasper.RemoteClient) {},
+						// "": func(ctx context.Context, t *testing.T, client Manager) {},
 					} {
 						t.Run(name, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
@@ -508,7 +508,7 @@ func TestRPCProcess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for setupMethod, makeTestServiceAndClient := range map[string]func(ctx context.Context, mngr jasper.Manager) (jasper.RemoteClient, error){
+	for setupMethod, makeTestServiceAndClient := range map[string]func(ctx context.Context, mngr jasper.Manager) (Manager, error){
 		"Insecure": makeInsecureServiceAndClient,
 		"TLS":      makeTLSServiceAndClient,
 	} {
