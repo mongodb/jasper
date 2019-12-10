@@ -10,5 +10,5 @@ import (
 func TestMockInterfaces(t *testing.T) {
 	assert.Implements(t, (*jasper.Manager)(nil), &Manager{})
 	assert.Implements(t, (*jasper.Process)(nil), &Process{})
-	assert.Implements(t, (*jasper.RemoteClient)(nil), &RemoteClient{})
+	assert.Implements(t, (*jasper.RemoteClient)(nil), &remote.Client{})
 }
