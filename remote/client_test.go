@@ -234,7 +234,9 @@ func AddBasicClientTests(tests ...ClientTestCase) []ClientTestCase {
 
 				_, err = proc.Wait(ctx)
 				require.Error(t, err)
-				assert.True(t, strings.Contains(err.Error(), "problem finding process"))
+				procs, err := client.List(ctx, options.All)
+				require.NoError(t, err)
+				assert.Len(t, procs, 0)
 			},
 		},
 		{
