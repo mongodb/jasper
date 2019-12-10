@@ -8,12 +8,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/level"
+	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	sender := grip.GetSender()
+	grip.Error(sender.SetLevel(send.LevelInfo{Threshhold: level.Info}))
+	grip.Error(grip.SetLevel(sender))
+}
 
 type ClientTestCase struct {
 	Name string

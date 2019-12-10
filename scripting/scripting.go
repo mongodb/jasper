@@ -58,10 +58,13 @@ func NewHarness(m jasper.Manager, env options.ScriptingHarness) (Harness, error)
 	}
 }
 
+// HarnessCache provides an internal local cache for scripting
+// environments.
 type HarnessCache interface {
 	Create(jasper.Manager, options.ScriptingHarness) (Harness, error)
 	Get(string) (Harness, error)
 	Add(string, Harness) error
+	Check(string) bool
 }
 
 ////////////////////////////////////////////////////////////////////////

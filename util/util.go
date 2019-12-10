@@ -9,6 +9,9 @@ import (
 // connection to a service.
 type CloseFunc func() error
 
+// NewLocalBuffer provides a synchronized read/Write closer.
+func NewLocalBuffer(b bytes.Buffer) *LocalBuffer { return &LocalBuffer{b: b} }
+
 type LocalBuffer struct {
 	b bytes.Buffer
 	sync.RWMutex

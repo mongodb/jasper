@@ -46,6 +46,7 @@ func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProc
 			Machine: remoteOpts,
 			Client:  clientOpts,
 		},
+		shCache: scripting.NewCache(),
 		manager: manager,
 	}
 	return client, nil
