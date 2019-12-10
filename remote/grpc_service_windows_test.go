@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/rpc/internal"
+	"github.com/mongodb/jasper/remote/internal"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
