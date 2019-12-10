@@ -327,7 +327,7 @@ func AddBasicClientTests(modify testutil.OptsModify, tests ...ClientTestCase) []
 				require.NoError(t, jasper.Terminate(ctx, sleepProc)) // Clean up
 			},
 		},
-		ClientTestCase{
+		{
 			Name: "RegisterIsDisabled",
 			Case: func(ctx context.Context, t *testing.T, client Manager) {
 				err := client.Register(ctx, nil)
@@ -335,7 +335,7 @@ func AddBasicClientTests(modify testutil.OptsModify, tests ...ClientTestCase) []
 				assert.Contains(t, err.Error(), "cannot register")
 			},
 		},
-		ClientTestCase{
+		{
 			Name: "CreateProcessReturnsCorrectExample",
 			Case: func(ctx context.Context, t *testing.T, client Manager) {
 				opts := testutil.TrueCreateOpts()
@@ -351,7 +351,7 @@ func AddBasicClientTests(modify testutil.OptsModify, tests ...ClientTestCase) []
 				assert.Equal(t, proc.ID(), fetched.ID())
 			},
 		},
-		ClientTestCase{
+		{
 			Name: "WaitOnSigKilledProcessReturnsProperExitCode",
 			Case: func(ctx context.Context, t *testing.T, client Manager) {
 				opts := testutil.SleepCreateOpts(100)
@@ -372,8 +372,7 @@ func AddBasicClientTests(modify testutil.OptsModify, tests ...ClientTestCase) []
 				}
 			},
 		},
-
-		ClientTestCase{
+		{
 			Name: "WriteFileFailsWithInvalidPath",
 			Case: func(ctx context.Context, t *testing.T, client Manager) {
 				opts := options.WriteFile{Content: []byte("foo")}
