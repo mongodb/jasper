@@ -24,7 +24,7 @@ func TestWireManager(t *testing.T) {
 		mngr, err := jasper.NewSynchronizedManager(false)
 		require.NoError(t, err)
 
-		client, err := makeTestServiceAndClient(ctx, mngr)
+		client, err := makeTestMDBServiceAndClient(ctx, mngr)
 		require.NoError(t, err)
 		return client
 	}

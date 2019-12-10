@@ -30,9 +30,10 @@ func AttachService(ctx context.Context, manager jasper.Manager, s *grpc.Server) 
 	}
 
 	srv := &jasperService{
-		hostID:  hn,
-		manager: manager,
-		cache:   lru.NewCache(),
+		hostID:    hn,
+		manager:   manager,
+		cache:     lru.NewCache(),
+		scripting: scripting.NewCache(),
 		cacheOpts: options.Cache{
 			PruneDelay: jasper.DefaultCachePruneDelay,
 			MaxSize:    jasper.DefaultMaxCacheSize,

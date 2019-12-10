@@ -39,7 +39,9 @@ type Service struct {
 // manager implementation that does locking.
 func NewRestService(m jasper.Manager) *Service {
 	return &Service{
-		manager: m,
+		manager:   m,
+		harnesses: scripting.NewCache(),
+		cache:     lru.NewCache(),
 	}
 }
 
@@ -47,7 +49,7 @@ func NewRestService(m jasper.Manager) *Service {
 // service. It attaches no middleware and does not start the service.
 func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	s.hostID, _ = os.Hostname()
-	s.cache = lru.NewCache()
+
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 	s.cacheOpts.PruneDelay = jasper.DefaultCachePruneDelay

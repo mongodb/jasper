@@ -25,8 +25,9 @@ func init() {
 }
 
 type ClientTestCase struct {
-	Name string
-	Case func(context.Context, *testing.T, Manager)
+	Name       string
+	Case       func(context.Context, *testing.T, Manager)
+	ShouldSkip bool
 }
 
 func AddBasicClientTests(tests ...ClientTestCase) []ClientTestCase {
@@ -299,8 +300,9 @@ func AddBasicClientTests(tests ...ClientTestCase) []ClientTestCase {
 }
 
 type ProcessTestCase struct {
-	Name string
-	Case func(context.Context, *testing.T, *options.Create, jasper.ProcessConstructor)
+	Name       string
+	Case       func(context.Context, *testing.T, *options.Create, jasper.ProcessConstructor)
+	ShouldSkip bool
 }
 
 func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
@@ -644,6 +646,29 @@ func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
 				err = proc.Signal(ctx, syscall.SIGTERM)
 				require.Error(t, err)
 				assert.True(t, strings.Contains(err.Error(), "cannot signal a process that has terminated"))
+			},
+		},
+		{
+			Name: "CompleteAlwaysReturnsTrueWhenProcessIsComplete",
+			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
+				proc, err := makep(ctx, opts)
+				require.NoError(t, err)
+
+				_, err = proc.Wait(ctx)
+				assert.NoError(t, err)
+
+				assert.True(t, proc.Complete(ctx))
+			},
+		},
+		{
+			Name: "RegisterSignalTriggerFails",
+			Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
+				opts := testutil.SleepCreateOpts(3)
+				proc, err := makep(ctx, opts)
+				require.NoError(t, err)
+				assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ jasper.ProcessInfo, _ syscall.Signal) bool {
+					return false
+				}))
 			},
 		},
 	}, tests...)

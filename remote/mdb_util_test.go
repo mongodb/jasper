@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func makeTestServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
+func makeTestMDBServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -29,7 +29,7 @@ func makeTestServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager
 		return nil, errors.WithStack(err)
 	}
 
-	client, err := NewClient(ctx, addr, 0)
+	client, err := NewMDBClient(ctx, addr, 0)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

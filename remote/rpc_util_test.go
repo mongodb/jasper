@@ -18,20 +18,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeInsecureServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
+func makeInsecureRPCServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	if err := startTestService(ctx, mngr, addr, nil); err != nil {
+	if err := startTestRPCService(ctx, mngr, addr, nil); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return newTestClient(ctx, addr, nil)
+	return newTestRPCClient(ctx, addr, nil)
 }
 
-func makeTLSServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
+func makeTLSRPCServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", testutil.GetPortNumber()))
 	if err != nil {
 
@@ -65,7 +65,7 @@ func makeTLSServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager,
 		return nil, errors.Wrap(err, "failed to initialize test server credentials")
 	}
 
-	if err = startTestService(ctx, mngr, addr, serverCreds); err != nil {
+	if err = startTestRPCService(ctx, mngr, addr, serverCreds); err != nil {
 		return nil, errors.Wrap(err, "failed to start test server")
 	}
 
@@ -82,12 +82,12 @@ func makeTLSServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manager,
 		return nil, errors.Wrap(err, "failed to initialize test client credentials")
 	}
 
-	return newTestClient(ctx, addr, clientCreds)
+	return newTestRPCClient(ctx, addr, clientCreds)
 }
 
 // startTestService creates a server for testing purposes that terminates when
 // the context is done.
-func startTestService(ctx context.Context, mngr jasper.Manager, addr net.Addr, creds *certdepot.Credentials) error {
+func startTestRPCService(ctx context.Context, mngr jasper.Manager, addr net.Addr, creds *certdepot.Credentials) error {
 	closeService, err := StartRPCService(ctx, mngr, addr, creds)
 	if err != nil {
 		return errors.Wrap(err, "could not start server")
@@ -103,7 +103,7 @@ func startTestService(ctx context.Context, mngr jasper.Manager, addr net.Addr, c
 
 // newTestClient establishes a client for testing purposes that closes when
 // the context is done.
-func newTestClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (Manager, error) {
+func newTestRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (Manager, error) {
 	client, err := NewRPCClient(ctx, addr, creds)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get client")

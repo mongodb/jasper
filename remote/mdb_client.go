@@ -25,10 +25,10 @@ const (
 	namespace = "jasper.$cmd"
 )
 
-// NewClient returns a remote client for connection to a MongoDB wire protocol
+// NewMDBClient returns a remote client for connection to a MongoDB wire protocol
 // service. reqTimeout specifies the timeout for a request, or uses a default
 // timeout if zero.
-func NewClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) (Manager, error) {
+func NewMDBClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) (Manager, error) {
 	dialer := net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "tcp", addr.String())
 	if err != nil {

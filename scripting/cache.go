@@ -25,6 +25,8 @@ func (c *cacheImpl) Create(jpm jasper.Manager, opts options.ScriptingHarness) (H
 		return nil, errors.Wrap(err, "problem constructing harness")
 	}
 
+	c.cache[h.ID()] = h
+
 	return h, nil
 }
 

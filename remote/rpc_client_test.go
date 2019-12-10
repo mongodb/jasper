@@ -14,7 +14,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,8 +30,8 @@ func TestRPCClient(t *testing.T) {
 	defer cancel()
 
 	for setupMethod, makeTestServiceAndClient := range map[string]func(ctx context.Context, mngr jasper.Manager) (Manager, error){
-		"Insecure": makeInsecureServiceAndClient,
-		"TLS":      makeTLSServiceAndClient,
+		"Insecure": makeInsecureRPCServiceAndClient,
+		"TLS":      makeTLSRPCServiceAndClient,
 	} {
 		t.Run(setupMethod, func(t *testing.T) {
 			for mname, factory := range map[string]func(ctx context.Context, t *testing.T) Manager{
@@ -332,102 +331,6 @@ func TestRPCClient(t *testing.T) {
 					}
 				})
 			}
-		})
-	}
-}
-func TestRPCProcess(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	for setupMethod, makeTestServiceAndClient := range map[string]func(ctx context.Context, mngr jasper.Manager) (Manager, error){
-		"Insecure": makeInsecureServiceAndClient,
-		"TLS":      makeTLSServiceAndClient,
-	} {
-		t.Run(setupMethod, func(t *testing.T) {
-			for cname, makeProc := range map[string]jasper.ProcessConstructor{
-				"Basic": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-					mngr, err := jasper.NewSynchronizedManager(false)
-					if err != nil {
-						return nil, errors.WithStack(err)
-					}
-
-					client, err := makeTestServiceAndClient(ctx, mngr)
-					if err != nil {
-						return nil, errors.WithStack(err)
-					}
-
-					return client.CreateProcess(ctx, opts)
-				},
-			} {
-				t.Run(cname, func(t *testing.T) {
-					for _, test := range AddBasicProcessTests(
-						ProcessTestCase{
-							Name: "CompleteReturnsFalseForProcessThatDoesntExist",
-							Case: func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-								proc, err := makep(ctx, opts)
-								require.NoError(t, err)
-
-								firstID := proc.ID()
-								_, err = proc.Wait(ctx)
-								assert.NoError(t, err)
-								assert.True(t, proc.Complete(ctx))
-								proc.(*rpcProcess).info.Id += "_foo"
-								proc.(*rpcProcess).info.Complete = false
-								require.NotEqual(t, firstID, proc.ID())
-								assert.False(t, proc.Complete(ctx), proc.ID())
-							},
-						},
-
-						ProcessTestCase{
-							Name: "RunningReturnsFalseForProcessThatDoesntExist",
-							Case: func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-								proc, err := makep(ctx, opts)
-								require.NoError(t, err)
-
-								firstID := proc.ID()
-								_, err = proc.Wait(ctx)
-								assert.NoError(t, err)
-								proc.(*rpcProcess).info.Id += "_foo"
-								proc.(*rpcProcess).info.Complete = false
-								require.NotEqual(t, firstID, proc.ID())
-								assert.False(t, proc.Running(ctx), proc.ID())
-							},
-						},
-						ProcessTestCase{
-							Name: "CompleteAlwaysReturnsTrueWhenProcessIsComplete",
-							Case: func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-								proc, err := makep(ctx, opts)
-								require.NoError(t, err)
-
-								_, err = proc.Wait(ctx)
-								assert.NoError(t, err)
-
-								assert.True(t, proc.Complete(ctx))
-							},
-						},
-						ProcessTestCase{
-							Name: "RegisterSignalTriggerFails",
-							Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
-								opts := testutil.SleepCreateOpts(3)
-								proc, err := makep(ctx, opts)
-								require.NoError(t, err)
-								assert.Error(t, proc.RegisterSignalTrigger(ctx, func(_ jasper.ProcessInfo, _ syscall.Signal) bool {
-									return false
-								}))
-							},
-						},
-					) {
-						t.Run(test.Name, func(t *testing.T) {
-							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
-							defer cancel()
-
-							opts := &options.Create{Args: []string{"ls"}}
-							test.Case(tctx, t, opts, makeProc)
-						})
-					}
-				})
-			}
-
 		})
 	}
 }
