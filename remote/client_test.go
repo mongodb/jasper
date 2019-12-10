@@ -395,7 +395,7 @@ func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
 				proc, err := makep(ctx, opts)
 				require.NoError(t, err)
 
-				for i := 0; i < 100; i++ {
+				for i := 0; i < 50; i++ {
 					proc.Tag("foo")
 				}
 
