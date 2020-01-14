@@ -28,9 +28,8 @@ func init() {
 }
 
 type ClientTestCase struct {
-	Name       string
-	Case       func(context.Context, *testing.T, Manager)
-	ShouldSkip bool
+	Name string
+	Case func(context.Context, *testing.T, Manager)
 }
 
 func AddBasicClientTests(modify testutil.OptsModify, tests ...ClientTestCase) []ClientTestCase {
@@ -453,8 +452,7 @@ func TestManager(t *testing.T) {
 				t.Run(modify.Name, func(t *testing.T) {
 					for _, test := range AddBasicClientTests(modify.Options,
 						ClientTestCase{
-							Name:       "StandardInput",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "StandardInput",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								for subTestName, subTestCase := range map[string]func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte){
 									"ReaderIsIgnored": func(ctx context.Context, t *testing.T, opts *options.Create, expectedOutput string, stdin []byte) {
@@ -530,8 +528,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						ClientTestCase{
-							Name:       "WriteFileSucceeds",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "WriteFileSucceeds",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 								require.NoError(t, err)
@@ -550,8 +547,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						ClientTestCase{
-							Name:       "WriteFileAcceptsContentFromReader",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "WriteFileAcceptsContentFromReader",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 								require.NoError(t, err)
@@ -571,8 +567,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						ClientTestCase{
-							Name:       "WriteFileSucceedsWithLargeContent",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "WriteFileSucceedsWithLargeContent",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
 								require.NoError(t, err)
@@ -592,8 +587,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						ClientTestCase{
-							Name:       "WriteFileSucceedsWithNoContent",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "WriteFileSucceedsWithNoContent",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								path := filepath.Join(buildDir(t), filepath.Base(t.Name()))
 								require.NoError(t, os.RemoveAll(path))
@@ -612,8 +606,7 @@ func TestManager(t *testing.T) {
 						},
 
 						ClientTestCase{
-							Name:       "GetLogStreamFromNonexistentProcessFails",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "GetLogStreamFromNonexistentProcessFails",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								stream, err := client.GetLogStream(ctx, "foo", 1)
 								assert.Error(t, err)
@@ -621,8 +614,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						ClientTestCase{
-							Name:       "GetLogStreamFailsWithoutInMemoryLogger",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "GetLogStreamFailsWithoutInMemoryLogger",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								opts := &options.Create{Args: []string{"echo", "foo"}}
 								modify.Options(opts)
@@ -639,8 +631,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						ClientTestCase{
-							Name:       "WithInMemoryLogger",
-							ShouldSkip: factory.Name == "MDB",
+							Name: "WithInMemoryLogger",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								output := "foo"
 								opts := &options.Create{
@@ -685,9 +676,6 @@ func TestManager(t *testing.T) {
 							},
 						},
 					) {
-						if test.ShouldSkip {
-							continue
-						}
 						t.Run(test.Name, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 							defer cancel()
