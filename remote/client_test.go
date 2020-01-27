@@ -23,7 +23,7 @@ import (
 
 func init() {
 	sender := grip.GetSender()
-	grip.Error(sender.SetLevel(send.LevelInfo{Threshold: level.Info}))
+	grip.Error(sender.SetLevel(send.LevelInfo{Default: level.Info, Threshold: level.Info}))
 	grip.Error(grip.SetSender(sender))
 }
 
