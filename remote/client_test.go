@@ -35,7 +35,7 @@ type clientTestCase struct {
 	Case func(context.Context, *testing.T, Manager)
 }
 
-func AddBasicClientTests(modify testutil.OptsModify, tests ...clientTestCase) []clientTestCase {
+func addBasicClientTests(modify testutil.OptsModify, tests ...clientTestCase) []clientTestCase {
 	return append([]clientTestCase{
 		{
 			Name: "ValidateFixture",
@@ -472,7 +472,7 @@ func TestManager(t *testing.T) {
 				},
 			} {
 				t.Run(modify.Name, func(t *testing.T) {
-					for _, test := range AddBasicClientTests(modify.Options,
+					for _, test := range addBasicClientTests(modify.Options,
 						clientTestCase{
 							Name: "StandardInput",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
