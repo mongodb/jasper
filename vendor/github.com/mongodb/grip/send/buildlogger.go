@@ -2,6 +2,7 @@ package send
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -276,6 +277,8 @@ func (b *buildlogger) Send(m message.Composer) {
 		}
 	}
 }
+
+func (b *buildlogger) Flush(_ context.Context) error { return nil }
 
 func (b *buildlogger) SetName(n string) {
 	b.conf.Local.SetName(n)
