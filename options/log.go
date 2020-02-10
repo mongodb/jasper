@@ -129,12 +129,13 @@ func (opts *Log) Validate() error {
 	return catcher.Resolve()
 }
 
-// Logger is a wrapper struct around a grip/send.Sender.
+// Logger is a wrapper around a grip/send.Sender. It is not thread-safe.
 type Logger struct {
 	Type    LogType `bson:"log_type" json:"log_type" yaml:"log_type"`
 	Options Log     `bson:"log_options" json:"log_options" yaml:"log_options"`
 
 	sender send.Sender
+	closed bool
 }
 
 // Validate ensures that LogOptions is valid.
@@ -146,7 +147,8 @@ func (l Logger) Validate() error {
 }
 
 // Configure will configure the grip/send.Sender used by the Logger to use the
-// specified LogType as specified in Logger.Type.
+// specified LogType as specified in Logger.Type. If the error is nil, callers
+// are expected to call Close for the Logger once complete.
 func (l *Logger) Configure() (send.Sender, error) { //nolint: gocognit
 	if l.sender != nil {
 		return l.sender, nil
@@ -244,4 +246,17 @@ func (l *Logger) Configure() (send.Sender, error) { //nolint: gocognit
 	l.sender = sender
 
 	return l.sender, nil
+}
+
+// Close closes the underlying sender. This should be called once the logger is
+// finished logging.
+func (l *Logger) Close() error {
+	if l.closed {
+		return nil
+	}
+	if l.sender != nil {
+		l.sender.Close()
+	}
+	l.closed = true
+	return nil
 }

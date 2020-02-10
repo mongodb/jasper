@@ -254,11 +254,11 @@ func TestProcessImplementations(t *testing.T) {
 				"ProcessLogDefault": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					file, err := ioutil.TempFile("build", "out.txt")
 					require.NoError(t, err)
-					assert.NoError(t, file.Close())
 					defer func() {
+						assert.NoError(t, file.Close())
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
-					info, err := os.Stat(file.Name())
+					info, err := file.Stat()
 					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
@@ -274,11 +274,11 @@ func TestProcessImplementations(t *testing.T) {
 				"ProcessWritesToLog": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					file, err := ioutil.TempFile("build", "out.txt")
 					require.NoError(t, err)
-					assert.NoError(t, file.Close())
 					defer func() {
+						assert.NoError(t, file.Close())
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
-					info, err := os.Stat(file.Name())
+					info, err := file.Stat()
 					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
@@ -297,7 +297,7 @@ func TestProcessImplementations(t *testing.T) {
 					go func() {
 						done := false
 						for !done {
-							info, err = os.Stat(file.Name())
+							info, err = file.Stat()
 							require.NoError(t, err)
 							if info.Size() > 0 {
 								done = true
@@ -310,7 +310,7 @@ func TestProcessImplementations(t *testing.T) {
 					case <-ctx.Done():
 						assert.Fail(t, "file write took too long to complete")
 					case <-fileWrite:
-						info, err = os.Stat(file.Name())
+						info, err = file.Stat()
 						require.NoError(t, err)
 						assert.NotZero(t, info.Size())
 					}
@@ -318,11 +318,11 @@ func TestProcessImplementations(t *testing.T) {
 				"ProcessWritesToBufferedLog": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					file, err := ioutil.TempFile("build", "out.txt")
 					require.NoError(t, err)
-					assert.NoError(t, file.Close())
 					defer func() {
+						assert.NoError(t, file.Close())
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
-					info, err := os.Stat(file.Name())
+					info, err := file.Stat()
 					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
@@ -346,7 +346,7 @@ func TestProcessImplementations(t *testing.T) {
 					fileWrite := make(chan int64)
 					go func() {
 						for {
-							info, err = os.Stat(file.Name())
+							info, err = file.Stat()
 							require.NoError(t, err)
 							if info.Size() > 0 {
 								fileWrite <- info.Size()
