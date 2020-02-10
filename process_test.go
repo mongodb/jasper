@@ -254,12 +254,12 @@ func TestProcessImplementations(t *testing.T) {
 				"ProcessLogDefault": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					file, err := ioutil.TempFile("build", "out.txt")
 					require.NoError(t, err)
+					assert.NoError(t, file.Close())
 					defer func() {
-						assert.NoError(t, file.Close())
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
-					info, err := file.Stat()
-					assert.NoError(t, err)
+					info, err := os.Stat(file.Name())
+					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []options.Logger{{Type: options.LogDefault, Options: options.Log{Format: options.LogFormatPlain}}}
@@ -274,12 +274,12 @@ func TestProcessImplementations(t *testing.T) {
 				"ProcessWritesToLog": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					file, err := ioutil.TempFile("build", "out.txt")
 					require.NoError(t, err)
+					assert.NoError(t, file.Close())
 					defer func() {
-						assert.NoError(t, file.Close())
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
-					info, err := file.Stat()
-					assert.NoError(t, err)
+					info, err := os.Stat(file.Name())
+					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []options.Logger{{Type: options.LogFile, Options: options.Log{FileName: file.Name(), Format: options.LogFormatPlain}}}
@@ -297,7 +297,8 @@ func TestProcessImplementations(t *testing.T) {
 					go func() {
 						done := false
 						for !done {
-							info, err = file.Stat()
+							info, err = os.Stat(file.Name())
+							require.NoError(t, err)
 							if info.Size() > 0 {
 								done = true
 								fileWrite <- done
@@ -309,20 +310,20 @@ func TestProcessImplementations(t *testing.T) {
 					case <-ctx.Done():
 						assert.Fail(t, "file write took too long to complete")
 					case <-fileWrite:
-						info, err = file.Stat()
-						assert.NoError(t, err)
+						info, err = os.Stat(file.Name())
+						require.NoError(t, err)
 						assert.NotZero(t, info.Size())
 					}
 				},
 				"ProcessWritesToBufferedLog": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					file, err := ioutil.TempFile("build", "out.txt")
 					require.NoError(t, err)
+					assert.NoError(t, file.Close())
 					defer func() {
-						assert.NoError(t, file.Close())
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
-					info, err := file.Stat()
-					assert.NoError(t, err)
+					info, err := os.Stat(file.Name())
+					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []options.Logger{
@@ -345,7 +346,8 @@ func TestProcessImplementations(t *testing.T) {
 					fileWrite := make(chan int64)
 					go func() {
 						for {
-							info, err = file.Stat()
+							info, err = os.Stat(file.Name())
+							require.NoError(t, err)
 							if info.Size() > 0 {
 								fileWrite <- info.Size()
 								break
