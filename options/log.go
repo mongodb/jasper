@@ -135,7 +135,6 @@ type Logger struct {
 	Options Log     `bson:"log_options" json:"log_options" yaml:"log_options"`
 
 	sender send.Sender
-	closed bool
 }
 
 // Validate ensures that LogOptions is valid.
@@ -251,12 +250,8 @@ func (l *Logger) Configure() (send.Sender, error) { //nolint: gocognit
 // Close closes the underlying sender. This should be called once the logger is
 // finished logging.
 func (l *Logger) Close() error {
-	if l.closed {
-		return nil
-	}
 	if l.sender != nil {
 		l.sender.Close()
 	}
-	l.closed = true
 	return nil
 }
