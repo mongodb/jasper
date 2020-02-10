@@ -496,6 +496,20 @@ func TestProcessImplementations(t *testing.T) {
 						assert.Equal(t, int(sig), exitCode)
 					}
 				},
+				"WaitGivesProperExitCodeOnSignalAbort": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
+					proc, err := makep(ctx, testutil.SleepCreateOpts(100))
+					require.NoError(t, err)
+					require.NotNil(t, proc)
+					sig := syscall.SIGABRT
+					assert.NoError(t, proc.Signal(ctx, sig))
+					exitCode, err := proc.Wait(ctx)
+					assert.Error(t, err)
+					if runtime.GOOS == "windows" {
+						assert.Equal(t, 1, exitCode)
+					} else {
+						assert.Equal(t, int(sig), exitCode)
+					}
+				},
 				"WaitGivesNegativeOneOnAlternativeError": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					cctx, cancel := context.WithCancel(ctx)
 					proc, err := makep(ctx, testutil.SleepCreateOpts(100))
