@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/mongodb/grip/message"
-	"github.com/pkg/errors"
 )
 
 const minInterval = 5 * time.Second
@@ -29,6 +28,10 @@ type bufferedSender struct {
 // If the interval is 0, the constructor sets an interval of 1 minute, and if
 // it is less than 5 seconds, the constructor sets it to 5 seconds. If the
 // size threshold is 0, then the constructor sets a threshold of 100.
+//
+// This Sender does not own the underlying Sender, so users are responsible for
+// closing the underlying Sender if/when it is appropriate to release its
+// resources.
 func NewBufferedSender(sender Sender, interval time.Duration, size int) Sender {
 	if interval == 0 {
 		interval = time.Minute
@@ -82,8 +85,8 @@ func (s *bufferedSender) Flush(_ context.Context) error {
 	return nil
 }
 
-// Close writes any buffered messages to the underlying Sender and closes the
-// underlying sender.
+// Close writes any buffered messages to the underlying Sender. This does not
+// close the underlying sender.
 func (s *bufferedSender) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -92,17 +95,11 @@ func (s *bufferedSender) Close() error {
 		return nil
 	}
 
-	defer func() {
-		s.closed = true
-	}()
-
 	s.cancel()
 	if len(s.buffer) > 0 {
 		s.flush()
 	}
-	if err := s.Sender.Close(); err != nil {
-		return errors.Wrap(err, "could not close underlying sender")
-	}
+	s.closed = true
 
 	return nil
 }

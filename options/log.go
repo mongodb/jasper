@@ -134,7 +134,13 @@ type Logger struct {
 	Type    LogType `bson:"log_type" json:"log_type" yaml:"log_type"`
 	Options Log     `bson:"log_options" json:"log_options" yaml:"log_options"`
 
+	// sender may be the actual send.Sender or the wrapping send.Sender.
 	sender send.Sender
+	// baseSender stores the underlying send.Senders. It must be stored to work
+	// around the fact that wrapping Senders do not necessarily close their
+	// underlying send.Sender, but we have to clean up the resources when the
+	// Logger is finished.
+	baseSender send.Sender
 }
 
 // Validate ensures that LogOptions is valid.
@@ -235,6 +241,8 @@ func (l *Logger) Configure() (send.Sender, error) { //nolint: gocognit
 		return nil, errors.New("failed to set log format")
 	}
 
+	baseSender := sender
+
 	if l.Type != LogBuildloggerV3 && l.Options.BufferOptions.Buffered {
 		if l.Options.BufferOptions.Duration < 0 || l.Options.BufferOptions.MaxSize < 0 {
 			return nil, errors.New("buffer options cannot be negative")
@@ -243,15 +251,21 @@ func (l *Logger) Configure() (send.Sender, error) { //nolint: gocognit
 	}
 
 	l.sender = sender
+	l.baseSender = baseSender
 
 	return l.sender, nil
 }
 
-// Close closes the underlying sender. This should be called once the logger is
+// Close closes its send.Senders, closing the wrapper send.Sender and then the
+// underlying base send.Sender. This should be called once the Logger is
 // finished logging.
 func (l *Logger) Close() error {
+	catcher := grip.NewBasicCatcher()
 	if l.sender != nil {
-		l.sender.Close()
+		catcher.Wrap(l.sender.Close(), "could not close sender")
 	}
-	return nil
+	if l.baseSender != nil && l.sender != l.baseSender {
+		catcher.Wrap(l.baseSender.Close(), "could not close underlying sender")
+	}
+	return catcher.Resolve()
 }
