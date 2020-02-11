@@ -101,40 +101,41 @@ func TestFlush(t *testing.T) {
 }
 
 func TestBufferedClose(t *testing.T) {
-	s, err := NewInternalLogger("buffs", LevelInfo{level.Debug, level.Debug})
-	require.NoError(t, err)
+	for testName, testCase := range map[string]func(t *testing.T, s *InternalSender, bs *bufferedSender){
+		"EmptyBuffer": func(t *testing.T, s *InternalSender, bs *bufferedSender) {
+			assert.Nil(t, bs.Close())
+			assert.True(t, bs.closed)
+			_, ok := s.GetMessageSafe()
+			assert.False(t, ok)
+		},
+		"NonEmptyBuffer": func(t *testing.T, s *InternalSender, bs *bufferedSender) {
+			bs.buffer = append(
+				bs.buffer,
+				message.ConvertToComposer(level.Debug, "message1"),
+				message.ConvertToComposer(level.Debug, "message2"),
+				message.ConvertToComposer(level.Debug, "message3"),
+			)
 
-	t.Run("EmptyBuffer", func(t *testing.T) {
-		bs := newBufferedSender(s, time.Minute, 10)
-
-		assert.Nil(t, bs.Close())
-		assert.True(t, bs.closed)
-		_, ok := s.GetMessageSafe()
-		assert.False(t, ok)
-	})
-	t.Run("NonEmptyBuffer", func(t *testing.T) {
-		bs := newBufferedSender(s, time.Minute, 10)
-		bs.buffer = append(
-			bs.buffer,
-			message.ConvertToComposer(level.Debug, "message1"),
-			message.ConvertToComposer(level.Debug, "message2"),
-			message.ConvertToComposer(level.Debug, "message3"),
-		)
-
-		assert.Nil(t, bs.Close())
-		assert.True(t, bs.closed)
-		assert.Empty(t, bs.buffer)
-		msgs, ok := s.GetMessageSafe()
-		require.True(t, ok)
-		assert.Equal(t, "message1\nmessage2\nmessage3", msgs.Message.String())
-	})
-	t.Run("NoopWhenClosed", func(t *testing.T) {
-		bs := newBufferedSender(s, time.Minute, 10)
-
-		assert.NoError(t, bs.Close())
-		assert.True(t, bs.closed)
-		assert.NoError(t, bs.Close())
-	})
+			assert.Nil(t, bs.Close())
+			assert.True(t, bs.closed)
+			assert.Empty(t, bs.buffer)
+			msgs, ok := s.GetMessageSafe()
+			require.True(t, ok)
+			assert.Equal(t, "message1\nmessage2\nmessage3", msgs.Message.String())
+		},
+		"NoopWhenClosed": func(t *testing.T, s *InternalSender, bs *bufferedSender) {
+			assert.NoError(t, bs.Close())
+			assert.True(t, bs.closed)
+			assert.NoError(t, bs.Close())
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			s, err := NewInternalLogger("buffs", LevelInfo{Default: level.Debug, Threshold: level.Debug})
+			require.NoError(t, err)
+			bs := newBufferedSender(s, time.Minute, 10)
+			testCase(t, s, bs)
+		})
+	}
 }
 
 func TestIntervalFlush(t *testing.T) {

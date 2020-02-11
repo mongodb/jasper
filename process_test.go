@@ -259,7 +259,7 @@ func TestProcessImplementations(t *testing.T) {
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
 					info, err := file.Stat()
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []options.Logger{{Type: options.LogDefault, Options: options.Log{Format: options.LogFormatPlain}}}
@@ -279,7 +279,7 @@ func TestProcessImplementations(t *testing.T) {
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
 					info, err := file.Stat()
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []options.Logger{{Type: options.LogFile, Options: options.Log{FileName: file.Name(), Format: options.LogFormatPlain}}}
@@ -298,6 +298,7 @@ func TestProcessImplementations(t *testing.T) {
 						done := false
 						for !done {
 							info, err = file.Stat()
+							require.NoError(t, err)
 							if info.Size() > 0 {
 								done = true
 								fileWrite <- done
@@ -310,7 +311,7 @@ func TestProcessImplementations(t *testing.T) {
 						assert.Fail(t, "file write took too long to complete")
 					case <-fileWrite:
 						info, err = file.Stat()
-						assert.NoError(t, err)
+						require.NoError(t, err)
 						assert.NotZero(t, info.Size())
 					}
 				},
@@ -322,7 +323,7 @@ func TestProcessImplementations(t *testing.T) {
 						assert.NoError(t, os.RemoveAll(file.Name()))
 					}()
 					info, err := file.Stat()
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Zero(t, info.Size())
 
 					opts.Output.Loggers = []options.Logger{
@@ -346,6 +347,7 @@ func TestProcessImplementations(t *testing.T) {
 					go func() {
 						for {
 							info, err = file.Stat()
+							require.NoError(t, err)
 							if info.Size() > 0 {
 								fileWrite <- info.Size()
 								break
