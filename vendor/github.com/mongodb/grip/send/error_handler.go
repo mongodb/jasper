@@ -22,6 +22,7 @@ func ErrorHandlerFromLogger(l *log.Logger) ErrorHandler {
 	}
 }
 
+// ErrorHandler wraps an existing Sender for sending error messages.
 func ErrorHandlerFromSender(s Sender) ErrorHandler {
 	return func(err error, m message.Composer) {
 		if err == nil {

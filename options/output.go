@@ -235,8 +235,8 @@ func (o *Output) Close() error {
 	if o.errorSender != nil && (o.SuppressOutput || o.SendOutputToError) {
 		catcher.Add(o.errorSender.Sender.Close())
 	}
-	// Since loggers are not shared outside of this process, we close the
-	// loggers to clean up their underlying send.Senders.
+	// Since loggers are owned by this process, we close the loggers to clean up
+	// their underlying send.Senders.
 	for _, logger := range o.Loggers {
 		catcher.Add(logger.Close())
 	}
