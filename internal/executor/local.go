@@ -72,6 +72,14 @@ func (e *execLocal) SetStderr(stderr io.Writer) {
 	e.cmd.Stderr = stderr
 }
 
+func (e *execLocal) GetStdout() io.Writer {
+	return e.cmd.Stdout
+}
+
+func (e *execLocal) GetStderr() io.Writer {
+	return e.cmd.Stdout
+}
+
 // Start begins running the process.
 func (e *execLocal) Start() error {
 	return e.cmd.Start()

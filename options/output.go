@@ -105,7 +105,7 @@ func (o *Output) Validate() error {
 // GetOutput returns a Writer that has the stdout output from the process that
 // the Output that this method is called on is attached to. The caller is
 // responsible for calling closeLoggers when the loggers are not needed anymore.
-func (o *Output) GetOutput() (w io.Writer, err error) {
+func (o *Output) GetOutput() (io.Writer, error) {
 	if o.SendOutputToError {
 		return o.GetError()
 	}

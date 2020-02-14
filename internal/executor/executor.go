@@ -16,6 +16,8 @@ type Executor interface {
 	SetStdin(io.Reader)
 	SetStdout(io.Writer)
 	SetStderr(io.Writer)
+	GetStdout() io.Writer
+	GetStderr() io.Writer
 	Start() error
 	Wait() error
 	Signal(syscall.Signal) error

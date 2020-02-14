@@ -16,6 +16,7 @@ type basicProcessManager struct {
 	procs         map[string]Process
 	useSSHLibrary bool
 	tracker       ProcessTracker
+	loggers       LoggingCache
 }
 
 func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLibrary bool) (Manager, error) {
@@ -23,6 +24,7 @@ func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLib
 		procs:         procs,
 		id:            uuid.New().String(),
 		useSSHLibrary: useSSHLibrary,
+		loggers:       NewLoggingCache,
 	}
 	if trackProcs {
 		tracker, err := NewProcessTracker(m.id)
@@ -49,6 +51,13 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	if err != nil {
 		return nil, errors.Wrap(err, "problem constructing process")
 	}
+
+	_ = m.loggers.Put(proc.ID(), &CachedLogger{
+		ID:      proc.ID(),
+		Manager: m.id,
+		Error:   opts.GetError(),
+		Output:  opts.GetOutput(),
+	})
 
 	// This trigger is not guaranteed to be registered since the process may
 	// have already completed. One way to guarantee it runs could be to add this
@@ -162,6 +171,7 @@ func (m *basicProcessManager) Clear(ctx context.Context) {
 	for procID, proc := range m.procs {
 		if proc.Complete(ctx) {
 			delete(m.procs, procID)
+			m.loggers.Remove(procID)
 		}
 	}
 }
