@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote"
@@ -27,10 +29,13 @@ func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProc
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
-	// We have to suppress logs from SSH, because it will prevent the JSON
+	// We have to run SSH without output, because it will prevent the JSON
 	// output from the Jasper CLI from being parsed correctly (e.g. adding a
 	// host to the known hosts file generates a warning).
-	remoteOpts.Args = append([]string{"-o", "LogLevel=QUIET"}, remoteOpts.Args...)
+	remoteOpts.Args = append(remoteOpts.Args...
+		"-T",
+		"-o", "LogLevel=QUIET",
+	)
 
 	if err := clientOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating client options")
