@@ -29,6 +29,11 @@ func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProc
 	if err := remoteOpts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "problem validating remote options")
 	}
+	for _, arg := range remoteOpts.Args {
+		if strings.HasPrefix(arg, "-v") {
+			return nil, errors.New("cannot use verbose arguments in non-interactive SSH client")
+		}
+	}
 	// We have to run SSH without output, because it will prevent the JSON
 	// output from the Jasper CLI from being parsed correctly (e.g. adding a
 	// host to the known hosts file generates a warning).
