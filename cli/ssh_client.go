@@ -5,9 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"strings"
 
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote"
@@ -37,7 +36,7 @@ func NewSSHClient(remoteOpts options.Remote, clientOpts ClientOptions, trackProc
 	// We have to run SSH without output, because it will prevent the JSON
 	// output from the Jasper CLI from being parsed correctly (e.g. adding a
 	// host to the known hosts file generates a warning).
-	remoteOpts.Args = append(remoteOpts.Args...
+	remoteOpts.Args = append(remoteOpts.Args,
 		"-T",
 		"-o", "LogLevel=QUIET",
 	)
