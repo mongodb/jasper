@@ -24,7 +24,7 @@ func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLib
 		procs:         procs,
 		id:            uuid.New().String(),
 		useSSHLibrary: useSSHLibrary,
-		loggers:       NewLoggingCache,
+		loggers:       NewLoggingCache(),
 	}
 	if trackProcs {
 		tracker, err := NewProcessTracker(m.id)
@@ -52,12 +52,16 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 		return nil, errors.Wrap(err, "problem constructing process")
 	}
 
-	_ = m.loggers.Put(proc.ID(), &CachedLogger{
+	grip.Warning(message.WrapError(m.loggers.Put(proc.ID(), &CachedLogger{
 		ID:      proc.ID(),
 		Manager: m.id,
-		Error:   opts.GetError(),
-		Output:  opts.GetOutput(),
-	})
+		Error:   convertWriter(opts.Output.GetError()),
+		Output:  convertWriter(opts.Output.GetOutput()),
+	}), message.Fields{
+		"message": "problem caching logger for process",
+		"process": proc.ID(),
+		"manager": m.ID(),
+	}))
 
 	// This trigger is not guaranteed to be registered since the process may
 	// have already completed. One way to guarantee it runs could be to add this
@@ -75,6 +79,8 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 
 	return proc, nil
 }
+
+func (m *basicProcessManager) LoggingCache() LoggingCache { return m.loggers }
 
 func (m *basicProcessManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)

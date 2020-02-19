@@ -54,5 +54,6 @@ func (m *remoteOverrideMgr) Get(ctx context.Context, n string) (Process, error) 
 	return m.mgr.Get(ctx, n)
 }
 
+func (m *remoteOverrideMgr) LoggingCache() LoggingCache      { return m.mgr.LoggingCache() }
 func (m *remoteOverrideMgr) Clear(ctx context.Context)       { m.mgr.Clear(ctx) }
 func (m *remoteOverrideMgr) Close(ctx context.Context) error { return m.mgr.Close(ctx) }

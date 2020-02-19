@@ -24,4 +24,19 @@ type Manager interface {
 
 	CreateScripting(context.Context, options.ScriptingHarness) (scripting.Harness, error)
 	GetScripting(context.Context, string) (scripting.Harness, error)
+
+	SendMessages(context.Context, LoggingPayload) error
+}
+
+type LoggingPayload struct {
+	LoggerID string `bson:"logger_id" json:"logger_id" yaml:"logger_id"`
+
+	Messages []interface{} `bson:"messages" json:"messages" yaml:"messages"`
+	Priority level.Priority `bson:"priority" json:"priority" yaml:"priority"`
+	IsString bool tags
+	IsJSON   bool
+	IsBSON   bool
+}
+
+type LoggingPayloadFormatInfo struct {
 }
