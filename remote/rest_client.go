@@ -399,6 +399,12 @@ func (c *restClient) WriteFile(ctx context.Context, opts options.WriteFile) erro
 	return opts.WriteBufferedContent(sendOpts)
 }
 
+func (c *restClient) LoggingCache() jasper.LoggingCache { return nil }
+
+func (c *restClient) SendMessages(_ context.Context, _ LoggingPayload) error {
+	return errors.New("message sending is not supported")
+}
+
 type restProcess struct {
 	id     string
 	client *restClient

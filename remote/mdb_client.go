@@ -95,6 +95,12 @@ func (c *client) GetScripting(_ context.Context, _ string) (scripting.Harness, e
 	return nil, errors.New("scripting environment is not supported")
 }
 
+func (c *client) LoggingCache() jasper.LoggingCache { return nil }
+
+func (c *client) SendMessages(_ context.Context, _ LoggingPayload) error {
+	return errors.New("message sending is not supported")
+}
+
 func (c *client) Register(ctx context.Context, proc jasper.Process) error {
 	return errors.New("cannot register local processes on remote process managers")
 }
