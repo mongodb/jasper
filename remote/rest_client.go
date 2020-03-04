@@ -401,7 +401,18 @@ func (c *restClient) WriteFile(ctx context.Context, opts options.WriteFile) erro
 
 func (c *restClient) LoggingCache() jasper.LoggingCache { return nil }
 
-func (c *restClient) SendMessages(_ context.Context, _ LoggingPayload) error {
+func (c *restClient) SendMessages(ctx context.Context, lp LoggingPayload) error {
+	body, err := makeBody(lp)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/logging/"+lp.LoggerID+"/cache"), body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
 	return errors.New("message sending is not supported")
 }
 

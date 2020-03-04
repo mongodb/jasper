@@ -763,7 +763,7 @@ func (s *Service) loggingCacheSize(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
-	args := &options.Create{}
+	args := &options.Output{}
 	id := gimlet.GetVars(r)["id"]
 	if err := gimlet.GetJSON(r.Body, args); err != nil {
 		writeError(rw, gimlet.ErrorResponse{

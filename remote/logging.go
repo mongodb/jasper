@@ -1,11 +1,14 @@
 package remote
 
 import (
+	"encoding/json"
+
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // LoggingPayload captures the arguements to the SendMessages operation.
@@ -43,41 +46,105 @@ func (lp *LoggingPayload) Send(logger *jasper.CachedLogger) error {
 		return errors.New("could not configure output for message")
 	}
 
-	var msg message.Composer
-
-	switch data := lp.Data.(type) {
-	case string:
-		if lp.ForceSendToError == LoggingPayloadFormatJSON {
-
-		} else {
-			msg = message.NewDefaultMessage(lp.Priority, data)
-		}
-	case []byte:
-		switch lp.Format {
-		case LoggingPayloadFormatJSON:
-		case LoggingPayloadFormatBSON:
-		default:
-		}
-	case []string:
-		if lp.IsMulti {
-			varbatch := []message.Composer{}
-			for _, str := range data {
-				if lp.Format == LoggingPayloadFormatJSON {
-
-				} else {
-					batch = append(message.NewDefaultMessage(lp.Priority, str))
-				}
-			}
-
-			msg = message.NewGroupComposer(batch)
-		} else {
-
-		}
-
-	case [][]string:
-	case [][]byte:
-	case [][]interface{}:
+	msg, err := lp.convertMessage(lp.Data)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
 	sender.Send(msg)
+
+	return nil
+}
+
+func (lp *LoggingPayload) convertMessage(value interface{}) (message.Composer, error) {
+	switch data := value.(type) {
+	case string:
+		return lp.produceMessage([]byte(data))
+	case []byte:
+		return lp.produceMessage(data)
+	case []string:
+		if lp.IsMulti {
+			batch := []message.Composer{}
+			for _, str := range data {
+				elem, err := lp.produceMessage([]byte(str))
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				batch = append(batch, elem)
+			}
+			return message.NewGroupComposer(batch), nil
+		}
+		return message.ConvertToComposer(lp.Priority, data), nil
+	case [][]byte:
+		if lp.IsMulti {
+			batch := []message.Composer{}
+			for _, dt := range data {
+				elem, err := lp.produceMessage(dt)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				batch = append(batch, elem)
+			}
+			return message.NewGroupComposer(batch), nil
+		}
+
+		return message.NewLineMessage(lp.Priority, byteSlicesToStringSlice(data)), nil
+	case []interface{}:
+		if lp.IsMulti {
+			batch := []message.Composer{}
+			for _, dt := range data {
+				elem, err := lp.convertMessage(dt)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				batch = append(batch, elem)
+			}
+			return message.NewGroupComposer(batch), nil
+		}
+		return message.NewLineMessage(lp.Priority, data...), nil
+	default:
+		return message.ConvertToComposer(lp.Priority, value), nil
+	}
+}
+
+func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) {
+	switch lp.Format {
+	case LoggingPayloadFormatJSON:
+		payload := message.Fields{}
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return nil, errors.Wrap(err, "problem parsing json from message body")
+		}
+
+		if lp.AddMetadata {
+			return message.NewFields(lp.Priority, payload), nil
+		}
+
+		return message.NewSimpleFields(lp.Priority, payload), nil
+
+	case LoggingPayloadFormatBSON:
+		payload := message.Fields{}
+		if err := bson.Unmarshal(data, &payload); err != nil {
+			return nil, errors.Wrap(err, "problem parsing json from message body")
+		}
+
+		if lp.AddMetadata {
+			return message.NewFields(lp.Priority, payload), nil
+		}
+
+		return message.NewSimpleFields(lp.Priority, payload), nil
+	default:
+		if lp.AddMetadata {
+			return message.NewSimpleBytesMessage(lp.Priority, data), nil
+		}
+
+		return message.NewBytesMessage(lp.Priority, data), nil
+	}
+}
+
+func byteSlicesToStringSlice(in [][]byte) []string {
+	out := make([]string, len(in))
+	for idx := range in {
+		out[idx] = string(in[idx])
+	}
+	return out
 }

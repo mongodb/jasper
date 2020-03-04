@@ -85,10 +85,17 @@ func NewErrorLogger(name string, l LevelInfo) (Sender, error) {
 	return setup(MakeErrorLogger(), name, l)
 }
 
-// WrapWriterLogger constructs a new unconfigured sender that directly wraps any
-// writer implementation. These loggers prepend time and logger name
-// information to the beginning of log lines.
+// WrapWriterLogger constructs a new unconfigured sender that directly
+// wraps any writer implementation. These loggers prepend time and
+// logger name information to the beginning of log lines.
+//
+// As a special case, if the writer is a *WriterSender, then this
+// method will unwrap and return the underlying sender from the writer.
 func WrapWriterLogger(wr io.Writer) Sender {
+	if s, ok := wr.(*WriterSender); ok {
+		return s.Sender
+	}
+
 	s := &nativeLogger{
 		Base: NewBase(""),
 	}
@@ -108,16 +115,27 @@ func WrapWriterLogger(wr io.Writer) Sender {
 // implementation that writes all data to the underlying writer.
 // These loggers prepend time and logger name information to the
 // beginning of log lines.
+//
+// As a special case, if the writer is a *WriterSender, then this
+// method will unwrap and return the underlying sender from the writer.
 func NewWrappedWriterLogger(name string, wr io.Writer, l LevelInfo) (Sender, error) {
 	return setup(WrapWriterLogger(wr), name, l)
 }
 
 // WrapWriter produces a simple writer that does not modify the log
 // lines passed to the writer.
+//
+// As a special case, if the writer is a *WriterSender, then this
+// method will unwrap and return the underlying sender from the writer.
 func WrapWriter(wr io.Writer) Sender {
+	if s, ok := wr.(*WriterSender); ok {
+		return s.Sender
+	}
+
 	s := &nativeLogger{
 		Base: NewBase(""),
 	}
+
 	_ = s.SetFormatter(MakePlainFormatter())
 	s.level = LevelInfo{level.Trace, level.Trace}
 	s.logger = log.New(wr, "", 0)
