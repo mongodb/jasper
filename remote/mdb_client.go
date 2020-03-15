@@ -95,7 +95,7 @@ func (c *client) GetScripting(_ context.Context, _ string) (scripting.Harness, e
 	return nil, errors.New("scripting environment is not supported")
 }
 
-func (c *client) LoggingCache() jasper.LoggingCache { return nil }
+func (c *client) LoggingCache(_ context.Context) jasper.LoggingCache { return nil }
 
 func (c *client) SendMessages(_ context.Context, _ LoggingPayload) error {
 	return errors.New("message sending is not supported")

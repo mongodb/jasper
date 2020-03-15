@@ -759,7 +759,7 @@ type restLoggingCacheSize struct {
 }
 
 func (s *Service) loggingCacheSize(rw http.ResponseWriter, r *http.Request) {
-	gimlet.WriteJSON(rw, &restLoggingCacheSize{Size: s.manager.LoggingCache().Len()})
+	gimlet.WriteJSON(rw, &restLoggingCacheSize{Size: s.manager.LoggingCache(r.Context()).Len()})
 }
 
 func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
@@ -773,7 +773,7 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cl, err := s.manager.LoggingCache().Create(id, args)
+	cl, err := s.manager.LoggingCache(r.Context()).Create(id, args)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -786,16 +786,16 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) loggingCacheDelete(rw http.ResponseWriter, r *http.Request) {
-	s.manager.LoggingCache().Remove(gimlet.GetVars(r)["id"])
+	s.manager.LoggingCache(r.Context()).Remove(gimlet.GetVars(r)["id"])
 }
 
 func (s *Service) loggingCacheGet(rw http.ResponseWriter, r *http.Request) {
-	gimlet.WriteJSON(rw, s.manager.LoggingCache().Get(gimlet.GetVars(r)["id"]))
+	gimlet.WriteJSON(rw, s.manager.LoggingCache(r.Context()).Get(gimlet.GetVars(r)["id"]))
 }
 
 func (s *Service) loggingSend(rw http.ResponseWriter, r *http.Request) {
 	id := gimlet.GetVars(r)["id"]
-	cache := s.manager.LoggingCache()
+	cache := s.manager.LoggingCache(r.Context())
 	logger := cache.Get(id)
 	if logger == nil {
 		writeError(rw, gimlet.ErrorResponse{

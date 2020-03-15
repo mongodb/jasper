@@ -34,7 +34,7 @@ type Manager interface {
 	CreateCommand(context.Context) *Command
 	Register(context.Context, Process) error
 
-	LoggingCache() LoggingCache
+	LoggingCache(context.Context) LoggingCache
 	WriteFile(context.Context, options.WriteFile) error
 
 	List(context.Context, options.Filter) ([]Process, error)

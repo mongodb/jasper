@@ -305,7 +305,7 @@ func (c *rpcClient) WriteFile(ctx context.Context, jopts options.WriteFile) erro
 	return nil
 }
 
-func (c *rpcClient) LoggingCache() jasper.LoggingCache { return nil }
+func (c *rpcClient) LoggingCache(_ context.Context) jasper.LoggingCache { return nil }
 
 func (c *rpcClient) SendMessages(_ context.Context, _ LoggingPayload) error {
 	return errors.New("message sending is not supported")

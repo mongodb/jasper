@@ -399,8 +399,6 @@ func (c *restClient) WriteFile(ctx context.Context, opts options.WriteFile) erro
 	return opts.WriteBufferedContent(sendOpts)
 }
 
-func (c *restClient) LoggingCache() jasper.LoggingCache { return nil }
-
 func (c *restClient) SendMessages(ctx context.Context, lp LoggingPayload) error {
 	body, err := makeBody(lp)
 	if err != nil {
@@ -415,6 +413,43 @@ func (c *restClient) SendMessages(ctx context.Context, lp LoggingPayload) error 
 
 	return errors.New("message sending is not supported")
 }
+
+func (c *restClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
+	return &restLoggingCache{
+		client: c,
+		ctx:    ctx,
+	}
+}
+
+type restLoggingCache struct {
+	client *restClient
+	ctx    context.Context
+}
+
+func (lc *restLoggingCache) Create(id string, opts *options.Output) (*jasper.CachedLogger, error) {
+
+	return nil, nil
+}
+
+func (lc *restLoggingCache) Put(id string, cl *jasper.CachedLogger) error { return errors.New("") }
+func (lc *restLoggingCache) Get(id string) *jasper.CachedLogger {
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/%s", id), nil)
+	return nil
+}
+
+func (lc *restLoggingCache) Remove(id string) {
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/%s", id), nil)
+	grip.Info(message.Fields{
+		"has_error": err == nil,
+		"code":      resp.StatusCode,
+		"status":    resp.Status,
+		"op":        "delete",
+		"logger":    id,
+		"err":       err,
+	})
+}
+
+func (lc *restLoggingCache) Len() int { return 0 }
 
 type restProcess struct {
 	id     string

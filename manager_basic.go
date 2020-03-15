@@ -80,7 +80,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	return proc, nil
 }
 
-func (m *basicProcessManager) LoggingCache() LoggingCache { return m.loggers }
+func (m *basicProcessManager) LoggingCache(_ context.Context) LoggingCache { return m.loggers }
 
 func (m *basicProcessManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)
