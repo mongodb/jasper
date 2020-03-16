@@ -85,8 +85,8 @@ func (c *restClient) doRequest(ctx context.Context, method string, url string, b
 	if err != nil {
 		return nil, errors.Wrap(err, "problem making request")
 	}
+	defer resp.Body.Close()
 	if err = handleError(resp); err != nil {
-		defer resp.Body.Close()
 		return nil, errors.WithStack(err)
 	}
 
@@ -152,6 +152,10 @@ func (c *restClient) CreateScripting(ctx context.Context, opts options.Scripting
 	}
 	defer resp.Body.Close()
 
+	if err = handleError(resp); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	out := struct {
 		ID string `json:"id"`
 	}{}
@@ -173,13 +177,8 @@ func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Har
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		gimerr := gimlet.ErrorResponse{}
-		if err := gimlet.GetJSON(resp.Body, &gimerr); err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		return nil, gimerr
+	if err = handleError(resp); err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	return &restScripting{
@@ -220,6 +219,10 @@ func (c *restClient) List(ctx context.Context, f options.Filter) ([]jasper.Proce
 	}
 	defer resp.Body.Close()
 
+	if err = handleError(resp); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	out, err := c.getListOfProcesses(resp)
 
 	return out, errors.WithStack(err)
@@ -231,6 +234,10 @@ func (c *restClient) Group(ctx context.Context, name string) ([]jasper.Process, 
 		return nil, errors.Wrap(err, "request returned error")
 	}
 	defer resp.Body.Close()
+
+	if err = handleError(resp); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	out, err := c.getListOfProcesses(resp)
 
@@ -427,14 +434,49 @@ type restLoggingCache struct {
 }
 
 func (lc *restLoggingCache) Create(id string, opts *options.Output) (*jasper.CachedLogger, error) {
+	body, err := makeBody(opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
-	return nil, nil
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodPost, lc.client.getURL("/download/cache"), body)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+
+	if err = handleError(resp); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	out := &jasper.CachedLogger{}
+	if err = gimlet.GetJSON(resp.Body, out); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return out, nil
 }
 
-func (lc *restLoggingCache) Put(id string, cl *jasper.CachedLogger) error { return errors.New("") }
+func (lc *restLoggingCache) Put(id string, cl *jasper.CachedLogger) error {
+	return errors.New("operation not supported for remote managers")
+}
+
 func (lc *restLoggingCache) Get(id string) *jasper.CachedLogger {
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/%s", id), nil)
-	return nil
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if err = handleError(resp); err != nil {
+		return nil
+	}
+
+	out := &jasper.CachedLogger{}
+	if err = gimlet.GetJSON(resp.Body, out); err != nil {
+		return nil
+	}
+	return out
 }
 
 func (lc *restLoggingCache) Remove(id string) {
@@ -449,7 +491,24 @@ func (lc *restLoggingCache) Remove(id string) {
 	})
 }
 
-func (lc *restLoggingCache) Len() int { return 0 }
+func (lc *restLoggingCache) Len() int {
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/size"), nil)
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0
+	}
+
+	out := restLoggingCacheSize{}
+	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
+		return 0
+	}
+
+	return out.Size
+}
 
 type restProcess struct {
 	id     string
