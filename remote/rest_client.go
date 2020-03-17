@@ -406,19 +406,23 @@ func (c *restClient) WriteFile(ctx context.Context, opts options.WriteFile) erro
 	return opts.WriteBufferedContent(sendOpts)
 }
 
-func (c *restClient) SendMessages(ctx context.Context, lp LoggingPayload) error {
+func (c *restClient) SendMessages(ctx context.Context, lp options.LoggingPayload) error {
 	body, err := makeBody(lp)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
-	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/logging/"+lp.LoggerID+"/cache"), body)
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/logging/%s/send", lp.LoggerID), body)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close()
 
-	return errors.New("message sending is not supported")
+	if err = handleError(resp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
 
 func (c *restClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
@@ -433,7 +437,7 @@ type restLoggingCache struct {
 	ctx    context.Context
 }
 
-func (lc *restLoggingCache) Create(id string, opts *options.Output) (*jasper.CachedLogger, error) {
+func (lc *restLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
 	body, err := makeBody(opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -449,7 +453,7 @@ func (lc *restLoggingCache) Create(id string, opts *options.Output) (*jasper.Cac
 		return nil, errors.WithStack(err)
 	}
 
-	out := &jasper.CachedLogger{}
+	out := &options.CachedLogger{}
 	if err = gimlet.GetJSON(resp.Body, out); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -457,11 +461,11 @@ func (lc *restLoggingCache) Create(id string, opts *options.Output) (*jasper.Cac
 	return out, nil
 }
 
-func (lc *restLoggingCache) Put(id string, cl *jasper.CachedLogger) error {
+func (lc *restLoggingCache) Put(id string, cl *options.CachedLogger) error {
 	return errors.New("operation not supported for remote managers")
 }
 
-func (lc *restLoggingCache) Get(id string) *jasper.CachedLogger {
+func (lc *restLoggingCache) Get(id string) *options.CachedLogger {
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/%s", id), nil)
 	if err != nil {
 		return nil
@@ -472,7 +476,7 @@ func (lc *restLoggingCache) Get(id string) *jasper.CachedLogger {
 		return nil
 	}
 
-	out := &jasper.CachedLogger{}
+	out := &options.CachedLogger{}
 	if err = gimlet.GetJSON(resp.Body, out); err != nil {
 		return nil
 	}

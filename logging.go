@@ -10,23 +10,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CachedLogger is the cached item representing a processes normal
-// output. It captures information about the cached item, as well as
-// go interfaces for sending log messages.
-type CachedLogger struct {
-	ID       string    `bson:"id" json:"id" yaml:"id"`
-	Manager  string    `bson:"manager_id" json:"manager_id" yaml:"manager_id"`
-	Accessed time.Time `bson:"accessed" json:"accessed" yaml:"accessed"`
-
-	Error  send.Sender `bson:"-" json:"-" yaml:"-"`
-	Output send.Sender `bson:"-" json:"-" yaml:"-"`
-}
-
 // LoggingCache provides an interface to a cache loggers.
 type LoggingCache interface {
-	Create(string, *options.Output) (*CachedLogger, error)
-	Put(string, *CachedLogger) error
-	Get(string) *CachedLogger
+	Create(string, *options.Output) (*options.CachedLogger, error)
+	Put(string, *options.CachedLogger) error
+	Get(string) *options.CachedLogger
 	Remove(string)
 	Len() int
 }
@@ -35,12 +23,12 @@ type LoggingCache interface {
 // cache for use in novel manager implementations
 func NewLoggingCache() LoggingCache {
 	return &loggingCacheImpl{
-		cache: map[string]CachedLogger{},
+		cache: map[string]options.CachedLogger{},
 	}
 }
 
 type loggingCacheImpl struct {
-	cache map[string]CachedLogger
+	cache map[string]options.CachedLogger
 	mu    sync.RWMutex
 }
 
@@ -56,7 +44,7 @@ func convertWriter(wr io.Writer, err error) send.Sender {
 	return send.WrapWriter(wr)
 }
 
-func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*CachedLogger, error) {
+func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -64,7 +52,7 @@ func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*CachedLogge
 		return nil, errors.Errorf("logger named %s exists", id)
 	}
 
-	logger := CachedLogger{
+	logger := options.CachedLogger{
 		ID:       id,
 		Accessed: time.Now(),
 		Error:    convertWriter(opts.GetError()),
@@ -98,7 +86,7 @@ func (c *loggingCacheImpl) Prune(ts time.Time) int {
 	return count
 }
 
-func (c *loggingCacheImpl) Get(id string) *CachedLogger {
+func (c *loggingCacheImpl) Get(id string) *options.CachedLogger {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -112,7 +100,7 @@ func (c *loggingCacheImpl) Get(id string) *CachedLogger {
 	return &item
 }
 
-func (c *loggingCacheImpl) Put(id string, logger *CachedLogger) error {
+func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

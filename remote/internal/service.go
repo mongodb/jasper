@@ -745,3 +745,91 @@ func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *Scriptin
 
 	return resp, nil
 }
+
+func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCacheCreateArgs) (*LoggingCacheInstance, error) {
+	lc := s.manager.LoggingCache(ctx)
+	if lc == nil {
+		return nil, errors.New("logging cache not supported")
+	}
+	opt := args.Options.Export()
+	out, err := lc.Create(args.Name, &opt)
+	if err != nil {
+		return &LoggingCacheInstance{
+			Outcome: &OperationOutcome{
+				Success: false,
+				Text:    err.Error(),
+			},
+		}, nil
+	}
+
+	return ConvertCachedLogger(out), nil
+}
+
+func (s *jasperService) LoggingCacheGet(ctx context.Context, args *LoggingCacheArgs) (*LoggingCacheInstance, error) {
+	lc := s.manager.LoggingCache(ctx)
+	if lc == nil {
+		return nil, errors.New("logging cache not supported")
+	}
+
+	out := lc.Get(args.Name)
+	if out == nil {
+		return &LoggingCacheInstance{
+			Outcome: &OperationOutcome{
+				Success: false,
+				Text:    "not found",
+			},
+		}, nil
+	}
+
+	return ConvertCachedLogger(out), nil
+}
+
+func (s *jasperService) LoggingCacheRemove(ctx context.Context, args *LoggingCacheArgs) (*OperationOutcome, error) {
+	lc := s.manager.LoggingCache(ctx)
+	if lc == nil {
+		return nil, errors.New("logging cache not supported")
+	}
+
+	lc.Remove(args.Name)
+
+	return &OperationOutcome{
+		Success: true,
+	}, nil
+}
+
+func (s *jasperService) LoggingCacheLen(ctx context.Context, _ *empty.Empty) (*LoggingCacheSize, error) {
+	lc := s.manager.LoggingCache(ctx)
+	if lc == nil {
+		return nil, errors.New("logging cache not supported")
+	}
+
+	return &LoggingCacheSize{
+		Outcome: &OperationOutcome{
+			Success: true,
+		},
+		Id:   s.manager.ID(),
+		Size: int64(lc.Len()),
+	}, nil
+}
+
+func (s *jasperService) SendMessages(ctx context.Context, lp *LoggingPayload) (*OperationOutcome, error) {
+	lc := s.manager.LoggingCache(ctx)
+	if lc == nil {
+		return nil, errors.New("logging cache not supported")
+	}
+
+	logger := lc.Get(lp.LoggerID)
+	if logger == nil {
+		return nil, errors.New("named logger does not exist")
+	}
+
+	payload := lp.Export()
+	if err := payload.Send(logger); err != nil {
+		return &OperationOutcome{
+			Success: false,
+			Text:    err.Error(),
+		}, nil
+	}
+
+	return &OperationOutcome{Success: true}, nil
+}

@@ -285,7 +285,7 @@ func (c *sshClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
 	return c.manager.LoggingCache(ctx)
 }
 
-func (c *sshClient) SendMessages(_ context.Context, _ remote.LoggingPayload) error {
+func (c *sshClient) SendMessages(_ context.Context, _ options.LoggingPayload) error {
 	return errors.New("message sending is not supported")
 }
 

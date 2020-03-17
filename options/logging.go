@@ -1,15 +1,27 @@
-package remote
+package options
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
-	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+// CachedLogger is the cached item representing a processes normal
+// output. It captures information about the cached item, as well as
+// go interfaces for sending log messages.
+type CachedLogger struct {
+	ID       string    `bson:"id" json:"id" yaml:"id"`
+	Manager  string    `bson:"manager_id" json:"manager_id" yaml:"manager_id"`
+	Accessed time.Time `bson:"accessed" json:"accessed" yaml:"accessed"`
+
+	Error  send.Sender `bson:"-" json:"-" yaml:"-"`
+	Output send.Sender `bson:"-" json:"-" yaml:"-"`
+}
 
 // LoggingPayload captures the arguements to the SendMessages operation.
 type LoggingPayload struct {
@@ -29,7 +41,7 @@ const (
 	LoggingPayloadFormatJSON = "json"
 )
 
-func (lp *LoggingPayload) Send(logger *jasper.CachedLogger) error {
+func (lp *LoggingPayload) Send(logger *CachedLogger) error {
 	if logger == nil || (logger.Error == nil && logger.Output == nil) {
 		return errors.New("no output configured")
 	}

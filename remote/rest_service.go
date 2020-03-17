@@ -805,7 +805,7 @@ func (s *Service) loggingSend(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := &LoggingPayload{}
+	payload := &options.LoggingPayload{}
 	if err := gimlet.GetJSON(r.Body, payload); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusNotFound,

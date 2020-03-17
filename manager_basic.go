@@ -52,7 +52,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 		return nil, errors.Wrap(err, "problem constructing process")
 	}
 
-	grip.Warning(message.WrapError(m.loggers.Put(proc.ID(), &CachedLogger{
+	grip.Warning(message.WrapError(m.loggers.Put(proc.ID(), &options.CachedLogger{
 		ID:      proc.ID(),
 		Manager: m.id,
 		Error:   convertWriter(opts.Output.GetError()),

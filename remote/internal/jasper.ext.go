@@ -851,3 +851,66 @@ func ConvertScriptingTestOptions(args []scripting.TestOptions) []*ScriptingHarne
 	}
 	return out
 }
+
+func (lf LoggingPayloadFormat) Export() options.LoggingPayloadFormat {
+	switch lf {
+	case LoggingPayloadFormat_FORMATBSON:
+		return options.LoggingPayloadFormatJSON
+	case LoggingPayloadFormat_FORMATJSON:
+		return options.LoggingPayloadFormatBSON
+	default:
+		return ""
+	}
+
+}
+
+func (lp *LoggingPayload) Export() options.LoggingPayload {
+	data := make([]interface{}, len(lp.Data))
+	for idx := range lp.Data {
+		switch val := lp.Data[idx].Data.(type) {
+		case *LoggingPayloadData_Msg:
+			data[idx] = val.Msg
+		case *LoggingPayloadData_Raw:
+			data[idx] = val.Raw
+		}
+	}
+
+	return options.LoggingPayload{
+		Data:             data,
+		LoggerID:         lp.LoggerID,
+		IsMulti:          lp.IsMulti,
+		ForceSendToError: lp.ForceSendToError,
+		AddMetadata:      lp.AddMetadata,
+		Priority:         level.Priority(lp.Priority),
+		Format:           lp.Format.Export(),
+	}
+
+}
+
+func (l *LoggingCacheInstance) Export() (*options.CachedLogger, error) {
+	if !l.Outcome.Success {
+		return nil, errors.New(l.Outcome.Text)
+	}
+
+	ts, err := ptypes.Timestamp(l.Accessed)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &options.CachedLogger{
+		Accessed: ts,
+		ID:       l.Id,
+		Manager:  l.Manager,
+	}, nil
+}
+
+func ConvertCachedLogger(in *options.CachedLogger) *LoggingCacheInstance {
+	return &LoggingCacheInstance{
+		Outcome: &OperationOutcome{
+			Success: true,
+		},
+		Id:       in.ID,
+		Manager:  in.Manager,
+		Accessed: mustConvertTimestamp(in.Accessed),
+	}
+}
