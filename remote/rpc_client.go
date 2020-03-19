@@ -305,11 +305,37 @@ func (c *rpcClient) WriteFile(ctx context.Context, jopts options.WriteFile) erro
 	return nil
 }
 
-func (c *rpcClient) LoggingCache(_ context.Context) jasper.LoggingCache { return nil }
+func (c *rpcClient) SendMessages(ctx context.Context, opts options.LoggingPayload) error {
+	lp := internal.ConvertLoggingPayload(opts)
+	resp, err := c.client.SendMessages(ctx, lp)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
-func (c *rpcClient) SendMessages(_ context.Context, _ options.LoggingPayload) error {
-	return errors.New("message sending is not supported")
+	if !resp.Success {
+		return errors.New(resp.Text)
+	}
+
+	return nil
 }
+
+func (c *rpcClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
+	return &rpcLoggingCache{ctx: ctx, client: c.client}
+}
+
+type rpcLoggingCache struct {
+	client internal.JasperProcessManagerClient
+	ctx    context.Context
+}
+
+func (lc *rpcLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
+	return nil, nil
+}
+
+func (lc *rpcLoggingCache) Put(id string, opts *options.CachedLogger) error { return nil }
+func (lc *rpcLoggingCache) Get(id string) *options.CachedLogger             { return nil }
+func (lc *rpcLoggingCache) Remove(id string)                                {}
+func (lc *rpcLoggingCache) Len() int                                        { return 0 }
 
 type rpcProcess struct {
 	client internal.JasperProcessManagerClient

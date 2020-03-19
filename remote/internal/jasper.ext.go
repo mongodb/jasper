@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"syscall"
 	"time"
@@ -11,12 +12,14 @@ import (
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 	"github.com/tychoish/bond"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Export takes a protobuf RPC CreateOptions struct and returns the analogous
@@ -858,10 +861,24 @@ func (lf LoggingPayloadFormat) Export() options.LoggingPayloadFormat {
 		return options.LoggingPayloadFormatJSON
 	case LoggingPayloadFormat_FORMATJSON:
 		return options.LoggingPayloadFormatBSON
+	case LoggingPayloadFormat_FORMATSTRING:
+		return options.LoggingPayloadFormatSTRING
 	default:
 		return ""
 	}
+}
 
+func ConvertLoggingPayloadFormat(in options.LoggingPayloadFormat) LoggingPayloadFormat {
+	switch in {
+	case options.LoggingPayloadFormatJSON:
+		return LoggingPayloadFormat_FORMATJSON
+	case options.LoggingPayloadFormatBSON:
+		return LoggingPayloadFormat_FORMATBSON
+	case options.LoggingPayloadFormatSTRING:
+		return LoggingPayloadFormat_FORMATSTRING
+	default:
+		return 0
+	}
 }
 
 func (lp *LoggingPayload) Export() options.LoggingPayload {
@@ -884,7 +901,74 @@ func (lp *LoggingPayload) Export() options.LoggingPayload {
 		Priority:         level.Priority(lp.Priority),
 		Format:           lp.Format.Export(),
 	}
+}
 
+func convertMessage(format options.LoggingPayloadFormat, m interface{}) *LoggingPayloadData {
+	out := &LoggingPayloadData{}
+
+	switch m := m.(type) {
+	case message.Composer:
+		switch format {
+		case options.LoggingPayloadFormatSTRING:
+			out.Data = &LoggingPayloadData_Msg{Msg: m.String()}
+		case options.LoggingPayloadFormatBSON:
+			payload, _ := bson.Marshal(m.Raw())
+			out.Data = &LoggingPayloadData_Raw{Raw: payload}
+		case options.LoggingPayloadFormatJSON:
+			payload, _ := json.Marshal(m.Raw())
+			out.Data = &LoggingPayloadData_Raw{Raw: payload}
+		default:
+			out.Data = &LoggingPayloadData_Raw{}
+		}
+	case string:
+		out.Data = &LoggingPayloadData_Msg{Msg: m}
+	case []byte:
+		out.Data = &LoggingPayloadData_Raw{Raw: m}
+	default:
+		out.Data = &LoggingPayloadData_Raw{}
+	}
+	return out
+}
+
+func ConvertLoggingPayload(in options.LoggingPayload) *LoggingPayload {
+	data := []*LoggingPayloadData{}
+	switch val := in.Data.(type) {
+	case []interface{}:
+		for idx := range val {
+			data = append(data, convertMessage(in.Format, val[idx]))
+		}
+	case []string:
+		for idx := range val {
+			data = append(data, convertMessage(in.Format, val[idx]))
+		}
+	case [][]byte:
+		for idx := range val {
+			data = append(data, convertMessage(in.Format, val[idx]))
+		}
+	case []message.Composer:
+		for idx := range val {
+			data = append(data, convertMessage(in.Format, val[idx]))
+		}
+	case *message.GroupComposer:
+		msgs := val.Messages()
+		for idx := range msgs {
+			data = append(data, convertMessage(in.Format, msgs[idx]))
+		}
+	case string:
+		data = append(data, convertMessage(in.Format, val))
+	case []byte:
+		data = append(data, convertMessage(in.Format, val))
+	}
+
+	return &LoggingPayload{
+		LoggerID:         in.LoggerID,
+		Priority:         int32(in.Priority),
+		IsMulti:          in.IsMulti,
+		ForceSendToError: in.ForceSendToError,
+		AddMetadata:      in.AddMetadata,
+		Format:           ConvertLoggingPayloadFormat(in.Format),
+		Data:             data,
+	}
 }
 
 func (l *LoggingCacheInstance) Export() (*options.CachedLogger, error) {

@@ -341,9 +341,10 @@ message LoggingCacheSize {
 }
 
 enum LoggingPayloadFormat {
-    FORMATUNKNONW = 0;
-    FORMATBSON = 1;
-    FORMATJSON = 2;
+  FORMATUNKNONW = 0;
+  FORMATBSON = 1;
+  FORMATJSON = 2;
+  FORMATSTRING = 3;
 }
 
 message LoggingPayloadData {

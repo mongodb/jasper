@@ -37,8 +37,9 @@ type LoggingPayload struct {
 type LoggingPayloadFormat string
 
 const (
-	LoggingPayloadFormatBSON = "bson"
-	LoggingPayloadFormatJSON = "json"
+	LoggingPayloadFormatBSON   = "bson"
+	LoggingPayloadFormatJSON   = "json"
+	LoggingPayloadFormatSTRING = "string"
 )
 
 func (lp *LoggingPayload) Send(logger *CachedLogger) error {
@@ -144,6 +145,7 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 		}
 
 		return message.NewSimpleFields(lp.Priority, payload), nil
+
 	default:
 		if lp.AddMetadata {
 			return message.NewSimpleBytesMessage(lp.Priority, data), nil
