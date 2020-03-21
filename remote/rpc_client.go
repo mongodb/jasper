@@ -329,13 +329,52 @@ type rpcLoggingCache struct {
 }
 
 func (lc *rpcLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
-	return nil, nil
+	resp, err := lc.client.LoggingCacheCreate(lc.ctx, internal.ConvertLoggingCreateArgs(id, opts))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	out, err := resp.Export()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return out, nil
 }
 
-func (lc *rpcLoggingCache) Put(id string, opts *options.CachedLogger) error { return nil }
-func (lc *rpcLoggingCache) Get(id string) *options.CachedLogger             { return nil }
-func (lc *rpcLoggingCache) Remove(id string)                                {}
-func (lc *rpcLoggingCache) Len() int                                        { return 0 }
+func (lc *rpcLoggingCache) Put(id string, opts *options.CachedLogger) error {
+	return errors.New("operation not supported for remote managers")
+}
+
+func (lc *rpcLoggingCache) Get(id string) *options.CachedLogger {
+	resp, err := lc.client.LoggingCacheGet(lc.ctx, &internal.LoggingCacheArgs{Name: id})
+	if err != nil {
+		return nil
+	}
+	if !resp.Outcome.Success {
+		return nil
+	}
+
+	out, err := resp.Export()
+	if err != nil {
+		return nil
+	}
+
+	return out
+}
+
+func (lc *rpcLoggingCache) Remove(id string) {
+	_, _ = lc.client.LoggingCacheRemove(lc.ctx, &internal.LoggingCacheArgs{Name: id})
+}
+
+func (lc *rpcLoggingCache) Len() int {
+	resp, err := lc.client.LoggingCacheLen(lc.ctx, &empty.Empty{})
+	if err != nil {
+		return 0
+	}
+
+	return int(resp.Size)
+}
 
 type rpcProcess struct {
 	client internal.JasperProcessManagerClient

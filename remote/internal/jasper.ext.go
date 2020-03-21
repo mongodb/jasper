@@ -921,9 +921,19 @@ func convertMessage(format options.LoggingPayloadFormat, m interface{}) *Logging
 			out.Data = &LoggingPayloadData_Raw{}
 		}
 	case string:
-		out.Data = &LoggingPayloadData_Msg{Msg: m}
+		switch format {
+		case options.LoggingPayloadFormatJSON:
+			out.Data = &LoggingPayloadData_Raw{Raw: []byte(m)}
+		default:
+			out.Data = &LoggingPayloadData_Msg{Msg: m}
+		}
 	case []byte:
-		out.Data = &LoggingPayloadData_Raw{Raw: m}
+		switch format {
+		case options.LoggingPayloadFormatSTRING:
+			out.Data = &LoggingPayloadData_Msg{Msg: string(m)}
+		default:
+			out.Data = &LoggingPayloadData_Raw{Raw: m}
+		}
 	default:
 		out.Data = &LoggingPayloadData_Raw{}
 	}
@@ -996,5 +1006,13 @@ func ConvertCachedLogger(in *options.CachedLogger) *LoggingCacheInstance {
 		Id:       in.ID,
 		Manager:  in.Manager,
 		Accessed: mustConvertTimestamp(in.Accessed),
+	}
+}
+
+func ConvertLoggingCreateArgs(id string, opts *options.Output) *LoggingCacheCreateArgs {
+	o := ConvertOutputOptions(*opts)
+	return &LoggingCacheCreateArgs{
+		Name:    id,
+		Options: &o,
 	}
 }
