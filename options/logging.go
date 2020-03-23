@@ -55,8 +55,6 @@ func (lp *LoggingPayload) Send(logger *CachedLogger) error {
 		sender = logger.Output
 	} else if logger.Error != nil {
 		sender = logger.Error
-	} else {
-		return errors.New("could not configure output for message")
 	}
 
 	msg, err := lp.convertMessage(lp.Data)
