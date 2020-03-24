@@ -23,8 +23,9 @@ func TestManagerInterface(t *testing.T) {
 	for mname, factory := range map[string]func(context.Context, *testing.T) Manager{
 		"Basic/NoLock": func(_ context.Context, _ *testing.T) Manager {
 			return &basicProcessManager{
-				id:    "id",
-				procs: map[string]Process{},
+				id:      "id",
+				loggers: NewLoggingCache(),
+				procs:   map[string]Process{},
 			}
 		},
 		"Basic/Lock/BasicProcs": func(_ context.Context, t *testing.T) Manager {
@@ -39,8 +40,9 @@ func TestManagerInterface(t *testing.T) {
 		},
 		"Basic/NoLock/RemoteNil": func(_ context.Context, _ *testing.T) Manager {
 			m := &basicProcessManager{
-				id:    "id",
-				procs: map[string]Process{},
+				loggers: NewLoggingCache(),
+				id:      "id",
+				procs:   map[string]Process{},
 			}
 			return NewRemoteManager(m, nil)
 		},
@@ -474,7 +476,8 @@ func TestTrackedManager(t *testing.T) {
 	for managerName, makeManager := range map[string]func() *basicProcessManager{
 		"Basic": func() *basicProcessManager {
 			return &basicProcessManager{
-				procs: map[string]Process{},
+				procs:   map[string]Process{},
+				loggers: NewLoggingCache(),
 				tracker: &mockProcessTracker{
 					Infos: []ProcessInfo{},
 				},

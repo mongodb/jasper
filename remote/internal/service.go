@@ -9,6 +9,7 @@ import (
 	"time"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
@@ -791,6 +792,19 @@ func (s *jasperService) LoggingCacheRemove(ctx context.Context, args *LoggingCac
 	}
 
 	lc.Remove(args.Name)
+
+	return &OperationOutcome{
+		Success: true,
+	}, nil
+}
+
+func (s *jasperService) LoggingCachePrune(ctx context.Context, arg *timestamp.Timestamp) (*OperationOutcome, error) {
+	lc := s.manager.LoggingCache(ctx)
+	if lc == nil {
+		return nil, errors.New("logging cache not supported")
+	}
+
+	lc.Prune(mustConvertPTimestamp(arg))
 
 	return &OperationOutcome{
 		Success: true,

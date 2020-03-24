@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"syscall"
+	"time"
 
 	"github.com/evergreen-ci/certdepot"
 	empty "github.com/golang/protobuf/ptypes/empty"
@@ -365,6 +366,10 @@ func (lc *rpcLoggingCache) Get(id string) *options.CachedLogger {
 
 func (lc *rpcLoggingCache) Remove(id string) {
 	_, _ = lc.client.LoggingCacheRemove(lc.ctx, &internal.LoggingCacheArgs{Name: id})
+}
+
+func (lc *rpcLoggingCache) Prune(ts time.Time) {
+	_, _ = lc.client.LoggingCachePrune(lc.ctx, internal.MustConvertTimestamp(ts))
 }
 
 func (lc *rpcLoggingCache) Len() int {

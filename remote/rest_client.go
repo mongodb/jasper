@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/evergreen-ci/gimlet"
 	"github.com/mongodb/grip"
@@ -491,6 +492,17 @@ func (lc *restLoggingCache) Remove(id string) {
 		"status":    resp.Status,
 		"op":        "delete",
 		"logger":    id,
+		"err":       err,
+	})
+}
+
+func (lc *restLoggingCache) Prune(ts time.Time) {
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/prune/%s", ts.Format(time.RFC3339)), nil)
+	grip.Info(message.Fields{
+		"has_error": err == nil,
+		"code":      resp.StatusCode,
+		"status":    resp.Status,
+		"op":        "prune",
 		"err":       err,
 	})
 }

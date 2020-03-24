@@ -90,6 +90,7 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/scripting/{id}/build").Version(1).Post().Handler(s.scriptingBuild)
 	app.AddRoute("/scripting/{id}/test").Version(1).Post().Handler(s.scriptingTest)
 	app.AddRoute("/logging/size").Version(1).Get().Handler(s.loggingCacheSize)
+	app.AddRoute("/logging/prune/{time}").Version(1).Delete().Handler(s.loggingCachePrune)
 	app.AddRoute("/logging/{id}").Version(1).Post().Handler(s.loggingCacheCreate)
 	app.AddRoute("/logging/{id}").Version(1).Delete().Handler(s.loggingCacheDelete)
 	app.AddRoute("/logging/{id}").Version(1).Get().Handler(s.loggingCacheGet)
@@ -787,6 +788,19 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 
 func (s *Service) loggingCacheDelete(rw http.ResponseWriter, r *http.Request) {
 	s.manager.LoggingCache(r.Context()).Remove(gimlet.GetVars(r)["id"])
+}
+
+func (s *Service) loggingCachePrune(rw http.ResponseWriter, r *http.Request) {
+	ts, err := time.Parse(time.RFC3339, gimlet.GetVars(r)["time"])
+	if err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrapf(err, "problem parsing timestamp").Error(),
+		})
+		return
+	}
+
+	s.manager.LoggingCache(r.Context()).Prune(ts)
 }
 
 func (s *Service) loggingCacheGet(rw http.ResponseWriter, r *http.Request) {

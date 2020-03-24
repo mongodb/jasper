@@ -776,7 +776,7 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
 	}
 }
 
-func mustConvertTimestamp(t time.Time) *timestamp.Timestamp {
+func MustConvertTimestamp(t time.Time) *timestamp.Timestamp {
 	out, err := ptypes.TimestampProto(t)
 	if err != nil {
 		panic(err)
@@ -797,7 +797,7 @@ func ConvertScriptingTestResults(res []scripting.TestResult) []*ScriptingHarness
 	for idx, r := range res {
 		out[idx] = &ScriptingHarnessTestResult{
 			Name:     r.Name,
-			StartAt:  mustConvertTimestamp(r.StartAt),
+			StartAt:  MustConvertTimestamp(r.StartAt),
 			Duration: ptypes.DurationProto(r.Duration),
 			Outcome:  string(r.Outcome),
 		}
@@ -1005,7 +1005,7 @@ func ConvertCachedLogger(in *options.CachedLogger) *LoggingCacheInstance {
 		},
 		Id:       in.ID,
 		Manager:  in.Manager,
-		Accessed: mustConvertTimestamp(in.Accessed),
+		Accessed: MustConvertTimestamp(in.Accessed),
 	}
 }
 

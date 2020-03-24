@@ -364,6 +364,7 @@ message LoggingPayload {
   repeated LoggingPayloadData data = 7;
 }
 
+
 service JasperProcessManager {
   // Manager functions
   rpc ID(google.protobuf.Empty) returns (IDResponse);
@@ -398,6 +399,7 @@ service JasperProcessManager {
   rpc LoggingCacheGet(LoggingCacheArgs) returns (LoggingCacheInstance);
   rpc LoggingCacheRemove(LoggingCacheArgs) returns (OperationOutcome);
   rpc LoggingCacheLen(google.protobuf.Empty) returns (LoggingCacheSize);
+  rpc LoggingCachePrune(google.protobuf.Timestamp) returns (OperationOutcome);
 
   // Remote specific functions
   rpc Status(google.protobuf.Empty) returns (StatusResponse);

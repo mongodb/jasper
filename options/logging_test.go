@@ -189,9 +189,7 @@ func TestLogging(t *testing.T) {
 				msg, err := lp.convertMessage(message.NewString("jasper"))
 				require.NoError(t, err)
 				require.Equal(t, "jasper", msg.String())
-
 			})
-
 		})
 		t.Run("ConvertMulti", func(t *testing.T) {
 			lp := &LoggingPayload{}

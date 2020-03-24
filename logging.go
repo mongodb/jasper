@@ -16,6 +16,7 @@ type LoggingCache interface {
 	Put(string, *options.CachedLogger) error
 	Get(string) *options.CachedLogger
 	Remove(string)
+	Prune(time.Time)
 	Len() int
 }
 
@@ -71,7 +72,7 @@ func (c *loggingCacheImpl) Len() int {
 	return len(c.cache)
 }
 
-func (c *loggingCacheImpl) Prune(ts time.Time) int {
+func (c *loggingCacheImpl) Prune(ts time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -82,8 +83,6 @@ func (c *loggingCacheImpl) Prune(ts time.Time) int {
 			delete(c.cache, k)
 		}
 	}
-
-	return count
 }
 
 func (c *loggingCacheImpl) Get(id string) *options.CachedLogger {
@@ -101,6 +100,10 @@ func (c *loggingCacheImpl) Get(id string) *options.CachedLogger {
 }
 
 func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
+	if logger == nil {
+		return errors.New("cannot cache nil logger")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
