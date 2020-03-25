@@ -18,13 +18,9 @@ import (
 func TestLogging(t *testing.T) {
 	t.Run("LoggingSendErrors", func(t *testing.T) {
 		lp := &LoggingPayload{}
-		t.Run("Nil", func(t *testing.T) {
-			err := lp.Send(nil)
-			require.Error(t, err)
-			require.Equal(t, "cannot send to nil logger", err.Error())
-		})
+		cl := &CachedLogger{}
 		t.Run("Unconfigured", func(t *testing.T) {
-			err := lp.Send(&CachedLogger{})
+			err := cl.Send(lp)
 			require.Error(t, err)
 			require.Equal(t, "no output configured", err.Error())
 		})
@@ -32,7 +28,7 @@ func TestLogging(t *testing.T) {
 			lp.Format = LoggingPayloadFormatJSON
 			lp.Data = "hello, world!"
 			logger := &CachedLogger{Output: grip.GetSender()}
-			require.Error(t, lp.Send(logger))
+			require.Error(t, logger.Send(lp))
 		})
 
 	})
@@ -43,7 +39,7 @@ func TestLogging(t *testing.T) {
 		t.Run("Output", func(t *testing.T) {
 			assert.Equal(t, 0, output.Len())
 			cl := &CachedLogger{Output: output}
-			require.NoError(t, lp.Send(cl))
+			require.NoError(t, cl.Send(lp))
 			require.Equal(t, 1, output.Len())
 			msg := output.GetMessage()
 			assert.Equal(t, "hello world!", msg.Message.String())
@@ -51,16 +47,16 @@ func TestLogging(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
 			assert.Equal(t, 0, error.Len())
 			cl := &CachedLogger{Error: error}
-			require.NoError(t, lp.Send(cl))
+			require.NoError(t, cl.Send(lp))
 			require.Equal(t, 1, error.Len())
 			msg := error.GetMessage()
 			assert.Equal(t, "hello world!", msg.Message.String())
 		})
 		t.Run("ErrorForce", func(t *testing.T) {
-			lp.ForceSendToError = true
+			lp.PreferSendToError = true
 			assert.Equal(t, 0, error.Len())
 			cl := &CachedLogger{Error: error, Output: output}
-			require.NoError(t, lp.Send(cl))
+			require.NoError(t, cl.Send(lp))
 			require.Equal(t, 1, error.Len())
 			msg := error.GetMessage()
 			assert.Equal(t, "hello world!", msg.Message.String())

@@ -8,6 +8,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -55,8 +56,8 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	grip.Warning(message.WrapError(m.loggers.Put(proc.ID(), &options.CachedLogger{
 		ID:      proc.ID(),
 		Manager: m.id,
-		Error:   convertWriter(opts.Output.GetError()),
-		Output:  convertWriter(opts.Output.GetOutput()),
+		Error:   util.ConvertWriter(opts.Output.GetError()),
+		Output:  util.ConvertWriter(opts.Output.GetOutput()),
 	}), message.Fields{
 		"message": "problem caching logger for process",
 		"process": proc.ID(),

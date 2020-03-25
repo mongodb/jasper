@@ -1,48 +1,34 @@
 package jasper
 
 import (
-	"io"
 	"sync"
 	"time"
 
-	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
-// LoggingCache provides an interface to a cache loggers.
+// LoggingCache provides an interface to a cache of loggers.
 type LoggingCache interface {
-	Create(string, *options.Output) (*options.CachedLogger, error)
-	Put(string, *options.CachedLogger) error
-	Get(string) *options.CachedLogger
-	Remove(string)
-	Prune(time.Time)
+	Create(id string, opts *options.Output) (*options.CachedLogger, error)
+	Put(id string, logger *options.CachedLogger) error
+	Get(id string) *options.CachedLogger
+	Remove(id string)
+	Prune(lastAccessed time.Time)
 	Len() int
 }
 
 // NewLoggingCache produces a thread-safe implementation of a logging
-// cache for use in novel manager implementations
+// cache for use in manager implementations.
 func NewLoggingCache() LoggingCache {
 	return &loggingCacheImpl{
-		cache: map[string]options.CachedLogger{},
+		cache: map[string]*options.CachedLogger{},
 	}
 }
 
 type loggingCacheImpl struct {
-	cache map[string]options.CachedLogger
+	cache map[string]*options.CachedLogger
 	mu    sync.RWMutex
-}
-
-func convertWriter(wr io.Writer, err error) send.Sender {
-	if err != nil {
-		return nil
-	}
-
-	if wr == nil {
-		return nil
-	}
-
-	return send.WrapWriter(wr)
 }
 
 func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
@@ -52,17 +38,11 @@ func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*options.Cac
 	if _, ok := c.cache[id]; ok {
 		return nil, errors.Errorf("logger named %s exists", id)
 	}
-
-	logger := options.CachedLogger{
-		ID:       id,
-		Accessed: time.Now(),
-		Error:    convertWriter(opts.GetError()),
-		Output:   convertWriter(opts.GetOutput()),
-	}
+	logger := opts.CachedLogger(id)
 
 	c.cache[id] = logger
 
-	return &logger, nil
+	return logger, nil
 }
 
 func (c *loggingCacheImpl) Len() int {
@@ -76,10 +56,8 @@ func (c *loggingCacheImpl) Prune(ts time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	count := 0
 	for k, v := range c.cache {
 		if v.Accessed.Before(ts) {
-			count++
 			delete(c.cache, k)
 		}
 	}
@@ -96,7 +74,7 @@ func (c *loggingCacheImpl) Get(id string) *options.CachedLogger {
 	item := c.cache[id]
 	item.Accessed = time.Now()
 	c.cache[id] = item
-	return &item
+	return item
 }
 
 func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
@@ -113,7 +91,7 @@ func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
 
 	logger.Accessed = time.Now()
 
-	c.cache[id] = *logger
+	c.cache[id] = logger
 
 	return nil
 }

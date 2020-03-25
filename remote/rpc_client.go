@@ -306,9 +306,8 @@ func (c *rpcClient) WriteFile(ctx context.Context, jopts options.WriteFile) erro
 	return nil
 }
 
-func (c *rpcClient) SendMessages(ctx context.Context, opts options.LoggingPayload) error {
-	lp := internal.ConvertLoggingPayload(opts)
-	resp, err := c.client.SendMessages(ctx, lp)
+func (c *rpcClient) SendMessages(ctx context.Context, lp options.LoggingPayload) error {
+	resp, err := c.client.SendMessages(ctx, internal.ConvertLoggingPayload(lp))
 	if err != nil {
 		return errors.WithStack(err)
 	}

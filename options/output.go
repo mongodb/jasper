@@ -3,10 +3,12 @@ package options
 import (
 	"io"
 	"io/ioutil"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -242,4 +244,13 @@ func (o *Output) Close() error {
 	}
 
 	return errors.WithStack(catcher.Resolve())
+}
+
+func (o *Output) CachedLogger(id string) *CachedLogger {
+	return &CachedLogger{
+		ID:       id,
+		Accessed: time.Now(),
+		Error:    util.ConvertWriter(o.GetError()),
+		Output:   util.ConvertWriter(o.GetOutput()),
+	}
 }

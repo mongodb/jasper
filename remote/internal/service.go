@@ -838,7 +838,7 @@ func (s *jasperService) SendMessages(ctx context.Context, lp *LoggingPayload) (*
 	}
 
 	payload := lp.Export()
-	if err := payload.Send(logger); err != nil {
+	if err := logger.Send(payload); err != nil {
 		return &OperationOutcome{
 			Success: false,
 			Text:    err.Error(),

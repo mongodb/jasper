@@ -359,7 +359,7 @@ message LoggingPayload {
   int32 priority = 2;
   LoggingPayloadFormat format = 3;
   bool is_multi = 4;
-  bool force_send_to_error = 5;
+  bool prefer_send_to_error = 5;
   bool add_metadata = 6;
   repeated LoggingPayloadData data = 7;
 }

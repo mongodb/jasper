@@ -71,11 +71,11 @@ func (e *execSSHBinary) SetStderr(stderr io.Writer) {
 	e.cmd.Stderr = stderr
 }
 
-func (e *execSSHBinary) GetStdout() io.Writer {
+func (e *execSSHBinary) Stdout() io.Writer {
 	return e.cmd.Stdout
 }
 
-func (e *execSSHBinary) GetStderr() io.Writer {
+func (e *execSSHBinary) Stderr() io.Writer {
 	return e.cmd.Stderr
 }
 

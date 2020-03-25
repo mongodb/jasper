@@ -828,7 +828,7 @@ func (s *Service) loggingSend(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := payload.Send(logger)
+	err := logger.Send(payload)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,

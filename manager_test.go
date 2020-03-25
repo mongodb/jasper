@@ -57,6 +57,7 @@ func TestManagerInterface(t *testing.T) {
 				"ValidateFixture": func(ctx context.Context, t *testing.T, manager Manager, mod testutil.OptsModify) {
 					assert.NotNil(t, ctx)
 					assert.NotNil(t, manager)
+					assert.NotNil(t, manager.LoggingCache(ctx))
 				},
 				"IDReturnsNonempty": func(ctx context.Context, t *testing.T, manager Manager, mod testutil.OptsModify) {
 					assert.NotEmpty(t, manager.ID())
@@ -489,6 +490,7 @@ func TestTrackedManager(t *testing.T) {
 				"ValidateFixtureSetup": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					assert.NotNil(t, manager.tracker)
 					assert.Len(t, manager.procs, 0)
+					assert.NotNil(t, manager.LoggingCache(ctx))
 				},
 				"CreateProcessTracksProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					proc, err := manager.CreateProcess(ctx, opts)

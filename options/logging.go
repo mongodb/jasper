@@ -27,8 +27,8 @@ type CachedLogger struct {
 	Output send.Sender `bson:"-" json:"-" yaml:"-"`
 }
 
-func (cl *CachedLogger) getSender(forceError bool) (send.Sender, error) {
-	if forceError && cl.Error != nil {
+func (cl *CachedLogger) getSender(preferError bool) (send.Sender, error) {
+	if preferError && cl.Error != nil {
 		return cl.Error, nil
 	} else if cl.Output != nil {
 		return cl.Output, nil
@@ -39,22 +39,21 @@ func (cl *CachedLogger) getSender(forceError bool) (send.Sender, error) {
 	return nil, errors.New("no output configured")
 }
 
-// LoggingPayload captures the arguements to the SendMessages operation.
+// LoggingPayload captures the arguments to the SendMessages operation.
 type LoggingPayload struct {
-	LoggerID         string               `bson:"logger_id" json:"logger_id" yaml:"logger_id"`
-	Data             interface{}          `bson:"data" json:"data" yaml:"data"`
-	Priority         level.Priority       `bson:"priority" json:"priority" yaml:"priority"`
-	IsMulti          bool                 `bson:"multi" json:"multi" yaml:"multi"`
-	ForceSendToError bool                 `bson:"force_send_to_error" json:"force_send_to_error" yaml:"force_send_to_error"`
-	AddMetadata      bool                 `bson:"add_metadata" json:"add_metadata" yaml:"add_metadata"`
-	Format           LoggingPayloadFormat `bson:"payload_format,omitempty" json:"payload_format,omitempty" yaml:"payload_format,omitempty"`
+	LoggerID          string               `bson:"logger_id" json:"logger_id" yaml:"logger_id"`
+	Data              interface{}          `bson:"data" json:"data" yaml:"data"`
+	Priority          level.Priority       `bson:"priority" json:"priority" yaml:"priority"`
+	IsMulti           bool                 `bson:"multi" json:"multi" yaml:"multi"`
+	PreferSendToError bool                 `bson:"prefer_send_to_error" json:"prefer_send_to_error" yaml:"prefer_send_to_error"`
+	AddMetadata       bool                 `bson:"add_metadata" json:"add_metadata" yaml:"add_metadata"`
+	Format            LoggingPayloadFormat `bson:"payload_format,omitempty" json:"payload_format,omitempty" yaml:"payload_format,omitempty"`
 }
 
 // LoggingPayloadFormat is an set enumerated values describing the
 // formating or encoding of the payload data.
 type LoggingPayloadFormat string
 
-// notlint
 const (
 	LoggingPayloadFormatBSON   = "bson"
 	LoggingPayloadFormatJSON   = "json"
@@ -62,15 +61,11 @@ const (
 )
 
 // Send resolves a sender from the cached logger (either the error or
-// output endpoint,) and then sends the message from the data
+// output endpoint), and then sends the message from the data
 // payload. This method ultimately is responsible for converting the
 // payload to a message format.
-func (lp *LoggingPayload) Send(logger *CachedLogger) error {
-	if logger == nil {
-		return errors.New("cannot send to nil logger")
-	}
-
-	sender, err := logger.getSender(lp.ForceSendToError)
+func (cl *CachedLogger) Send(lp *LoggingPayload) error {
+	sender, err := cl.getSender(lp.PreferSendToError)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -97,7 +92,7 @@ func (lp *LoggingPayload) convertMultiMessage(value interface{}) (message.Compos
 	case string:
 		return lp.convertMultiMessage(strings.Split(data, "\n"))
 	case []byte:
-		payload, err := splitBSONSlice(lp.Format == LoggingPayloadFormatBSON, data)
+		payload, err := lp.splitByteSlice(data)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -180,17 +175,18 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 		return message.NewSimpleFields(lp.Priority, payload), nil
 	default: // includes string case.
 		if lp.AddMetadata {
-			return message.NewSimpleBytesMessage(lp.Priority, data), nil
+			return message.NewBytesMessage(lp.Priority, data), nil
 		}
 
-		return message.NewBytesMessage(lp.Priority, data), nil
+		return message.NewSimpleBytesMessage(lp.Priority, data), nil
 	}
 }
 
-func splitBSONSlice(isBson bool, data []byte) (interface{}, error) {
-	if !isBson {
+func (lp *LoggingPayload) splitByteSlice(data []byte) (interface{}, error) {
+	if lp.Format != LoggingPayloadFormatBSON {
 		return bytes.Split(data, []byte("\x00")), nil
 	}
+
 	out := [][]byte{}
 	buf := bytes.NewBuffer(data)
 	for {

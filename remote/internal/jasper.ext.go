@@ -881,7 +881,7 @@ func ConvertLoggingPayloadFormat(in options.LoggingPayloadFormat) LoggingPayload
 	}
 }
 
-func (lp *LoggingPayload) Export() options.LoggingPayload {
+func (lp *LoggingPayload) Export() *options.LoggingPayload {
 	data := make([]interface{}, len(lp.Data))
 	for idx := range lp.Data {
 		switch val := lp.Data[idx].Data.(type) {
@@ -892,14 +892,14 @@ func (lp *LoggingPayload) Export() options.LoggingPayload {
 		}
 	}
 
-	return options.LoggingPayload{
-		Data:             data,
-		LoggerID:         lp.LoggerID,
-		IsMulti:          lp.IsMulti,
-		ForceSendToError: lp.ForceSendToError,
-		AddMetadata:      lp.AddMetadata,
-		Priority:         level.Priority(lp.Priority),
-		Format:           lp.Format.Export(),
+	return &options.LoggingPayload{
+		Data:              data,
+		LoggerID:          lp.LoggerID,
+		IsMulti:           lp.IsMulti,
+		PreferSendToError: lp.PreferSendToError,
+		AddMetadata:       lp.AddMetadata,
+		Priority:          level.Priority(lp.Priority),
+		Format:            lp.Format.Export(),
 	}
 }
 
@@ -971,13 +971,13 @@ func ConvertLoggingPayload(in options.LoggingPayload) *LoggingPayload {
 	}
 
 	return &LoggingPayload{
-		LoggerID:         in.LoggerID,
-		Priority:         int32(in.Priority),
-		IsMulti:          in.IsMulti,
-		ForceSendToError: in.ForceSendToError,
-		AddMetadata:      in.AddMetadata,
-		Format:           ConvertLoggingPayloadFormat(in.Format),
-		Data:             data,
+		LoggerID:          in.LoggerID,
+		Priority:          int32(in.Priority),
+		IsMulti:           in.IsMulti,
+		PreferSendToError: in.PreferSendToError,
+		AddMetadata:       in.AddMetadata,
+		Format:            ConvertLoggingPayloadFormat(in.Format),
+		Data:              data,
 	}
 }
 

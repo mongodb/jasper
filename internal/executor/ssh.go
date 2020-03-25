@@ -83,11 +83,11 @@ func (e *execSSH) SetStderr(stderr io.Writer) {
 	e.session.Stderr = stderr
 }
 
-// GetStdout returns the standard output of the process.
-func (e *execSSH) GetStdout() io.Writer { return e.session.Stdout }
+// Stdout returns the standard output of the process.
+func (e *execSSH) Stdout() io.Writer { return e.session.Stdout }
 
-// GetStderr returns the standard error of the process.
-func (e *execSSH) GetStderr() io.Writer { return e.session.Stderr }
+// Stderr returns the standard error of the process.
+func (e *execSSH) Stderr() io.Writer { return e.session.Stderr }
 
 // Start begins running the process.
 func (e *execSSH) Start() error {
