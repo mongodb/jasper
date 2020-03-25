@@ -86,7 +86,7 @@ func (c *restClient) doRequest(ctx context.Context, method string, url string, b
 	if err != nil {
 		return nil, errors.Wrap(err, "problem making request")
 	}
-	defer resp.Body.Close()
+
 	if err = handleError(resp); err != nil {
 		return nil, errors.WithStack(err)
 	}
