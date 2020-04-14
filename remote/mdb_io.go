@@ -237,3 +237,20 @@ type getBuildloggerURLsResponse struct {
 type signalEventRequest struct {
 	Name string `bson:"signal_event"`
 }
+
+type loggingCacheSizeResponse struct {
+	Size int `bson:"size"`
+}
+
+type loggingCacheCreateRequest struct {
+	ID      string         `bson:"id"`
+	Options options.Output `bson:"options"`
+}
+
+type loggingCacheGetAndDeleteRequest struct {
+	ID string `bson:"id"`
+}
+
+type loggingCacheCreateAndGetResponse struct {
+	CachedLogger options.CachedLogger `bson:"cached_logger"`
+}
