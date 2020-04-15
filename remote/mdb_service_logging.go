@@ -7,7 +7,6 @@ import (
 	"github.com/evergreen-ci/mrpc/mongowire"
 	"github.com/evergreen-ci/mrpc/shell"
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
 
@@ -16,6 +15,7 @@ const (
 	LoggingCacheCreateCommand = "create_logging_cache"
 	LoggingCacheDeleteCommand = "delete_logging_cache"
 	LoggingCacheGetCommand    = "get_logging_cache"
+	LoggingCachePruneCommand  = "logging_cache_prune"
 	LoggingSendMessageCommand = "send_message"
 )
 
@@ -35,7 +35,7 @@ func (s *mdbService) loggingCreate(ctx context.Context, w io.Writer, msg mongowi
 		return
 	}
 
-	cachedLogger, err := lc.Create(req.ID, &req.Options)
+	cachedLogger, err := lc.Create(req.Params.ID, &req.Params.Options)
 	if err != nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not create logger"), LoggingCacheCreateCommand)
 		return
@@ -45,7 +45,7 @@ func (s *mdbService) loggingCreate(ctx context.Context, w io.Writer, msg mongowi
 }
 
 func (s *mdbService) loggingGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req := &loggingCacheGetAndDeleteRequest{}
+	req := &loggingCacheGetRequest{}
 	lc := s.serviceLoggingCacheRequest(ctx, w, msg, req, LoggingCacheGetCommand)
 	if lc == nil {
 		return
@@ -61,7 +61,7 @@ func (s *mdbService) loggingGet(ctx context.Context, w io.Writer, msg mongowire.
 }
 
 func (s *mdbService) loggingDelete(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req := &loggingCacheGetAndDeleteRequest{}
+	req := &loggingCacheDeleteRequest{}
 	lc := s.serviceLoggingCacheRequest(ctx, w, msg, req, LoggingCacheDeleteCommand)
 	if lc == nil {
 		return
@@ -72,19 +72,31 @@ func (s *mdbService) loggingDelete(ctx context.Context, w io.Writer, msg mongowi
 	s.serviceLoggingCacheResponse(ctx, w, nil, LoggingCacheDeleteCommand)
 }
 
+func (s *mdbService) loggingPrune(ctx context.Context, w io.Writer, msg mongowire.Message) {
+	req := &loggingCachePruneRequest{}
+	lc := s.serviceLoggingCacheRequest(ctx, w, msg, req, LoggingCachePruneCommand)
+	if lc == nil {
+		return
+	}
+
+	lc.Prune(req.LastAccessed)
+
+	s.serviceLoggingCacheResponse(ctx, w, nil, LoggingCachePruneCommand)
+}
+
 func (s *mdbService) loggingSendMessage(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req := &options.LoggingPayload{}
+	req := &loggingSendMessageRequest{}
 	lc := s.serviceLoggingCacheRequest(ctx, w, msg, req, LoggingCacheDeleteCommand)
 	if lc == nil {
 		return
 	}
 
-	cachedLogger := lc.Get(req.LoggerID)
+	cachedLogger := lc.Get(req.Payload.LoggerID)
 	if cachedLogger == nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.New("named logger does not exist"), LoggingSendMessageCommand)
 		return
 	}
-	if err := cachedLogger.Send(req); err != nil {
+	if err := cachedLogger.Send(&req.Payload); err != nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem sending message"), LoggingSendMessageCommand)
 	}
 
