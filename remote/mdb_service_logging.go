@@ -98,6 +98,7 @@ func (s *mdbService) loggingSendMessage(ctx context.Context, w io.Writer, msg mo
 	}
 	if err := cachedLogger.Send(&req.Payload); err != nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem sending message"), LoggingSendMessageCommand)
+		return
 	}
 
 	s.serviceLoggingCacheResponse(ctx, w, nil, LoggingSendMessageCommand)
