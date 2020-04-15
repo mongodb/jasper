@@ -1100,7 +1100,7 @@ func TestManager(t *testing.T) {
 							},
 						},
 						clientTestCase{
-							Name: "LoggingSendMessagesStd",
+							Name: "LoggingSendMessagesValid",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								lc := client.LoggingCache(ctx)
 								logger1, err := lc.Create("logger1", &options.Output{})
