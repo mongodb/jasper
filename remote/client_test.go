@@ -1003,7 +1003,7 @@ func TestManager(t *testing.T) {
 								assert.Equal(t, "new_logger", logger.ID)
 								assert.Equal(t, client.ID(), logger.Manager)
 
-								// should fail with exisitng logger
+								// should fail with existing logger
 								_, err = lc.Create("new_logger", &options.Output{})
 								assert.Error(t, err)
 							},
