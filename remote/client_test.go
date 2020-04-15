@@ -1001,7 +1001,6 @@ func TestManager(t *testing.T) {
 								logger, err := lc.Create("new_logger", &options.Output{})
 								require.NoError(t, err)
 								assert.Equal(t, "new_logger", logger.ID)
-								assert.Equal(t, client.ID(), logger.Manager)
 
 								// should fail with existing logger
 								_, err = lc.Create("new_logger", &options.Output{})
@@ -1025,7 +1024,6 @@ func TestManager(t *testing.T) {
 								logger := lc.Get(expectedLogger.ID)
 								require.NotNil(t, logger)
 								assert.Equal(t, expectedLogger.ID, logger.ID)
-								assert.Equal(t, expectedLogger.Manager, logger.Manager)
 							},
 						},
 						clientTestCase{

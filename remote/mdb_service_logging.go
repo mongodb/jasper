@@ -40,7 +40,6 @@ func (s *mdbService) loggingCreate(ctx context.Context, w io.Writer, msg mongowi
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not create logger"), LoggingCacheCreateCommand)
 		return
 	}
-	cachedLogger.Manager = s.manager.ID()
 
 	s.serviceLoggingCacheResponse(ctx, w, makeLoggingCacheCreateAndGetResponse(cachedLogger), LoggingCacheCreateCommand)
 }
