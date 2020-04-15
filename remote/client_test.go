@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -991,6 +992,127 @@ func TestManager(t *testing.T) {
 								assert.NoError(t, proc.RegisterSignalTriggerID(ctx, jasper.CleanTerminationSignalTrigger))
 
 								assert.NoError(t, proc.Signal(ctx, syscall.SIGTERM))
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCacheCreate",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								logger, err := lc.Create("new_logger", &options.Output{})
+								require.NoError(t, err)
+								assert.Equal(t, "new_logger", logger.ID)
+								assert.Equal(t, client.ID(), logger.Manager)
+
+								// should fail with exisitng logger
+								_, err = lc.Create("new_logger", &options.Output{})
+								assert.Error(t, err)
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCachePutNotImplemented",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								assert.Error(t, lc.Put("logger", &options.CachedLogger{ID: "logger"}))
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCacheGetExists",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								expectedLogger, err := lc.Create("new_logger", &options.Output{})
+								require.NoError(t, err)
+
+								logger := lc.Get(expectedLogger.ID)
+								require.NotNil(t, logger)
+								assert.Equal(t, expectedLogger.ID, logger.ID)
+								assert.Equal(t, expectedLogger.Manager, logger.Manager)
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCacheGetDNE",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								logger := lc.Get("DNE")
+								require.Nil(t, logger)
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCacheRemove",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								logger1, err := lc.Create("logger1", &options.Output{})
+								require.NoError(t, err)
+								logger2, err := lc.Create("logger2", &options.Output{})
+								require.NoError(t, err)
+
+								require.NotNil(t, lc.Get(logger1.ID))
+								require.NotNil(t, lc.Get(logger2.ID))
+								lc.Remove(logger2.ID)
+								require.NotNil(t, lc.Get(logger1.ID))
+								require.Nil(t, lc.Get(logger2.ID))
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCachePrune",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								logger1, err := lc.Create("logger1", &options.Output{})
+								require.NoError(t, err)
+								time.Sleep(5 * time.Second)
+
+								logger2, err := lc.Create("logger2", &options.Output{})
+								require.NoError(t, err)
+
+								lc.Prune(time.Now().Add(-4 * time.Second))
+								require.Nil(t, lc.Get(logger1.ID))
+								require.NotNil(t, lc.Get(logger2.ID))
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCacheLenEmpty",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								_, err := lc.Create("logger1", &options.Output{})
+								require.NoError(t, err)
+								_, err = lc.Create("logger2", &options.Output{})
+								require.NoError(t, err)
+
+								assert.Equal(t, 2, lc.Len())
+							},
+						},
+						clientTestCase{
+							Name: "LoggingCacheLenNotEmpty",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								assert.Zero(t, lc.Len())
+							},
+						},
+						clientTestCase{
+							Name: "LoggingSendMessagesInvalid",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								payload := options.LoggingPayload{
+									LoggerID: "DNE",
+									Data:     "new log message",
+									Priority: level.Warning,
+									Format:   options.LoggingPayloadFormatSTRING,
+								}
+								assert.Error(t, client.SendMessages(ctx, payload))
+							},
+						},
+						clientTestCase{
+							Name: "LoggingSendMessagesStd",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								lc := client.LoggingCache(ctx)
+								logger1, err := lc.Create("logger1", &options.Output{})
+								require.NoError(t, err)
+
+								payload := options.LoggingPayload{
+									LoggerID: logger1.ID,
+									Data:     "new log message",
+									Priority: level.Warning,
+									Format:   options.LoggingPayloadFormatSTRING,
+								}
+								assert.NoError(t, client.SendMessages(ctx, payload))
 							},
 						},
 					) {

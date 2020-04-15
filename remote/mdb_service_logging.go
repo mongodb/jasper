@@ -35,13 +35,14 @@ func (s *mdbService) loggingCreate(ctx context.Context, w io.Writer, msg mongowi
 		return
 	}
 
-	cachedLogger, err := lc.Create(req.Params.ID, &req.Params.Options)
+	cachedLogger, err := lc.Create(req.Params.ID, req.Params.Options)
 	if err != nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not create logger"), LoggingCacheCreateCommand)
 		return
 	}
+	cachedLogger.Manager = s.manager.ID()
 
-	s.serviceLoggingCacheResponse(ctx, w, &loggingCacheCreateAndGetResponse{CachedLogger: *cachedLogger}, LoggingCacheCreateCommand)
+	s.serviceLoggingCacheResponse(ctx, w, makeLoggingCacheCreateAndGetResponse(cachedLogger), LoggingCacheCreateCommand)
 }
 
 func (s *mdbService) loggingGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
@@ -57,7 +58,7 @@ func (s *mdbService) loggingGet(ctx context.Context, w io.Writer, msg mongowire.
 		return
 	}
 
-	s.serviceLoggingCacheResponse(ctx, w, &loggingCacheCreateAndGetResponse{CachedLogger: *cachedLogger}, LoggingCacheGetCommand)
+	s.serviceLoggingCacheResponse(ctx, w, makeLoggingCacheCreateAndGetResponse(cachedLogger), LoggingCacheGetCommand)
 }
 
 func (s *mdbService) loggingDelete(ctx context.Context, w io.Writer, msg mongowire.Message) {

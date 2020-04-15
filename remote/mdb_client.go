@@ -150,7 +150,7 @@ type mdbLoggingCache struct {
 func (lc *mdbLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
 	r := &loggingCacheCreateRequest{}
 	r.Params.ID = id
-	r.Params.Options = *opts
+	r.Params.Options = opts
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")
@@ -169,7 +169,7 @@ func (lc *mdbLoggingCache) Create(id string, opts *options.Output) (*options.Cac
 		return nil, errors.Wrap(err, "error in response")
 	}
 
-	return &resp.CachedLogger, nil
+	return resp.CachedLogger, nil
 }
 
 func (lc *mdbLoggingCache) Put(_ string, _ *options.CachedLogger) error {
@@ -195,7 +195,7 @@ func (lc *mdbLoggingCache) Get(id string) *options.CachedLogger {
 		return nil
 	}
 
-	return &resp.CachedLogger
+	return resp.CachedLogger
 }
 
 func (lc *mdbLoggingCache) Remove(id string) {
@@ -217,8 +217,7 @@ func (lc *mdbLoggingCache) Prune(lastAccessed time.Time) {
 }
 
 func (lc *mdbLoggingCache) Len() int {
-	// TODO: probably have to change this
-	req, err := shell.RequestToMessage(mongowire.OP_QUERY, nil)
+	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCacheLenRequest{})
 	if err != nil {
 		return -1
 	}
