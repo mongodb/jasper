@@ -1,6 +1,8 @@
 package remote
 
 import (
+	"time"
+
 	"github.com/evergreen-ci/mrpc/shell"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
@@ -236,4 +238,48 @@ type getBuildloggerURLsResponse struct {
 
 type signalEventRequest struct {
 	Name string `bson:"signal_event"`
+}
+
+type loggingCacheSizeResponse struct {
+	shell.ErrorResponse `bson:"error_response,inline"`
+	Size                int `bson:"size"`
+}
+
+type loggingCacheCreateRequest struct {
+	Params struct {
+		ID      string          `bson:"id"`
+		Options *options.Output `bson:"options"`
+	} `bson:"create_logging_cache"`
+}
+
+type loggingCacheGetRequest struct {
+	ID string `bson:"get_logging_cache"`
+}
+
+type loggingCacheDeleteRequest struct {
+	ID string `bson:"delete_logging_cache"`
+}
+
+type loggingCacheCreateAndGetResponse struct {
+	shell.ErrorResponse `bson:"error_response,inline"`
+	CachedLogger        *options.CachedLogger `bson:"cached_logger"`
+}
+
+func makeLoggingCacheCreateAndGetResponse(l *options.CachedLogger) *loggingCacheCreateAndGetResponse {
+	return &loggingCacheCreateAndGetResponse{
+		ErrorResponse: shell.MakeSuccessResponse(),
+		CachedLogger:  l,
+	}
+}
+
+type loggingCachePruneRequest struct {
+	LastAccessed time.Time `bson:"logging_cache_prune"`
+}
+
+type loggingCacheLenRequest struct {
+	Len bool `bson:"logging_cache_size"`
+}
+
+type loggingSendMessageRequest struct {
+	Payload options.LoggingPayload `bson:"send_message"`
 }

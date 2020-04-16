@@ -111,6 +111,7 @@ func (s *mdbService) registerHandlers() error {
 		LoggingCacheCreateCommand: s.loggingCreate,
 		LoggingCacheDeleteCommand: s.loggingDelete,
 		LoggingCacheGetCommand:    s.loggingGet,
+		LoggingCachePruneCommand:  s.loggingPrune,
 		LoggingSendMessageCommand: s.loggingSendMessage,
 
 		// Remote client commands
