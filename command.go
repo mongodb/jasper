@@ -369,6 +369,14 @@ func (c *Command) Add(args []string) *Command {
 	return c
 }
 
+// AddWhen adds a command only when the conditional is true.
+func (c *Command) AddWhen(cond bool, args []string) *Command {
+	if !cond {
+		return c
+	}
+	return c.Add(args)
+}
+
 // Sudo runs each command with superuser privileges with the default target
 // user. This will cause the commands to fail if the commands are executed in
 // Windows. If this is a remote command, the command being run remotely uses
@@ -391,6 +399,15 @@ func (c *Command) Extend(cmds [][]string) *Command {
 	return c
 }
 
+// ExtendWhen adds on multiple sub-commands, only when the conditional
+// is true.
+func (c *Command) ExtendWhen(cond bool, cmds [][]string) *Command {
+	if !cond {
+		return c
+	}
+	return c.Extend(cmds)
+}
+
 // Append takes a series of strings and splits them into sub-commands and adds
 // them to the Command.
 func (c *Command) Append(cmds ...string) *Command {
@@ -400,6 +417,16 @@ func (c *Command) Append(cmds ...string) *Command {
 	return c
 }
 
+// AppendWhen adds a sequence of subcommands to the Command only when
+// the conditional is true.
+func (c *Command) AppendWhen(cond bool, cmds ...string) *Command {
+	if !cond {
+		return c
+	}
+
+	return c.Append(cmds...)
+}
+
 // ShellScript adds an operation to the command that runs a shell script, using
 // the shell's "-c" option).
 func (c *Command) ShellScript(shell, script string) *Command {
@@ -407,17 +434,56 @@ func (c *Command) ShellScript(shell, script string) *Command {
 	return c
 }
 
+// ShellScriptWhen a shell script option only when the conditional of true.
+func (c *Command) ShellScriptWhen(cond bool, shell, script string) *Command {
+	if !cond {
+		return c
+	}
+
+	return c.ShellScript(shell, script)
+}
+
 // Bash adds a script using "bash -c", as syntactic sugar for the ShellScript2
 // method.
 func (c *Command) Bash(script string) *Command { return c.ShellScript("bash", script) }
+
+// BashWhen adds a bash script only when the conditional is true.
+func (c *Command) BashWhen(cond bool, script string) *Command {
+	if !cond {
+		return c
+
+	}
+
+	return c.Bash(script)
+}
 
 // Sh adds a script using "sh -c", as syntactic sugar for the ShellScript
 // method.
 func (c *Command) Sh(script string) *Command { return c.ShellScript("sh", script) }
 
+// ShWhen adds a shell script (e.g. "sh -c") only when the conditional
+// is true.
+func (c *Command) ShWhen(cond bool, script string) *Command {
+	if !cond {
+		return c
+	}
+
+	return c.Sh(script)
+}
+
 // AppendArgs is the variadic equivalent of Add, which adds a command
 // in the form of arguments.
 func (c *Command) AppendArgs(args ...string) *Command { return c.Add(args) }
+
+// AppendArgsWhen is the variadic equivalent of AddWhen, which adds a command
+// in the form of arguments only when the conditional is true.
+func (c *Command) AppendArgsWhen(cond bool, args ...string) *Command {
+	if !cond {
+		return c
+	}
+
+	return c.Add(args)
+}
 
 // SetHook allows you to add a function that's always called (locally)
 // after the command completes.
