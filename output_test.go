@@ -69,7 +69,7 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					assert.NoError(t, err)
 					assert.Contains(t, logs, output)
 				},
-				"MultipleInMemoryoptions.LoggersReturnsLogsFromOnlyOne": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor, output string) {
+				"MultipleInMemoryLoggersReturnLogsFromOnlyOne": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor, output string) {
 					opts.Output.Loggers = []options.Logger{
 						{
 							Type: options.LogInMemory,
