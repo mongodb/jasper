@@ -489,7 +489,7 @@ func (c *Command) AppendArgsWhen(cond bool, args ...string) *Command {
 func (c *Command) Prerequisite(chk func() bool) *Command { c.opts.Prerequisite = chk; return c }
 
 // PostHook allows you to add a function that runs (locally) after the
-// each subcommand in the Command completes. When specified the
+// each subcommand in the Command completes. When specified, the
 // PostHook can override or annotate any error produced by the command
 // execution. The error returned is subject to the IgnoreError
 // options. The PostHook is not run when using SetRunFunction.
