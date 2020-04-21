@@ -44,6 +44,8 @@ func (opts *Command) Validate() error {
 // sub-commands in a command object, and can modify the state of the command.
 type CommandPreHook func(*Create)
 
+// NewLoggingPreHook provides a logging message for debugging purposes
+// that prints information from the creation options.
 func NewLoggingPreHook(logger grip.Journaler, lp level.Priority) CommandPreHook {
 	return func(opt *Create) {
 		logger.Log(lp, message.Fields{
