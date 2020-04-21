@@ -43,6 +43,9 @@ func (m *basicProcessManager) ID() string {
 
 func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.AddEnvVar(ManagerEnvironID, m.id)
+	if opts.ID == "" {
+		opts.ID = m.id
+	}
 
 	if opts.Remote != nil && m.useSSHLibrary {
 		opts.Remote.UseSSHLibrary = true

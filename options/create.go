@@ -37,6 +37,7 @@ const (
 // execution configuration, post-execution triggers, and output configuration.
 // It is not safe for concurrent access.
 type Create struct {
+	ID               string            `bson:"id" json:"id" yaml:"id"`
 	Args             []string          `bson:"args" json:"args" yaml:"args"`
 	Environment      map[string]string `bson:"env,omitempty" json:"env,omitempty" yaml:"env,omitempty"`
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
