@@ -488,17 +488,16 @@ func (c *Command) AppendArgsWhen(cond bool, args ...string) *Command {
 // RunFunction is set.
 func (c *Command) Prerequisite(chk func() bool) *Command { c.opts.Prerequisite = chk; return c }
 
-// PostHook allows you to add a function that runs (locally)
-// after the each subcommand in the Command completes. When specified
-// the PostHook can override or annotate any error produced by the command
+// PostHook allows you to add a function that runs (locally) after the
+// each subcommand in the Command completes. When specified the
+// PostHook can override or annotate any error produced by the command
 // execution. The error returned is subject to the IgnoreError
-// options. The PostHook is not run necessarily run when the RunFunction is set.
+// options. The PostHook is not run when using SetRunFunction.
 func (c *Command) PostHook(h options.CommandPostHook) *Command { c.opts.PostHook = h; return c }
 
-// PreHook allows you to add a function that runs (locally)
-// before each subcommand executes, and allows you to log, or modify the
-// creation option. The Prehook is not neccessary run when the
-// RunFunction is set
+// PreHook allows you to add a function that runs (locally) before
+// each subcommand executes, and allows you to log or modify the
+// creation option. The PreHook is not run when using SetRunFunction.
 func (c *Command) PreHook(fn options.CommandPreHook) *Command { c.opts.PreHook = fn; return c }
 
 func (c *Command) setupEnv() {
@@ -537,12 +536,9 @@ func (c *Command) Run(ctx context.Context) error {
 			catcher.Add(c.Close())
 			return catcher.Resolve()
 		}
-		if opt.ID == "" {
-			opt.ID = c.opts.ID
-		}
 
 		if c.opts.PreHook != nil {
-			c.opts.PreHook(opt)
+			c.opts.PreHook(&c.opts, opt)
 		}
 
 		err := c.exec(ctx, opt, idx)

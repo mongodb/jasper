@@ -41,15 +41,16 @@ func (opts *Command) Validate() error {
 }
 
 // CommandPreHook describes a common function type to run before
-// sub-commands in a command object, and can modify the state of the command.
-type CommandPreHook func(*Create)
+// sub-commands in a command object and can modify the state of the
+// command.
+type CommandPreHook func(*Command, *Create)
 
 // NewLoggingPreHook provides a logging message for debugging purposes
 // that prints information from the creation options.
 func NewLoggingPreHook(logger grip.Journaler, lp level.Priority) CommandPreHook {
-	return func(opt *Create) {
+	return func(cmd *Command, opt *Create) {
 		logger.Log(lp, message.Fields{
-			"id":     opt.ID,
+			"id":     cmd.ID,
 			"dir":    opt.WorkingDirectory,
 			"cmd":    opt.Args,
 			"tags":   opt.Tags,
@@ -59,7 +60,7 @@ func NewLoggingPreHook(logger grip.Journaler, lp level.Priority) CommandPreHook 
 }
 
 // NewDefaultLoggingPreHook uses the global grip logger to log a debug
-// message at the specified priority. level.
+// message at the specified priority level.
 func NewDefaultLoggingPreHook(lp level.Priority) CommandPreHook {
 	return NewLoggingPreHook(grip.GetDefaultJournaler(), lp)
 }
@@ -69,22 +70,22 @@ func NewLoggingPreHookFromSender(sender send.Sender, lp level.Priority) CommandP
 	return NewLoggingPreHook(logging.MakeGrip(sender), lp)
 }
 
-// MergePreHooks produces a single Prehook function that runs all
+// MergePreHooks produces a single PreHook function that runs all
 // defined prehooks.
 func MergePreHooks(fns ...CommandPreHook) CommandPreHook {
-	return func(opt *Create) {
+	return func(cmd *Command, opt *Create) {
 		for _, fn := range fns {
-			fn(opt)
+			fn(cmd, opt)
 		}
 	}
 }
 
 // CommandPostHook describes a common function type to run after the
-// command completes and processes its error returns, potentially
-// overriding the output of the command.
+// command completes and processes its error, potentially overriding
+// the output of the command.
 type CommandPostHook func(error) error
 
-// MergePostHooks runs all passed post hooks, collecting
+// MergePostHooks runs all post hooks, collecting
 // the errors and merging them.
 func MergePostHooks(fns ...CommandPostHook) CommandPostHook {
 	return func(err error) error {
