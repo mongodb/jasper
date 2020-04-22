@@ -119,7 +119,6 @@ func (c *mdbClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 		client: c,
 		id:     resp.ID,
 	}, nil
-
 }
 
 func (c *mdbClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
