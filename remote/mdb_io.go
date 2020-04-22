@@ -285,6 +285,25 @@ type loggingSendMessageRequest struct {
 	Payload options.LoggingPayload `bson:"send_message"`
 }
 
+type scriptingCreateRequest struct {
+	Params struct {
+		Type    string `bson:"type"`
+		Options []byte `bson:"options"`
+	} `bson:"create_scripting"`
+}
+
+type scriptingCreateResponse struct {
+	shell.ErrorResponse `bson:"error_response,inline"`
+	ID                  string `bson:"id"`
+}
+
+func makeScriptingCreateResponse(id string) *scriptingCreateResponse {
+	return &scriptingCreateResponse{
+		ErrorResponse: shell.MakeSuccessResponse(),
+		ID:            id,
+	}
+}
+
 type scriptingGetRequest struct {
 	ID string `bson:"get_scripting"`
 }
