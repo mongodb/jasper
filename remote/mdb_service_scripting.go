@@ -46,9 +46,11 @@ func (s *mdbService) scriptingCreate(ctx context.Context, w io.Writer, msg mongo
 	opts, err := options.NewScriptingHarness(req.Params.Type)
 	if err != nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem creating harness options"), ScriptingCreateCommand)
+		return
 	}
 	if err = bson.Unmarshal(req.Params.Options, opts); err != nil {
 		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem unmarshalling options"), ScriptingCreateCommand)
+		return
 	}
 
 	harness, err := s.harnessCache.Create(s.manager, opts)
