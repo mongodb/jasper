@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper/internal/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
@@ -108,7 +110,19 @@ func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd e
 			}
 		}
 		p.info.Successful = cmd.Success()
+		grip.Info(message.Fields{
+			"message":     "kim: running process triggers",
+			"proc":        p.id,
+			"info":        fmt.Sprintf("%#v", p.info),
+			"create_opts": fmt.Sprintf("%#v", p.info.Options),
+		})
 		p.triggers.Run(p.info)
+		grip.Info(message.Fields{
+			"message":     "kim: running process triggers",
+			"proc":        p.id,
+			"info":        fmt.Sprintf("%#v", p.info),
+			"create_opts": fmt.Sprintf("%#v", p.info.Options),
+		})
 	}
 	finish(<-waitFinished)
 }
