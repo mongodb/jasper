@@ -1,12 +1,14 @@
 package options
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
@@ -221,14 +223,15 @@ func (o *Output) Copy() *Output {
 // Close calls all of the processes' output senders' Close method.
 func (o *Output) Close() error {
 	catcher := grip.NewBasicCatcher()
-	// Closing the outputSender and errorSender does not close the underlying
-	// send.Sender.
+	// Close the outputSender and errorSender, which does not close the
+	// underlying send.Sender.
 	if o.outputSender != nil {
 		catcher.Add(o.outputSender.Close())
 	}
 	if o.errorSender != nil {
 		catcher.Add(o.errorSender.Close())
 	}
+	// Close the sender wrapped by the send.WriterSender.
 	if o.outputSender != nil {
 		catcher.Add(o.outputSender.Sender.Close())
 	}
@@ -239,9 +242,19 @@ func (o *Output) Close() error {
 	}
 	// Since loggers are owned by this process, we close the loggers to clean up
 	// their underlying send.Senders.
+	grip.Info(message.Fields{
+		"message": "kim: closing loggers",
+		"output":  fmt.Sprintf("%#v", *o),
+	})
+	// kim: TODO: this is the likeliest source of errors since it was more
+	// recently added.
 	for _, logger := range o.Loggers {
 		catcher.Add(logger.Close())
 	}
+	grip.Info(message.Fields{
+		"message": "kim: done closing loggers",
+		"output":  fmt.Sprintf("%#v", *o),
+	})
 
 	return errors.WithStack(catcher.Resolve())
 }

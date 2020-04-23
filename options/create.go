@@ -14,6 +14,7 @@ import (
 	"github.com/google/shlex"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/internal/executor"
 	"github.com/pkg/errors"
@@ -41,18 +42,18 @@ type Create struct {
 	Environment      map[string]string `bson:"env,omitempty" json:"env,omitempty" yaml:"env,omitempty"`
 	OverrideEnviron  bool              `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	Synchronized     bool              `bson:"synchronized" json:"synchronized" yaml:"synchronized"`
-	Implementation   string            `bson:"implementation" json:"implementation" yaml:"implementation"`
+	Implementation   string            `bson:"implementation,omitempty" json:"implementation,omitempty" yaml:"implementation,omitempty"`
 	WorkingDirectory string            `bson:"working_directory,omitempty" json:"working_directory,omitempty" yaml:"working_directory,omitempty"`
 	Output           Output            `bson:"output" json:"output" yaml:"output"`
 	Remote           *Remote           `bson:"remote,omitempty" json:"remote,omitempty" yaml:"remote,omitempty"`
 	// TimeoutSecs takes precedence over Timeout. On remote interfaces,
 	// TimeoutSecs should be set instead of Timeout.
 	TimeoutSecs int           `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
-	Timeout     time.Duration `bson:"timeout" json:"-" yaml:"-"`
-	Tags        []string      `bson:"tags" json:"tags,omitempty" yaml:"tags"`
-	OnSuccess   []*Create     `bson:"on_success" json:"on_success,omitempty" yaml:"on_success"`
-	OnFailure   []*Create     `bson:"on_failure" json:"on_failure,omitempty" yaml:"on_failure"`
-	OnTimeout   []*Create     `bson:"on_timeout" json:"on_timeout,omitempty" yaml:"on_timeout"`
+	Timeout     time.Duration `bson:"timeout,omitempty" json:"-" yaml:"-"`
+	Tags        []string      `bson:"tags,omitempty" json:"tags,omitempty" yaml:"tags,omitempty"`
+	OnSuccess   []*Create     `bson:"on_success,omitempty" json:"on_success,omitempty" yaml:"on_success"`
+	OnFailure   []*Create     `bson:"on_failure,omitempty" json:"on_failure,omitempty" yaml:"on_failure"`
+	OnTimeout   []*Create     `bson:"on_timeout,omitempty" json:"on_timeout,omitempty" yaml:"on_timeout"`
 	// StandardInputBytes takes precedence over StandardInput. On remote
 	// interfaces, StandardInputBytes should be set instead of StandardInput.
 	StandardInput      io.Reader `bson:"-" json:"-" yaml:"-"`
@@ -229,6 +230,10 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 
 	// Senders require Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() error {
+		grip.Info(message.Fields{
+			"message":     "kim: closing output options",
+			"create_opts": fmt.Sprintf("%#v", opts),
+		})
 		return errors.WithStack(opts.Output.Close())
 	})
 

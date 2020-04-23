@@ -104,7 +104,6 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					}
 					assert.Equal(t, 1, outputCount)
 				},
-				// "SuccessiveCallsReturnLogs": func(ctx context.Context, t *testing.T, opts *options.Create, output string) {},
 				// "": func(ctx context.Context, t *testing.T, opts *options.Create, output string) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
