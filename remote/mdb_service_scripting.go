@@ -189,18 +189,9 @@ func (s *mdbService) serviceScriptingRequest(ctx context.Context, w io.Writer, m
 }
 
 func (s *mdbService) getHarness(ctx context.Context, w io.Writer, id, command string) scripting.Harness {
-	var (
-		harness scripting.Harness
-		err     error
-	)
-
-	if s.harnessCache != nil {
-		harness, err = s.harnessCache.Get(id)
-		if err == nil {
-			return harness
-		}
-	} else {
-		err = errors.New("scripting harnesses not supported")
+	harness, err := s.harnessCache.Get(id)
+	if err == nil {
+		return harness
 	}
 
 	shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrapf(err, "problem fetching scripting harness with id %s", id), command)
