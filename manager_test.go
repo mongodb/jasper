@@ -581,12 +581,12 @@ func TestTrackedManager(t *testing.T) {
 				tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 				defer cancel()
 				t.Run(name+"Manager/BlockingProcess", func(t *testing.T) {
-					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
+					opts := testutil.SleepCreateOpts(1)
 					opts.Implementation = options.ProcessImplementationBlocking
 					test(tctx, t, makeManager(), opts)
 				})
 				t.Run(name+"Manager/BasicProcess", func(t *testing.T) {
-					opts := testutil.YesCreateOpts(testutil.ManagerTestTimeout)
+					opts := testutil.SleepCreateOpts(1)
 					opts.Implementation = options.ProcessImplementationBasic
 					test(tctx, t, makeManager(), opts)
 				})

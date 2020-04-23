@@ -1,7 +1,6 @@
 package options
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"time"
@@ -242,10 +241,10 @@ func (o *Output) Close() error {
 	}
 	// Since loggers are owned by this process, we close the loggers to clean up
 	// their underlying send.Senders.
-	grip.Info(message.Fields{
-		"message": "kim: closing loggers",
-		"output":  fmt.Sprintf("%#v", *o),
-	})
+	// grip.Info(message.Fields{
+	//     "message": "kim: closing loggers",
+	//     "loggers": o.Loggers,
+	// })
 	// kim: TODO: this is the likeliest source of errors since it was more
 	// recently added.
 	for _, logger := range o.Loggers {
@@ -253,7 +252,7 @@ func (o *Output) Close() error {
 	}
 	grip.Info(message.Fields{
 		"message": "kim: done closing loggers",
-		"output":  fmt.Sprintf("%#v", *o),
+		"loggers": o.Loggers,
 	})
 
 	return errors.WithStack(catcher.Resolve())

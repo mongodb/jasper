@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,8 +32,9 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					_, err = proc.Wait(ctx)
-					require.NoError(t, err)
+					exitCode, err := proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Zero(t, exitCode)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 0)
 					assert.Error(t, err)
@@ -42,8 +44,9 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					_, err = proc.Wait(ctx)
-					require.NoError(t, err)
+					exitCode, err := proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Zero(t, exitCode)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 100)
 					assert.Error(t, err)
@@ -62,8 +65,9 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					_, err = proc.Wait(ctx)
-					require.NoError(t, err)
+					exitCode, err := proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Zero(t, exitCode)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 100)
 					assert.NoError(t, err)
@@ -89,8 +93,9 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					_, err = proc.Wait(ctx)
-					require.NoError(t, err)
+					exitCode, err := proc.Wait(ctx)
+					assert.NoError(t, err)
+					assert.Zero(t, exitCode)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 100)
 					assert.NoError(t, err)
@@ -110,7 +115,7 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					tctx, tcancel := context.WithTimeout(ctx, testutil.ProcessTestTimeout)
 					defer tcancel()
 
-					output := "foo"
+					output := t.Name() + " " + filepath.Join(procType, testName)
 					opts := &options.Create{Args: []string{"echo", output}}
 					testCase(tctx, t, opts, makeProc, output)
 				})

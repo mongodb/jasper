@@ -178,7 +178,18 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	if opts.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		deadline, _ = ctx.Deadline()
-		opts.closers = append(opts.closers, func() error { cancel(); return nil })
+		opts.closers = append(opts.closers, func() error {
+			// grip.Info(message.Fields{
+			//     "message": "kim: running context closer",
+			//     "args":    opts.Args,
+			// })
+			cancel()
+			// grip.Info(message.Fields{
+			//     "message": "kim: done running context closer",
+			//     "args":    opts.Args,
+			// })
+			return nil
+		})
 	}
 
 	var cmd executor.Executor
@@ -230,11 +241,16 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 
 	// Senders require Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() error {
-		grip.Info(message.Fields{
-			"message":     "kim: closing output options",
-			"create_opts": fmt.Sprintf("%#v", opts),
-		})
-		return errors.WithStack(opts.Output.Close())
+		// grip.Info(message.Fields{
+		//     "message": "kim: closing output options",
+		//     "args":    opts.Args,
+		// })
+		err := errors.WithStack(opts.Output.Close())
+		// grip.Info(message.Fields{
+		//     "message": "kim: done closing output options",
+		//     "args":    opts.Args,
+		// })
+		return err
 	})
 
 	return cmd, deadline, nil
@@ -267,8 +283,20 @@ func (opts *Create) AddEnvVar(k, v string) {
 func (opts *Create) Close() error {
 	catcher := grip.NewBasicCatcher()
 	for _, c := range opts.closers {
+		// grip.Info(message.Fields{
+		//     "message": "kim: running closer",
+		//     "args":    opts.Args,
+		// })
 		catcher.Add(c())
+		// grip.Info(message.Fields{
+		//     "message": "kim: done with closer",
+		//     "args":    opts.Args,
+		// })
 	}
+	grip.Info(message.Fields{
+		"message": "kim: done with ALL closers",
+		"args":    opts.Args,
+	})
 	return catcher.Resolve()
 }
 

@@ -259,9 +259,6 @@ func (l *Logger) Configure() (send.Sender, error) { //nolint: gocognit
 // Close closes its send.Senders, closing the wrapper send.Sender and then the
 // underlying base send.Sender. This should be called once the Logger is
 // finished logging.
-// kim: TODO: ensure this is valid. I'm guessing it's hanging somewhere around
-// here but not certain. It was probably introduced in this change because I
-// can't point to any other possible problem areas.
 func (l *Logger) Close() error {
 	catcher := grip.NewBasicCatcher()
 	if l.sender != nil {
@@ -270,5 +267,11 @@ func (l *Logger) Close() error {
 	if l.baseSender != nil && l.sender != l.baseSender {
 		catcher.Wrap(l.baseSender.Close(), "could not close underlying sender")
 	}
-	return catcher.Resolve()
+	err := catcher.Resolve()
+	// grip.Info(message.Fields{
+	//     "message": "kim: finished closing logger",
+	//     "logger":  *l,
+	//     "err":     err,
+	// })
+	return err
 }

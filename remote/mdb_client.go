@@ -80,7 +80,7 @@ func (c *mdbClient) CreateProcess(ctx context.Context, opts *options.Create) (ja
 	if err := resp.SuccessOrError(); err != nil {
 		return nil, errors.Wrap(err, "error in response")
 	}
-	return &process{info: resp.Info, doRequest: c.doRequest}, nil
+	return &mdbProcess{info: resp.Info, doRequest: c.doRequest}, nil
 }
 
 func (c *mdbClient) CreateCommand(ctx context.Context) *jasper.Command {
@@ -258,7 +258,7 @@ func (c *mdbClient) List(ctx context.Context, f options.Filter) ([]jasper.Proces
 	infos := resp.Infos
 	procs := make([]jasper.Process, 0, len(infos))
 	for _, info := range infos {
-		procs = append(procs, &process{info: info, doRequest: c.doRequest})
+		procs = append(procs, &mdbProcess{info: info, doRequest: c.doRequest})
 	}
 	return procs, nil
 }
@@ -282,7 +282,7 @@ func (c *mdbClient) Group(ctx context.Context, tag string) ([]jasper.Process, er
 	infos := resp.Infos
 	procs := make([]jasper.Process, 0, len(infos))
 	for _, info := range infos {
-		procs = append(procs, &process{info: info, doRequest: c.doRequest})
+		procs = append(procs, &mdbProcess{info: info, doRequest: c.doRequest})
 	}
 	return procs, nil
 }
@@ -304,7 +304,7 @@ func (c *mdbClient) Get(ctx context.Context, id string) (jasper.Process, error) 
 		return nil, errors.Wrap(err, "error in response")
 	}
 	info := resp.Info
-	return &process{info: info, doRequest: c.doRequest}, nil
+	return &mdbProcess{info: info, doRequest: c.doRequest}, nil
 }
 
 func (c *mdbClient) Clear(ctx context.Context) {

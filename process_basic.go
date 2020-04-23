@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper/internal/executor"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
@@ -110,19 +108,21 @@ func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd e
 			}
 		}
 		p.info.Successful = cmd.Success()
-		grip.Info(message.Fields{
-			"message":     "kim: running process triggers",
-			"proc":        p.id,
-			"info":        fmt.Sprintf("%#v", p.info),
-			"create_opts": fmt.Sprintf("%#v", p.info.Options),
-		})
+		// grip.Info(message.Fields{
+		//     "message": "kim: running process triggers",
+		//     "type":    "basic",
+		//     "proc":    p.id,
+		//     "args":    p.info.Options.Args,
+		//     "err":     err,
+		// })
 		p.triggers.Run(p.info)
-		grip.Info(message.Fields{
-			"message":     "kim: running process triggers",
-			"proc":        p.id,
-			"info":        fmt.Sprintf("%#v", p.info),
-			"create_opts": fmt.Sprintf("%#v", p.info.Options),
-		})
+		// grip.Info(message.Fields{
+		//     "message": "kim: finished process triggers",
+		//     "type":    "basic",
+		//     "proc":    p.id,
+		//     "args":    p.info.Options.Args,
+		//     "err":     err,
+		// })
 	}
 	finish(<-waitFinished)
 }
@@ -182,6 +182,12 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	case <-ctx.Done():
 		return -1, errors.New("operation canceled")
 	case <-p.waitProcessed:
+		// grip.Info(message.Fields{
+		//     "message":   "kim: processed finished waiting",
+		//     "exit_code": p.info.ExitCode,
+		//     "err":       p.err,
+		//     "proc":      p.id,
+		// })
 	}
 
 	return p.info.ExitCode, p.err

@@ -154,7 +154,19 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd e
 			}()
 
 			p.mu.RLock()
+			// grip.Info(message.Fields{
+			//     "message": "kim: running process triggers",
+			//     "type":    "blocking",
+			//     "proc":    p.id,
+			//     "args":    p.info.Options.Args,
+			// })
 			p.triggers.Run(info)
+			// grip.Info(message.Fields{
+			//     "message": "kim: finished process triggers",
+			//     "type":    "blocking",
+			//     "proc":    p.id,
+			//     "args":    p.info.Options.Args,
+			// })
 			p.mu.RUnlock()
 			p.setErr(err)
 			p.setInfo(info)
