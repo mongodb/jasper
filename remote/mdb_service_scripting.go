@@ -9,7 +9,7 @@ import (
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 const (

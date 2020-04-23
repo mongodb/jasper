@@ -1124,7 +1124,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "ScriptingGetExists",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								expectedHarness := createScriptingHarness(ctx, t, client, ".")
+								expectedHarness := createTestScriptingHarness(ctx, t, client, ".")
 
 								harness, err := client.GetScripting(ctx, expectedHarness.ID())
 								require.NoError(t, err)
@@ -1134,14 +1134,14 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "ScriptingSetup",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								harness := createScriptingHarness(ctx, t, client, ".")
+								harness := createTestScriptingHarness(ctx, t, client, ".")
 								assert.NoError(t, harness.Setup(ctx))
 							},
 						},
 						clientTestCase{
 							Name: "ScriptingCleanup",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								harness := createScriptingHarness(ctx, t, client, ".")
+								harness := createTestScriptingHarness(ctx, t, client, ".")
 								assert.NoError(t, harness.Cleanup(ctx))
 							},
 						},
@@ -1153,7 +1153,7 @@ func TestManager(t *testing.T) {
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpdir))
 								}()
-								harness := createScriptingHarness(ctx, t, client, tmpdir)
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
 
 								require.NoError(t, err)
 								tmpFile := filepath.Join(tmpdir, "fake_script.go")
@@ -1169,7 +1169,7 @@ func TestManager(t *testing.T) {
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpdir))
 								}()
-								harness := createScriptingHarness(ctx, t, client, tmpdir)
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
 
 								tmpFile := filepath.Join(tmpdir, "fake_script.go")
 								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(42) }`), 0755))
@@ -1185,7 +1185,7 @@ func TestManager(t *testing.T) {
 									assert.NoError(t, os.RemoveAll(tmpdir))
 								}()
 
-								harness := createScriptingHarness(ctx, t, client, tmpdir)
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
 								assert.NoError(t, harness.RunScript(ctx, `package main; import "fmt"; func main() { fmt.Println("Hello World") }`))
 							},
 						},
@@ -1198,7 +1198,7 @@ func TestManager(t *testing.T) {
 									assert.NoError(t, os.RemoveAll(tmpdir))
 								}()
 
-								harness := createScriptingHarness(ctx, t, client, tmpdir)
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
 								require.Error(t, harness.RunScript(ctx, `package main; import "os"; func main() { os.Exit(42) }`))
 							},
 						},
@@ -1210,7 +1210,7 @@ func TestManager(t *testing.T) {
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpdir))
 								}()
-								harness := createScriptingHarness(ctx, t, client, tmpdir)
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
 
 								tmpFile := filepath.Join(tmpdir, "fake_script.go")
 								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
@@ -1232,7 +1232,7 @@ func TestManager(t *testing.T) {
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpdir))
 								}()
-								harness := createScriptingHarness(ctx, t, client, tmpdir)
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
 
 								tmpFile := filepath.Join(tmpdir, "fake_script_test.go")
 								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "testing"; func TestMain(t *testing.T) { return }`), 0755))
@@ -1254,7 +1254,7 @@ func TestManager(t *testing.T) {
 	}
 }
 
-func createScriptingHarness(ctx context.Context, t *testing.T, client Manager, dir string) scripting.Harness {
+func createTestScriptingHarness(ctx context.Context, t *testing.T, client Manager, dir string) scripting.Harness {
 	opts := options.NewGolangScriptingEnvironment(filepath.Join(dir, "gopath"), runtime.GOROOT())
 	harness, err := client.CreateScripting(ctx, opts)
 	require.NoError(t, err)
