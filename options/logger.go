@@ -267,11 +267,5 @@ func (l *Logger) Close() error {
 	if l.baseSender != nil && l.sender != l.baseSender {
 		catcher.Wrap(l.baseSender.Close(), "could not close underlying sender")
 	}
-	err := catcher.Resolve()
-	// grip.Info(message.Fields{
-	//     "message": "kim: finished closing logger",
-	//     "logger":  *l,
-	//     "err":     err,
-	// })
-	return err
+	return catcher.Resolve()
 }

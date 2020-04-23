@@ -108,21 +108,7 @@ func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd e
 			}
 		}
 		p.info.Successful = cmd.Success()
-		// grip.Info(message.Fields{
-		//     "message": "kim: running process triggers",
-		//     "type":    "basic",
-		//     "proc":    p.id,
-		//     "args":    p.info.Options.Args,
-		//     "err":     err,
-		// })
 		p.triggers.Run(p.info)
-		// grip.Info(message.Fields{
-		//     "message": "kim: finished process triggers",
-		//     "type":    "basic",
-		//     "proc":    p.id,
-		//     "args":    p.info.Options.Args,
-		//     "err":     err,
-		// })
 	}
 	finish(<-waitFinished)
 }
@@ -182,12 +168,6 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 	case <-ctx.Done():
 		return -1, errors.New("operation canceled")
 	case <-p.waitProcessed:
-		// grip.Info(message.Fields{
-		//     "message":   "kim: processed finished waiting",
-		//     "exit_code": p.info.ExitCode,
-		//     "err":       p.err,
-		//     "proc":      p.id,
-		// })
 	}
 
 	return p.info.ExitCode, p.err

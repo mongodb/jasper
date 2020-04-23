@@ -32,9 +32,8 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					exitCode, err := proc.Wait(ctx)
-					assert.NoError(t, err)
-					assert.Zero(t, exitCode)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 0)
 					assert.Error(t, err)
@@ -44,9 +43,8 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					exitCode, err := proc.Wait(ctx)
-					assert.NoError(t, err)
-					assert.Zero(t, exitCode)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 100)
 					assert.Error(t, err)
@@ -65,9 +63,8 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					exitCode, err := proc.Wait(ctx)
-					assert.NoError(t, err)
-					assert.Zero(t, exitCode)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 100)
 					assert.NoError(t, err)
@@ -93,9 +90,8 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
-					exitCode, err := proc.Wait(ctx)
-					assert.NoError(t, err)
-					assert.Zero(t, exitCode)
+					_, err = proc.Wait(ctx)
+					require.NoError(t, err)
 
 					logs, err := GetInMemoryLogStream(ctx, proc, 100)
 					assert.NoError(t, err)

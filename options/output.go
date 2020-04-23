@@ -7,7 +7,6 @@ import (
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
-	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
@@ -225,37 +224,27 @@ func (o *Output) Close() error {
 	// Close the outputSender and errorSender, which does not close the
 	// underlying send.Sender.
 	if o.outputSender != nil {
-		catcher.Add(o.outputSender.Close())
+		catcher.Wrap(o.outputSender.Close(), "problem closing output sender")
 	}
 	if o.errorSender != nil {
-		catcher.Add(o.errorSender.Close())
+		catcher.Wrap(o.errorSender.Close(), "problem closing error sender")
 	}
 	// Close the sender wrapped by the send.WriterSender.
 	if o.outputSender != nil {
-		catcher.Add(o.outputSender.Sender.Close())
+		catcher.Wrap(o.outputSender.Sender.Close(), "problem closing wrapped output sender")
 	}
 	// Since senders are shared, only close error's senders if output hasn't
 	// already closed them.
 	if o.errorSender != nil && (o.SuppressOutput || o.SendOutputToError) {
-		catcher.Add(o.errorSender.Sender.Close())
+		catcher.Wrap(o.errorSender.Sender.Close(), "problem closing wrapped error sender")
 	}
 	// Since loggers are owned by this process, we close the loggers to clean up
 	// their underlying send.Senders.
-	// grip.Info(message.Fields{
-	//     "message": "kim: closing loggers",
-	//     "loggers": o.Loggers,
-	// })
-	// kim: TODO: this is the likeliest source of errors since it was more
-	// recently added.
 	for _, logger := range o.Loggers {
-		catcher.Add(logger.Close())
+		catcher.Wrapf(logger.Close(), "problem closing '%s' logger", logger.Type)
 	}
-	grip.Info(message.Fields{
-		"message": "kim: done closing loggers",
-		"loggers": o.Loggers,
-	})
 
-	return errors.WithStack(catcher.Resolve())
+	return catcher.Resolve()
 }
 
 func (o *Output) CachedLogger(id string) *CachedLogger {
