@@ -221,29 +221,30 @@ func (o *Output) Copy() *Output {
 // Close calls all of the processes' output senders' Close method.
 func (o *Output) Close() error {
 	catcher := grip.NewBasicCatcher()
-	// Closing the outputSender and errorSender does not close the underlying
-	// send.Sender.
+	// Close the outputSender and errorSender, which does not close the
+	// underlying send.Sender.
 	if o.outputSender != nil {
-		catcher.Add(o.outputSender.Close())
+		catcher.Wrap(o.outputSender.Close(), "problem closing output sender")
 	}
 	if o.errorSender != nil {
-		catcher.Add(o.errorSender.Close())
+		catcher.Wrap(o.errorSender.Close(), "problem closing error sender")
 	}
+	// Close the sender wrapped by the send.WriterSender.
 	if o.outputSender != nil {
-		catcher.Add(o.outputSender.Sender.Close())
+		catcher.Wrap(o.outputSender.Sender.Close(), "problem closing wrapped output sender")
 	}
 	// Since senders are shared, only close error's senders if output hasn't
 	// already closed them.
 	if o.errorSender != nil && (o.SuppressOutput || o.SendOutputToError) {
-		catcher.Add(o.errorSender.Sender.Close())
+		catcher.Wrap(o.errorSender.Sender.Close(), "problem closing wrapped error sender")
 	}
 	// Since loggers are owned by this process, we close the loggers to clean up
 	// their underlying send.Senders.
 	for _, logger := range o.Loggers {
-		catcher.Add(logger.Close())
+		catcher.Wrapf(logger.Close(), "problem closing '%s' logger", logger.Type)
 	}
 
-	return errors.WithStack(catcher.Resolve())
+	return catcher.Resolve()
 }
 
 func (o *Output) CachedLogger(id string) *CachedLogger {

@@ -973,7 +973,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "RegisterSignalTriggerIDChecksForInvalidTriggerID",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								proc, err := client.CreateProcess(ctx, testutil.YesCreateOpts(0))
+								proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(1))
 								require.NoError(t, err)
 								assert.True(t, proc.Running(ctx))
 
@@ -985,7 +985,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "RegisterSignalTriggerIDPassesWithValidArgs",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								proc, err := client.CreateProcess(ctx, testutil.YesCreateOpts(0))
+								proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(1))
 								require.NoError(t, err)
 								assert.True(t, proc.Running(ctx))
 

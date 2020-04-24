@@ -46,6 +46,7 @@ func GetInMemoryLogStream(ctx context.Context, proc Process, count int) ([]strin
 			continue
 		}
 
+		// This is fine because logger.sender is already set.
 		sender, err := logger.Configure()
 		if err != nil {
 			continue

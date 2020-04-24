@@ -197,13 +197,9 @@ buildvariants:
     display_name: Windows
     run_on:
       - windows-64-vs2015-small
-      - windows-64-vs2015-test
-      - windows-64-vs2015-compile
       - windows-64-vs2015-large
-      - windows-64-vs2010-compile
-      - windows-64-vs2010-test
-      - windows-64-vs2013-compile
-      - windows-64-vs2013-test
+      - windows-64-vs2017-small
+      - windows-64-vs2017-large
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: C:/golang/go1.11
