@@ -1057,12 +1057,13 @@ func TestManager(t *testing.T) {
 								lc := client.LoggingCache(ctx)
 								logger1, err := lc.Create("logger1", &options.Output{})
 								require.NoError(t, err)
-								time.Sleep(5 * time.Second)
+								require.NotNil(t, lc.Get(logger1.ID))
+								time.Sleep(2 * time.Second)
 
 								logger2, err := lc.Create("logger2", &options.Output{})
 								require.NoError(t, err)
 
-								lc.Prune(time.Now().Add(-4 * time.Second))
+								lc.Prune(time.Now().Add(-time.Second))
 								require.Nil(t, lc.Get(logger1.ID))
 								require.NotNil(t, lc.Get(logger2.ID))
 							},
