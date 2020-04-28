@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/certdepot"
+	"github.com/golang/protobuf/ptypes"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	internal "github.com/mongodb/jasper/remote/internal"
@@ -190,11 +192,11 @@ func (c *rpcClient) Close(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (c *rpcClient) Status(ctx context.Context) (string, bool, error) {
@@ -214,11 +216,11 @@ func (c *rpcClient) ConfigureCache(ctx context.Context, opts options.Cache) erro
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (c *rpcClient) DownloadFile(ctx context.Context, opts options.Download) error {
@@ -226,11 +228,12 @@ func (c *rpcClient) DownloadFile(ctx context.Context, opts options.Download) err
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Success {
-		return nil
+
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (c *rpcClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {
@@ -238,11 +241,11 @@ func (c *rpcClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDow
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (c *rpcClient) GetLogStream(ctx context.Context, id string, count int) (jasper.LogStream, error) {
@@ -269,11 +272,11 @@ func (c *rpcClient) SignalEvent(ctx context.Context, name string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (c *rpcClient) WriteFile(ctx context.Context, jopts options.WriteFile) error {
@@ -368,7 +371,14 @@ func (lc *rpcLoggingCache) Remove(id string) {
 }
 
 func (lc *rpcLoggingCache) Prune(ts time.Time) {
-	_, _ = lc.client.LoggingCachePrune(lc.ctx, internal.MustConvertTimestamp(ts))
+	pbts, err := ptypes.TimestampProto(ts)
+	if err != nil {
+		grip.Warning(message.WrapError(err, message.Fields{
+			"message": "could not convert prune timestamp to equivalent protobuf RPC timestamp",
+		}))
+		return
+	}
+	_, _ = lc.client.LoggingCachePrune(lc.ctx, pbts)
 }
 
 func (lc *rpcLoggingCache) Len() int {
@@ -389,7 +399,12 @@ func (p *rpcProcess) ID() string { return p.info.Id }
 
 func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	if p.info.Complete {
-		return p.info.Export()
+		exportedInfo, err := p.info.Export()
+		grip.Warning(message.WrapError(err, message.Fields{
+			"message": "could not convert info for process",
+			"process": p.ID(),
+		}))
+		return exportedInfo
 	}
 
 	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
@@ -398,7 +413,13 @@ func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	}
 	p.info = info
 
-	return info.Export()
+	exportedInfo, err := p.info.Export()
+	grip.Warning(message.WrapError(err, message.Fields{
+		"message": "could not convert info for process",
+		"process": p.ID(),
+	}))
+
+	return exportedInfo
 }
 func (p *rpcProcess) Running(ctx context.Context) bool {
 	if p.info.Complete {
@@ -438,11 +459,11 @@ func (p *rpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (p *rpcProcess) Wait(ctx context.Context) (int, error) {
@@ -484,11 +505,11 @@ func (p *rpcProcess) RegisterSignalTriggerID(ctx context.Context, sigID jasper.S
 		return errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (p *rpcProcess) Tag(tag string) {
@@ -524,11 +545,11 @@ func (s *rpcScripting) Run(ctx context.Context, args []string) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (s *rpcScripting) Setup(ctx context.Context) error {
@@ -537,11 +558,11 @@ func (s *rpcScripting) Setup(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
@@ -550,11 +571,11 @@ func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }
 
 func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) (string, error) {
@@ -577,10 +598,10 @@ func (s *rpcScripting) Test(ctx context.Context, dir string, args ...scripting.T
 	}
 
 	if !resp.Outcome.Success {
-		err = errors.New(resp.Outcome.Text)
+		return nil, errors.New(resp.Outcome.Text)
 	}
 
-	return resp.Export(), err
+	return resp.Export()
 }
 
 func (s *rpcScripting) Cleanup(ctx context.Context) error {
@@ -589,9 +610,9 @@ func (s *rpcScripting) Cleanup(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.Success {
-		return nil
+	if !resp.Success {
+		return errors.New(resp.Text)
 	}
 
-	return errors.New(resp.Text)
+	return nil
 }

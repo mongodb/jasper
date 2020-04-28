@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	duration "github.com/golang/protobuf/ptypes/duration"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
@@ -95,7 +93,15 @@ func ConvertCreateOptions(opts *options.Create) *CreateOptions {
 
 // Export takes a protobuf RPC ProcessInfo struct and returns the analogous
 // Jasper ProcessInfo struct.
-func (info *ProcessInfo) Export() jasper.ProcessInfo {
+func (info *ProcessInfo) Export() (jasper.ProcessInfo, error) {
+	startAt, err := ptypes.Timestamp(info.StartAt)
+	if err != nil {
+		return jasper.ProcessInfo{}, errors.Wrap(err, "could not convert end timestamp from equivalent protobuf RPC timestamp")
+	}
+	endAt, err := ptypes.Timestamp(info.EndAt)
+	if err != nil {
+		return jasper.ProcessInfo{}, errors.Wrap(err, "could not convert end timestamp from equivalent protobuf RPC timestamp")
+	}
 	return jasper.ProcessInfo{
 		ID:         info.Id,
 		PID:        int(info.Pid),
@@ -105,13 +111,23 @@ func (info *ProcessInfo) Export() jasper.ProcessInfo {
 		ExitCode:   int(info.ExitCode),
 		Timeout:    info.Timedout,
 		Options:    *info.Options.Export(),
-	}
+		StartAt:    startAt,
+		EndAt:      endAt,
+	}, nil
 }
 
 // ConvertProcessInfo takes a Jasper ProcessInfo struct and returns an
 // equivalent protobuf RPC *ProcessInfo struct. ConvertProcessInfo is the
 // inverse of (*ProcessInfo) Export().
-func ConvertProcessInfo(info jasper.ProcessInfo) *ProcessInfo {
+func ConvertProcessInfo(info jasper.ProcessInfo) (*ProcessInfo, error) {
+	startAt, err := ptypes.TimestampProto(info.StartAt)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert start timestamp to equivalent protobuf RPC timestamp")
+	}
+	endAt, err := ptypes.TimestampProto(info.EndAt)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert end timestamp to equivalent protobuf RPC timestamp")
+	}
 	return &ProcessInfo{
 		Id:         info.ID,
 		Pid:        int64(info.PID),
@@ -120,8 +136,10 @@ func ConvertProcessInfo(info jasper.ProcessInfo) *ProcessInfo {
 		Successful: info.Successful,
 		Complete:   info.Complete,
 		Timedout:   info.Timeout,
+		StartAt:    startAt,
+		EndAt:      endAt,
 		Options:    ConvertCreateOptions(&info.Options),
-	}
+	}, nil
 }
 
 // Export takes a protobuf RPC Signals struct and returns the analogous
@@ -681,7 +699,8 @@ func ConvertLogStream(l jasper.LogStream) *LogStream {
 	}
 }
 
-// Export converts the rpc type to jasper's equivalent option type.
+// Export takes a protobuf RPC ScriptingOptions and returns the analogous
+// ScriptingHarness options.
 func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 	switch val := o.Value.(type) {
 	case *ScriptingOptions_Golang:
@@ -721,6 +740,9 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 	}
 }
 
+// ConvertScriptingOptions takes ScriptingHarness options and returns an
+// equivalent protobuf RPC ScriptingOptions. ConvertScriptingOptions is the
+// inverse of (*ScriptingOptions) Export().
 func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
 	switch val := opts.(type) {
 	case *options.ScriptingGolang:
@@ -776,71 +798,71 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
 	}
 }
 
-func MustConvertTimestamp(t time.Time) *timestamp.Timestamp {
-	out, err := ptypes.TimestampProto(t)
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
-func mustConvertPTimestamp(t *timestamp.Timestamp) time.Time {
-	out, err := ptypes.Timestamp(t)
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
-func ConvertScriptingTestResults(res []scripting.TestResult) []*ScriptingHarnessTestResult {
+// ConvertScriptingTestResults takes scripting TestResults and returns an
+// equivalent protobuf RPC ScriptingHarnessTestResult.
+func ConvertScriptingTestResults(res []scripting.TestResult) ([]*ScriptingHarnessTestResult, error) {
 	out := make([]*ScriptingHarnessTestResult, len(res))
 	for idx, r := range res {
+		startAt, err := ptypes.TimestampProto(r.StartAt)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not convert start timestamp to equivalent protobuf RPC timestamp")
+		}
 		out[idx] = &ScriptingHarnessTestResult{
 			Name:     r.Name,
-			StartAt:  MustConvertTimestamp(r.StartAt),
+			StartAt:  startAt,
 			Duration: ptypes.DurationProto(r.Duration),
 			Outcome:  string(r.Outcome),
 		}
 	}
-	return out
+	return out, nil
 }
 
-func (r *ScriptingHarnessTestResponse) Export() []scripting.TestResult {
+// Export takes a protobuf RPC ScriptingHarnessTestResponse and returns the
+// analogous scripting TestResult.
+func (r *ScriptingHarnessTestResponse) Export() ([]scripting.TestResult, error) {
 	out := make([]scripting.TestResult, len(r.Results))
 	for idx, res := range r.Results {
+		startAt, err := ptypes.Timestamp(res.StartAt)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not convert start time from equivalent protobuf RPC time for script '%s'", res.Name)
+		}
+		duration, err := ptypes.Duration(res.Duration)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not convert script duration from equivalent protobuf RPC duration for script '%s'", res.Name)
+		}
+
 		out[idx] = scripting.TestResult{
 			Name:     res.Name,
-			StartAt:  mustConvertPTimestamp(res.StartAt),
-			Duration: mustConvertDuration(res.Duration),
+			StartAt:  startAt,
+			Duration: duration,
 			Outcome:  scripting.TestOutcome(res.Outcome),
 		}
 	}
-	return out
+	return out, nil
 }
 
-func mustConvertDuration(in *duration.Duration) time.Duration {
-	dur, err := ptypes.Duration(in)
-	if err != nil {
-		panic(err)
-	}
-
-	return dur
-}
-
-func (a *ScriptingHarnessTestArgs) Export() []scripting.TestOptions {
+// Export takes a protobuf RPC ScriptingHarnessTestArgs and returns the
+// analogous scripting TestOptions.
+func (a *ScriptingHarnessTestArgs) Export() ([]scripting.TestOptions, error) {
 	out := make([]scripting.TestOptions, len(a.Options))
 	for idx, opts := range a.Options {
+		timeout, err := ptypes.Duration(opts.Timeout)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not convert timeout from equivalent RPC protobuf duration for script '%s'", opts.Name)
+		}
 		out[idx] = scripting.TestOptions{
 			Name:    opts.Name,
 			Args:    opts.Args,
 			Pattern: opts.Pattern,
-			Timeout: mustConvertDuration(opts.Timeout),
+			Timeout: timeout,
 			Count:   int(opts.Count),
 		}
 	}
-	return out
+	return out, nil
 }
 
+// ConvertScriptingTestResults takes scripting TestOptions and returns an
+// equivalent protobuf RPC ScriptingHarnessTestOptions.
 func ConvertScriptingTestOptions(args []scripting.TestOptions) []*ScriptingHarnessTestOptions {
 	out := make([]*ScriptingHarnessTestOptions, len(args))
 	for idx, opt := range args {
@@ -855,6 +877,8 @@ func ConvertScriptingTestOptions(args []scripting.TestOptions) []*ScriptingHarne
 	return out
 }
 
+// Export takes a protobuf RPC LoggingPayloadFormat and returns the
+// analogous LoggingPayloadFormat.
 func (lf LoggingPayloadFormat) Export() options.LoggingPayloadFormat {
 	switch lf {
 	case LoggingPayloadFormat_FORMATBSON:
@@ -868,6 +892,9 @@ func (lf LoggingPayloadFormat) Export() options.LoggingPayloadFormat {
 	}
 }
 
+// ConvertLoggingPayloadFormat takes LoggingPayloadFormat options and returns an
+// equivalent protobuf RPC LoggingPayloadFormat. ConvertLoggingPayloadFormat is
+// the inverse of (LoggingPayloadFormat) Export().
 func ConvertLoggingPayloadFormat(in options.LoggingPayloadFormat) LoggingPayloadFormat {
 	switch in {
 	case options.LoggingPayloadFormatJSON:
@@ -881,6 +908,8 @@ func ConvertLoggingPayloadFormat(in options.LoggingPayloadFormat) LoggingPayload
 	}
 }
 
+// Export takes a protobuf RPC LoggingPayload and returns the
+// analogous LoggingPayload options.
 func (lp *LoggingPayload) Export() *options.LoggingPayload {
 	data := make([]interface{}, len(lp.Data))
 	for idx := range lp.Data {
@@ -940,6 +969,9 @@ func convertMessage(format options.LoggingPayloadFormat, m interface{}) *Logging
 	return out
 }
 
+// ConvertLoggingPayload takes LoggingPayload options and returns an
+// equivalent protobuf RPC LoggingPayload. ConvertLoggingPayload is
+// the inverse of (*LoggingPayload) Export().
 func ConvertLoggingPayload(in options.LoggingPayload) *LoggingPayload {
 	data := []*LoggingPayloadData{}
 	switch val := in.Data.(type) {
@@ -981,34 +1013,45 @@ func ConvertLoggingPayload(in options.LoggingPayload) *LoggingPayload {
 	}
 }
 
+// Export takes a protobuf RPC LoggingCacheInstance and returns the
+// analogous CacheLogger options.
 func (l *LoggingCacheInstance) Export() (*options.CachedLogger, error) {
 	if !l.Outcome.Success {
 		return nil, errors.New(l.Outcome.Text)
 	}
 
-	ts, err := ptypes.Timestamp(l.Accessed)
+	accessed, err := ptypes.Timestamp(l.Accessed)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "could not convert last accessed timestamp from equivalent protobuf RPC timestamp")
 	}
 
 	return &options.CachedLogger{
-		Accessed: ts,
+		Accessed: accessed,
 		ID:       l.Id,
 		Manager:  l.Manager,
 	}, nil
 }
 
-func ConvertCachedLogger(in *options.CachedLogger) *LoggingCacheInstance {
+// ConvertCachedLogger takes CachedLogger options and returns an
+// equivalent protobuf RPC LoggingCacheInstance. ConvertLoggingPayload is
+// the inverse of (*LoggingCacheInstance) Export().
+func ConvertCachedLogger(opts *options.CachedLogger) (*LoggingCacheInstance, error) {
+	accessed, err := ptypes.TimestampProto(opts.Accessed)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert last accessed timestamp to equivalent protobuf RPC timestamp")
+	}
 	return &LoggingCacheInstance{
 		Outcome: &OperationOutcome{
 			Success: true,
 		},
-		Id:       in.ID,
-		Manager:  in.Manager,
-		Accessed: MustConvertTimestamp(in.Accessed),
-	}
+		Id:       opts.ID,
+		Manager:  opts.Manager,
+		Accessed: accessed,
+	}, nil
 }
 
+// ConvertLoggingCreateArgs takes the given ID and returns an equivalent
+// protobuf RPC LoggingCacheCreateArgs.
 func ConvertLoggingCreateArgs(id string, opts *options.Output) *LoggingCacheCreateArgs {
 	o := ConvertOutputOptions(*opts)
 	return &LoggingCacheCreateArgs{
