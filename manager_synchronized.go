@@ -9,11 +9,11 @@ import (
 )
 
 // MakeSynchronizedManager wraps the given manager in a thread-safe Manager.
-func MakeSynchronizedManager(manager Manager) (Manager, error) {
-	return &synchronizedProcessManager{manager: manager}, nil
+func MakeSynchronizedManager(manager Manager) Manager {
+	return &synchronizedProcessManager{manager: manager}
 }
 
-// NewSynchronizedManager is a constructor for a thread-safe Manager.
+// NewSynchronizedManager is a constructor for a thread-safe basic Manager.
 func NewSynchronizedManager(trackProcs bool) (Manager, error) {
 	basicManager, err := newBasicProcessManager(map[string]Process{}, trackProcs, false)
 	if err != nil {
