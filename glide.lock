@@ -42,13 +42,15 @@ imports:
   - name: github.com/evergreen-ci/poplar
     version: 3043bd036e01aa6abbad6af0df031a8315308ff9
 
-  # cgroup requirements
+  # cgroup/docker requirements
   - name: github.com/containerd/cgroups
     version: dbea6f2bd41658b84b00417ceefa416b979cbf10
   - name: github.com/opencontainers/runtime-spec
     version: ad53dcdc39f1f7f7472b10aa0a45648fe4865496
   - name: github.com/docker/go-units
     version: 2fb04c6466a548a03cb009c5569ee1ab1e35398e
+  - name: github.com/docker/docker
+    version: aa6a9891b09cce3d9004121294301a30d45d998d
   - name: github.com/coreos/go-systemd
     version: 95778dfbb74eb7e4dbaf43bf7d71809650ef8076
   - name: github.com/godbus/dbus

@@ -20,6 +20,7 @@ import:
   - package: github.com/containerd/cgroups
   - package: github.com/opencontainers/runtime-spec
   - package: github.com/docker/go-units
+  - package: github.com/docker/docker
   - package: github.com/coreos/go-systemd
   - package: github.com/godbus/dbus
   - package: github.com/gogo/protobuf
