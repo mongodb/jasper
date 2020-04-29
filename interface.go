@@ -35,7 +35,6 @@ type Manager interface {
 	Register(context.Context, Process) error
 
 	LoggingCache(context.Context) LoggingCache
-	WriteFile(context.Context, options.WriteFile) error
 
 	List(context.Context, options.Filter) ([]Process, error)
 	Group(context.Context, string) ([]Process, error)

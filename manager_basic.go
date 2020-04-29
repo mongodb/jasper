@@ -87,14 +87,6 @@ func (m *basicProcessManager) CreateCommand(ctx context.Context) *Command {
 	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
-func (m *basicProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	if err := opts.Validate(); err != nil {
-		return errors.Wrap(err, "invalid file options")
-	}
-
-	return errors.Wrap(opts.DoWrite(), "problem writing data")
-}
-
 func (m *basicProcessManager) Register(ctx context.Context, proc Process) error {
 	if ctx.Err() != nil {
 		return errors.WithStack(ctx.Err())

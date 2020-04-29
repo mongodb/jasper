@@ -61,13 +61,6 @@ func (m *synchronizedProcessManager) CreateCommand(ctx context.Context) *Command
 	return NewCommand().ProcConstructor(m.CreateProcess)
 }
 
-func (m *synchronizedProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return errors.WithStack(m.manager.WriteFile(ctx, opts))
-}
-
 func (m *synchronizedProcessManager) Register(ctx context.Context, proc Process) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -34,10 +34,6 @@ func (m *remoteOverrideMgr) CreateCommand(ctx context.Context) *Command {
 	return cmd
 }
 
-func (m *remoteOverrideMgr) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	return m.mgr.WriteFile(ctx, opts)
-}
-
 func (m *remoteOverrideMgr) Register(ctx context.Context, p Process) error {
 	return m.mgr.Register(ctx, p)
 }
