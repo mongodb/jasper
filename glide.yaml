@@ -1,11 +1,12 @@
 package: github.com/mongodb/jasper
 import:
-  - package: github.com/pkg/errors
   - package: github.com/golang/uuid
+  - package: github.com/pkg/errors
+  - package: github.com/evergreen-ci/utility
   - package: github.com/stretchr/testify
+  - package: github.com/mongodb/grip
   - package: github.com/mongodb/amboy
   - package: github.com/mongodb/ftdc
-  - package: github.com/mongodb/grip
   - package: github.com/evergreen-ci/aviation
   - package: github.com/evergreen-ci/birch
   - package: github.com/evergreen-ci/gimlet
