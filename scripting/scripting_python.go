@@ -68,12 +68,15 @@ func (e *pythonEnvironment) Run(ctx context.Context, args []string) error {
 
 func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error {
 	scriptChecksum := fmt.Sprintf("%x", sha1.Sum([]byte(script)))
+
 	wo := options.WriteFile{
 		Path:    filepath.Join(e.opts.VirtualEnvPath, "tmp", strings.Join([]string{e.manager.ID(), scriptChecksum}, "-")+".py"),
 		Content: []byte(script),
 	}
-
-	if err := e.manager.WriteFile(ctx, wo); err != nil {
+	if err := wo.Validate(); err != nil {
+		return errors.Wrap(err, "invalid options to write file")
+	}
+	if err := wo.DoWrite(); err != nil {
 		return errors.Wrap(err, "problem writing file")
 	}
 

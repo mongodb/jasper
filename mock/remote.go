@@ -15,6 +15,7 @@ type RemoteClient struct {
 	FailConfigureCache     bool
 	FailDownloadFile       bool
 	FailDownloadMongoDB    bool
+	FailWriteFile          bool
 	FailGetLogStream       bool
 	FailGetBuildloggerURLs bool
 	FailSignalEvent        bool
@@ -27,6 +28,9 @@ type RemoteClient struct {
 
 	// DownloadMongoDB input
 	MongoDBDownloadOptions options.MongoDBDownload
+
+	// WriteFile input
+	WriteFileOptions options.WriteFile
 
 	// LogStream input/output
 	LogStreamID    string
@@ -83,6 +87,14 @@ func (c *RemoteClient) DownloadMongoDB(ctx context.Context, opts options.MongoDB
 
 	c.MongoDBDownloadOptions = opts
 
+	return nil
+}
+
+func (c *RemoteClient) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	if c.FailWriteFile {
+		return mockFail()
+	}
+	c.WriteFileOptions = opts
 	return nil
 }
 

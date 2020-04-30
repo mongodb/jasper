@@ -21,14 +21,12 @@ type Manager struct {
 	FailClose           bool
 	FailCreateScripting bool
 	FailGetScripting    bool
-	FailWriteFile       bool
 	NilLoggingCache     bool
 	Create              func(*options.Create) Process
 	CreateConfig        Process
 	ManagerID           string
 	Procs               []jasper.Process
 	ScriptingEnv        scripting.Harness
-	WriteFileOptions    options.WriteFile
 	LoggingCacheVal     jasper.LoggingCache
 }
 
@@ -97,17 +95,6 @@ func (m *Manager) LoggingCache(ctx context.Context) jasper.LoggingCache {
 		return nil
 	}
 	return m.LoggingCacheVal
-}
-
-// WriteFile saves the options.WriteFile. If FailWriteFile is set, it returns an
-// error.
-func (m *Manager) WriteFile(ctx context.Context, opts options.WriteFile) error {
-	if m.FailWriteFile {
-		return mockFail()
-	}
-
-	m.WriteFileOptions = opts
-	return nil
 }
 
 // Register adds the process to Procs. If FailRegister is set, it returns an
