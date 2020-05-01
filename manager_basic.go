@@ -20,6 +20,9 @@ type basicProcessManager struct {
 	loggers       LoggingCache
 }
 
+// newBasicProcessManager returns a manager which is not thread safe for
+// creating arbitrary processes. By default, processes are basic processes
+// unless otherwise specified when creating the process.
 func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLibrary bool) (Manager, error) {
 	m := basicProcessManager{
 		procs:         procs,

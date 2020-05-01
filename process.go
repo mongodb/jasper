@@ -7,9 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewProcess is a factory function which constructs a Process outside
-// of the context of a manager. These processes will not be managed or
-// tracked.
+// NewProcess is a factory function which constructs a local Process outside
+// of the context of a manager.
 func NewProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	var (
 		proc Process
