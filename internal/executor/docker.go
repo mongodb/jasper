@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,6 +18,8 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/pkg/errors"
 )
+
+// kim: TODO: needs thorough testing
 
 type docker struct {
 	execOpts types.ExecConfig
@@ -33,18 +36,16 @@ type docker struct {
 
 	containerID    string
 	containerMutex sync.RWMutex
-	execID         string
-	execMutex      sync.RWMutex
 
-	started  bool
-	exited   bool
-	exitErr  error
-	exitCode int
+	// kim: TODO: should add a "state" variable to handle state transitions
+	// (unstarted, started, exited, closed)
+	started bool
+	exited  bool
+	exitErr error
 }
 
 // NewDocker returns an Executor that creates a process within a Docker
-// container. Callers are expected to clean up resources by either cancelling
-// the context or explicitly calling Close.
+// container. Callers are expected to clean up resources by calling Close.
 func NewDocker(ctx context.Context, opts []client.Opt, platform, image string, args []string) (Executor, error) {
 	e := &docker{
 		execOpts: types.ExecConfig{
@@ -67,9 +68,16 @@ func NewDocker(ctx context.Context, opts []client.Opt, platform, image string, a
 
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
+		// kim: TODO: remove goroutine and require explicit close
+		// This cleanup goroutine is a best-effort attempt to clean up the
+		// container, since it could fail to clean up the container in some
+		// exit conditions. For example, if the context cancels just as the main
+		// program is about to exit, the request to the Docker daemon is not
+		// guaranteed to finish in time to remove the container since all
+		// goroutines will be forcibly shut down.
 		<-ctx.Done()
-		grip.Error(errors.Wrap(e.client.Close(), "error closing Docker client"))
 		grip.Error(e.removeContainer())
+		grip.Error(errors.Wrap(e.client.Close(), "error closing Docker client"))
 		// utility.PutHTTPClient(httpClient)
 	}()
 	e.ctx = ctx
@@ -233,12 +241,19 @@ func (e *docker) removeContainer() error {
 	if containerID == "" {
 		return nil
 	}
+	// pp.Println("removing container:", containerID)
 
-	if err := e.client.ContainerRemove(e.ctx, e.containerID, types.ContainerRemoveOptions{
+	// We must ensure the container is cleaned up, so do not reuse the
+	// Executor's context, which may already be done. This is an expensive
+	// operation.
+	rmCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e.client.ContainerRemove(rmCtx, e.containerID, types.ContainerRemoveOptions{
 		Force: true,
 	}); err != nil {
 		return errors.Wrap(err, "problem cleaning up container for process")
 	}
+	// pp.Println("container removed:", containerID)
 
 	e.setContainerID("")
 
@@ -255,18 +270,6 @@ func (e *docker) setContainerID(id string) {
 	e.containerMutex.Lock()
 	defer e.containerMutex.Unlock()
 	e.containerID = id
-}
-
-func (e *docker) getExecID() string {
-	e.execMutex.RLock()
-	defer e.execMutex.RUnlock()
-	return e.execID
-}
-
-func (e *docker) setExecID(id string) {
-	e.execMutex.Lock()
-	defer e.execMutex.Unlock()
-	e.execID = id
 }
 
 func (e *docker) Wait() error {
@@ -292,7 +295,6 @@ func (e *docker) Wait() error {
 		if res.Error != nil {
 			e.exitErr = errors.New(res.Error.Message)
 		}
-		e.exitCode = int(res.StatusCode)
 	}
 
 	e.exited = true
@@ -312,46 +314,56 @@ func (e *docker) Signal(sig syscall.Signal) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not get Docker equivalent of signal '%d'", sig)
 	}
-	if err := e.client.ContainerKill(e.ctx, e.getExecID(), dsig); err != nil {
+	if err := e.client.ContainerKill(e.ctx, e.getContainerID(), dsig); err != nil {
 		return errors.Wrap(err, "could not signal process within container")
 	}
 	return nil
 }
 
+// PID returns the PID of the process in the container, or -1 if the PID cannot
+// be retrieved.
 func (e *docker) PID() int {
-	resp, err := e.client.ContainerExecInspect(e.ctx, e.getExecID())
+	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
-			"message":  "could not get exit code",
-			"executor": "docker",
+			"message":   "could not inspect container to retrieve PID",
+			"container": e.getContainerID(),
+			"executor":  "docker",
 		}))
 		return -1
 	}
-	// kim: TODO: test if PID is still valid even when process has exited. If
-	// not, it may be necessarily a real pid.
-	return resp.Pid
-}
-
-// ExitCode returns, or -1 if it cannot be retrieved.
-func (e *docker) ExitCode() int {
-	if !e.exited {
+	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
+		grip.Error(message.WrapError(err, message.Fields{
+			"message":   "introspection of container did not contain process state",
+			"container": e.getContainerID(),
+			"executor":  "docker",
+		}))
 		return -1
 	}
-	return e.exitCode
+	return resp.State.Pid
+}
 
-	// resp, err := e.client.ContainerExecInspect(e.ctx, e.getExecID())
-	// if err != nil {
-	//     grip.Error(message.WrapError(err, message.Fields{
-	//         "message":  "could not get exit code",
-	//         "executor": "docker",
-	//     }))
-	//     return -1
-	// }
-	// if resp.Running {
-	//     return -1
-	// }
-	//
-	// return resp.ExitCode
+// ExitCode returns the exit code of the process in the container, or -1 if the
+// exit code cannot be retrieved.
+func (e *docker) ExitCode() int {
+	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
+	if err != nil {
+		grip.Error(message.WrapError(err, message.Fields{
+			"message":   "could not inspect container to retrieve PID",
+			"container": e.getContainerID(),
+			"executor":  "docker",
+		}))
+		return -1
+	}
+	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
+		grip.Error(message.WrapError(err, message.Fields{
+			"message":   "introspection of container did not contain process state",
+			"container": e.getContainerID(),
+			"executor":  "docker",
+		}))
+		return -1
+	}
+	return resp.State.ExitCode
 }
 
 func (e *docker) Success() bool {
@@ -365,6 +377,7 @@ func (e *docker) SignalInfo() (sig syscall.Signal, signaled bool) {
 	return -1, false
 }
 
+// kim: TODO: move cleanup goroutine to close
 func (e *docker) Close() {
 	e.closeConn()
 }

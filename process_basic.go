@@ -102,9 +102,10 @@ func (p *basicProcess) transition(ctx context.Context, deadline time.Time, cmd e
 				p.info.Timeout = sig == syscall.SIGKILL && finishTime.After(deadline)
 			}
 		} else {
-			p.info.ExitCode = cmd.ExitCode()
+			exitCode := cmd.ExitCode()
+			p.info.ExitCode = exitCode
 			if runtime.GOOS == "windows" && !deadline.IsZero() {
-				p.info.Timeout = cmd.ExitCode() == 1 && finishTime.After(deadline)
+				p.info.Timeout = exitCode == 1 && finishTime.After(deadline)
 			}
 		}
 		p.info.Successful = cmd.Success()

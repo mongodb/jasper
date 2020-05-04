@@ -146,9 +146,10 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, cmd e
 						info.Timeout = sig == syscall.SIGKILL && finishTime.After(deadline)
 					}
 				} else {
-					info.ExitCode = cmd.ExitCode()
+					exitCode := cmd.ExitCode()
+					info.ExitCode = exitCode
 					if runtime.GOOS == "windows" && !deadline.IsZero() {
-						info.Timeout = cmd.ExitCode() == 1 && finishTime.After(deadline)
+						info.Timeout = exitCode == 1 && finishTime.After(deadline)
 					}
 				}
 			}()

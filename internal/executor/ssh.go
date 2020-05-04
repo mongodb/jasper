@@ -25,8 +25,8 @@ type ssh struct {
 }
 
 // NewSSH returns an Executor that creates processes over SSH. Callers are
-// expected to clean up resources by either cancelling the context or explicitly
-// calling Close.
+// expected to clean up resources by explicitly calling Close.
+// kim: TODO: remove goroutine and just close the objects in Close.
 func NewSSH(ctx context.Context, client *cryptossh.Client, session *cryptossh.Session, args []string) (Executor, error) {
 	e := &ssh{
 		session: session,
