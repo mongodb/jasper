@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 	"testing"
@@ -570,7 +569,6 @@ func TestTrackedManager(t *testing.T) {
 					cmd := manager.CreateCommand(ctx).Background(true).Add(opts.Args)
 					cmd.opts.Process = *opts
 
-					fmt.Println(cmd.opts.Process)
 					require.NoError(t, cmd.Run(ctx))
 					assert.Len(t, manager.procs, 1)
 

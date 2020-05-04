@@ -200,9 +200,10 @@ func TestProcessImplementations(t *testing.T) {
 							require.NoError(t, err)
 							assert.NoError(t, proc.RegisterSignalTriggerID(ctx, CleanTerminationSignalTrigger))
 						},
-						"DefaultTriggerSucceeds": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
+						"DefaultTriggerSucceeds": func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
+							opts := testutil.SleepCreateOpts(3)
 							proc, err := makep(ctx, opts)
-							assert.NoError(t, err)
+							require.NoError(t, err)
 							assert.NoError(t, proc.RegisterTrigger(ctx, makeDefaultTrigger(ctx, nil, opts, "foo")))
 						},
 						"OptionsCloseTriggerRegisteredByDefault": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
