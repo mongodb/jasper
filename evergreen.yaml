@@ -139,15 +139,17 @@ task_groups:
       - func: get-project
       - func: setup-docker-image
         variants:
-          - lint
-          - race-detector
           - ubuntu1604
     setup_task:
       - func: run-make
         vars: { target: "clean-results" }
     teardown_task:
       - func: cleanup-docker-containers
+        variants:
+          - ubuntu1604
       - func: teardown-docker-image
+        variants:
+          - ubuntu1604
       - func: parse-results
 
 #######################################
@@ -161,7 +163,6 @@ buildvariants:
       GOROOT: /opt/golang/go1.13
       GO_BIN_PATH: /opt/golang/go1.13/bin/go
       RACE_DETECTOR: true
-      DOCKER_IMAGE: ubuntu
       make_args: -k
     run_on:
       - archlinux-test
@@ -175,7 +176,6 @@ buildvariants:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.13
       GO_BIN_PATH: /opt/golang/go1.13/bin/go
-      DOCKER_IMAGE: ubuntu
       make_args: -k
     run_on:
       - archlinux-test
