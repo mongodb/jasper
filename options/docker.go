@@ -24,19 +24,25 @@ type Docker struct {
 
 // Validate checks whether all the required fields are set and sets defaults if
 // none are specified.
-func (d *Docker) Validate() error {
+func (opts *Docker) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(d.Image == "", "Docker image must be specified")
-	if d.Platform == "" {
+	catcher.NewWhen(opts.Image == "", "Docker image must be specified")
+	if opts.Platform == "" {
 		if utility.StringSliceContains(DockerPlatforms(), runtime.GOOS) {
-			d.Platform = runtime.GOOS
+			opts.Platform = runtime.GOOS
 		} else {
-			catcher.Errorf("cannot set default platform to current runtime platform '%s' because it is unsupported", d.Platform)
+			catcher.Errorf("cannot set default platform to current runtime platform '%s' because it is unsupported", opts.Platform)
 		}
-	} else if !utility.StringSliceContains(DockerPlatforms(), d.Platform) {
-		catcher.Errorf("unrecognized platform '%s'", d.Platform)
+	} else if !utility.StringSliceContains(DockerPlatforms(), opts.Platform) {
+		catcher.Errorf("unrecognized platform '%s'", opts.Platform)
 	}
 	return catcher.Resolve()
+}
+
+// Copy returns a copy of the options for only the exported fields.
+func (opts *Docker) Copy() *Docker {
+	optsCopy := *opts
+	return &optsCopy
 }
 
 // DockerPlatforms returns all supported platforms that can run Docker
@@ -47,22 +53,22 @@ func DockerPlatforms() []string {
 
 // Resolve converts the Docker options into options to initialize a Docker
 // client.
-func (d *Docker) Resolve() ([]client.Opt, error) {
-	var opts []client.Opt
+func (opts *Docker) Resolve() ([]client.Opt, error) {
+	var clientOpts []client.Opt
 
-	if d.Host != "" && d.Port != 0 {
-		addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", d.Host, d.Port))
+	if opts.Host != "" && opts.Port != 0 {
+		addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", opts.Host, opts.Port))
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not resolve Docker daemon address %s:%d", d.Host, d.Port)
+			return nil, errors.Wrapf(err, "could not resolve Docker daemon address %s:%d", opts.Host, opts.Port)
 		}
-		opts = append(opts, client.WithHost(addr.String()))
+		clientOpts = append(clientOpts, client.WithHost(addr.String()))
 	}
 
-	if d.APIVersion != "" {
-		opts = append(opts, client.WithAPIVersionNegotiation())
+	if opts.APIVersion != "" {
+		clientOpts = append(clientOpts, client.WithAPIVersionNegotiation())
 	} else {
-		opts = append(opts, client.WithVersion(d.APIVersion))
+		clientOpts = append(clientOpts, client.WithVersion(opts.APIVersion))
 	}
 
-	return opts, nil
+	return clientOpts, nil
 }

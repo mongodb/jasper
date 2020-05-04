@@ -185,6 +185,9 @@ func (opts *Create) Hash() hash.Hash {
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
+// kim: TODO: test resolution with Docker options.
+// kim: TODO: defer and check for err to determine context cancellation and
+// cmd.Close()
 func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, error) {
 	if ctx.Err() != nil {
 		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
@@ -366,6 +369,14 @@ func (opts *Create) Copy() *Create {
 	if opts.StandardInputBytes != nil {
 		optsCopy.StandardInputBytes = make([]byte, len(opts.StandardInputBytes))
 		_ = copy(optsCopy.StandardInputBytes, opts.StandardInputBytes)
+	}
+
+	if opts.Remote != nil {
+		optsCopy.Remote = opts.Remote.Copy()
+	}
+
+	if opts.Docker != nil {
+		optsCopy.Docker = opts.Docker.Copy()
 	}
 
 	optsCopy.Output = *opts.Output.Copy()
