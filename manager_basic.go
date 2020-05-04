@@ -24,6 +24,9 @@ type basicProcessManager struct {
 // creating arbitrary processes. By default, processes are basic processes
 // unless otherwise specified when creating the process.
 func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLibrary bool) (Manager, error) {
+	if procs == nil {
+		procs = map[string]Process{}
+	}
 	m := basicProcessManager{
 		procs:         procs,
 		id:            uuid.New().String(),

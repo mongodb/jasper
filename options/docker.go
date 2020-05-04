@@ -3,7 +3,6 @@ package options
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"runtime"
 
 	"github.com/docker/docker/client"
@@ -54,7 +53,7 @@ func DockerPlatforms() []string {
 
 // Resolve converts the Docker options into options to initialize a Docker
 // client.
-func (opts *Docker) Resolve(httpClient *http.Client) (*client.Client, error) {
+func (opts *Docker) Resolve() (*client.Client, error) {
 	var clientOpts []client.Opt
 
 	if opts.Host != "" && opts.Port != 0 {
@@ -69,10 +68,6 @@ func (opts *Docker) Resolve(httpClient *http.Client) (*client.Client, error) {
 		clientOpts = append(clientOpts, client.WithAPIVersionNegotiation())
 	} else {
 		clientOpts = append(clientOpts, client.WithVersion(opts.APIVersion))
-	}
-
-	if httpClient != nil {
-		clientOpts = append(clientOpts, client.WithHTTPClient(httpClient))
 	}
 
 	client, err := client.NewClientWithOpts(clientOpts...)

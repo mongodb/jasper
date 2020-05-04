@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"sync"
 	"syscall"
 	"time"
@@ -14,14 +13,11 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/evergreen-ci/utility"
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/pkg/errors"
 )
-
-// kim: TODO: needs thorough testing
 
 type docker struct {
 	execOpts types.ExecConfig
@@ -32,9 +28,8 @@ type docker struct {
 	image    string
 	platform string
 
-	client     *client.Client
-	httpClient *http.Client
-	ctx        context.Context
+	client *client.Client
+	ctx    context.Context
 
 	containerID    string
 	containerMutex sync.RWMutex
@@ -50,20 +45,19 @@ type docker struct {
 
 // NewDocker returns an Executor that creates a process within a Docker
 // container. Callers are expected to clean up resources by calling Close.
-func NewDocker(ctx context.Context, client *client.Client, httpClient *http.Client, platform, image string, args []string) Executor {
+func NewDocker(ctx context.Context, client *client.Client, platform, image string, args []string) Executor {
 	return &docker{
 		ctx: ctx,
 		execOpts: types.ExecConfig{
 			Cmd: args,
 		},
-		platform:   platform,
-		image:      image,
-		client:     client,
-		httpClient: httpClient,
-		status:     Unstarted,
-		pid:        -1,
-		exitCode:   -1,
-		signal:     syscall.Signal(-1),
+		platform: platform,
+		image:    image,
+		client:   client,
+		status:   Unstarted,
+		pid:      -1,
+		exitCode: -1,
+		signal:   syscall.Signal(-1),
 	}
 }
 
@@ -126,17 +120,6 @@ func (e *docker) Start() error {
 	e.setStatus(Running)
 
 	return nil
-}
-
-func (e *docker) getContainerState() (*types.ContainerState, error) {
-	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not inspect container")
-	}
-	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
-		return nil, errors.Wrap(err, "introspection of container did not contain state information")
-	}
-	return resp.ContainerJSONBase.State, nil
 }
 
 // setupContainer creates a container for the process without starting it.
@@ -237,11 +220,9 @@ func (e *docker) removeContainer() error {
 	if containerID == "" {
 		return nil
 	}
-	// pp.Println("removing container:", containerID)
 
 	// We must ensure the container is cleaned up, so do not reuse the
-	// Executor's context, which may already be done. This is an expensive
-	// operation.
+	// Executor's context, which may already be done.
 	rmCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := e.client.ContainerRemove(rmCtx, e.containerID, types.ContainerRemoveOptions{
@@ -249,7 +230,6 @@ func (e *docker) removeContainer() error {
 	}); err != nil {
 		return errors.Wrap(err, "problem cleaning up container for process")
 	}
-	// pp.Println("container removed:", containerID)
 
 	e.setContainerID("")
 
@@ -266,15 +246,24 @@ func (e *docker) Wait() error {
 
 	containerID := e.getContainerID()
 
-	wait, errs := e.client.ContainerWait(e.ctx, containerID, container.WaitConditionNotRunning)
+	waitDone, errs := e.client.ContainerWait(e.ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errs:
 		return errors.Wrap(err, "error waiting for container to finish running")
 	case <-e.ctx.Done():
 		return e.ctx.Err()
-	case res := <-wait:
-		if res.Error != nil {
-			e.exitErr = errors.New(res.Error.Message)
+	case <-waitDone:
+		state, err := e.getProcessState()
+		if err != nil {
+			return errors.Wrap(err, "could not get container state after waiting for completion")
+		}
+		if len(state.Error) != 0 {
+			e.exitErr = errors.New(state.Error)
+		}
+		// In order to maintain the same semantics as exec.Command, we have to
+		// return an error for non-zero exit codes.
+		if (state.ExitCode) != 0 {
+			e.exitErr = errors.Errorf("exit status %d", state.ExitCode)
 		}
 	}
 
@@ -308,13 +297,13 @@ func (e *docker) PID() int {
 		return e.pid
 	}
 
-	state, err := e.getContainerState()
+	state, err := e.getProcessState()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
-			"message":   "could not get container state",
+			"message":   "could not get container PID",
 			"op":        "pid",
 			"container": e.getContainerID(),
-			"executor":  "Docker",
+			"executor":  "docker",
 		}))
 	}
 
@@ -330,10 +319,10 @@ func (e *docker) ExitCode() int {
 		return e.exitCode
 	}
 
-	state, err := e.getContainerState()
+	state, err := e.getProcessState()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
-			"message":   "could not get container state",
+			"message":   "could not get container exit code",
 			"container": e.getContainerID(),
 			"executor":  "docker",
 		}))
@@ -365,11 +354,21 @@ func (e *docker) Close() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.Wrap(e.removeContainer(), "error removing Docker container")
 	catcher.Wrap(e.client.Close(), "error closing Docker client")
-	if e.httpClient != nil {
-		utility.PutHTTPClient(e.httpClient)
-	}
 	e.setStatus(Closed)
 	return catcher.Resolve()
+}
+
+// getProcessState returns information about the state of the process that ran
+// inside the container.
+func (e *docker) getProcessState() (*types.ContainerState, error) {
+	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not inspect container")
+	}
+	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
+		return nil, errors.Wrap(err, "introspection of container's process is missing state information")
+	}
+	return resp.ContainerJSONBase.State, nil
 }
 
 func (e *docker) getContainerID() string {

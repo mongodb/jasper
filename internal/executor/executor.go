@@ -6,7 +6,8 @@ import (
 )
 
 // Executor is an interface by which Jasper processes can manipulate and
-// introspect on processes.
+// introspect on processes. Implementations are not guaranteed to be
+// thread-safe.
 type Executor interface {
 	// Args returns the command and the arguments used to create the process.
 	Args() []string

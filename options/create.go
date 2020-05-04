@@ -185,7 +185,6 @@ func (opts *Create) Hash() hash.Hash {
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
-// kim: TODO: add tests for Docker resolution and SSH binary resolution.
 func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.Time, resolveErr error) {
 	if ctx.Err() != nil {
 		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
@@ -275,14 +274,11 @@ func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, err
 	}
 
 	if opts.Docker != nil {
-		// kim: TODO: figure out the magic secret sauce to make it connect
-		// httpClient := utility.GetHTTPClient()
-		client, err := opts.Docker.Resolve(nil)
+		client, err := opts.Docker.Resolve()
 		if err != nil {
-			// utility.PutHTTPClient(httpClient)
 			return nil, errors.Wrap(err, "could not resolve Docker options")
 		}
-		return executor.NewDocker(ctx, client, nil, opts.Docker.Platform, opts.Docker.Image, opts.Args), nil
+		return executor.NewDocker(ctx, client, opts.Docker.Platform, opts.Docker.Image, opts.Args), nil
 	}
 
 	return executor.NewLocal(ctx, opts.Args), nil

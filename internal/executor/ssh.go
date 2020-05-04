@@ -107,9 +107,9 @@ func (e *ssh) Signal(sig syscall.Signal) error {
 	return e.session.Signal(syscallToSSHSignal(sig))
 }
 
-// PID is not implemented.
+// PID is not implemented since there is no simple way to get the remote
+// process's PID.
 func (e *ssh) PID() int {
-	// TODO: there is no simple way of retrieving the PID of the remote process.
 	return -1
 }
 
