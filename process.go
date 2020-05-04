@@ -22,14 +22,16 @@ func NewProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	switch opts.Implementation {
 	case options.ProcessImplementationBlocking:
 		proc, err = newBlockingProcess(ctx, opts)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	case options.ProcessImplementationBasic:
 		proc, err = newBasicProcess(ctx, opts)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	default:
-		err = errors.Errorf("cannot create '%s' type of process", opts.Implementation)
-	}
-
-	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Errorf("cannot create '%s' type of process", opts.Implementation)
 	}
 
 	if !opts.Synchronized {

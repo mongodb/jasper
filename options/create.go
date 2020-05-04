@@ -11,7 +11,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/evergreen-ci/utility"
 	"github.com/google/shlex"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -276,13 +275,14 @@ func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, err
 	}
 
 	if opts.Docker != nil {
-		httpClient := utility.GetHTTPClient()
-		client, err := opts.Docker.Resolve(httpClient)
+		// kim: TODO: figure out the magic secret sauce to make it connect
+		// httpClient := utility.GetHTTPClient()
+		client, err := opts.Docker.Resolve(nil)
 		if err != nil {
-			utility.PutHTTPClient(httpClient)
+			// utility.PutHTTPClient(httpClient)
 			return nil, errors.Wrap(err, "could not resolve Docker options")
 		}
-		return executor.NewDocker(ctx, client, httpClient, opts.Docker.Platform, opts.Docker.Image, opts.Args), nil
+		return executor.NewDocker(ctx, client, nil, opts.Docker.Platform, opts.Docker.Image, opts.Args), nil
 	}
 
 	return executor.NewLocal(ctx, opts.Args), nil
