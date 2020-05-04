@@ -22,7 +22,6 @@ func NewRemoteManager(m Manager, remote *options.Remote) Manager {
 	}
 }
 
-// func (m *remoteOverrideMgr) ID() string { return m.mgr.ID() }
 func (m *remoteOverrideMgr) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.Remote = m.remote
 	return m.Manager.CreateProcess(ctx, opts)

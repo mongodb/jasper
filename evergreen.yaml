@@ -163,6 +163,7 @@ buildvariants:
       GOROOT: /opt/golang/go1.13
       GO_BIN_PATH: /opt/golang/go1.13/bin/go
       RACE_DETECTOR: true
+      SKIP_DOCKER_TESTS: true
       make_args: -k
     run_on:
       - archlinux-test
