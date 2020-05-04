@@ -207,6 +207,19 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/containerd/cgroups/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/coreos/go-systemd/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/godbus/dbus/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/gogo/protobuf/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/google/shlex/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/google/uuid/
+	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/crypto/
+	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/net/
+	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/oauth2/
+	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/sys/
+	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/text/
+	rm -rf vendor/github.com/docker/docker/vendor/google.golang.org/genproto/
+	rm -rf vendor/github.com/docker/docker/vendor/google.golang.org/grpc/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor/ -type d -empty | xargs rm -rf
 	find vendor/ -type d -name '.git' | xargs rm -rf
