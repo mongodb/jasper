@@ -798,14 +798,6 @@ func (c *Command) getCreateOpts() ([]*options.Create, error) {
 			continue
 		}
 
-		// kim: TODO: verify that this block is unnecessary.
-		// if c.opts.Process.Remote != nil {
-		//     cmd.Remote = c.opts.Process.Remote
-		// }
-		// if c.opts.Process.Docker != nil {
-		//     cmd.Docker = c.opts.Process.Docker
-		// }
-
 		out = append(out, cmd)
 	}
 

@@ -6,7 +6,7 @@ import (
 )
 
 // Executor is an interface by which Jasper processes can manipulate and
-// introspect on processes.
+// introspect on processes. Implementations should be thread-safe.
 type Executor interface {
 	// Args returns the command and the arguments used to create the process.
 	Args() []string
@@ -46,5 +46,5 @@ type Executor interface {
 	// SignalInfo returns information about signals the process has received.
 	SignalInfo() (sig syscall.Signal, signaled bool)
 	// Close cleans up the executor's resources.
-	Close()
+	Close() error
 }

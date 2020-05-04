@@ -8,45 +8,30 @@ import (
 	"syscall"
 
 	"github.com/mongodb/grip"
-	"github.com/pkg/errors"
 	cryptossh "golang.org/x/crypto/ssh"
 )
 
 // ssh runs processes on a remote machine via SSH.
 type ssh struct {
-	session   *cryptossh.Session
-	client    *cryptossh.Client
-	args      []string
-	dir       string
-	env       []string
-	exited    bool
-	exitErr   error
-	closeConn context.CancelFunc
+	session *cryptossh.Session
+	client  *cryptossh.Client
+	args    []string
+	dir     string
+	env     []string
+	exited  bool
+	exitErr error
+	ctx     context.Context
 }
 
 // NewSSH returns an Executor that creates processes over SSH. Callers are
 // expected to clean up resources by explicitly calling Close.
-// kim: TODO: remove goroutine and just close the objects in Close.
-func NewSSH(ctx context.Context, client *cryptossh.Client, session *cryptossh.Session, args []string) (Executor, error) {
-	e := &ssh{
+func NewSSH(ctx context.Context, client *cryptossh.Client, session *cryptossh.Session, args []string) Executor {
+	return &ssh{
+		ctx:     ctx,
 		session: session,
 		client:  client,
 		args:    args,
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	e.closeConn = cancel
-	go func() {
-		<-ctx.Done()
-		if err := e.session.Close(); err != nil && err != io.EOF {
-			grip.Warning(errors.Wrap(err, "error closing SSH session"))
-		}
-		if err := e.client.Close(); err != nil && err != io.EOF {
-			grip.Warning(errors.Wrap(err, "error closing SSH client"))
-		}
-	}()
-
-	return e, nil
 }
 
 // Args returns the arguments to the process.
@@ -165,12 +150,20 @@ func (e *ssh) SignalInfo() (sig syscall.Signal, signaled bool) {
 	return sshToSyscallSignal(sshSig), sshSig != ""
 }
 
-// Close closes the SSH connection.
-func (e *ssh) Close() {
-	e.closeConn()
+// Close closes the SSH connection resources.
+func (e *ssh) Close() error {
+	catcher := grip.NewBasicCatcher()
+	if err := e.session.Close(); err != nil && err != io.EOF {
+		catcher.Wrap(err, "error closing SSH session")
+	}
+	if err := e.client.Close(); err != nil && err != io.EOF {
+		catcher.Wrap(err, "error closing SSH client")
+	}
+	return catcher.Resolve()
 }
 
-// syscallToSSHSignal converts a syscall.Signal to its equivalent cryptossh.Signal
+// syscallToSSHSignal converts a syscall.Signal to its equivalent
+// cryptossh.Signal.
 func syscallToSSHSignal(sig syscall.Signal) cryptossh.Signal {
 	switch sig {
 	case syscall.SIGABRT:
@@ -199,6 +192,8 @@ func syscallToSSHSignal(sig syscall.Signal) cryptossh.Signal {
 	return cryptossh.Signal("")
 }
 
+// sshToSyscallSignal converts a cryptossh.Signal to its equivalent
+// syscall.Signal.
 func sshToSyscallSignal(sig cryptossh.Signal) syscall.Signal {
 	switch sig {
 	case cryptossh.SIGABRT:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"sync"
 	"syscall"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/evergreen-ci/utility"
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
@@ -30,9 +32,9 @@ type docker struct {
 	image    string
 	platform string
 
-	client    *client.Client
-	ctx       context.Context
-	closeConn context.CancelFunc
+	client     *client.Client
+	httpClient *http.Client
+	ctx        context.Context
 
 	containerID    string
 	containerMutex sync.RWMutex
@@ -46,44 +48,17 @@ type docker struct {
 
 // NewDocker returns an Executor that creates a process within a Docker
 // container. Callers are expected to clean up resources by calling Close.
-func NewDocker(ctx context.Context, opts []client.Opt, platform, image string, args []string) (Executor, error) {
-	e := &docker{
+func NewDocker(ctx context.Context, client *client.Client, httpClient *http.Client, platform, image string, args []string) Executor {
+	return &docker{
+		ctx: ctx,
 		execOpts: types.ExecConfig{
 			Cmd: args,
 		},
-		platform: platform,
-		image:    image,
+		platform:   platform,
+		image:      image,
+		client:     client,
+		httpClient: httpClient,
 	}
-
-	// kim: TODO: figure out why HTTP client doesn't work - get unable to connect
-	// httpClient := utility.GetHTTPClient()
-	// opts = append(opts, client.WithHTTPClient(httpClient))
-
-	client, err := client.NewClientWithOpts(opts...)
-	if err != nil {
-		// utility.PutHTTPClient(httpClient)
-		return nil, errors.Wrap(err, "could not create Docker client")
-	}
-	e.client = client
-
-	ctx, cancel := context.WithCancel(ctx)
-	go func() {
-		// kim: TODO: remove goroutine and require explicit close
-		// This cleanup goroutine is a best-effort attempt to clean up the
-		// container, since it could fail to clean up the container in some
-		// exit conditions. For example, if the context cancels just as the main
-		// program is about to exit, the request to the Docker daemon is not
-		// guaranteed to finish in time to remove the container since all
-		// goroutines will be forcibly shut down.
-		<-ctx.Done()
-		grip.Error(e.removeContainer())
-		grip.Error(errors.Wrap(e.client.Close(), "error closing Docker client"))
-		// utility.PutHTTPClient(httpClient)
-	}()
-	e.ctx = ctx
-	e.closeConn = cancel
-
-	return e, nil
 }
 
 func (e *docker) Args() []string {
@@ -377,7 +352,14 @@ func (e *docker) SignalInfo() (sig syscall.Signal, signaled bool) {
 	return -1, false
 }
 
-// kim: TODO: move cleanup goroutine to close
-func (e *docker) Close() {
-	e.closeConn()
+// Close cleans up the container associated with this process executor and
+// closes the connection to the Docker daemon.
+func (e *docker) Close() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.Wrap(e.removeContainer(), "error removing Docker container")
+	catcher.Wrap(e.client.Close(), "error closing Docker client")
+	if e.httpClient != nil {
+		utility.PutHTTPClient(e.httpClient)
+	}
+	return catcher.Resolve()
 }

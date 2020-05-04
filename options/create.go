@@ -11,6 +11,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/google/shlex"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
@@ -185,10 +186,8 @@ func (opts *Create) Hash() hash.Hash {
 // Resolve creates the command object according to the create options. It
 // returns the resolved command and the deadline when the command will be
 // terminated by timeout. If there is no deadline, it returns the zero time.
-// kim: TODO: test resolution with Docker options.
-// kim: TODO: defer and check for err to determine context cancellation and
-// cmd.Close()
-func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, error) {
+// kim: TODO: add tests for Docker resolution and SSH binary resolution.
+func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.Time, resolveErr error) {
 	if ctx.Err() != nil {
 		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
 	}
@@ -201,6 +200,12 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	var cancel context.CancelFunc = func() {}
 	if opts.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer func() {
+			if resolveErr != nil {
+				cancel()
+			}
+		}()
+
 		deadline, _ = ctx.Deadline()
 		opts.closers = append(opts.closers, func() error {
 			cancel()
@@ -208,39 +213,15 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 		})
 	}
 
-	var cmd executor.Executor
-	var err error
-	if opts.Remote != nil {
-		if opts.Remote.UseSSHLibrary {
-			// The SSH client/session will be managed by the SSH executor.
-			client, session, err := opts.Remote.Resolve()
-			if err != nil {
-				return nil, time.Time{}, errors.Wrap(err, "could not resolve SSH client and session")
-			}
-
-			cmd, err = executor.NewSSH(ctx, client, session, opts.Args)
-			if err != nil {
-				cancel()
-				return nil, time.Time{}, errors.Wrap(err, "could not create SSH process executor")
-			}
-		} else {
-			cmd = executor.NewSSHBinary(ctx, opts.Remote.String(), opts.Remote.Args, opts.Args)
-		}
-	} else if opts.Docker != nil {
-		clientOpts, err := opts.Docker.Resolve()
-		if err != nil {
-			cancel()
-			return nil, time.Time{}, errors.Wrap(err, "could not resolve Docker options")
-		}
-
-		cmd, err = executor.NewDocker(ctx, clientOpts, opts.Docker.Platform, opts.Docker.Image, opts.Args)
-		if err != nil {
-			cancel()
-			return nil, time.Time{}, errors.Wrap(err, "could not create Docker process executor")
-		}
-	} else {
-		cmd = executor.NewLocal(ctx, opts.Args)
+	cmd, err := opts.resolveExecutor(ctx)
+	if err != nil {
+		return nil, time.Time{}, errors.Wrap(err, "could not resolve process executor")
 	}
+	defer func() {
+		if resolveErr != nil {
+			grip.Error(errors.Wrap(cmd.Close(), "problem closing process executor"))
+		}
+	}()
 
 	if opts.WorkingDirectory == "" && opts.isLocal() {
 		opts.WorkingDirectory, _ = os.Getwd()
@@ -259,14 +240,12 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 
 	stdout, err := opts.Output.GetOutput()
 	if err != nil {
-		cancel()
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStdout(stdout)
 
 	stderr, err := opts.Output.GetError()
 	if err != nil {
-		cancel()
 		return nil, time.Time{}, errors.WithStack(err)
 	}
 	cmd.SetStderr(stderr)
@@ -281,6 +260,32 @@ func (opts *Create) Resolve(ctx context.Context) (executor.Executor, time.Time, 
 	})
 
 	return cmd, deadline, nil
+}
+
+func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, error) {
+	if opts.Remote != nil {
+		if opts.Remote.UseSSHLibrary {
+			client, session, err := opts.Remote.Resolve()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not resolve SSH client and session")
+			}
+			return executor.NewSSH(ctx, client, session, opts.Args), nil
+		}
+
+		return executor.NewSSHBinary(ctx, opts.Remote.String(), opts.Remote.Args, opts.Args), nil
+	}
+
+	if opts.Docker != nil {
+		httpClient := utility.GetHTTPClient()
+		client, err := opts.Docker.Resolve(httpClient)
+		if err != nil {
+			utility.PutHTTPClient(httpClient)
+			return nil, errors.Wrap(err, "could not resolve Docker options")
+		}
+		return executor.NewDocker(ctx, client, httpClient, opts.Docker.Platform, opts.Docker.Image, opts.Args), nil
+	}
+
+	return executor.NewLocal(ctx, opts.Args), nil
 }
 
 // ResolveEnvironment returns the (Create).Environment as a slice of environment

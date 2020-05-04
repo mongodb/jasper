@@ -134,4 +134,6 @@ func (e *local) SignalInfo() (sig syscall.Signal, signaled bool) {
 }
 
 // Close is a no-op.
-func (e *local) Close() {}
+func (e *local) Close() error {
+	return nil
+}

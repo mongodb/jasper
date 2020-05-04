@@ -23,14 +23,13 @@ type execSSHBinary struct {
 
 // NewSSHBinary returns an Executor that creates processes using the SSH binary.
 func NewSSHBinary(ctx context.Context, destination string, opts []string, args []string) Executor {
-	e := &execSSHBinary{
+	return &execSSHBinary{
 		destination: destination,
 		remoteOpts:  opts,
 		cmdArgs:     args,
 		// The actual arguments to SSH will be resolved when Start is called.
 		cmd: exec.CommandContext(ctx, "ssh"),
 	}
-	return e
 }
 
 // Args returns the arguments to the process.
@@ -157,4 +156,6 @@ func (e *execSSHBinary) SignalInfo() (sig syscall.Signal, signaled bool) {
 }
 
 // Close is a no-op.
-func (e *execSSHBinary) Close() {}
+func (e *execSSHBinary) Close() error {
+	return nil
+}
