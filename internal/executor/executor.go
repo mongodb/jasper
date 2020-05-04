@@ -6,7 +6,7 @@ import (
 )
 
 // Executor is an interface by which Jasper processes can manipulate and
-// introspect on processes. Implementations should be thread-safe.
+// introspect on processes.
 type Executor interface {
 	// Args returns the command and the arguments used to create the process.
 	Args() []string
@@ -39,12 +39,74 @@ type Executor interface {
 	// executors and will return -1 if it could not be retrieved.
 	PID() int
 	// ExitCode returns the exit code of a completed process. This will return a
-	// non-negative value if it successfully retrieved the exit code.
+	// non-negative value if it successfully retrieved the exit code. Callers
+	// must call Wait before retrieving the exit code.
 	ExitCode() int
 	// Success returns whether or not the completed process ran successfully.
+	// Callers must call Wait before checking for success.
 	Success() bool
 	// SignalInfo returns information about signals the process has received.
 	SignalInfo() (sig syscall.Signal, signaled bool)
-	// Close cleans up the executor's resources.
+	// Close cleans up the executor's resources. Users should not assume the
+	// information from the Executor will be accurate after it has been closed.
 	Close() error
 }
+
+// Status represents the current state of the Executor.
+type Status int
+
+func (s Status) String() string {
+	switch s {
+	case Unknown:
+		return "unknown"
+	case Unstarted:
+		return "unstarted"
+	case Running:
+		return "running"
+	case Exited:
+		return "exited"
+	case Closed:
+		return "closed"
+	default:
+		return ""
+	}
+}
+
+func (s Status) Before(other Status) bool {
+	return s < other
+}
+
+func (s Status) BeforeInclusive(other Status) bool {
+	return s <= other
+}
+
+func (s Status) After(other Status) bool {
+	return s > other
+}
+
+func (s Status) AfterInclusive(other Status) bool {
+	return s >= other
+}
+
+func (s Status) Between(lower Status, upper Status) bool {
+	return lower < s && s < upper
+}
+
+func (s Status) BetweenInclusive(lower Status, upper Status) bool {
+	return lower <= s && s <= upper
+}
+
+const (
+	// Unknown means the process
+	Unknown = iota
+	// Unstarted means that the Executor has not yet started running the
+	// process.
+	Unstarted Status = iota
+	// Running means that the Executor has started running the process.
+	Running Status = iota
+	// Exited means the Executor has finished running the process.
+	Exited Status = iota
+	// Closed means the Executor has cleaned up its resources and further
+	// requests cannot be made.
+	Closed Status = iota
+)

@@ -39,11 +39,13 @@ type docker struct {
 	containerID    string
 	containerMutex sync.RWMutex
 
-	// kim: TODO: should add a "state" variable to handle state transitions
-	// (unstarted, started, exited, closed)
-	started bool
-	exited  bool
-	exitErr error
+	status      Status
+	statusMutex sync.RWMutex
+
+	pid      int
+	exitCode int
+	exitErr  error
+	signal   syscall.Signal
 }
 
 // NewDocker returns an Executor that creates a process within a Docker
@@ -58,6 +60,10 @@ func NewDocker(ctx context.Context, client *client.Client, httpClient *http.Clie
 		image:      image,
 		client:     client,
 		httpClient: httpClient,
+		status:     Unstarted,
+		pid:        -1,
+		exitCode:   -1,
+		signal:     syscall.Signal(-1),
 	}
 }
 
@@ -105,6 +111,10 @@ func (e *docker) Stderr() io.Writer {
 }
 
 func (e *docker) Start() error {
+	if e.getStatus().After(Unstarted) {
+		return errors.New("cannot start a process that has already started, exited, or closed")
+	}
+
 	if err := e.setupContainer(); err != nil {
 		return errors.Wrap(err, "could not set up container for process")
 	}
@@ -113,9 +123,20 @@ func (e *docker) Start() error {
 		return errors.Wrap(err, "could not start process within container")
 	}
 
-	e.started = true
+	e.setStatus(Running)
 
 	return nil
+}
+
+func (e *docker) getContainerState() (*types.ContainerState, error) {
+	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not inspect container")
+	}
+	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
+		return nil, errors.Wrap(err, "introspection of container did not contain state information")
+	}
+	return resp.ContainerJSONBase.State, nil
 }
 
 // setupContainer creates a container for the process without starting it.
@@ -235,31 +256,16 @@ func (e *docker) removeContainer() error {
 	return nil
 }
 
-func (e *docker) getContainerID() string {
-	e.containerMutex.RLock()
-	defer e.containerMutex.RUnlock()
-	return e.containerID
-}
-
-func (e *docker) setContainerID(id string) {
-	e.containerMutex.Lock()
-	defer e.containerMutex.Unlock()
-	e.containerID = id
-}
-
 func (e *docker) Wait() error {
-	if !e.started {
+	if e.getStatus().Before(Running) {
 		return errors.New("cannot wait on unstarted process")
 	}
-	if e.exited {
+	if e.getStatus().After(Running) {
 		return e.exitErr
 	}
 
 	containerID := e.getContainerID()
 
-	// kim: TODO: verify that this is the correct condition to wait on. There
-	// could be a race between container completion and this if we don't lock
-	// the exited state.
 	wait, errs := e.client.ContainerWait(e.ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errs:
@@ -272,17 +278,14 @@ func (e *docker) Wait() error {
 		}
 	}
 
-	e.exited = true
+	e.setStatus(Exited)
 
 	return e.exitErr
 }
 
 func (e *docker) Signal(sig syscall.Signal) error {
-	if !e.started {
-		return errors.New("cannot signal an unstarted process")
-	}
-	if e.exited {
-		return errors.New("cannot signal an exited process")
+	if e.getStatus() != Running {
+		return errors.New("cannot signal a non-running process")
 	}
 
 	dsig, err := syscallToDockerSignal(sig, e.platform)
@@ -292,64 +295,68 @@ func (e *docker) Signal(sig syscall.Signal) error {
 	if err := e.client.ContainerKill(e.ctx, e.getContainerID(), dsig); err != nil {
 		return errors.Wrap(err, "could not signal process within container")
 	}
+
+	e.signal = sig
+
 	return nil
 }
 
 // PID returns the PID of the process in the container, or -1 if the PID cannot
 // be retrieved.
 func (e *docker) PID() int {
-	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
+	if e.pid > -1 || !e.getStatus().BetweenInclusive(Running, Exited) {
+		return e.pid
+	}
+
+	state, err := e.getContainerState()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
-			"message":   "could not inspect container to retrieve PID",
+			"message":   "could not get container state",
+			"op":        "pid",
 			"container": e.getContainerID(),
-			"executor":  "docker",
+			"executor":  "Docker",
 		}))
-		return -1
 	}
-	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
-		grip.Error(message.WrapError(err, message.Fields{
-			"message":   "introspection of container did not contain process state",
-			"container": e.getContainerID(),
-			"executor":  "docker",
-		}))
-		return -1
-	}
-	return resp.State.Pid
+
+	e.pid = state.Pid
+
+	return e.pid
 }
 
 // ExitCode returns the exit code of the process in the container, or -1 if the
 // exit code cannot be retrieved.
 func (e *docker) ExitCode() int {
-	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
+	if e.exitCode > -1 || !e.getStatus().BetweenInclusive(Running, Exited) {
+		return e.exitCode
+	}
+
+	state, err := e.getContainerState()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
-			"message":   "could not inspect container to retrieve PID",
+			"message":   "could not get container state",
 			"container": e.getContainerID(),
 			"executor":  "docker",
 		}))
-		return -1
+		return e.exitCode
 	}
-	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
-		grip.Error(message.WrapError(err, message.Fields{
-			"message":   "introspection of container did not contain process state",
-			"container": e.getContainerID(),
-			"executor":  "docker",
-		}))
-		return -1
-	}
-	return resp.State.ExitCode
+
+	e.exitCode = state.ExitCode
+
+	return e.exitCode
 }
 
 func (e *docker) Success() bool {
-	if !e.started || !e.exited {
+	if e.getStatus().Before(Exited) {
 		return false
 	}
 	return e.exitErr == nil
 }
 
+// SignalInfo returns information about signals that were sent to the process in
+// the container. This will only return information about received signals if
+// Signal is called.
 func (e *docker) SignalInfo() (sig syscall.Signal, signaled bool) {
-	return -1, false
+	return e.signal, e.signal != -1
 }
 
 // Close cleans up the container associated with this process executor and
@@ -361,5 +368,33 @@ func (e *docker) Close() error {
 	if e.httpClient != nil {
 		utility.PutHTTPClient(e.httpClient)
 	}
+	e.setStatus(Closed)
 	return catcher.Resolve()
+}
+
+func (e *docker) getContainerID() string {
+	e.containerMutex.RLock()
+	defer e.containerMutex.RUnlock()
+	return e.containerID
+}
+
+func (e *docker) setContainerID(id string) {
+	e.containerMutex.Lock()
+	defer e.containerMutex.Unlock()
+	e.containerID = id
+}
+
+func (e *docker) getStatus() Status {
+	e.statusMutex.RLock()
+	defer e.statusMutex.RUnlock()
+	return e.status
+}
+
+func (e *docker) setStatus(status Status) {
+	e.statusMutex.Lock()
+	defer e.statusMutex.Unlock()
+	if status < e.status && status != Unknown {
+		return
+	}
+	e.status = status
 }
