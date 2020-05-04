@@ -33,7 +33,7 @@ func syscallToDockerSignal(sig syscall.Signal, platform string) (string, error) 
 
 // dockerToSyscallSignal converts the Docker signal to the equivalent
 // syscall.Signal.
-func dockerToSyscallSignal(dsig string, platform string) (syscall.Signal, error) {
+func dockerToSyscallSignal(dsig string, platform string) (syscall.Signal, error) { //nolint: deadcode
 	switch platform {
 	case "darwin":
 		if sig, ok := dockerToSyscallDarwin()[dsig]; ok {

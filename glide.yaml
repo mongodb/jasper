@@ -4,7 +4,6 @@ import:
   - package: github.com/pkg/errors
   - package: github.com/evergreen-ci/utility
   - package: github.com/PuerkitoBio/rehttp
-  - package: gopkg.in/yaml.v2
   - package: github.com/stretchr/testify
   - package: github.com/mongodb/grip
   - package: github.com/mongodb/amboy

@@ -149,53 +149,11 @@ func (e *docker) setupContainer() error {
 	return nil
 }
 
-// startContainer attaches any I/O streams and starts the container.
+// startContainer attaches any I/O stream to the process and starts the
+// container.
 func (e *docker) startContainer() error {
-	if e.stdin != nil || e.stdout != nil || e.stderr != nil {
-		stream, err := e.client.ContainerAttach(e.ctx, e.getContainerID(), types.ContainerAttachOptions{
-			Stream: true,
-			Stdin:  e.execOpts.AttachStdin,
-			Stdout: e.execOpts.AttachStdout,
-			Stderr: e.execOpts.AttachStderr,
-		})
-		if err != nil {
-			return e.withRemoveContainer(errors.Wrap(err, "problem creating process within container"))
-		}
-
-		go func() {
-			defer stream.Close()
-			var wg sync.WaitGroup
-
-			if e.stdin != nil {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					_, err := io.Copy(stream.Conn, e.stdin)
-					grip.Error(errors.Wrap(err, "problem streaming input to process"))
-					grip.Error(errors.Wrap(stream.CloseWrite(), "problem closing process input stream"))
-				}()
-			}
-
-			if e.stdout != nil || e.stderr != nil {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					stdout := e.stdout
-					stderr := e.stderr
-					if stdout == nil {
-						stdout = ioutil.Discard
-					}
-					if stderr == nil {
-						stderr = ioutil.Discard
-					}
-					if _, err := stdcopy.StdCopy(stdout, stderr, stream.Reader); err != nil {
-						grip.Error(errors.Wrap(err, "problem streaming output from process"))
-					}
-				}()
-			}
-
-			wg.Wait()
-		}()
+	if err := e.setupIOStream(); err != nil {
+		return e.withRemoveContainer(errors.Wrap(err, "problem setting up I/O streaming to process in container"))
 	}
 
 	if err := e.client.ContainerStart(e.ctx, e.getContainerID(), types.ContainerStartOptions{}); err != nil {
@@ -203,6 +161,66 @@ func (e *docker) startContainer() error {
 	}
 
 	return nil
+}
+
+// setupIOStream sets up the process to read standard input and write to
+// standard output and standard error. This is a no-op if there are no
+// configured inputs or outputs.
+func (e *docker) setupIOStream() error {
+	if e.stdin == nil && e.stdout == nil && e.stderr == nil {
+		return nil
+	}
+
+	stream, err := e.client.ContainerAttach(e.ctx, e.getContainerID(), types.ContainerAttachOptions{
+		Stream: true,
+		Stdin:  e.execOpts.AttachStdin,
+		Stdout: e.execOpts.AttachStdout,
+		Stderr: e.execOpts.AttachStderr,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not set attach I/O to process in container")
+	}
+
+	go e.runIOStream(stream)
+
+	return nil
+}
+
+// runIOStream starts the goroutines to handle standard I/O and waits until the
+// stream is done.
+func (e *docker) runIOStream(stream types.HijackedResponse) {
+	defer stream.Close()
+	var wg sync.WaitGroup
+
+	if e.stdin != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := io.Copy(stream.Conn, e.stdin)
+			grip.Error(errors.Wrap(err, "problem streaming input to process"))
+			grip.Error(errors.Wrap(stream.CloseWrite(), "problem closing process input stream"))
+		}()
+	}
+
+	if e.stdout != nil || e.stderr != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			stdout := e.stdout
+			stderr := e.stderr
+			if stdout == nil {
+				stdout = ioutil.Discard
+			}
+			if stderr == nil {
+				stderr = ioutil.Discard
+			}
+			if _, err := stdcopy.StdCopy(stdout, stderr, stream.Reader); err != nil {
+				grip.Error(errors.Wrap(err, "problem streaming output from process"))
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 // withRemoveContainer returns the error as well as any error from cleaning up
