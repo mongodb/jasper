@@ -26,7 +26,7 @@ type Docker struct {
 // none are specified.
 func (opts *Docker) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(opts.Port <= 0, "port must be positive value")
+	catcher.NewWhen(opts.Port < 0, "port must be positive value")
 	catcher.NewWhen(opts.Image == "", "Docker image must be specified")
 	if opts.Platform == "" {
 		if util.StringSliceContains(DockerPlatforms(), runtime.GOOS) {
@@ -57,7 +57,7 @@ func DockerPlatforms() []string {
 func (opts *Docker) Resolve() (*client.Client, error) {
 	var clientOpts []client.Opt
 
-	if opts.Host != "" && opts.Port != 0 {
+	if opts.Host != "" && opts.Port > 0 {
 		addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", opts.Host, opts.Port))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not resolve Docker daemon address %s:%d", opts.Host, opts.Port)
