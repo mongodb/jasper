@@ -14,7 +14,7 @@ import (
 // Docker encapsulates options related to connecting to a Docker daemon.
 type Docker struct {
 	Host       string
-	Port       uint
+	Port       int
 	APIVersion string
 	Image      string
 	// Platform refers to the major operating system on which the Docker
@@ -26,6 +26,7 @@ type Docker struct {
 // none are specified.
 func (opts *Docker) Validate() error {
 	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(opts.Port <= 0, "port must be positive value")
 	catcher.NewWhen(opts.Image == "", "Docker image must be specified")
 	if opts.Platform == "" {
 		if utility.StringSliceContains(DockerPlatforms(), runtime.GOOS) {
