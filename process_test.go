@@ -13,8 +13,10 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,7 +55,7 @@ func TestProcessImplementations(t *testing.T) {
 						containers, err := client.ContainerList(ctx, types.ContainerListOptions{All: true})
 						require.NoError(t, err)
 						for _, container := range containers {
-							client.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true})
+							grip.Error(errors.Wrap(client.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true}), "problem cleaning up container"))
 						}
 					}()
 				}

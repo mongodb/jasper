@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -261,7 +260,11 @@ func TestWriteFileOptions(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					opts := WriteFile{Path: filepath.Join(testutil.BuildDirectory(), filepath.Base(t.Name()))}
+					// TODO: we can't use testutil.BuildDirectory() because it
+					// will cause a cycle.
+					cwd, err := os.Getwd()
+					require.NoError(t, err)
+					opts := WriteFile{Path: filepath.Join(filepath.Dir(cwd), filepath.Base(t.Name()))}
 					defer func() {
 						assert.NoError(t, os.RemoveAll(opts.Path))
 					}()
@@ -292,7 +295,11 @@ func TestWriteFileOptions(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					opts := WriteFile{Path: filepath.Join(testutil.BuildDirectory(), filepath.Base(t.Name()))}
+					// TODO: we can't use testutil.BuildDirectory() because it
+					// will cause a cycle.
+					cwd, err := os.Getwd()
+					require.NoError(t, err)
+					opts := WriteFile{Path: filepath.Join(filepath.Dir(cwd), filepath.Base(t.Name()))}
 					defer func() {
 						assert.NoError(t, os.RemoveAll(opts.Path))
 					}()
