@@ -31,7 +31,7 @@ func TestCLIRemote(t *testing.T) {
 					assert.True(t, resp.Successful())
 				},
 				"DownloadFileSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					tmpFile, err := ioutil.TempFile(buildDir(t), "out.txt")
+					tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), "out.txt")
 					require.NoError(t, err)
 					defer func() {
 						assert.NoError(t, tmpFile.Close())
@@ -52,7 +52,7 @@ func TestCLIRemote(t *testing.T) {
 					assert.NotZero(t, info.Size)
 				},
 				"DownloadMongoDBSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					tmpDir, err := ioutil.TempDir(buildDir(t), "out")
+					tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "out")
 					require.NoError(t, err)
 					defer func() {
 						assert.NoError(t, os.RemoveAll(tmpDir))
@@ -88,7 +88,7 @@ func TestCLIRemote(t *testing.T) {
 					assert.True(t, resp.Successful())
 				},
 				"WriteFileSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					tmpFile, err := ioutil.TempFile(buildDir(t), "write_file")
+					tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), "write_file")
 					require.NoError(t, err)
 					defer func() {
 						assert.NoError(t, tmpFile.Close())
