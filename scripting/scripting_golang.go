@@ -109,11 +109,8 @@ func (e *golangEnvironment) RunScript(ctx context.Context, script string) error 
 		Path:    path,
 		Content: []byte(script),
 	}
-	if err := wo.Validate(); err != nil {
-		return errors.Wrap(err, "invalid options to write file")
-	}
-	if err := wo.DoWrite(); err != nil {
-		return errors.Wrap(err, "problem writing file")
+	if err := e.manager.WriteFile(ctx, wo); err != nil {
+		return errors.Wrap(err, "problem writing script file")
 	}
 
 	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).

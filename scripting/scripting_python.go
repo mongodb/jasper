@@ -73,11 +73,8 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 		Path:    filepath.Join(e.opts.VirtualEnvPath, "tmp", strings.Join([]string{e.manager.ID(), scriptChecksum}, "-")+".py"),
 		Content: []byte(script),
 	}
-	if err := wo.Validate(); err != nil {
-		return errors.Wrap(err, "invalid options to write file")
-	}
-	if err := wo.DoWrite(); err != nil {
-		return errors.Wrap(err, "problem writing file")
+	if err := e.manager.WriteFile(ctx, wo); err != nil {
+		return errors.Wrap(err, "problem writing script file")
 	}
 
 	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).SetOutputOptions(e.opts.Output).AppendArgs(e.opts.Interpreter(), wo.Path).Run(ctx)
