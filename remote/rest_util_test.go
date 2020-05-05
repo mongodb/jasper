@@ -44,8 +44,8 @@ tryStartService:
 			timer := time.NewTimer(5 * time.Millisecond)
 			defer timer.Stop()
 			url := fmt.Sprintf("http://localhost:%d/jasper/v1/", port)
-			timer.Reset(5 * time.Millisecond)
 			for trials := 0; trials < 10; trials++ {
+				timer.Reset(5 * time.Millisecond)
 				select {
 				case <-ctx.Done():
 					return nil, -1, errors.WithStack(ctx.Err())
