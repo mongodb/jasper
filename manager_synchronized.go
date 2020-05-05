@@ -123,3 +123,10 @@ func (m *synchronizedProcessManager) LoggingCache(ctx context.Context) LoggingCa
 
 	return m.manager.LoggingCache(ctx)
 }
+
+func (m *synchronizedProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.manager.WriteFile(ctx, opts)
+}

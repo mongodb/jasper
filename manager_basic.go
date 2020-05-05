@@ -228,3 +228,11 @@ func (m *basicProcessManager) Group(ctx context.Context, name string) ([]Process
 
 	return out, nil
 }
+
+func (m *basicProcessManager) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	if err := opts.Validate(); err != nil {
+		return errors.Wrap(err, "invalid write options")
+	}
+
+	return errors.Wrapf(opts.DoWrite(), "error writing file '%s'", opts.Path)
+}

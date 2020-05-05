@@ -13,21 +13,23 @@ import (
 // Manager implements the Manager interface with exported fields to
 // configure and introspect the mock's behavior.
 type Manager struct {
-	FailCreate          bool
-	FailRegister        bool
-	FailList            bool
-	FailGroup           bool
-	FailGet             bool
-	FailClose           bool
-	FailCreateScripting bool
-	FailGetScripting    bool
-	NilLoggingCache     bool
-	Create              func(*options.Create) Process
-	CreateConfig        Process
-	ManagerID           string
-	Procs               []jasper.Process
-	ScriptingEnv        scripting.Harness
-	LoggingCacheVal     jasper.LoggingCache
+	FailCreate      bool
+	FailRegister    bool
+	FailList        bool
+	FailGroup       bool
+	FailGet         bool
+	FailClose       bool
+	NilLoggingCache bool
+	FailWriteFile   bool
+	Create          func(*options.Create) Process
+	CreateConfig    Process
+	ManagerID       string
+	Procs           []jasper.Process
+	ScriptingEnv    scripting.Harness
+	LoggingCacheVal jasper.LoggingCache
+
+	// WriteFile input
+	WriteFileOptions options.WriteFile
 }
 
 func mockFail() error {
@@ -69,24 +71,6 @@ func (m *Manager) CreateProcess(ctx context.Context, opts *options.Create) (jasp
 // underlying processes.
 func (m *Manager) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(m.CreateProcess)
-}
-
-// GetScripting returns a cached scripting environment. If FailGetScripting is
-// set, it returns an error.
-func (m *Manager) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	if m.FailGetScripting {
-		return nil, mockFail()
-	}
-	return m.ScriptingEnv, nil
-}
-
-// CreateScripting constructs an attached scripting environment. If
-// FailCreateScripting is set, it returns an error.
-func (m *Manager) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	if m.FailCreateScripting {
-		return nil, mockFail()
-	}
-	return m.ScriptingEnv, nil
 }
 
 // LoggingCache returns the implementation's logging cache.
@@ -194,5 +178,13 @@ func (m *Manager) Close(ctx context.Context) error {
 		return mockFail()
 	}
 	m.Clear(ctx)
+	return nil
+}
+
+func (m *Manager) WriteFile(ctx context.Context, opts options.WriteFile) error {
+	if m.FailWriteFile {
+		return mockFail()
+	}
+	m.WriteFileOptions = opts
 	return nil
 }
