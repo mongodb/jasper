@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/evergreen-ci/utility"
 	"github.com/mholt/archiver"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
@@ -44,8 +43,8 @@ func (opts Download) Download() error {
 		return errors.Wrap(err, "problem building request")
 	}
 
-	client := utility.GetHTTPClient()
-	defer utility.PutHTTPClient(client)
+	client := bond.GetHTTPClient()
+	defer bond.PutHTTPClient(client)
 
 	resp, err := client.Do(req)
 	if err != nil {

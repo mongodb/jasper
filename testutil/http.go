@@ -4,18 +4,38 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
-	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
+var httpClientPool *sync.Pool
+
+func init() {
+	httpClientPool = &sync.Pool{
+		New: func() interface{} {
+			return &http.Client{}
+		},
+	}
+}
+
+// GetHTTPClient gets an HTTP client from the client pool.
+func GetHTTPClient() *http.Client {
+	return httpClientPool.Get().(*http.Client)
+}
+
+// PutHTTPClient returns the given HTTP client back to the pool.
+func PutHTTPClient(client *http.Client) {
+	httpClientPool.Put(client)
+}
+
 // WaitForRESTService waits until either the REST service becomes available to
 // serve requests or the context is done.
 func WaitForRESTService(ctx context.Context, url string) error {
-	client := utility.GetHTTPClient()
-	defer utility.PutHTTPClient(client)
+	client := GetHTTPClient()
+	defer PutHTTPClient(client)
 
 	// Block until the service comes up
 	timeoutInterval := 10 * time.Millisecond

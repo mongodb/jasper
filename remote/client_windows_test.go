@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
@@ -15,8 +14,8 @@ import (
 )
 
 func TestWindowsEvents(t *testing.T) {
-	httpClient := utility.GetHTTPClient()
-	defer utility.PutHTTPClient(httpClient)
+	httpClient := testutil.GetHTTPClient()
+	defer testutil.PutHTTPClient(httpClient)
 
 	for clientName, makeClient := range map[string]func(ctx context.Context, t *testing.T) Manager{
 		"RPC": func(ctx context.Context, t *testing.T) Manager {

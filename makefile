@@ -216,7 +216,6 @@ vendor-clean:
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/google/uuid/
 	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/crypto/
 	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/net/
-	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/oauth2/
 	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/text/
 	rm -rf vendor/github.com/docker/docker/vendor/google.golang.org/genproto/

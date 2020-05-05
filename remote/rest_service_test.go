@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
 	"github.com/mongodb/jasper/options"
@@ -32,8 +31,8 @@ func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("alway
 func (n *neverJSON) Close() error                  { return errors.New("always error") }
 
 func TestRestService(t *testing.T) {
-	httpClient := utility.GetHTTPClient()
-	defer utility.PutHTTPClient(httpClient)
+	httpClient := testutil.GetHTTPClient()
+	defer testutil.PutHTTPClient(httpClient)
 
 	tempDir, err := ioutil.TempDir(buildDir(t), filepath.Base(t.Name()))
 	require.NoError(t, err)

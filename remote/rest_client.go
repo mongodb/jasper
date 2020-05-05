@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/gimlet"
-	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
+	"github.com/tychoish/bond"
 )
 
 // NewRestClient creates a REST client that connecst to the given address
@@ -27,7 +27,7 @@ import (
 func NewRestClient(addr net.Addr) Manager {
 	return &restClient{
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr),
-		client: utility.GetHTTPClient(),
+		client: bond.GetHTTPClient(),
 	}
 }
 
@@ -37,7 +37,7 @@ type restClient struct {
 }
 
 func (c *restClient) CloseConnection() error {
-	utility.PutHTTPClient(c.client)
+	bond.PutHTTPClient(c.client)
 	return nil
 }
 

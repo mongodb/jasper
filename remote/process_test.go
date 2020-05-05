@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
@@ -398,8 +397,8 @@ func TestProcessImplementations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	httpClient := utility.GetHTTPClient()
-	defer utility.PutHTTPClient(httpClient)
+	httpClient := testutil.GetHTTPClient()
+	defer testutil.PutHTTPClient(httpClient)
 
 	for cname, makeProc := range map[string]jasper.ProcessConstructor{
 		"REST": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
