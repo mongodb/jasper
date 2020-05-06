@@ -6,7 +6,6 @@ import (
 	"runtime"
 
 	"github.com/docker/docker/client"
-	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
@@ -29,12 +28,12 @@ func (opts *Docker) Validate() error {
 	catcher.NewWhen(opts.Port < 0, "port must be positive value")
 	catcher.NewWhen(opts.Image == "", "Docker image must be specified")
 	if opts.Platform == "" {
-		if utility.StringSliceContains(DockerPlatforms(), runtime.GOOS) {
+		if PlatformSupportsDocker(runtime.GOOS) {
 			opts.Platform = runtime.GOOS
 		} else {
 			catcher.Errorf("failed to set default platform to current runtime platform '%s' because it is unsupported", opts.Platform)
 		}
-	} else if !utility.StringSliceContains(DockerPlatforms(), opts.Platform) {
+	} else if !PlatformSupportsDocker(opts.Platform) {
 		catcher.Errorf("unrecognized platform '%s'", opts.Platform)
 	}
 	return catcher.Resolve()
@@ -46,10 +45,14 @@ func (opts *Docker) Copy() *Docker {
 	return &optsCopy
 }
 
-// DockerPlatforms returns all supported platforms that can run Docker
-// processes.
-func DockerPlatforms() []string {
-	return []string{"windows", "darwin", "linux"}
+// DockerPlatforms returns whether or not the platform has support for Docker.
+func PlatformSupportsDocker(platform string) bool {
+	switch platform {
+	case "darwin", "linux", "windows":
+		return true
+	default:
+		return false
+	}
 }
 
 // Resolve converts the Docker options into options to initialize a Docker
