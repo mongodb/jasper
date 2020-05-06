@@ -66,6 +66,8 @@ func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 	}
 }
 
+// LoggerConfig represents the necessary information to construct a new grip
+// send.Sender.
 type LoggerConfig struct {
 	Type     string          `json:"type" bson:"type"`
 	Format   LogConfigFormat `json:"format" bson:"format"`
