@@ -9,6 +9,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+var GlobalLoggerRegistry LoggerRegistry = &basicLoggerRegistry{
+	factories: map[string]LoggerFactory{
+		DefaultLogger: NewDefaultLoggerFactory,
+	},
+}
+
 const (
 	// DefaultLogName is the default name for logs emitted by Jasper.
 	DefaultLogName = "jasper"
@@ -87,12 +93,13 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if !ok {
 		return nil, errors.Errorf("unregistered logger type '%s'", lc.Type)
 	}
+	producer := factory()
 
 	if err := lc.Format.Unmarshal(lc.Data, factory); err != nil {
 		return nil, errors.Wrap(err, "problem unmarshalling data")
 	}
 
-	return factory.Configure()
+	return producer.Configure()
 }
 
 // BaseOptions are the base options necessary for setting up most loggers.
@@ -146,9 +153,13 @@ type bufferedSender struct {
 // NewBufferedSender returns a grip send.Sender buffered with the given
 // options. It overwrites the underlying Close method in order to ensure that
 // both the base sender and the buffered sender are closed correctly.
-func NewBufferedSender(baseSender send.Sender, opts BaseOptions) (send.Sender, err) {
-	sender := send.NewBufferedSender(baseSender, opts.Base.Buffer.Duration, opts.Base.Buffer.MaxSize)
-	formatter, err := opts.Base.Format.MakeFormatter()
+func NewBufferedSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid options")
+	}
+
+	sender := send.NewBufferedSender(baseSender, opts.Buffer.Duration, opts.Buffer.MaxSize)
+	formatter, err := opts.Format.MakeFormatter()
 	if err != nil {
 		return nil, err
 	}
@@ -159,14 +170,14 @@ func NewBufferedSender(baseSender send.Sender, opts BaseOptions) (send.Sender, e
 	return &bufferedSender{
 		baseSender: baseSender,
 		Sender:     sender,
-	}
+	}, nil
 }
 
-func (*bufferedSender) Close() error {
+func (s *bufferedSender) Close() error {
 	catcher := grip.NewBasicCatcher()
 
-	catcher.Wrap(l.Sender.Close(), "problem closing sender")
-	catcher.Wrap(l.baseSender.Close(), "problem closing base sender")
+	catcher.Wrap(s.Sender.Close(), "problem closing sender")
+	catcher.Wrap(s.baseSender.Close(), "problem closing base sender")
 
 	return catcher.Resolve()
 }
@@ -184,6 +195,12 @@ type DefaultLoggerOptions struct {
 	Base   BaseOptions `json:"base" bson:"base"`
 }
 
+// NewDefaultLoggerFactory returns a LoggerProducer backed by
+// DefaultLoggerOptions.
+func NewDefaultLoggerFactory() LoggerProducer {
+	return &DefaultLoggerOptions{}
+}
+
 // Validate ensures DefaultLoggerOptions is valid.
 func (opts *DefaultLoggerOptions) Validate() error {
 	if opts.Prefix == "" {
@@ -194,6 +211,10 @@ func (opts *DefaultLoggerOptions) Validate() error {
 }
 
 func (opts *DefaultLoggerOptions) Configure() (send.Sender, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid options")
+	}
+
 	baseSender, err := send.NewNativeLogger(opts.Prefix, opts.Base.Level)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem creating default logger")

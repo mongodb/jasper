@@ -17,19 +17,25 @@ type LoggerRegistry interface {
 	Resolve(string) (LoggerFactory, bool)
 }
 
-type basicRegistry struct {
+type basicLoggerRegistry struct {
 	mu        sync.RWMutex
 	factories map[string]LoggerFactory
 }
 
-func (r *basicRegistry) Register(name string, factory LoggerFactory) {
+func NewBasicLoggerRegistry() LoggerRegistry {
+	return &basicLoggerRegistry{
+		factories: map[string]LoggerFactory{},
+	}
+}
+
+func (r *basicLoggerRegistry) Register(name string, factory LoggerFactory) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.factories[name] = factory
 }
 
-func (r *basicRegistry) Check(name string) bool {
+func (r *basicLoggerRegistry) Check(name string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -37,7 +43,7 @@ func (r *basicRegistry) Check(name string) bool {
 	return ok
 }
 
-func (r *basicRegistry) Names() []string {
+func (r *basicLoggerRegistry) Names() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -49,7 +55,7 @@ func (r *basicRegistry) Names() []string {
 	return names
 }
 
-func (r *basicRegistry) Resolve(name string) (LoggerFactory, bool) {
+func (r *basicLoggerRegistry) Resolve(name string) (LoggerFactory, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -65,12 +71,14 @@ const (
 	LogConfigFormatJSON LogConfigFormat = "JSON"
 )
 
-func (f *LogConfigFormat) Validate() error {
+func (f LogConfigFormat) Validate() error {
 	switch f {
 	case LogConfigFormatBSON, LogConfigFormatJSON:
 	default:
-		return nil, errors.New("unknown log config format")
+		return errors.New("unknown log config format")
 	}
+
+	return nil
 }
 
 // Unmarshal unmarshals the data into out based on the log config format.
@@ -95,7 +103,10 @@ func (f LogConfigFormat) Unmarshal(data []byte, out interface{}) error {
 	}
 }
 
-// LoggerFactory produces a Logger interface backed by a grip logger.
-type LoggerFactory interface {
+// LoggerProducer produces a Logger interface backed by a grip logger.
+type LoggerProducer interface {
 	Configure() (send.Sender, error)
 }
+
+// LoggerFactory creates a new instance of a LoggerProducer implementation.
+type LoggerFactory func() LoggerProducer
