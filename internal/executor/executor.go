@@ -102,12 +102,12 @@ const (
 	Unknown = iota
 	// Unstarted means that the Executor has not yet started running the
 	// process.
-	Unstarted Status
+	Unstarted Status = iota
 	// Running means that the Executor has started running the process.
-	Running Status
+	Running Status = iota
 	// Exited means the Executor has finished running the process.
-	Exited Status
+	Exited Status = iota
 	// Closed means the Executor has cleaned up its resources and further
 	// requests cannot be made.
-	Closed Status
+	Closed Status = iota
 )
