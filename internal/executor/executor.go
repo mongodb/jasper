@@ -98,8 +98,8 @@ func (s Status) BetweenInclusive(lower Status, upper Status) bool {
 }
 
 const (
-	// Unknown means the process
-	Unknown = iota
+	// Unknown means the process is in an unknown or invalid state.
+	Unknown Status = iota
 	// Unstarted means that the Executor has not yet started running the
 	// process.
 	Unstarted Status = iota
