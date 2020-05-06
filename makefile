@@ -95,6 +95,19 @@ $(buildDir)/output.%.lint:$(buildDir)/run-linter $(buildDir) .FORCE
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
+# Docker-related
+docker_image := $(DOCKER_IMAGE)
+ifeq ($(docker_image),)
+	docker_image := "ubuntu"
+endif
+
+docker-setup:
+	docker pull $(docker_image)
+
+docker-cleanup:
+	docker rm -f $(docker ps -a -q)
+	docker rmi -f $(docker_image)
+# end Docker
 
 # user-facing targets for basic build and development operations
 $(buildDir)/:
@@ -110,7 +123,7 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	$(goEnv) ./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:$(buildDir) $(coverageOutput)
 coverage-html:$(buildDir) $(coverageHtmlOutput)
-phony += lint $(buildDir) test coverage coverage-html
+phony += lint $(buildDir) test coverage coverage-html docker-setup docker-cleanup
 .PHONY: $(phony) .FORCE build
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)

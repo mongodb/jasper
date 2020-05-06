@@ -36,25 +36,6 @@ functions:
       add_expansions_to_env: true
       env:
         GOPATH: ${workdir}/gopath
-  setup-docker-image:
-    command: subprocess.exec
-    type: setup
-    params:
-      binary: docker
-      args: ["pull", "ubuntu"]
-  cleanup-docker-containers:
-    command: shell.exec
-    type: setup
-    params:
-      shell: bash
-      script: |
-        docker rm -f $(docker ps -a -q)
-  teardown-docker-image:
-    command: subprocess.exec
-    type: setup
-    params:
-      binary: docker
-      args: ["rmi", "-f", "ubuntu"]
   parse-results:
     command: gotest.parse_files
     type: setup
@@ -137,17 +118,16 @@ task_groups:
     max_hosts: 2
     setup_group:
       - func: get-project
-      - func: setup-docker-image
+      - func: run-make
+        vars: { target: "docker-setup" }
         variants:
           - ubuntu1604
     setup_task:
       - func: run-make
         vars: { target: "clean-results" }
     teardown_task:
-      - func: cleanup-docker-containers
-        variants:
-          - ubuntu1604
-      - func: teardown-docker-image
+      - func: run-make
+        vars: { target: "docker-cleanup" }
         variants:
           - ubuntu1604
       - func: parse-results
