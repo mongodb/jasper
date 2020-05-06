@@ -55,11 +55,44 @@ func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 	}
 }
 
-// Logger is an interface that wraps a grip send.Sender. It is not thread-safe.
-type Logger interface {
-	Type() string
+type LoggerConfig struct {
+	Type     string          `json:"type" bson:"type"`
+	Format   LogConfigFormat `json:"format" bson:"format"`
+	Data     []byte          `json:"data" bson:"data"`
+	Registry LoggerRegistry  `json:"-" bson:"-"`
+}
 
-	send.Sender
+func (lc *LoggerConfig) Validate() error {
+	catcher := grip.NewBasicCatcher()
+
+	// TODO: maybe check for nil or empty Data
+	if lc.Type == "" {
+		catcher.New("cannot have empty logger type")
+	}
+	catcher.Add(lc.Format.Validate())
+
+	if lc.Registry == nil {
+		lc.Registry = GlobalLoggerRegistry
+	}
+
+	return catcher.Resolve()
+}
+
+func (lc *LoggerConfig) Resolve() (send.Sender, error) {
+	if err := lc.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid config")
+	}
+
+	factory, ok := lc.Registry.Resolve(lc.Type)
+	if !ok {
+		return nil, errors.Errorf("unregistered logger type '%s'", lc.Type)
+	}
+
+	if err := lc.Format.Unmarshal(lc.Data, factory); err != nil {
+		return nil, errors.Wrap(err, "problem unmarshalling data")
+	}
+
+	return factory.Configure()
 }
 
 // BaseOptions are the base options necessary for setting up most loggers.
@@ -104,6 +137,40 @@ func (opts *BufferOptions) Validate() error {
 	return nil
 }
 
+type bufferedSender struct {
+	baseSender send.Sender
+
+	send.Sender
+}
+
+// NewBufferedSender returns a grip send.Sender buffered with the given
+// options. It overwrites the underlying Close method in order to ensure that
+// both the base sender and the buffered sender are closed correctly.
+func NewBufferedSender(baseSender send.Sender, opts BaseOptions) (send.Sender, err) {
+	sender := send.NewBufferedSender(baseSender, opts.Base.Buffer.Duration, opts.Base.Buffer.MaxSize)
+	formatter, err := opts.Base.Format.MakeFormatter()
+	if err != nil {
+		return nil, err
+	}
+	if err := sender.SetFormatter(formatter); err != nil {
+		return nil, errors.New("failed to set log format")
+	}
+
+	return &bufferedSender{
+		baseSender: baseSender,
+		Sender:     sender,
+	}
+}
+
+func (*bufferedSender) Close() error {
+	catcher := grip.NewBasicCatcher()
+
+	catcher.Wrap(l.Sender.Close(), "problem closing sender")
+	catcher.Wrap(l.baseSender.Close(), "problem closing base sender")
+
+	return catcher.Resolve()
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Default Logger
 ///////////////////////////////////////////////////////////////////////////////
@@ -126,48 +193,16 @@ func (opts *DefaultLoggerOptions) Validate() error {
 	return opts.Base.Validate()
 }
 
-type defaultLogger struct {
-	name       string
-	baseSender send.Sender
-
-	send.Sender
-}
-
-// DefaultLoggerFactory is a LoggerFactory function for default logger.
-func DefaultLoggerFactory(data []byte, format LogConfigFormat) (Logger, error) {
-	opts := &DefaultLoggerOptions{}
-	err := format.Unmarshal(data, opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem unmarshalling default logger options")
-	}
-
+func (opts *DefaultLoggerOptions) Configure() (send.Sender, error) {
 	baseSender, err := send.NewNativeLogger(opts.Prefix, opts.Base.Level)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating logger")
+		return nil, errors.Wrap(err, "problem creating default logger")
 	}
 
-	sender := send.NewBufferedSender(baseSender, opts.Base.Buffer.Duration, opts.Base.Buffer.MaxSize)
-	formatter, err := opts.Base.Format.MakeFormatter()
+	bufferedSender, err := NewBufferedSender(baseSender, opts.Base)
 	if err != nil {
-		return nil, err
-	}
-	if err := sender.SetFormatter(formatter); err != nil {
-		return nil, errors.New("failed to set log format")
+		return nil, errors.Wrap(err, "problem creating buffered default logger")
 	}
 
-	return &defaultLogger{
-		name:       DefaultLogger,
-		baseSender: baseSender,
-		Sender:     sender,
-	}, nil
-}
-
-func (l *defaultLogger) Type() string { return l.name }
-func (l *defaultLogger) Close() error {
-	catcher := grip.NewBasicCatcher()
-
-	catcher.Wrap(l.Sender.Close(), "problem closing sender")
-	catcher.Wrap(l.baseSender.Close(), "problem closing base sender")
-
-	return catcher.Resolve()
+	return bufferedSender, nil
 }

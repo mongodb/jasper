@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/mongodb/grip/send"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -64,6 +65,14 @@ const (
 	LogConfigFormatJSON LogConfigFormat = "JSON"
 )
 
+func (f *LogConfigFormat) Validate() error {
+	switch f {
+	case LogConfigFormatBSON, LogConfigFormatJSON:
+	default:
+		return nil, errors.New("unknown log config format")
+	}
+}
+
 // Unmarshal unmarshals the data into out based on the log config format.
 func (f LogConfigFormat) Unmarshal(data []byte, out interface{}) error {
 	switch f {
@@ -87,4 +96,6 @@ func (f LogConfigFormat) Unmarshal(data []byte, out interface{}) error {
 }
 
 // LoggerFactory produces a Logger interface backed by a grip logger.
-type LoggerFactory func([]byte, LogConfigFormat) (Logger, error)
+type LoggerFactory interface {
+	Configure() (send.Sender, error)
+}
