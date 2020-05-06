@@ -41,6 +41,8 @@ imports:
     version: 9a33c650233106e021bcb51bfc87de1910a8b6fc
   - name: github.com/evergreen-ci/poplar
     version: 3043bd036e01aa6abbad6af0df031a8315308ff9
+  - name: github.com/evergreen-ci/utility
+    version: 3fa5718f9200847b0982978361090cb94bb6f0fd
 
   # cgroup/docker requirements
   - name: github.com/containerd/cgroups
@@ -74,8 +76,14 @@ imports:
   - name: github.com/golang/protobuf
     version: c823c79ea1570fb5ff454033735a8e68575d1d0f
 
-  # vendoring mongo-go-driver and mgo.v2 because many dependencies use it
+  # vendoring because many dependencies use it
   - name: go.mongodb.org/mongo-driver
     version: 305bc4a5e4131420fe8ba5628e6faa9e6ade4e86
   - name: gopkg.in/mgo.v2
     version: a6b53ec6cb22a3699387a57a161566f9402ee85b
+  - name: github.com/PuerkitoBio/rehttp
+    version: 3acc8749c14f0a6368ee715d142dddf24c72d632
+  - name: golang.org/x/oauth2
+    version: bf48bf16ab8d622ce64ec6ce98d2c98f916b6303
+  - name: gopkg.in/yaml.v2
+    version: 53403b58ad1b561927d19068c655246f2db79d48

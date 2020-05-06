@@ -128,10 +128,12 @@ clean-results:
 vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/utility/parsing.go
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/google/uuid/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/google/uuid/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/urfave/cli/
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/evergreen-ci/gimlet/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/pkg/errors/
@@ -155,10 +157,10 @@ vendor-clean:
 	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/montanaflynn/
-	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
+	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/mongodb/grip/vendor/golang.org/x/sys/
-	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/pkg/
+	rm -rf vendor/github.com/mongodb/grip/vendor/golang.org/x/oauth2/
 	rm -rf vendor/github.com/mongodb/grip/buildscripts/
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/stretchr/testify/
@@ -168,7 +170,7 @@ vendor-clean:
 	rm -rf vendor/github.com/tychoish/bond/vendor/github.com/satori/go.uuid/
 	rm -rf vendor/github.com/tychoish/lru/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/tychoish/lru/vendor/github.com/pkg/errors/
-	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/pkg/
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/mholt/archiver/rar.go
 	rm -rf vendor/github.com/mholt/archiver/tarbz2.go
 	rm -rf vendor/github.com/mholt/archiver/tarlz4.go
@@ -184,6 +186,7 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/net/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/text/
+	rm -rf vendor/github.com/evergreen-ci/timber/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/evergreen-ci/timber/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/montanaflynn/stats/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pkg/errors/
@@ -199,15 +202,16 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/pkg/errors/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/stretchr/testify/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/gopkg.in/mgo.v2/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/net/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/sys/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/text/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/gopkg.in/mgo.v2/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
-	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/containerd/cgroups/
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/coreos/go-systemd/
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/godbus/dbus/

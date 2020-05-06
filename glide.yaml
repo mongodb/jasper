@@ -13,6 +13,8 @@ import:
   - package: github.com/evergreen-ci/poplar
   - package: github.com/evergreen-ci/service
   - package: github.com/evergreen-ci/timber
+  - package: github.com/evergreen-ci/utility
+  - package: github.com/ev
   - package: github.com/tychoish/bond
   - package: github.com/tychoish/lru
   - package: github.com/mholt/archiver
@@ -30,6 +32,7 @@ import:
   - package: golang.org/x/net
   - package: golang.org/x/sys
   - package: golang.org/x/text
+  - package: golang.org/x/oauth2
   - package: google.golang.org/genproto
   - package: github.com/golang/protobuf
   - package: go.mongodb.org/go-driver

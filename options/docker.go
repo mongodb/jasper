@@ -6,8 +6,8 @@ import (
 	"runtime"
 
 	"github.com/docker/docker/client"
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
-	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -29,12 +29,12 @@ func (opts *Docker) Validate() error {
 	catcher.NewWhen(opts.Port < 0, "port must be positive value")
 	catcher.NewWhen(opts.Image == "", "Docker image must be specified")
 	if opts.Platform == "" {
-		if util.StringSliceContains(DockerPlatforms(), runtime.GOOS) {
+		if utility.StringSliceContains(DockerPlatforms(), runtime.GOOS) {
 			opts.Platform = runtime.GOOS
 		} else {
 			catcher.Errorf("failed to set default platform to current runtime platform '%s' because it is unsupported", opts.Platform)
 		}
-	} else if !util.StringSliceContains(DockerPlatforms(), opts.Platform) {
+	} else if !utility.StringSliceContains(DockerPlatforms(), opts.Platform) {
 		catcher.Errorf("unrecognized platform '%s'", opts.Platform)
 	}
 	return catcher.Resolve()
