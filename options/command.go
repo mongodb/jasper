@@ -24,8 +24,8 @@ type Command struct {
 // Validate ensures that the options passed to the command are valid.
 func (opts *Command) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	// The semantics of options.Create expects Args to be non-empty, but Command
-	// ignores these args.
+	// The semantics of a valid options.Create expects Args to be non-empty, but
+	// Command ignores these args, so we insert a dummy argument.
 	if len(opts.Process.Args) == 0 {
 		opts.Process.Args = []string{""}
 	}

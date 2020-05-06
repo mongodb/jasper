@@ -102,7 +102,11 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	seid, err := c.client.ScriptingHarnessCreate(ctx, internal.ConvertScriptingOptions(opts))
+	seOpts, err := internal.ConvertScriptingOptions(opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid scripting options")
+	}
+	seid, err := c.client.ScriptingHarnessCreate(ctx, seOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

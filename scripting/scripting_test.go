@@ -119,10 +119,10 @@ func TestScriptingHarness(t *testing.T) {
 			Name:      "Python3",
 			Supported: isInPath("python3") && !evgTaskContains("ubuntu"),
 			DefaultOptions: &options.ScriptingPython{
-				VirtualEnvPath:        filepath.Join(tmpdir, "python3"),
-				LegacyPython:          false,
-				HostPythonInterpreter: "python3",
-				Output:                output,
+				VirtualEnvPath:    filepath.Join(tmpdir, "python3"),
+				LegacyPython:      false,
+				InterpreterBinary: "python3",
+				Output:            output,
 			},
 			Tests: []seTest{
 				{
@@ -159,11 +159,11 @@ func TestScriptingHarness(t *testing.T) {
 			Name:      "Python2",
 			Supported: isInPath("python") && !evgTaskContains("windows"),
 			DefaultOptions: &options.ScriptingPython{
-				VirtualEnvPath:        filepath.Join(tmpdir, "python2"),
-				LegacyPython:          true,
-				HostPythonInterpreter: "python",
-				Packages:              []string{"wheel"},
-				Output:                output,
+				VirtualEnvPath:    filepath.Join(tmpdir, "python2"),
+				LegacyPython:      true,
+				InterpreterBinary: "python",
+				Packages:          []string{"wheel"},
+				Output:            output,
 			},
 			Tests: []seTest{
 				{

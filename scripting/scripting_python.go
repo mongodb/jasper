@@ -35,10 +35,10 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 	e.cachedHash = e.opts.ID()
 	venvpy := e.opts.Interpreter()
 
-	cmd := e.manager.CreateCommand(ctx).AppendArgs(e.opts.HostPythonInterpreter, "-m", e.venvMod(), e.opts.VirtualEnvPath).Environment(e.opts.Environment)
+	cmd := e.manager.CreateCommand(ctx).AppendArgs(e.opts.InterpreterBinary, "-m", e.venvMod(), e.opts.VirtualEnvPath).Environment(e.opts.Environment)
 
-	if e.opts.RequirementsFilePath != "" {
-		cmd.AppendArgs(venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsFilePath)
+	if e.opts.RequirementsPath != "" {
+		cmd.AppendArgs(venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsPath)
 	}
 
 	for _, pkg := range e.opts.Packages {

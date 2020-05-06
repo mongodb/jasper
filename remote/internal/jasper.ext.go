@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
@@ -708,23 +707,23 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 			Gopath:         val.Golang.Gopath,
 			Goroot:         val.Golang.Goroot,
 			Packages:       val.Golang.Packages,
-			Context:        val.Golang.Context,
-			WithUpdate:     val.Golang.WithUpdate,
+			Directory:      val.Golang.Directory,
+			UpdatePackages: val.Golang.UpdatePackages,
 			CachedDuration: time.Duration(o.Duration),
 			Environment:    o.Environment,
 			Output:         o.Output.Export(),
 		}, nil
 	case *ScriptingOptions_Python:
 		return &options.ScriptingPython{
-			VirtualEnvPath:        val.Python.VirtualEnvPath,
-			RequirementsFilePath:  val.Python.RequirementsPath,
-			HostPythonInterpreter: val.Python.HostPython,
-			Packages:              val.Python.Packages,
-			LegacyPython:          val.Python.LegacyPython,
-			AddTestRequirements:   val.Python.AddTestDeps,
-			CachedDuration:        time.Duration(o.Duration),
-			Environment:           o.Environment,
-			Output:                o.Output.Export(),
+			VirtualEnvPath:      val.Python.VirtualEnvPath,
+			RequirementsPath:    val.Python.RequirementsPath,
+			InterpreterBinary:   val.Python.InterpreterBinary,
+			Packages:            val.Python.Packages,
+			LegacyPython:        val.Python.LegacyPython,
+			AddTestRequirements: val.Python.AddTestReqs,
+			CachedDuration:      time.Duration(o.Duration),
+			Environment:         o.Environment,
+			Output:              o.Output.Export(),
 		}, nil
 	case *ScriptingOptions_Roswell:
 		return &options.ScriptingRoswell{
@@ -743,7 +742,7 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 // ConvertScriptingOptions takes ScriptingHarness options and returns an
 // equivalent protobuf RPC ScriptingOptions. ConvertScriptingOptions is the
 // inverse of (*ScriptingOptions) Export().
-func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
+func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, error) {
 	switch val := opts.(type) {
 	case *options.ScriptingGolang:
 		out := ConvertOutputOptions(val.Output)
@@ -753,14 +752,14 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
 			Output:      &out,
 			Value: &ScriptingOptions_Golang{
 				Golang: &ScriptingOptionsGolang{
-					Gopath:     val.Gopath,
-					Goroot:     val.Goroot,
-					Packages:   val.Packages,
-					Context:    val.Context,
-					WithUpdate: val.WithUpdate,
+					Gopath:         val.Gopath,
+					Goroot:         val.Goroot,
+					Packages:       val.Packages,
+					Directory:      val.Directory,
+					UpdatePackages: val.UpdatePackages,
 				},
 			},
-		}
+		}, nil
 	case *options.ScriptingPython:
 		out := ConvertOutputOptions(val.Output)
 		return &ScriptingOptions{
@@ -769,15 +768,15 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
 			Output:      &out,
 			Value: &ScriptingOptions_Python{
 				Python: &ScriptingOptionsPython{
-					VirtualEnvPath:   val.VirtualEnvPath,
-					RequirementsPath: val.RequirementsFilePath,
-					HostPython:       val.HostPythonInterpreter,
-					Packages:         val.Packages,
-					LegacyPython:     val.LegacyPython,
-					AddTestDeps:      val.AddTestRequirements,
+					VirtualEnvPath:    val.VirtualEnvPath,
+					RequirementsPath:  val.RequirementsPath,
+					InterpreterBinary: val.InterpreterBinary,
+					Packages:          val.Packages,
+					LegacyPython:      val.LegacyPython,
+					AddTestReqs:       val.AddTestRequirements,
 				},
 			},
-		}
+		}, nil
 	case *options.ScriptingRoswell:
 		out := ConvertOutputOptions(val.Output)
 		return &ScriptingOptions{
@@ -791,10 +790,9 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) *ScriptingOptions {
 					Lisp:    val.Lisp,
 				},
 			},
-		}
+		}, nil
 	default:
-		grip.Criticalf("'%T' is not supported", opts)
-		return nil
+		return nil, errors.Errorf("scripting options for '%T' is not supported", opts)
 	}
 }
 
