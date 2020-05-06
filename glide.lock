@@ -25,24 +25,26 @@ imports:
     version: 6f45313302b9c56850fc17f99e40caebce98c716
   - name: github.com/urfave/cli
     version: 693af58b4d51b8fcc7f9d89576da170765980581
-  - name: github.com/evergreen-ci/service
-    version: d9382e39d76857e2fe92a379d89f3c86fe507c4d
   - name: github.com/cheynewallace/tabby
     version: b7224f6123093cc04ce961170a360e1d22e214a5
   - name: github.com/evergreen-ci/aviation
     version: d74791c0d819b6f7908cced0dd37e6ab3fb9eeae
+  - name: github.com/evergreen-ci/birch
+    version: 5b054047680765b089c1e6f77d0896803d1fd73d
   - name: github.com/evergreen-ci/certdepot
     version: d2c7b2f7c9c7af6311d211fe7fb127d99bdc5d43
   - name: github.com/evergreen-ci/mrpc
     version: 0ac1b2e0d9f957ae72f731726aedd310932baece
-  - name: github.com/evergreen-ci/birch
-    version: 5b054047680765b089c1e6f77d0896803d1fd73d
-  - name: github.com/evergreen-ci/timber
-    version: 9a33c650233106e021bcb51bfc87de1910a8b6fc
   - name: github.com/evergreen-ci/poplar
     version: 3043bd036e01aa6abbad6af0df031a8315308ff9
   - name: github.com/evergreen-ci/utility
     version: 3fa5718f9200847b0982978361090cb94bb6f0fd
+  - name: github.com/evergreen-ci/service
+    version: d9382e39d76857e2fe92a379d89f3c86fe507c4d
+  - name: github.com/evergreen-ci/shrub
+    version: cb3b4ac90c6c802fd1dce863d2f54ee6f3efcc27
+  - name: github.com/evergreen-ci/timber
+    version: 9a33c650233106e021bcb51bfc87de1910a8b6fc
 
   # cgroup/docker requirements
   - name: github.com/containerd/cgroups
