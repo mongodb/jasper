@@ -11,28 +11,30 @@ import (
 
 // LoggerRegistry is an interface that stores reusable logger factories.
 type LoggerRegistry interface {
-	Register(string, LoggerFactory)
+	Register(LoggerProducerFactory)
 	Check(string) bool
 	Names() []string
-	Resolve(string) (LoggerFactory, bool)
+	Resolve(string) (LoggerProducerFactory, bool)
 }
 
 type basicLoggerRegistry struct {
 	mu        sync.RWMutex
-	factories map[string]LoggerFactory
+	factories map[string]LoggerProducerFactory
 }
 
+// NewBasicLoggerRegsitry returns a new LoggerRegistry backed by the
+// basicLoggerRegistry implementation.
 func NewBasicLoggerRegistry() LoggerRegistry {
 	return &basicLoggerRegistry{
-		factories: map[string]LoggerFactory{},
+		factories: map[string]LoggerProducerFactory{},
 	}
 }
 
-func (r *basicLoggerRegistry) Register(name string, factory LoggerFactory) {
+func (r *basicLoggerRegistry) Register(factory LoggerProducerFactory) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.factories[name] = factory
+	r.factories[factory().Type()] = factory
 }
 
 func (r *basicLoggerRegistry) Check(name string) bool {
@@ -55,7 +57,7 @@ func (r *basicLoggerRegistry) Names() []string {
 	return names
 }
 
-func (r *basicLoggerRegistry) Resolve(name string) (LoggerFactory, bool) {
+func (r *basicLoggerRegistry) Resolve(name string) (LoggerProducerFactory, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -71,18 +73,17 @@ const (
 	LogConfigFormatJSON LogConfigFormat = "JSON"
 )
 
+// Validate ensures that LogConfigFormat is valid.
 func (f LogConfigFormat) Validate() error {
 	switch f {
 	case LogConfigFormatBSON, LogConfigFormatJSON:
+		return nil
 	default:
 		return errors.New("unknown log config format")
 	}
-
-	return nil
 }
 
-// Unmarshal unmarshals the data into out based on the log config format.
-func (f LogConfigFormat) Unmarshal(data []byte, out interface{}) error {
+func (f LogConfigFormat) unmarshal(data []byte, out LoggerProducer) error {
 	switch f {
 	case LogConfigFormatBSON:
 		if err := bson.Unmarshal(data, out); err != nil {
@@ -105,8 +106,9 @@ func (f LogConfigFormat) Unmarshal(data []byte, out interface{}) error {
 
 // LoggerProducer produces a Logger interface backed by a grip logger.
 type LoggerProducer interface {
+	Type() string
 	Configure() (send.Sender, error)
 }
 
-// LoggerFactory creates a new instance of a LoggerProducer implementation.
-type LoggerFactory func() LoggerProducer
+// LoggerProducerFactory creates a new instance of a LoggerProducer implementation.
+type LoggerProducerFactory func() LoggerProducer
