@@ -8,13 +8,13 @@ import (
 
 var globalLoggerRegistry LoggerRegistry = &basicLoggerRegistry{
 	factories: map[string]LoggerProducerFactory{
-		DefaultLogger:   NewDefaultLoggerProducer,
-		FileLogger:      NewFileLoggerProducer,
-		InheritedLogger: NewInheritedLoggerProducer,
-		SumoLogicLogger: NewSumoLogicLoggerProducer,
-		InMemoryLogger:  NewInMemoryLoggerProducer,
-		SplunkLogger:    NewSplunkLoggerProducer,
-		BuildloggerV2:   NewBuildloggerV2LoggerProducer,
+		LogDefault:       NewDefaultLoggerProducer,
+		LogFile:          NewFileLoggerProducer,
+		LogInherited:     NewInheritedLoggerProducer,
+		LogSumoLogic:     NewSumoLogicLoggerProducer,
+		LogInMemory:      NewInMemoryLoggerProducer,
+		LogSplunk:        NewSplunkLoggerProducer,
+		LogBuildloggerV2: NewBuildloggerV2LoggerProducer,
 	},
 }
 
@@ -25,8 +25,8 @@ func GetGlobalLoggerRegistry() LoggerRegistry { return globalLoggerRegistry }
 // Default Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// DefaultLogger is the type name for the default logger.
-const DefaultLogger = "default"
+// LogDefault is the type name for the default logger.
+const LogDefault = "default"
 
 // DefaultLoggerOptions packages the options for creating a default logger.
 type DefaultLoggerOptions struct {
@@ -47,7 +47,7 @@ func (opts *DefaultLoggerOptions) Validate() error {
 	return opts.Base.Validate()
 }
 
-func (*DefaultLoggerOptions) Type() string { return DefaultLogger }
+func (*DefaultLoggerOptions) Type() string { return LogDefault }
 func (opts *DefaultLoggerOptions) Configure() (send.Sender, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid options")
@@ -69,8 +69,8 @@ func (opts *DefaultLoggerOptions) Configure() (send.Sender, error) {
 // File Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// FileLogger is the type name for the file logger.
-const FileLogger = "file"
+// LogFile is the type name for the file logger.
+const LogFile = "file"
 
 // FileLoggerOptions packages the options for creating a file logger.
 type FileLoggerOptions struct {
@@ -90,7 +90,7 @@ func (opts *FileLoggerOptions) Validate() error {
 	return catcher.Resolve()
 }
 
-func (*FileLoggerOptions) Type() string { return FileLogger }
+func (*FileLoggerOptions) Type() string { return LogFile }
 func (opts *FileLoggerOptions) Configure() (send.Sender, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid options")
@@ -112,8 +112,8 @@ func (opts *FileLoggerOptions) Configure() (send.Sender, error) {
 // Inherited Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// InheritedLogger is the type name for the inherited logger.
-const InheritedLogger = ""
+// LogInherited is the type name for the inherited logger.
+const LogInherited = "inherited"
 
 // InheritLoggerOptions packages the options for creating an inherited logger.
 type InheritedLoggerOptions struct {
@@ -124,7 +124,7 @@ type InheritedLoggerOptions struct {
 // InheritedLoggerOptions.
 func NewInheritedLoggerProducer() LoggerProducer { return &InheritedLoggerOptions{} }
 
-func (*InheritedLoggerOptions) Type() string { return InheritedLogger }
+func (*InheritedLoggerOptions) Type() string { return LogInherited }
 func (opts *InheritedLoggerOptions) Configure() (send.Sender, error) {
 	var (
 		sender send.Sender
@@ -151,8 +151,8 @@ func (opts *InheritedLoggerOptions) Configure() (send.Sender, error) {
 // In Memory Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// InMemoryLogger is the type name for the in memory logger.
-const InMemoryLogger = "in-memory"
+// LogInMemory is the type name for the in memory logger.
+const LogInMemory = "in-memory"
 
 // InMemoryLoggerOptions packages the options for creating an in memory logger.
 type InMemoryLoggerOptions struct {
@@ -172,7 +172,7 @@ func (opts *InMemoryLoggerOptions) Validate() error {
 	return catcher.Resolve()
 }
 
-func (*InMemoryLoggerOptions) Type() string { return InMemoryLogger }
+func (*InMemoryLoggerOptions) Type() string { return LogInMemory }
 func (opts *InMemoryLoggerOptions) Configure() (send.Sender, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid config")
@@ -194,8 +194,8 @@ func (opts *InMemoryLoggerOptions) Configure() (send.Sender, error) {
 // Sumo Logic Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// SumoLogicLogger is the type name for the sumo logic logger.
-const SumoLogicLogger = "sumo-logic"
+// LogSumoLogic is the type name for the sumo logic logger.
+const LogSumoLogic = "sumo-logic"
 
 // SumoLogicLoggerOptions packages the options for creating a sumo logic
 // logger.
@@ -216,7 +216,7 @@ func (opts *SumoLogicLoggerOptions) Validate() error {
 	return catcher.Resolve()
 }
 
-func (*SumoLogicLoggerOptions) Type() string { return SumoLogicLogger }
+func (*SumoLogicLoggerOptions) Type() string { return LogSumoLogic }
 func (opts *SumoLogicLoggerOptions) Configure() (send.Sender, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid config")
@@ -241,8 +241,8 @@ func (opts *SumoLogicLoggerOptions) Configure() (send.Sender, error) {
 // Splunk Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// SplunkLogger is the type name for the splunk logger.
-const SplunkLogger = "splunk"
+// LogSplunk is the type name for the splunk logger.
+const LogSplunk = "splunk"
 
 // SplunkLoggerOptions packages the options for creating a splunk logger.
 type SplunkLoggerOptions struct {
@@ -261,7 +261,7 @@ func (opts *SplunkLoggerOptions) Validate() error {
 	return catcher.Resolve()
 }
 
-func (*SplunkLoggerOptions) Type() string { return SplunkLogger }
+func (*SplunkLoggerOptions) Type() string { return LogSplunk }
 func (opts *SplunkLoggerOptions) Configure() (send.Sender, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid config")
@@ -283,10 +283,11 @@ func (opts *SplunkLoggerOptions) Configure() (send.Sender, error) {
 // BuildloggerV2 Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// BuildloggerV2 is the type name for the buildlogger v2 logger.
-const BuildloggerV2 = "buildloggerv2"
+// LogBuildloggerV2 is the type name for the buildlogger v2 logger.
+const LogBuildloggerV2 = "buildloggerv2"
 
-// DefaultLoggerOptions packages the options for creating a default logger.
+// BuildloggerV2Options packages the options for creating a buildlogger v2
+// logger.
 type BuildloggerV2Options struct {
 	Buildlogger send.BuildloggerConfig `json:"buildlogger" bson:"buildlogger"`
 	Base        BaseOptions            `json:"base" bson:"base"`
@@ -296,7 +297,7 @@ type BuildloggerV2Options struct {
 // BuildloggerV2Options.
 func NewBuildloggerV2LoggerProducer() LoggerProducer { return &BuildloggerV2Options{} }
 
-func (*BuildloggerV2Options) Type() string { return BuildloggerV2 }
+func (*BuildloggerV2Options) Type() string { return LogBuildloggerV2 }
 func (opts *BuildloggerV2Options) Configure() (send.Sender, error) {
 	if opts.Buildlogger.Local == nil {
 		opts.Buildlogger.Local = send.MakeNative()

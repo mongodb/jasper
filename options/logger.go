@@ -73,7 +73,8 @@ type LoggerConfig struct {
 	Config   LogConfig       `json:"config" bson:"config"`
 	Registry LoggerRegistry  `json:"-" bson:"-"`
 
-	sender send.Sender
+	producer LoggerProducer
+	sender   send.Sender
 }
 
 // Validate ensures the LoggerConfig is valid.
@@ -90,7 +91,8 @@ func (lc *LoggerConfig) Validate() error {
 	return catcher.Resolve()
 }
 
-// Resolve resolves the LoggerConfig and returns the results grip send.Sender.
+// Resolve resolves the LoggerConfig and returns the resulting grip
+// send.Sender.
 func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if lc.sender == nil {
 		if err := lc.Validate(); err != nil {
