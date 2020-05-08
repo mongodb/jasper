@@ -38,7 +38,7 @@ type Harness interface {
 	// (optional) arguments should either be arguments to the test
 	// runner or names of specific tests to run, depending on the
 	// implementation.
-	Test(context.Context, string, ...TestOptions) ([]TestResult, error)
+	Test(ctx context.Context, dir string, opts ...TestOptions) ([]TestResult, error)
 	// Cleanup should remove the files created by the scripting environment.
 	Cleanup(context.Context) error
 }

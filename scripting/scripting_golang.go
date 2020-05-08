@@ -71,7 +71,7 @@ func (e *golangEnvironment) Run(ctx context.Context, args []string) error {
 }
 
 func (e *golangEnvironment) Build(ctx context.Context, dir string, args []string) (string, error) {
-	if e.opts.Directory != "" {
+	if e.opts.Directory != "" && !strings.HasPrefix(dir, e.opts.Directory) {
 		dir = filepath.Join(e.opts.Directory, dir)
 	}
 	err := e.manager.CreateCommand(ctx).
@@ -132,7 +132,7 @@ func (e *golangEnvironment) Cleanup(ctx context.Context) error {
 }
 
 func (e *golangEnvironment) Test(ctx context.Context, dir string, tests ...TestOptions) ([]TestResult, error) {
-	if e.opts.Directory != "" {
+	if e.opts.Directory != "" && !strings.HasPrefix(dir, e.opts.Directory) {
 		dir = filepath.Join(e.opts.Directory, dir)
 	}
 
