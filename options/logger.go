@@ -103,15 +103,15 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 		if !ok {
 			return nil, errors.Errorf("unregistered logger type '%s'", lc.Type)
 		}
-		producer := factory()
+		lc.producer = factory()
 
 		if len(lc.Config) > 0 {
-			if err := lc.Format.unmarshal(lc.Config, producer); err != nil {
+			if err := lc.Format.unmarshal(lc.Config, lc.producer); err != nil {
 				return nil, errors.Wrap(err, "problem unmarshalling data")
 			}
 		}
 
-		sender, err := producer.Configure()
+		sender, err := lc.producer.Configure()
 		if err != nil {
 			return nil, err
 		}
@@ -129,6 +129,12 @@ func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 		return nil, errors.New("cannot marshal misconfigured bson logger config")
 	}
 
+	data, err := bson.Marshal(lc.producer)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem producing logger config")
+	}
+	lc.Config = data
+
 	return bson.Marshal(lc)
 }
 
@@ -140,6 +146,11 @@ func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("cannot marshal misconfigured bson logger config")
 	}
 
+	data, err := json.Marshal(lc.producer)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem producing logger config")
+	}
+	lc.Config = data
 	return json.Marshal(lc)
 }
 
