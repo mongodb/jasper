@@ -91,12 +91,26 @@ func (lc *LoggerConfig) Validate() error {
 	return catcher.Resolve()
 }
 
+func (lc *LoggerConfig) Set(producer LoggerProducer) error {
+	if err := lc.Validate(); err != nil {
+		return errors.Wrap(err, "invalid logger config")
+	}
+
+	if !lc.Registry.Check(producer.Type()) {
+		return errors.New("unregistered logger producer")
+	}
+	lc.Type = producer.Type()
+	lc.producer = producer
+
+	return nil
+}
+
 // Resolve resolves the LoggerConfig and returns the resulting grip
 // send.Sender.
 func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if lc.sender == nil {
 		if err := lc.Validate(); err != nil {
-			return nil, errors.Wrap(err, "invalid config")
+			return nil, errors.Wrap(err, "invalid logger config")
 		}
 
 		factory, ok := lc.Registry.Resolve(lc.Type)
