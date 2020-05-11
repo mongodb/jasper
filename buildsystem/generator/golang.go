@@ -39,7 +39,7 @@ type Golang struct {
 	WorkingDirectory string `yaml:"-"`
 }
 
-func NewGolang(file, workingDir string) (Generator, error) {
+func NewGolang(file, workingDir string) (*Golang, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read configuration file")

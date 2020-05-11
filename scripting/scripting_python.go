@@ -38,9 +38,9 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 	cmd := e.manager.CreateCommand(ctx).AppendArgs(e.opts.InterpreterBinary, "-m", e.venvMod(), e.opts.VirtualEnvPath).Environment(e.opts.Environment)
 
 	if e.opts.RequirementsPath != "" {
-		args := []string{venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsPath)}
+		args := []string{venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsPath}
 		if e.opts.UpdatePackages {
-			cmd = append(cmd, "--upgrade")
+			args = append(args, "--upgrade")
 		}
 		cmd.Add(args)
 	}
@@ -48,7 +48,7 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 	for _, pkg := range e.opts.Packages {
 		args := []string{venvpy, "-m", "pip", "install"}
 		if e.opts.UpdatePackages {
-			arge = append(args, "--update")
+			args = append(args, "--update")
 		}
 		args = append(args, pkg)
 		cmd.Add(args)
