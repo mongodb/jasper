@@ -1,12 +1,9 @@
 package options
 
 import (
-	"encoding/json"
 	"sync"
 
 	"github.com/mongodb/grip/send"
-	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 // LoggerRegistry is an interface that stores reusable logger factories.
@@ -63,45 +60,6 @@ func (r *basicLoggerRegistry) Resolve(name string) (LoggerProducerFactory, bool)
 
 	factory, ok := r.factories[name]
 	return factory, ok
-}
-
-// LogConfigFormat describes the format of the log configuration.
-type LogConfigFormat string
-
-const (
-	LogConfigFormatBSON LogConfigFormat = "BSON"
-	LogConfigFormatJSON LogConfigFormat = "JSON"
-)
-
-// Validate ensures that LogConfigFormat is valid.
-func (f LogConfigFormat) Validate() error {
-	switch f {
-	case LogConfigFormatBSON, LogConfigFormatJSON:
-		return nil
-	default:
-		return errors.New("unknown log config format")
-	}
-}
-
-func (f LogConfigFormat) unmarshal(data []byte, out LoggerProducer) error {
-	switch f {
-	case LogConfigFormatBSON:
-		if err := bson.Unmarshal(data, out); err != nil {
-			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
-
-		}
-
-		return nil
-	case LogConfigFormatJSON:
-		if err := json.Unmarshal(data, out); err != nil {
-			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
-
-		}
-
-		return nil
-	default:
-		return errors.Errorf("unsupported format '%s'", f)
-	}
 }
 
 // LoggerProducer produces a Logger interface backed by a grip logger.

@@ -74,7 +74,7 @@ const LogFile = "file"
 
 // FileLoggerOptions packages the options for creating a file logger.
 type FileLoggerOptions struct {
-	FileName string      `json:"file_name " bson:"file_name"`
+	Filename string      `json:"filename " bson:"filename"`
 	Base     BaseOptions `json:"base" bson:"base"`
 }
 
@@ -85,7 +85,7 @@ func NewFileLoggerProducer() LoggerProducer { return &FileLoggerOptions{} }
 func (opts *FileLoggerOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
-	catcher.NewWhen(opts.FileName == "", "must specify a filename")
+	catcher.NewWhen(opts.Filename == "", "must specify a filename")
 	catcher.Add(opts.Base.Validate())
 	return catcher.Resolve()
 }
@@ -96,7 +96,7 @@ func (opts *FileLoggerOptions) Configure() (send.Sender, error) {
 		return nil, errors.Wrap(err, "invalid options")
 	}
 
-	sender, err := send.NewPlainFileLogger(DefaultLogName, opts.FileName, opts.Base.Level)
+	sender, err := send.NewPlainFileLogger(DefaultLogName, opts.Filename, opts.Base.Level)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem creating base file logger")
 	}

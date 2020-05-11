@@ -56,22 +56,53 @@ func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 	}
 }
 
-// LogConfig type aliases []byte in order to implement the bson.MarshalBSON and
-// json.MarshalJSON interfaces. It is intended to hold the logger configuration
-// data.
-type LogConfig []byte
+// RawLoggerConfigFormat describes the format of the raw logger configuration.
+type RawLoggerConfigFormat string
 
-func (lc LogConfig) MarshalBSON() ([]byte, error) { return lc, nil }
-func (lc LogConfig) MarshalJSON() ([]byte, error) { return lc, nil }
+const (
+	RawLoggerConfigFormatBSON RawLoggerConfigFormat = "BSON"
+	RawLoggerConfigFormatJSON RawLoggerConfigFormat = "JSON"
+)
+
+// Validate ensures that RawLoggerConfigFormat is valid.
+func (f RawLoggerConfigFormat) Validate() error {
+	switch f {
+	case RawLoggerConfigFormatBSON, RawLoggerConfigFormatJSON:
+		return nil
+	default:
+		return errors.New("unknown raw logger config format")
+	}
+}
+
+func (f RawLoggerConfigFormat) unmarshal(data []byte, out LoggerProducer) error {
+	switch f {
+	case RawLoggerConfigFormatBSON:
+		if err := bson.Unmarshal(data, out); err != nil {
+			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
+
+		}
+
+		return nil
+	case RawLoggerConfigFormatJSON:
+		if err := json.Unmarshal(data, out); err != nil {
+			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
+
+		}
+
+		return nil
+	default:
+		return errors.Errorf("unsupported format '%s'", f)
+	}
+}
 
 // LoggerConfig represents the necessary information to construct a new grip
 // send.Sender. LoggerConfig implements the bson.MarshalBSON and
 // json.MarshalJSON interfaces.
 type LoggerConfig struct {
-	Type     string          `json:"type" bson:"type"`
-	Format   LogConfigFormat `json:"format" bson:"format"`
-	Config   LogConfig       `json:"config" bson:"config"`
-	Registry LoggerRegistry  `json:"-" bson:"-"`
+	Type     string                `json:"type" bson:"type"`
+	Format   RawLoggerConfigFormat `json:"format" bson:"format"`
+	Config   []byte                `json:"config" bson:"config"`
+	Registry LoggerRegistry        `json:"-" bson:"-"`
 
 	producer LoggerProducer
 	sender   send.Sender
@@ -92,10 +123,6 @@ func (lc *LoggerConfig) Validate() error {
 }
 
 func (lc *LoggerConfig) Set(producer LoggerProducer) error {
-	if err := lc.Validate(); err != nil {
-		return errors.Wrap(err, "invalid logger config")
-	}
-
 	if !lc.Registry.Check(producer.Type()) {
 		return errors.New("unregistered logger producer")
 	}
@@ -109,19 +136,21 @@ func (lc *LoggerConfig) Set(producer LoggerProducer) error {
 // send.Sender.
 func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if lc.sender == nil {
-		if err := lc.Validate(); err != nil {
-			return nil, errors.Wrap(err, "invalid logger config")
-		}
+		if lc.producer == nil {
+			if err := lc.Validate(); err != nil {
+				return nil, errors.Wrap(err, "invalid logger config")
+			}
 
-		factory, ok := lc.Registry.Resolve(lc.Type)
-		if !ok {
-			return nil, errors.Errorf("unregistered logger type '%s'", lc.Type)
-		}
-		lc.producer = factory()
+			factory, ok := lc.Registry.Resolve(lc.Type)
+			if !ok {
+				return nil, errors.Errorf("unregistered logger type '%s'", lc.Type)
+			}
+			lc.producer = factory()
 
-		if len(lc.Config) > 0 {
-			if err := lc.Format.unmarshal(lc.Config, lc.producer); err != nil {
-				return nil, errors.Wrap(err, "problem unmarshalling data")
+			if len(lc.Config) > 0 {
+				if err := lc.Format.unmarshal(lc.Config, lc.producer); err != nil {
+					return nil, errors.Wrap(err, "problem unmarshalling data")
+				}
 			}
 		}
 
@@ -137,9 +166,9 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 
 func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 	if lc.Format == "" {
-		lc.Format = LogConfigFormatBSON
+		lc.Format = RawLoggerConfigFormatBSON
 	}
-	if lc.Format != LogConfigFormatBSON {
+	if lc.Format != RawLoggerConfigFormatBSON {
 		return nil, errors.New("cannot marshal misconfigured bson logger config")
 	}
 
@@ -149,14 +178,18 @@ func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 	}
 	lc.Config = data
 
-	return bson.Marshal(lc)
+	return bson.Marshal(struct {
+		Type   string                `bson:"type"`
+		Format RawLoggerConfigFormat `bson:"format"`
+		Config []byte                `bson:"config"`
+	}{Type: lc.Type, Format: lc.Format, Config: lc.Config})
 }
 
 func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
 	if lc.Format == "" {
-		lc.Format = LogConfigFormatJSON
+		lc.Format = RawLoggerConfigFormatJSON
 	}
-	if lc.Format != LogConfigFormatJSON {
+	if lc.Format != RawLoggerConfigFormatJSON {
 		return nil, errors.New("cannot marshal misconfigured bson logger config")
 	}
 
@@ -165,7 +198,11 @@ func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
 		return nil, errors.Wrap(err, "problem producing logger config")
 	}
 	lc.Config = data
-	return json.Marshal(lc)
+	return json.Marshal(struct {
+		Type   string                `json:"type"`
+		Format RawLoggerConfigFormat `json:"format"`
+		Config []byte                `json:"config"`
+	}{Type: lc.Type, Format: lc.Format, Config: lc.Config})
 }
 
 // BaseOptions are the base options necessary for setting up most loggers.
