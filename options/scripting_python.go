@@ -26,8 +26,7 @@ type ScriptingPython struct {
 	// AddTestRequirements determines whether or not to install the dependencies
 	// necessary for executing scripts if they are not already installed.
 	AddTestRequirements bool `bson:"add_test_reqs" json:"add_test_reqs" yaml:"add_test_reqs"`
-	// TODO: should there be an equivalent UpdatePackages flag like for golang
-	// (i.e. pip install --upgrade)?
+	UpdatePackages      bool `bson:"update_packages" json:"update_packges" yaml:"update_packages"`
 	// TODO: should this be an enum to handle when it's not just python 2 vs 3?
 	LegacyPython bool `bson:"legacy_python" json:"legacy_python" yaml:"legacy_python"`
 
