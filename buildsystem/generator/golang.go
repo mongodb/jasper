@@ -11,6 +11,7 @@ import (
 
 	"github.com/evergreen-ci/shrub"
 	"github.com/evergreen-ci/utility"
+
 	// "github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
@@ -258,7 +259,7 @@ const (
 
 // Generate creates the evergreen configuration from the given golang build
 // configuration.
-func (g *Golang) Generate(output io.Writer) error {
+func (g *Golang) Generate(output io.Writer) (*shrub.Configuration, error) {
 	conf, err := shrub.BuildConfiguration(func(c *shrub.Configuration) {
 		for _, gv := range g.Variants {
 			variant := c.Variant(gv.Name)
@@ -313,14 +314,10 @@ func (g *Golang) Generate(output io.Writer) error {
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "failed to generate evergreen configuration")
+		return nil, errors.Wrap(err, "failed to generate evergreen configuration")
 	}
 
-	if err := writeConfig(conf, output); err != nil {
-		return errors.Wrap(err, "failed to write generated configuration")
-	}
-
-	return nil
+	return conf, nil
 }
 
 func (g *Golang) getPackagesAndRef(vp VariantPackage) (pkgs []GolangPackage, pkgRef string, err error) {
@@ -505,13 +502,8 @@ func (gp *GolangPackage) Validate() error {
 type GolangVariant struct {
 	Name    string   `yaml:"name"`
 	Distros []string `yaml:"distros"`
-	// Packages lists the names or paths of the package relative to the root
-	// package, which can be one of the following:
-	// - A name of a package explicitly listed in the packages section.
-	// - A path of a package explicitly listed in the packages section.
-	// - A path of a package that matches a path to a directory containing tests
-	//   relative to the root package.
-	// - A package tag, beginning with a period (e.g. ".tag").
+	// Packages lists a package name, path or or tagged group of packages
+	// relative to the root package.
 	Packages []VariantPackage `yaml:"packages"`
 	// Options are variant-specific options that modify test execution.
 	// Explicitly setting these values will override options specified under the

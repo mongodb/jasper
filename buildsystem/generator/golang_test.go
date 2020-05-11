@@ -2,7 +2,6 @@ package generator
 
 import (
 	"bytes"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -527,9 +526,8 @@ func TestGolangGenerate(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
 		"Succeeds": func(t *testing.T, g *Golang) {
 			b := &bytes.Buffer{}
-			require.NoError(t, g.Generate(b))
-			conf := shrub.Configuration{}
-			require.NoError(t, json.Unmarshal(b.Bytes(), &conf))
+			conf, err := g.Generate(b)
+			require.NoError(t, err)
 			require.Len(t, conf.Tasks, 4)
 
 			for _, parts := range [][]string{
