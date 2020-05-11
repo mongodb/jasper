@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/evergreen-ci/shrub"
+	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -500,8 +501,7 @@ func TestDiscoverPackages(t *testing.T) {
 	} {
 		t.Run(testName, func(t *testing.T) {
 			rootPackage := filepath.Join("github.com", "fake_user", "fake_repo")
-			// kim: TODO: replace with testutil.BuildDirectory()
-			gopath, err := ioutil.TempDir("", "gopath")
+			gopath, err := ioutil.TempDir(testutil.BuildDirectory(), "gopath")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, os.RemoveAll(gopath))
@@ -522,6 +522,7 @@ func TestDiscoverPackages(t *testing.T) {
 	}
 }
 
+// TODO: more test coverage for generation
 func TestGolangGenerate(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
 		"Succeeds": func(t *testing.T, g *Golang) {
@@ -577,8 +578,6 @@ func TestGolangGenerate(t *testing.T) {
 						Name: "name2",
 						Path: "path2",
 					},
-					// kim: TODO: make enough package definitions to generate
-					// task group
 				},
 				Variants: []GolangVariant{
 					{

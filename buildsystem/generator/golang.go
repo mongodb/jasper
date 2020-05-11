@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/evergreen-ci/shrub"
+	"github.com/evergreen-ci/utility"
 	// "github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
@@ -465,18 +466,10 @@ func (g *Golang) GetPackageByPath(path string) (*GolangPackage, error) {
 func (g *Golang) GetPackagesByTag(tag string) []GolangPackage {
 	var pkgs []GolangPackage
 	for _, pkg := range g.Packages {
-		for _, t := range pkg.Tags {
-			if t == tag {
-				pkgs = append(pkgs, pkg)
-				continue
-			}
+		if utility.StringSliceContains(pkg.Tags, tag) {
+			pkgs = append(pkgs, pkg)
+			continue
 		}
-		// TODO: uncomment once Docker PR is merged, which vendors
-		// github.come/evergreen-ci/utility and can replace the above lines.
-		// if utility.StringSliceContains(pkg.Tags, tag) {
-		//     pkgs = append(pkgs, pkg)
-		//     continue
-		// }
 	}
 	return pkgs
 }
