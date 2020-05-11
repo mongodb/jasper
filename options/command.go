@@ -11,7 +11,6 @@ type Command struct {
 	ID              string            `json:"id,omitempty"`
 	Commands        [][]string        `json:"commands"`
 	Process         Create            `json:"proc_opts,omitempty"`
-	Remote          *Remote           `json:"remote_options,omitempty"`
 	ContinueOnError bool              `json:"continue_on_error,omitempty"`
 	IgnoreError     bool              `json:"ignore_error,omitempty"`
 	Priority        level.Priority    `json:"priority,omitempty"`

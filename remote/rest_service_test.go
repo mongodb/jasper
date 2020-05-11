@@ -34,7 +34,7 @@ func TestRestService(t *testing.T) {
 	httpClient := testutil.GetHTTPClient()
 	defer testutil.PutHTTPClient(httpClient)
 
-	tempDir, err := ioutil.TempDir(buildDir(t), filepath.Base(t.Name()))
+	tempDir, err := ioutil.TempDir(testutil.BuildDirectory(), filepath.Base(t.Name()))
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, os.RemoveAll(tempDir)) }()
 
