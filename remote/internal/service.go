@@ -106,7 +106,10 @@ func (s *jasperService) ID(ctx context.Context, _ *empty.Empty) (*IDResponse, er
 }
 
 func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*ProcessInfo, error) {
-	jopts := opts.Export()
+	jopts, err := opts.Export()
+	if err != nil {
+		return nil, errors.Wrap(err, "problem exporting create options")
+	}
 
 	// Spawn a new context so that the process' context is not potentially
 	// canceled by the request's. See how rest_service.go's createProcess() does
@@ -442,8 +445,15 @@ func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProces
 
 	urls := []string{}
 	for _, logger := range getProcInfoNoHang(ctx, proc).Options.Output.Loggers {
-		if logger.Type == options.LogBuildloggerV2 || logger.Type == options.LogBuildloggerV3 {
-			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
+		if logger.Type == options.LogBuildloggerV2 {
+			producer := logger.GetProducer()
+			if producer == nil {
+				continue
+			}
+			rawProducer, ok := producer.(*options.BuildloggerV2Options)
+			if ok {
+				urls = append(urls, rawProducer.Buildlogger.GetGlobalLogURL())
+			}
 		}
 	}
 
@@ -797,7 +807,11 @@ func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCac
 	if lc == nil {
 		return nil, errors.New("logging cache not supported")
 	}
-	opt := args.Options.Export()
+	opt, err := args.Options.Export()
+	if err != nil {
+		return nil, errors.Wrap(err, "problem exporting output options")
+	}
+
 	out, err := lc.Create(args.Name, &opt)
 	if err != nil {
 		return &LoggingCacheInstance{

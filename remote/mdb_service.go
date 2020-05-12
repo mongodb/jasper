@@ -289,8 +289,15 @@ func (s *mdbService) getBuildloggerURLs(ctx context.Context, w io.Writer, msg mo
 
 	urls := []string{}
 	for _, logger := range getProcInfoNoHang(ctx, proc).Options.Output.Loggers {
-		if logger.Type == options.LogBuildloggerV2 || logger.Type == options.LogBuildloggerV3 {
-			urls = append(urls, logger.Options.BuildloggerOptions.GetGlobalLogURL())
+		if logger.Type == options.LogBuildloggerV2 {
+			producer := logger.GetProducer()
+			if producer == nil {
+				continue
+			}
+			rawProducer, ok := producer.(*options.BuildloggerV2Options)
+			if ok {
+				urls = append(urls, rawProducer.Buildlogger.GetGlobalLogURL())
+			}
 		}
 	}
 	if len(urls) == 0 {

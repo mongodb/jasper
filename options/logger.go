@@ -60,8 +60,9 @@ func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 type RawLoggerConfigFormat string
 
 const (
-	RawLoggerConfigFormatBSON RawLoggerConfigFormat = "BSON"
-	RawLoggerConfigFormatJSON RawLoggerConfigFormat = "JSON"
+	RawLoggerConfigFormatBSON    RawLoggerConfigFormat = "BSON"
+	RawLoggerConfigFormatJSON    RawLoggerConfigFormat = "JSON"
+	RawLoggerConfigFormatInvalid RawLoggerConfigFormat = "invalid"
 )
 
 // Validate ensures that RawLoggerConfigFormat is valid.
@@ -69,6 +70,8 @@ func (f RawLoggerConfigFormat) Validate() error {
 	switch f {
 	case RawLoggerConfigFormatBSON, RawLoggerConfigFormatJSON:
 		return nil
+	case RawLoggerConfigFormatInvalid:
+		return errors.New("invalid log format")
 	default:
 		return errors.New("unknown raw logger config format")
 	}
@@ -122,7 +125,12 @@ func (lc *LoggerConfig) Validate() error {
 	return catcher.Resolve()
 }
 
+// Set sets the logger producer and type for the logger config.
 func (lc *LoggerConfig) Set(producer LoggerProducer) error {
+	if lc.Registry == nil {
+		lc.Registry = globalLoggerRegistry
+	}
+
 	if !lc.Registry.Check(producer.Type()) {
 		return errors.New("unregistered logger producer")
 	}
@@ -131,6 +139,10 @@ func (lc *LoggerConfig) Set(producer LoggerProducer) error {
 
 	return nil
 }
+
+// GetProducer returns the underlying logger producer for this logger config,
+// which may be nil.
+func (lc *LoggerConfig) GetProducer() LoggerProducer { return lc.producer }
 
 // Resolve resolves the LoggerConfig and returns the resulting grip
 // send.Sender.
@@ -244,7 +256,7 @@ func (opts *BufferOptions) Validate() error {
 	return nil
 }
 
-type safeSender struct {
+type SafeSender struct {
 	baseSender send.Sender
 	send.Sender
 }
@@ -257,7 +269,7 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 		return nil, errors.Wrap(err, "invalid options")
 	}
 
-	sender := &safeSender{}
+	sender := &SafeSender{}
 	if opts.Buffer.Buffered {
 		sender.Sender = send.NewBufferedSender(baseSender, opts.Buffer.Duration, opts.Buffer.MaxSize)
 		sender.baseSender = baseSender
@@ -276,7 +288,15 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 	return sender, nil
 }
 
-func (s *safeSender) Close() error {
+func (s *SafeSender) GetSender() send.Sender {
+	if s.baseSender != nil {
+		return s.baseSender
+	}
+
+	return s.Sender
+}
+
+func (s *SafeSender) Close() error {
 	catcher := grip.NewBasicCatcher()
 
 	catcher.Wrap(s.Sender.Close(), "problem closing sender")

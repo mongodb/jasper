@@ -196,7 +196,7 @@ func TestOutputOptions(t *testing.T) {
 
 			assert.Equal(t, msg, stdout.String())
 
-			safeSender, ok := opts.Loggers[0].sender.(*safeSender)
+			safeSender, ok := opts.Loggers[0].sender.(*SafeSender)
 			require.True(t, ok)
 			sender, ok := safeSender.Sender.(*send.InMemorySender)
 			require.True(t, ok)
@@ -228,7 +228,7 @@ func TestOutputOptions(t *testing.T) {
 
 			assert.Equal(t, msg, stderr.String())
 
-			safeSender, ok := opts.Loggers[0].sender.(*safeSender)
+			safeSender, ok := opts.Loggers[0].sender.(*SafeSender)
 			require.True(t, ok)
 			sender, ok := safeSender.Sender.(*send.InMemorySender)
 			require.True(t, ok)
