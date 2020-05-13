@@ -542,7 +542,7 @@ func TestManager(t *testing.T) {
 										opts := &options.Create{
 											Args: []string{"bash", "-s"},
 											Output: options.Output{
-												Loggers: []options.LoggerConfig{inMemLogger},
+												Loggers: []*options.LoggerConfig{inMemLogger},
 											},
 										}
 										modify.Options(opts)
@@ -686,7 +686,7 @@ func TestManager(t *testing.T) {
 								opts := &options.Create{
 									Args: []string{"echo", output},
 									Output: options.Output{
-										Loggers: []options.LoggerConfig{inMemLogger},
+										Loggers: []*options.LoggerConfig{inMemLogger},
 									},
 								}
 								modify.Options(opts)
@@ -901,14 +901,14 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "GetBuildloggerURLsFailsWithoutBuildlogger",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								logger := options.LoggerConfig{}
+								logger := &options.LoggerConfig{}
 								require.NoError(t, logger.Set(&options.DefaultLoggerOptions{
 									Base: options.BaseOptions{Format: options.LogFormatPlain},
 								}))
 								opts := &options.Create{
 									Args: []string{"echo", "foobar"},
 									Output: options.Output{
-										Loggers: []options.LoggerConfig{logger},
+										Loggers: []*options.LoggerConfig{logger},
 									},
 								}
 
@@ -940,7 +940,7 @@ func TestManager(t *testing.T) {
 								}()
 								require.NoError(t, file.Close())
 
-								logger := options.LoggerConfig{}
+								logger := &options.LoggerConfig{}
 								require.NoError(t, logger.Set(&options.FileLoggerOptions{
 									Filename: file.Name(),
 									Base:     options.BaseOptions{Format: options.LogFormatPlain},
@@ -949,7 +949,7 @@ func TestManager(t *testing.T) {
 								opts := &options.Create{
 									Args: []string{"echo", output},
 									Output: options.Output{
-										Loggers: []options.LoggerConfig{logger},
+										Loggers: []*options.LoggerConfig{logger},
 									},
 								}
 

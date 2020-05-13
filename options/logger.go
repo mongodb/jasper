@@ -178,7 +178,7 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	return lc.sender, nil
 }
 
-func (lc LoggerConfig) MarshalBSON() ([]byte, error) {
+func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 	if lc.Format == "" {
 		lc.Format = RawLoggerConfigFormatBSON
 	}

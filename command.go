@@ -302,21 +302,21 @@ func (c *Command) SuppressStandardError(v bool) *Command {
 
 // SetLoggers sets the logging output on this command to the specified
 // slice. This removes any loggers previously configured.
-func (c *Command) SetLoggers(l []options.LoggerConfig) *Command {
+func (c *Command) SetLoggers(l []*options.LoggerConfig) *Command {
 	c.opts.Process.Output.Loggers = l
 	return c
 }
 
 // AppendLoggers adds one or more loggers to the existing configured
 // loggers in the command.
-func (c *Command) AppendLoggers(l ...options.LoggerConfig) *Command {
+func (c *Command) AppendLoggers(l ...*options.LoggerConfig) *Command {
 	c.opts.Process.Output.Loggers = append(c.opts.Process.Output.Loggers, l...)
 	return c
 }
 
 // ExtendLoggers takes the existing slice of loggers and adds that to any
 // existing configuration.
-func (c *Command) ExtendLoggers(l []options.LoggerConfig) *Command {
+func (c *Command) ExtendLoggers(l []*options.LoggerConfig) *Command {
 	c.opts.Process.Output.Loggers = append(c.opts.Process.Output.Loggers, l...)
 	return c
 }

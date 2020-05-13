@@ -260,7 +260,7 @@ func TestCreate(t *testing.T) {
 		"ResolveFailsWithInvalidLoggerConfiguration": func(t *testing.T, opts *Create) {
 			config, err := bson.Marshal(&SumoLogicLoggerOptions{})
 			require.NoError(t, err)
-			opts.Output.Loggers = []LoggerConfig{
+			opts.Output.Loggers = []*LoggerConfig{
 				{
 					Type:   LogSumoLogic,
 					Format: RawLoggerConfigFormatBSON,
@@ -276,7 +276,7 @@ func TestCreate(t *testing.T) {
 				SumoEndpoint: "endpoint",
 			})
 			require.NoError(t, err)
-			opts.Output.Loggers = []LoggerConfig{
+			opts.Output.Loggers = []*LoggerConfig{
 				{
 					Type:   LogSumoLogic,
 					Format: RawLoggerConfigFormatBSON,
@@ -292,7 +292,7 @@ func TestCreate(t *testing.T) {
 				SumoEndpoint: "endpoint",
 			})
 			require.NoError(t, err)
-			opts.Output.Loggers = []LoggerConfig{
+			opts.Output.Loggers = []*LoggerConfig{
 				{
 					Type:   LogSumoLogic,
 					Format: RawLoggerConfigFormatJSON,
@@ -434,7 +434,7 @@ func TestFileLogging(t *testing.T) {
 
 			opts := Create{Output: testParams.outOpts}
 			for _, file := range files {
-				logger := LoggerConfig{
+				logger := &LoggerConfig{
 					Type:   LogFile,
 					Format: RawLoggerConfigFormatJSON,
 					producer: &FileLoggerOptions{

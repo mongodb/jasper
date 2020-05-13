@@ -12,16 +12,16 @@ import (
 // NewInMemoryLogger is a basic constructor that constructs a logger
 // configuration for plain formatted in-memory buffered logger. The
 // logger will capture up to maxSize messages.
-func NewInMemoryLogger(maxSize int) (options.LoggerConfig, error) {
+func NewInMemoryLogger(maxSize int) (*options.LoggerConfig, error) {
 	loggerProducer := &options.InMemoryLoggerOptions{
 		InMemoryCap: maxSize,
 		Base: options.BaseOptions{
 			Format: options.LogFormatPlain,
 		},
 	}
-	config := options.LoggerConfig{}
+	config := &options.LoggerConfig{}
 	if err := config.Set(loggerProducer); err != nil {
-		return options.LoggerConfig{}, errors.Wrap(err, "problem setting logger producer for logger config")
+		return nil, errors.Wrap(err, "problem setting logger producer for logger config")
 	}
 	return config, nil
 }

@@ -24,7 +24,7 @@ type Output struct {
 	// Loggers are self-contained and specific to the process they are attached
 	// to. They are closed and cleaned up when the process exits. If this
 	// behavior is not desired, use Output instead of Loggers.
-	Loggers []LoggerConfig `bson:"loggers" json:"loggers,omitempty" yaml:"loggers"`
+	Loggers []*LoggerConfig `bson:"loggers" json:"loggers,omitempty" yaml:"loggers"`
 
 	outputSender *send.WriterSender
 	errorSender  *send.WriterSender
@@ -207,7 +207,7 @@ func (o *Output) Copy() *Output {
 	optsCopy.errorMulti = nil
 
 	if o.Loggers != nil {
-		optsCopy.Loggers = make([]LoggerConfig, len(o.Loggers))
+		optsCopy.Loggers = make([]*LoggerConfig, len(o.Loggers))
 		_ = copy(optsCopy.Loggers, o.Loggers)
 	}
 

@@ -76,7 +76,7 @@ func TestCLIRemote(t *testing.T) {
 					inMemLogger, err := jasper.NewInMemoryLogger(10)
 					require.NoError(t, err)
 					opts := testutil.TrueCreateOpts()
-					opts.Output.Loggers = []options.LoggerConfig{inMemLogger}
+					opts.Output.Loggers = []*options.LoggerConfig{inMemLogger}
 					createInput, err := json.Marshal(opts)
 					require.NoError(t, err)
 					createResp := &InfoResponse{}

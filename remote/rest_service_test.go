@@ -449,19 +449,19 @@ func TestRestService(t *testing.T) {
 				assert.NoError(t, os.RemoveAll(file.Name()))
 			}()
 
-			fileLogger := options.LoggerConfig{}
+			fileLogger := &options.LoggerConfig{}
 			require.NoError(t, fileLogger.Set(&options.FileLoggerOptions{
 				Filename: file.Name(),
 				Base:     options.BaseOptions{Format: options.LogFormatPlain},
 			}))
 
-			inMemoryLogger := options.LoggerConfig{}
+			inMemoryLogger := &options.LoggerConfig{}
 			require.NoError(t, inMemoryLogger.Set(&options.InMemoryLoggerOptions{
 				InMemoryCap: 100,
 				Base:        options.BaseOptions{Format: options.LogFormatPlain},
 			}))
 
-			opts := &options.Create{Output: options.Output{Loggers: []options.LoggerConfig{inMemoryLogger, fileLogger}}}
+			opts := &options.Create{Output: options.Output{Loggers: []*options.LoggerConfig{inMemoryLogger, fileLogger}}}
 			opts.Args = []string{"echo", "foobar"}
 			proc, err := client.CreateProcess(ctx, opts)
 			require.NoError(t, err)

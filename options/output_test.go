@@ -124,7 +124,7 @@ func TestOutputOptions(t *testing.T) {
 			assert.Error(t, opts.Validate())
 		},
 		"SuppressOutputWithLogger": func(t *testing.T, opts Output) {
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogDefault,
 					Format: RawLoggerConfigFormatBSON,
@@ -134,7 +134,7 @@ func TestOutputOptions(t *testing.T) {
 			assert.NoError(t, opts.Validate())
 		},
 		"SuppressErrorWithLogger": func(t *testing.T, opts Output) {
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogDefault,
 					Format: RawLoggerConfigFormatBSON,
@@ -144,7 +144,7 @@ func TestOutputOptions(t *testing.T) {
 			assert.NoError(t, opts.Validate())
 		},
 		"SuppressOutputAndErrorWithLogger": func(t *testing.T, opts Output) {
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogDefault,
 					Format: RawLoggerConfigFormatBSON,
@@ -155,7 +155,7 @@ func TestOutputOptions(t *testing.T) {
 			assert.NoError(t, opts.Validate())
 		},
 		"RedirectOutputWithLogger": func(t *testing.T, opts Output) {
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogDefault,
 					Format: RawLoggerConfigFormatBSON,
@@ -165,7 +165,7 @@ func TestOutputOptions(t *testing.T) {
 			assert.NoError(t, opts.Validate())
 		},
 		"RedirectErrorWithLogger": func(t *testing.T, opts Output) {
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogDefault,
 					Format: RawLoggerConfigFormatBSON,
@@ -176,7 +176,7 @@ func TestOutputOptions(t *testing.T) {
 		},
 		"GetOutputWithStdoutAndLogger": func(t *testing.T, opts Output) {
 			opts.Output = stdout
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogInMemory,
 					Format: RawLoggerConfigFormatBSON,
@@ -208,7 +208,7 @@ func TestOutputOptions(t *testing.T) {
 		},
 		"GetErrorWithErrorAndLogger": func(t *testing.T, opts Output) {
 			opts.Error = stderr
-			opts.Loggers = []LoggerConfig{
+			opts.Loggers = []*LoggerConfig{
 				{
 					Type:   LogInMemory,
 					Format: RawLoggerConfigFormatJSON,

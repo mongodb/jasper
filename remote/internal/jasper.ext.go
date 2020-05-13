@@ -240,7 +240,7 @@ func ConvertFilter(f options.Filter) *Filter {
 // Export takes a protobuf RPC OutputOptions struct and returns the analogous
 // Jasper OutputOptions struct.
 func (opts OutputOptions) Export() (options.Output, error) {
-	loggers := []options.LoggerConfig{}
+	loggers := []*options.LoggerConfig{}
 	for _, logger := range opts.Loggers {
 		exportedLogger, err := logger.Export()
 		if err != nil {
@@ -280,7 +280,7 @@ func ConvertOutputOptions(opts options.Output) (OutputOptions, error) {
 
 // Export takes a protobuf RPC Logger struct and returns the analogous
 // Jasper Logger struct.
-func (logger LoggerConfig) Export() (options.LoggerConfig, error) {
+func (logger LoggerConfig) Export() (*options.LoggerConfig, error) {
 	var producer options.LoggerProducer
 	switch {
 	case logger.GetDefault() != nil:
@@ -301,14 +301,14 @@ func (logger LoggerConfig) Export() (options.LoggerConfig, error) {
 		return logger.GetRaw().Export(), nil
 	}
 	if producer == nil {
-		return options.LoggerConfig{}, errors.New("logger config options invalid")
+		return nil, errors.New("logger config options invalid")
 	}
 	data, err := json.Marshal(producer)
 	if err != nil {
-		return options.LoggerConfig{}, errors.Wrap(err, "problem marshalling logger config options")
+		return nil, errors.Wrap(err, "problem marshalling logger config options")
 	}
 
-	return options.LoggerConfig{
+	return &options.LoggerConfig{
 		Type:   producer.Type(),
 		Format: options.RawLoggerConfigFormatJSON,
 		Config: data,
@@ -318,7 +318,7 @@ func (logger LoggerConfig) Export() (options.LoggerConfig, error) {
 // ConvertLoggerConfig takes a Jasper options.LoggerConfig struct and returns
 // an equivalent protobuf RPC LoggerConfig struct. ConvertLoggerConfig is the
 // inverse of (LoggerConfig) Export().
-func ConvertLoggerConfig(config options.LoggerConfig) (*LoggerConfig, error) {
+func ConvertLoggerConfig(config *options.LoggerConfig) (*LoggerConfig, error) {
 	if len(config.Config) == 0 {
 		config.Format = options.RawLoggerConfigFormatJSON
 		_, err := json.Marshal(&config)
@@ -554,8 +554,8 @@ func ConvertRawLoggerConfigFormat(f options.RawLoggerConfigFormat) RawLoggerConf
 
 // Export takes a protobuf RPC RawLoggerConfig struct and returns the
 // analagous Jasper options.LoggerConfig
-func (opts RawLoggerConfig) Export() options.LoggerConfig {
-	return options.LoggerConfig{
+func (opts RawLoggerConfig) Export() *options.LoggerConfig {
+	return &options.LoggerConfig{
 		Type:   opts.Type,
 		Format: opts.Format.Export(),
 		Config: opts.ConfigData,
