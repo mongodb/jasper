@@ -52,7 +52,7 @@ func (f LogFormat) MakeFormatter() (send.MessageFormatter, error) {
 	case LogFormatInvalid:
 		return nil, errors.New("cannot make log format for invalid format")
 	default:
-		return nil, errors.New("unknown log format")
+		return nil, errors.Errorf("unknown log format '%s'", f)
 	}
 }
 
@@ -73,7 +73,7 @@ func (f RawLoggerConfigFormat) Validate() error {
 	case RawLoggerConfigFormatInvalid:
 		return errors.New("invalid log format")
 	default:
-		return errors.New("unknown raw logger config format")
+		return errors.Errorf("unknown raw logger config format '%s'", f)
 	}
 }
 
@@ -116,7 +116,9 @@ func (lc *LoggerConfig) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
 	catcher.NewWhen(lc.Type == "", "cannot have empty logger type")
-	catcher.Add(lc.Format.Validate())
+	if len(lc.Config) > 0 {
+		catcher.Add(lc.Format.Validate())
+	}
 
 	if lc.Registry == nil {
 		lc.Registry = globalLoggerRegistry
@@ -176,7 +178,7 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	return lc.sender, nil
 }
 
-func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
+func (lc LoggerConfig) MarshalBSON() ([]byte, error) {
 	if lc.Format == "" {
 		lc.Format = RawLoggerConfigFormatBSON
 	}
@@ -184,11 +186,13 @@ func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 		return nil, errors.New("cannot marshal misconfigured bson logger config")
 	}
 
-	data, err := bson.Marshal(lc.producer)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem producing logger config")
+	if lc.producer != nil {
+		data, err := bson.Marshal(lc.producer)
+		if err != nil {
+			return nil, errors.Wrap(err, "problem producing logger config")
+		}
+		lc.Config = data
 	}
-	lc.Config = data
 
 	return bson.Marshal(struct {
 		Type   string                `bson:"type"`
@@ -205,11 +209,14 @@ func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("cannot marshal misconfigured bson logger config")
 	}
 
-	data, err := json.Marshal(lc.producer)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem producing logger config")
+	if lc.producer != nil {
+		data, err := json.Marshal(lc.producer)
+		if err != nil {
+			return nil, errors.Wrap(err, "problem producing logger config")
+		}
+		lc.Config = data
 	}
-	lc.Config = data
+
 	return json.Marshal(struct {
 		Type   string                `json:"type"`
 		Format RawLoggerConfigFormat `json:"format"`

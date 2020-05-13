@@ -20,6 +20,7 @@ func TestLoggerConfigValidate(t *testing.T) {
 		config := LoggerConfig{
 			Type:   LogDefault,
 			Format: "foo",
+			Config: []byte("some bytes"),
 		}
 		assert.Error(t, config.Validate())
 	})
@@ -177,10 +178,26 @@ func TestLoggerConfigMarshalBSON(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, config.Config)
 	})
+	t.Run("NilProducer", func(t *testing.T) {
+		config := LoggerConfig{
+			Type:   LogDefault,
+			Format: RawLoggerConfigFormatBSON,
+			Config: []byte("some bytes"),
+		}
+		data, err := bson.Marshal(&config)
+		require.NoError(t, err)
+		assert.NotNil(t, data)
+		unmarshalledConfig := &LoggerConfig{}
+		require.NoError(t, bson.Unmarshal(data, unmarshalledConfig))
+		assert.Equal(t, config.Type, unmarshalledConfig.Type)
+		assert.Equal(t, config.Format, unmarshalledConfig.Format)
+		assert.Equal(t, []byte("some bytes"), unmarshalledConfig.Config)
+	})
 	t.Run("CorrectFormat", func(t *testing.T) {
 		config := LoggerConfig{
 			Type:   LogDefault,
 			Format: RawLoggerConfigFormatBSON,
+			Config: []byte("some bytes"),
 			producer: &DefaultLoggerOptions{
 				Prefix: "jasper",
 				Base: BaseOptions{
@@ -217,10 +234,26 @@ func TestLoggerConfigMarshalJSON(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, config.Config)
 	})
+	t.Run("NilProducer", func(t *testing.T) {
+		config := LoggerConfig{
+			Type:   LogDefault,
+			Format: RawLoggerConfigFormatJSON,
+			Config: []byte("some bytes"),
+		}
+		data, err := json.Marshal(&config)
+		require.NoError(t, err)
+		assert.NotNil(t, data)
+		unmarshalledConfig := &LoggerConfig{}
+		require.NoError(t, json.Unmarshal(data, unmarshalledConfig))
+		assert.Equal(t, config.Type, unmarshalledConfig.Type)
+		assert.Equal(t, config.Format, unmarshalledConfig.Format)
+		assert.Equal(t, []byte("some bytes"), unmarshalledConfig.Config)
+	})
 	t.Run("CorrectFormat", func(t *testing.T) {
 		config := LoggerConfig{
 			Type:   LogDefault,
 			Format: RawLoggerConfigFormatJSON,
+			Config: []byte("some bytes"),
 			producer: &DefaultLoggerOptions{
 				Prefix: "jasper",
 				Base: BaseOptions{
@@ -243,4 +276,5 @@ func TestLoggerConfigMarshalJSON(t *testing.T) {
 		assert.Equal(t, config.Format, unmarshalledConfig.Format)
 		assert.Equal(t, config.producer, unmarshalledConfig.producer)
 	})
+
 }

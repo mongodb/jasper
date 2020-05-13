@@ -319,17 +319,19 @@ func (logger LoggerConfig) Export() (options.LoggerConfig, error) {
 // an equivalent protobuf RPC LoggerConfig struct. ConvertLoggerConfig is the
 // inverse of (LoggerConfig) Export().
 func ConvertLoggerConfig(config options.LoggerConfig) (*LoggerConfig, error) {
-	config.Format = options.RawLoggerConfigFormatJSON
-	_, err := config.MarshalJSON()
-	if err != nil {
-		return nil, errors.Wrap(err, "problem marshaling logger config")
+	if len(config.Config) == 0 {
+		config.Format = options.RawLoggerConfigFormatJSON
+		_, err := json.Marshal(&config)
+		if err != nil {
+			return nil, errors.Wrap(err, "problem marshaling logger config")
+		}
 	}
 
 	return &LoggerConfig{
 		Producer: &LoggerConfig_Raw{
 			Raw: &RawLoggerConfig{
 				Type:       config.Type,
-				Format:     RawLoggerConfigFormat_RAWLOGGERCONFIGFORMATJSON,
+				Format:     ConvertRawLoggerConfigFormat(config.Format),
 				ConfigData: config.Config,
 			},
 		},
