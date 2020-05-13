@@ -20,6 +20,7 @@ import (
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -553,7 +554,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "WriteFileSucceeds",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+								tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpFile.Name()))
@@ -572,7 +573,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "WriteFileAcceptsContentFromReader",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+								tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpFile.Name()))
@@ -592,7 +593,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "WriteFileSucceedsWithLargeContent",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+								tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tmpFile.Name()))
@@ -612,7 +613,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "WriteFileSucceedsWithLargeContentFromReader",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								tmpFile, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+								tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, tmpFile.Close())
@@ -633,7 +634,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "WriteFileSucceedsWithNoContent",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								path := filepath.Join(buildDir(t), filepath.Base(t.Name()))
+								path := filepath.Join(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, os.RemoveAll(path))
 								defer func() {
 									assert.NoError(t, os.RemoveAll(path))
@@ -887,7 +888,7 @@ func TestManager(t *testing.T) {
 									},
 								} {
 									t.Run(testName, func(t *testing.T) {
-										tempDir, err := ioutil.TempDir(buildDir(t), filepath.Base(t.Name()))
+										tempDir, err := ioutil.TempDir(testutil.BuildDirectory(), filepath.Base(t.Name()))
 										require.NoError(t, err)
 										defer func() {
 											assert.NoError(t, os.RemoveAll(tempDir))
@@ -932,7 +933,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "CreateWithLogFile",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								file, err := ioutil.TempFile(buildDir(t), filepath.Base(t.Name()))
+								file, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(file.Name()))
@@ -973,7 +974,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "RegisterSignalTriggerIDChecksForInvalidTriggerID",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								proc, err := client.CreateProcess(ctx, testutil.YesCreateOpts(0))
+								proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(1))
 								require.NoError(t, err)
 								assert.True(t, proc.Running(ctx))
 
@@ -985,7 +986,7 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "RegisterSignalTriggerIDPassesWithValidArgs",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								proc, err := client.CreateProcess(ctx, testutil.YesCreateOpts(0))
+								proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(1))
 								require.NoError(t, err)
 								assert.True(t, proc.Running(ctx))
 
@@ -1056,12 +1057,13 @@ func TestManager(t *testing.T) {
 								lc := client.LoggingCache(ctx)
 								logger1, err := lc.Create("logger1", &options.Output{})
 								require.NoError(t, err)
-								time.Sleep(5 * time.Second)
+								require.NotNil(t, lc.Get(logger1.ID))
+								time.Sleep(2 * time.Second)
 
 								logger2, err := lc.Create("logger2", &options.Output{})
 								require.NoError(t, err)
 
-								lc.Prune(time.Now().Add(-4 * time.Second))
+								lc.Prune(time.Now().Add(-time.Second))
 								require.Nil(t, lc.Get(logger1.ID))
 								require.NotNil(t, lc.Get(logger2.ID))
 							},
@@ -1113,6 +1115,133 @@ func TestManager(t *testing.T) {
 								assert.NoError(t, client.SendMessages(ctx, payload))
 							},
 						},
+						clientTestCase{
+							Name: "ScriptingGetDNE",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								_, err := client.GetScripting(ctx, "DNE")
+								assert.Error(t, err)
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingGetExists",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								expectedHarness := createTestScriptingHarness(ctx, t, client, ".")
+
+								harness, err := client.GetScripting(ctx, expectedHarness.ID())
+								require.NoError(t, err)
+								assert.Equal(t, expectedHarness.ID(), harness.ID())
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingSetup",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								harness := createTestScriptingHarness(ctx, t, client, ".")
+								assert.NoError(t, harness.Setup(ctx))
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingCleanup",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								harness := createTestScriptingHarness(ctx, t, client, ".")
+								assert.NoError(t, harness.Cleanup(ctx))
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingRunNoError",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpdir))
+								}()
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
+
+								require.NoError(t, err)
+								tmpFile := filepath.Join(tmpdir, "fake_script.go")
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+								assert.NoError(t, harness.Run(ctx, []string{tmpFile}))
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingRunError",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpdir))
+								}()
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
+
+								tmpFile := filepath.Join(tmpdir, "fake_script.go")
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(42) }`), 0755))
+								assert.Error(t, harness.Run(ctx, []string{tmpFile}))
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingRunScriptNoError",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpdir))
+								}()
+
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
+								assert.NoError(t, harness.RunScript(ctx, `package main; import "fmt"; func main() { fmt.Println("Hello World") }`))
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingRunScriptError",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpdir))
+								}()
+
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
+								require.Error(t, harness.RunScript(ctx, `package main; import "os"; func main() { os.Exit(42) }`))
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingBuild",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpdir))
+								}()
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
+
+								tmpFile := filepath.Join(tmpdir, "fake_script.go")
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+								_, err = harness.Build(ctx, tmpdir, []string{
+									"-o",
+									filepath.Join(tmpdir, "fake_script"),
+									tmpFile,
+								})
+								require.NoError(t, err)
+								_, err = os.Stat(filepath.Join(tmpFile))
+								require.NoError(t, err)
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingTest",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpdir))
+								}()
+								harness := createTestScriptingHarness(ctx, t, client, tmpdir)
+
+								tmpFile := filepath.Join(tmpdir, "fake_script_test.go")
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "testing"; func TestMain(t *testing.T) { return }`), 0755))
+								results, err := harness.Test(ctx, tmpdir, scripting.TestOptions{Name: "dummy"})
+								require.NoError(t, err)
+								require.Len(t, results, 1)
+							},
+						},
 					) {
 						t.Run(test.Name, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
@@ -1124,4 +1253,12 @@ func TestManager(t *testing.T) {
 			}
 		})
 	}
+}
+
+func createTestScriptingHarness(ctx context.Context, t *testing.T, client Manager, dir string) scripting.Harness {
+	opts := options.NewGolangScriptingEnvironment(filepath.Join(dir, "gopath"), runtime.GOROOT())
+	harness, err := client.CreateScripting(ctx, opts)
+	require.NoError(t, err)
+
+	return harness
 }

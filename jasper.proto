@@ -106,6 +106,8 @@ message ProcessInfo {
   bool timedout = 7;
   CreateOptions options = 8;
   int32 exit_code = 9;
+  google.protobuf.Timestamp start_at = 10;
+  google.protobuf.Timestamp end_at = 11;
 }
 
 message StatusResponse {
