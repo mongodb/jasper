@@ -45,7 +45,7 @@ func (e *golangEnvironment) Setup(ctx context.Context) error {
 		}
 	}
 
-	cmd.SetHook(func(res error) error {
+	cmd.PostHook(func(res error) error {
 		if res == nil {
 			e.isConfigured = true
 		}

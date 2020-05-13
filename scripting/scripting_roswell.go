@@ -35,7 +35,7 @@ func (e *roswellEnvironment) Setup(ctx context.Context) error {
 		cmd.AppendArgs(e.opts.Interpreter(), "install", sys)
 	}
 
-	cmd.SetHook(func(res error) error {
+	cmd.PostHook(func(res error) error {
 		if res == nil {
 			e.isConfigured = true
 		}

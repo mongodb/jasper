@@ -362,10 +362,6 @@ func (c *Command) AddEnv(k, v string) *Command {
 	return c
 }
 
-// Prerequisite sets a function on the Command such that the Command will only
-// execute if the function returns true.
-func (c *Command) Prerequisite(chk func() bool) *Command { c.opts.Prerequisite = chk; return c }
-
 // Add adds on a sub-command.
 func (c *Command) Add(args []string) *Command {
 	c.opts.Commands = append(c.opts.Commands, args)
@@ -488,9 +484,24 @@ func (c *Command) AppendArgsWhen(cond bool, args ...string) *Command {
 	return c.Add(args)
 }
 
-// SetHook allows you to add a function that's always called (locally)
-// after the command completes.
-func (c *Command) SetHook(h func(error) error) *Command { c.opts.Hook = h; return c }
+// Prerequisite sets a function on the Command such that the Command will only
+// execute if the function returns true. The Prerequisite function runs once per
+// Command object regardless of how many subcommands are
+// present. Prerequsite functions run even if the command's
+// RunFunction is set.
+func (c *Command) Prerequisite(chk func() bool) *Command { c.opts.Prerequisite = chk; return c }
+
+// PostHook allows you to add a function that runs (locally) after the
+// each subcommand in the Command completes. When specified, the
+// PostHook can override or annotate any error produced by the command
+// execution. The error returned is subject to the IgnoreError
+// options. The PostHook is not run when using SetRunFunction.
+func (c *Command) PostHook(h options.CommandPostHook) *Command { c.opts.PostHook = h; return c }
+
+// PreHook allows you to add a function that runs (locally) before
+// each subcommand executes, and allows you to log or modify the
+// creation option. The PreHook is not run when using SetRunFunction.
+func (c *Command) PreHook(fn options.CommandPreHook) *Command { c.opts.PreHook = fn; return c }
 
 func (c *Command) setupEnv() {
 	if c.opts.Process.Environment == nil {
@@ -529,11 +540,16 @@ func (c *Command) Run(ctx context.Context) error {
 			return catcher.Resolve()
 		}
 
-		err := c.exec(ctx, opt, idx)
-		catcher.AddWhen(!c.opts.IgnoreError, err)
+		if c.opts.PreHook != nil {
+			c.opts.PreHook(&c.opts, opt)
+		}
 
-		if c.opts.Hook != nil {
-			catcher.AddWhen(!c.opts.IgnoreError, c.opts.Hook(err))
+		err := c.exec(ctx, opt, idx)
+
+		if c.opts.PostHook != nil {
+			catcher.AddWhen(!c.opts.IgnoreError, c.opts.PostHook(err))
+		} else {
+			catcher.AddWhen(!c.opts.IgnoreError, err)
 		}
 
 		if err != nil && !c.opts.ContinueOnError {

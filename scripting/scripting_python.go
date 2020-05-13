@@ -45,7 +45,7 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 		cmd.AppendArgs(venvpy, "-m", "pip", "install", pkg)
 	}
 
-	cmd.SetHook(func(res error) error {
+	cmd.PostHook(func(res error) error {
 		if res == nil {
 			e.isConfigured = true
 		}
