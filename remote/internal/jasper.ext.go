@@ -414,7 +414,7 @@ func (opts BaseOptions) Export() options.BaseOptions {
 }
 
 // Export takes a protobuf RPC DefaultLoggerOptions struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts DefaultLoggerOptions) Export() options.LoggerProducer {
 	return &options.DefaultLoggerOptions{
 		Prefix: opts.Prefix,
@@ -423,7 +423,7 @@ func (opts DefaultLoggerOptions) Export() options.LoggerProducer {
 }
 
 // Export takes a protobuf RPC FileLoggerOptions struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts FileLoggerOptions) Export() options.LoggerProducer {
 	return &options.FileLoggerOptions{
 		Filename: opts.Filename,
@@ -432,7 +432,7 @@ func (opts FileLoggerOptions) Export() options.LoggerProducer {
 }
 
 // Export takes a protobuf RPC InheritedLoggerOptions struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts InheritedLoggerOptions) Export() options.LoggerProducer {
 	return &options.InheritedLoggerOptions{
 		Base: opts.Base.Export(),
@@ -440,7 +440,7 @@ func (opts InheritedLoggerOptions) Export() options.LoggerProducer {
 }
 
 // Export takes a protobuf RPC SumoLogicLoggerOptions struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts SumoLogicLoggerOptions) Export() options.LoggerProducer {
 	return &options.SumoLogicLoggerOptions{
 		SumoEndpoint: opts.SumoEndpoint,
@@ -449,7 +449,7 @@ func (opts SumoLogicLoggerOptions) Export() options.LoggerProducer {
 }
 
 // Export takes a protobuf RPC InMemoryLoggerOptions struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts InMemoryLoggerOptions) Export() options.LoggerProducer {
 	return &options.InMemoryLoggerOptions{
 		InMemoryCap: int(opts.InMemoryCap),
@@ -479,7 +479,7 @@ func ConvertSplunkInfo(opts send.SplunkConnectionInfo) *SplunkInfo {
 }
 
 // Export takes a protobuf RPC SplunkLoggerOptions struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts SplunkLoggerOptions) Export() options.LoggerProducer {
 	return &options.SplunkLoggerOptions{
 		Splunk: opts.Splunk.Export(),
@@ -488,7 +488,7 @@ func (opts SplunkLoggerOptions) Export() options.LoggerProducer {
 }
 
 // Export takes a protobuf RPC BuildloggerV2Info struct and returns the
-// analagous grip send.BuildloggerConfig struct.
+// analogous grip send.BuildloggerConfig struct.
 func (opts BuildloggerV2Info) Export() send.BuildloggerConfig {
 	return send.BuildloggerConfig{
 		CreateTest: opts.CreateTest,
@@ -517,7 +517,7 @@ func ConvertBuildloggerOptions(opts send.BuildloggerConfig) *BuildloggerV2Info {
 }
 
 // Export takes a protobuf RPC BuildloggerV2Options struct and returns the
-// analagous Jasper options.LoggerProducer.
+// analogous Jasper options.LoggerProducer.
 func (opts BuildloggerV2Options) Export() options.LoggerProducer {
 	return &options.BuildloggerV2Options{
 		Buildlogger: opts.Buildlogger.Export(),
@@ -553,7 +553,7 @@ func ConvertRawLoggerConfigFormat(f options.RawLoggerConfigFormat) RawLoggerConf
 }
 
 // Export takes a protobuf RPC RawLoggerConfig struct and returns the
-// analagous Jasper options.LoggerConfig
+// analogous Jasper options.LoggerConfig
 func (opts RawLoggerConfig) Export() *options.LoggerConfig {
 	return &options.LoggerConfig{
 		Type:   opts.Type,
