@@ -116,7 +116,7 @@ func TestCommand(t *testing.T) {
 			assert.Equal(t, 4, mock.count)
 			assert.Equal(t, 2, mock.errsSeen)
 		})
-		t.Run("ShortCircut", func(t *testing.T) {
+		t.Run("ShortCircuit", func(t *testing.T) {
 			mock := &testPostHook{abort: true}
 			hook := MergeAbortingPostHooks(mock.hook, mock.hook)
 			assert.NoError(t, hook(nil))
