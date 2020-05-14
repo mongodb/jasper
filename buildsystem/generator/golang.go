@@ -571,9 +571,6 @@ func (vp *VariantPackage) Validate() error {
 // GolangRuntimeOptions specify additional options to modify behavior of runtime
 // execution.
 type GolangRuntimeOptions struct {
-	// TODO: add more go test flags? It might be somewhat onerous to maintain
-	// all the possible go test flags here, but parsing the individual flags to
-	// merge them is also painful.
 	Args []string `yaml:"args,omitempty"`
 }
 
