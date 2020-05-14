@@ -305,21 +305,21 @@ func (c *Command) SuppressStandardError(v bool) *Command {
 
 // SetLoggers sets the logging output on this command to the specified
 // slice. This removes any loggers previously configured.
-func (c *Command) SetLoggers(l []options.Logger) *Command {
+func (c *Command) SetLoggers(l []*options.LoggerConfig) *Command {
 	c.opts.Process.Output.Loggers = l
 	return c
 }
 
 // AppendLoggers adds one or more loggers to the existing configured
 // loggers in the command.
-func (c *Command) AppendLoggers(l ...options.Logger) *Command {
+func (c *Command) AppendLoggers(l ...*options.LoggerConfig) *Command {
 	c.opts.Process.Output.Loggers = append(c.opts.Process.Output.Loggers, l...)
 	return c
 }
 
 // ExtendLoggers takes the existing slice of loggers and adds that to any
 // existing configuration.
-func (c *Command) ExtendLoggers(l []options.Logger) *Command {
+func (c *Command) ExtendLoggers(l []*options.LoggerConfig) *Command {
 	c.opts.Process.Output.Loggers = append(c.opts.Process.Output.Loggers, l...)
 	return c
 }
@@ -862,8 +862,14 @@ func getMsgOutput(opts options.Output) func(msg message.Fields) message.Fields {
 		return noOutput
 	}
 
-	logger := NewInMemoryLogger(1000)
-	sender, err := logger.Configure()
+	logger, err := NewInMemoryLogger(1000)
+	if err != nil {
+		return func(msg message.Fields) message.Fields {
+			msg["log_err"] = errors.Wrap(err, "could not set up in-memory sender for capturing output")
+			return msg
+		}
+	}
+	sender, err := logger.Resolve()
 	if err != nil {
 		return func(msg message.Fields) message.Fields {
 			msg["log_err"] = errors.Wrap(err, "could not set up in-memory sender for capturing output")

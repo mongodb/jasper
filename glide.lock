@@ -37,8 +37,6 @@ imports:
     version: 0ac1b2e0d9f957ae72f731726aedd310932baece
   - name: github.com/evergreen-ci/birch
     version: 5b054047680765b089c1e6f77d0896803d1fd73d
-  - name: github.com/evergreen-ci/timber
-    version: 9a33c650233106e021bcb51bfc87de1910a8b6fc
   - name: github.com/evergreen-ci/poplar
     version: 3043bd036e01aa6abbad6af0df031a8315308ff9
   - name: github.com/evergreen-ci/utility
