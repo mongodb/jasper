@@ -102,26 +102,14 @@ func (f RawLoggerConfigFormat) Unmarshal(data []byte, out interface{}) error {
 // Unmarshaler interfaces.
 type RawLoggerConfig []byte
 
-func (lc *RawLoggerConfig) MarshalJSON() ([]byte, error) {
-	if len(*lc) > 0 {
-		return *lc, nil
-	}
-
-	return json.Marshal([]byte(*lc))
-}
+func (lc *RawLoggerConfig) MarshalJSON() ([]byte, error) { return *lc, nil }
 
 func (lc *RawLoggerConfig) UnmarshalJSON(b []byte) error {
 	*lc = b
 	return nil
 }
 
-func (lc RawLoggerConfig) MarshalBSON() ([]byte, error) {
-	if len(lc) > 0 {
-		return lc, nil
-	}
-
-	return bson.Marshal([]byte(lc))
-}
+func (lc RawLoggerConfig) MarshalBSON() ([]byte, error) { return lc, nil }
 
 func (lc *RawLoggerConfig) UnmarshalBSON(b []byte) error {
 	*lc = b
@@ -181,9 +169,6 @@ func (lc *LoggerConfig) Producer() LoggerProducer { return lc.producer }
 
 // Type returns the type string.
 func (lc *LoggerConfig) Type() string { return lc.info.Type }
-
-// Config returns the raw logger config.
-func (lc *LoggerConfig) Config() RawLoggerConfig { return lc.info.Config }
 
 // Resolve resolves the LoggerConfig and returns the resulting grip
 // send.Sender.
