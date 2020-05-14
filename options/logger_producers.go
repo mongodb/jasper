@@ -6,21 +6,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var globalLoggerRegistry LoggerRegistry = &basicLoggerRegistry{
-	factories: map[string]LoggerProducerFactory{
-		LogDefault:       NewDefaultLoggerProducer,
-		LogFile:          NewFileLoggerProducer,
-		LogInherited:     NewInheritedLoggerProducer,
-		LogSumoLogic:     NewSumoLogicLoggerProducer,
-		LogInMemory:      NewInMemoryLoggerProducer,
-		LogSplunk:        NewSplunkLoggerProducer,
-		LogBuildloggerV2: NewBuildloggerV2LoggerProducer,
-	},
-}
-
-// GetGlobalLoggerRegistry returns the global logger registry.
-func GetGlobalLoggerRegistry() LoggerRegistry { return globalLoggerRegistry }
-
 ///////////////////////////////////////////////////////////////////////////////
 // Default Logger
 ///////////////////////////////////////////////////////////////////////////////

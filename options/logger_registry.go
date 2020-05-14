@@ -6,6 +6,21 @@ import (
 	"github.com/mongodb/grip/send"
 )
 
+var globalLoggerRegistry LoggerRegistry = &basicLoggerRegistry{
+	factories: map[string]LoggerProducerFactory{
+		LogDefault:       NewDefaultLoggerProducer,
+		LogFile:          NewFileLoggerProducer,
+		LogInherited:     NewInheritedLoggerProducer,
+		LogSumoLogic:     NewSumoLogicLoggerProducer,
+		LogInMemory:      NewInMemoryLoggerProducer,
+		LogSplunk:        NewSplunkLoggerProducer,
+		LogBuildloggerV2: NewBuildloggerV2LoggerProducer,
+	},
+}
+
+// GetGlobalLoggerRegistry returns the global logger registry.
+func GetGlobalLoggerRegistry() LoggerRegistry { return globalLoggerRegistry }
+
 // LoggerRegistry is an interface that stores reusable logger factories.
 type LoggerRegistry interface {
 	Register(LoggerProducerFactory)
