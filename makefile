@@ -60,6 +60,7 @@ $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
 # end benchmark setup targets
 
 # cli targets
+cli: $(name)
 $(name): $(buildDir)/$(name)
 $(buildDir)/$(name): cmd/$(name)/$(name).go
 	@$(goEnv) $(gobin) build -o $@ $<
@@ -129,8 +130,8 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	$(goEnv) ./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:$(buildDir) $(coverageOutput)
 coverage-html:$(buildDir) $(coverageHtmlOutput)
-phony += lint $(buildDir) test coverage coverage-html docker-setup docker-cleanup
-.PHONY: $(phony) .FORCE build
+phony += build lint $(buildDir) test coverage coverage-html docker-setup docker-cleanup $(buildDir)/$(name)
+.PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)

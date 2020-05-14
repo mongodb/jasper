@@ -259,7 +259,7 @@ const (
 
 // Generate creates the evergreen configuration from the given golang build
 // configuration.
-func (g *Golang) Generate(output io.Writer) (*shrub.Configuration, error) {
+func (g *Golang) Generate() (*shrub.Configuration, error) {
 	conf, err := shrub.BuildConfiguration(func(c *shrub.Configuration) {
 		for _, gv := range g.Variants {
 			variant := c.Variant(gv.Name)
@@ -388,7 +388,7 @@ func (g *Golang) subprocessScriptingCmd(gv GolangVariant, pkg GolangPackage) (*s
 	if relPath != "." && !strings.HasPrefix(relPath, "./") {
 		relPath = "./" + relPath
 	}
-	testOpts.Args = append(testOpts.Args, relPath)
+	testOpts = append(testOpts, relPath)
 
 	return &shrub.CmdSubprocessScripting{
 		Harness:     "golang",
@@ -403,7 +403,7 @@ func (g *Golang) subprocessScriptingCmd(gv GolangVariant, pkg GolangPackage) (*s
 		Env:     g.Environment,
 		TestDir: projectPath,
 		TestOptions: &shrub.ScriptingTestOptions{
-			Args: testOpts.Args,
+			Args: testOpts,
 		},
 	}, nil
 }
@@ -570,16 +570,14 @@ func (vp *VariantPackage) Validate() error {
 
 // GolangRuntimeOptions specify additional options to modify behavior of runtime
 // execution.
-type GolangRuntimeOptions struct {
-	Args []string `yaml:"args,omitempty"`
-}
+type GolangRuntimeOptions []string
 
 // Validate ensures that options to the scripting environment (i.e. the go
 // binary) do not contain duplicate flags.
-func (gro *GolangRuntimeOptions) Validate() error {
+func (gro GolangRuntimeOptions) Validate() error {
 	seen := map[string]struct{}{}
 	catcher := grip.NewBasicCatcher()
-	for _, flag := range gro.Args {
+	for _, flag := range gro {
 		flag = cleanupFlag(flag)
 		// Don't allow the verbose flag because the scripting harness sets
 		// verbose.
@@ -625,12 +623,12 @@ func cleanupFlag(flag string) string {
 // overwriting conflicting flags with overwrite's flags.
 func (gro GolangRuntimeOptions) Merge(overwrite GolangRuntimeOptions) GolangRuntimeOptions {
 	merged := gro
-	for _, flag := range overwrite.Args {
+	for _, flag := range overwrite {
 		if i := merged.flagIndex(flag); i != -1 {
-			merged.Args = append(merged.Args[:i], merged.Args[i+1:]...)
-			merged.Args = append(merged.Args, flag)
+			merged = append(merged[:i], merged[i+1:]...)
+			merged = append(merged, flag)
 		} else {
-			merged.Args = append(merged.Args, flag)
+			merged = append(merged, flag)
 		}
 	}
 
@@ -639,9 +637,9 @@ func (gro GolangRuntimeOptions) Merge(overwrite GolangRuntimeOptions) GolangRunt
 
 // flagIndex returns the index where the flag is set if it is present. If it is
 // absent, this returns -1.
-func (gro *GolangRuntimeOptions) flagIndex(flag string) int {
+func (gro GolangRuntimeOptions) flagIndex(flag string) int {
 	flag = cleanupFlag(flag)
-	for i, f := range gro.Args {
+	for i, f := range gro {
 		f = cleanupFlag(f)
 		if f == flag {
 			return i

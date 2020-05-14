@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -525,28 +524,27 @@ func TestDiscoverPackages(t *testing.T) {
 func TestGolangRuntimeOptions(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		for testName, testCase := range map[string]struct {
-			args        []string
+			opts        GolangRuntimeOptions
 			expectError bool
 		}{
 			"PassesWithAllUniqueFlags": {
-				args: []string{"-cover", "-coverprofile", "-race"},
+				opts: []string{"-cover", "-coverprofile", "-race"},
 			},
 			"FailsWithDuplicateFlags": {
-				args:        []string{"-race", "-race"},
+				opts:        []string{"-race", "-race"},
 				expectError: true,
 			},
 			"FailsWithDuplicateEquivalentFlags": {
-				args:        []string{"-race", "-test.race"},
+				opts:        []string{"-race", "-test.race"},
 				expectError: true,
 			},
 			"FailsWithVerboseFlag": {
-				args:        []string{"-v"},
+				opts:        []string{"-v"},
 				expectError: true,
 			},
 		} {
 			t.Run(testName, func(t *testing.T) {
-				opts := GolangRuntimeOptions{Args: testCase.args}
-				err := opts.Validate()
+				err := testCase.opts.Validate()
 				if testCase.expectError {
 					assert.Error(t, err)
 				} else {
@@ -557,57 +555,55 @@ func TestGolangRuntimeOptions(t *testing.T) {
 	})
 	t.Run("Merge", func(t *testing.T) {
 		for testName, testCase := range map[string]struct {
-			args      []string
-			overwrite []string
-			expected  []string
+			opts      GolangRuntimeOptions
+			overwrite GolangRuntimeOptions
+			expected  GolangRuntimeOptions
 		}{
 			"AllUniqueFlagsAreAppended": {
-				args:      []string{"-cover", "-race=true"},
+				opts:      []string{"-cover", "-race=true"},
 				overwrite: []string{"-coverprofile", "-outputdir=./dir"},
 				expected:  []string{"-cover", "-race=true", "-coverprofile", "-outputdir=./dir"},
 			},
 			"DuplicateFlagsAreCombined": {
-				args:      []string{"-cover"},
+				opts:      []string{"-cover"},
 				overwrite: []string{"-cover"},
 				expected:  []string{"-cover"},
 			},
 			"TestFlagsAreCheckedAgainstEquivalentFlags": {
-				args:      []string{"-test.race"},
+				opts:      []string{"-test.race"},
 				overwrite: []string{"-race"},
 				expected:  []string{"-race"},
 			},
 			"ConflictingTestFlagsAreOverwritten": {
-				args:      []string{"-test.race=true"},
+				opts:      []string{"-test.race=true"},
 				overwrite: []string{"-test.race=false"},
 				expected:  []string{"-test.race=false"},
 			},
 			"UniqueFlagsAreAppendedAndDuplicateFlagsAreCombined": {
-				args:      []string{"-cover"},
+				opts:      []string{"-cover"},
 				overwrite: []string{"-cover", "-coverprofile"},
 				expected:  []string{"-cover", "-coverprofile"},
 			},
 			"ConflictingFlagValuesAreOverwritten": {
-				args:      []string{"-race=false"},
+				opts:      []string{"-race=false"},
 				overwrite: []string{"-race=true"},
 				expected:  []string{"-race=true"},
 			},
 			"UniqueFlagsAreAppendedAndConflictingFlagsAreOverwritten": {
-				args:      []string{"-cover", "-race=false"},
+				opts:      []string{"-cover", "-race=false"},
 				overwrite: []string{"-race=true"},
 				expected:  []string{"-cover", "-race=true"},
 			},
 			"DuplicateFlagsAreCombinedAndConflictingFlagsAreOverwritten": {
-				args:      []string{"-cover", "-race=false"},
+				opts:      []string{"-cover", "-race=false"},
 				overwrite: []string{"-cover", "-race=true"},
 				expected:  []string{"-cover", "-race=true"},
 			},
 		} {
 			t.Run(testName, func(t *testing.T) {
-				opts := GolangRuntimeOptions{Args: testCase.args}
-				overwrite := GolangRuntimeOptions{Args: testCase.overwrite}
-				merged := opts.Merge(overwrite)
-				assert.Len(t, merged.Args, len(testCase.expected))
-				for _, flag := range merged.Args {
+				merged := testCase.opts.Merge(testCase.overwrite)
+				assert.Len(t, merged, len(testCase.expected))
+				for _, flag := range merged {
 					assert.True(t, utility.StringSliceContains(testCase.expected, flag))
 				}
 			})
@@ -620,8 +616,7 @@ func TestGolangRuntimeOptions(t *testing.T) {
 func TestGolangGenerate(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
 		"Succeeds": func(t *testing.T, g *Golang) {
-			b := &bytes.Buffer{}
-			conf, err := g.Generate(b)
+			conf, err := g.Generate()
 			require.NoError(t, err)
 			require.Len(t, conf.Tasks, 4)
 

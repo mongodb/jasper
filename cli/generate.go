@@ -62,11 +62,16 @@ func generateGolang() cli.Command {
 
 			for _, file := range files {
 				// kim: TODO: needs MAKE-1280 merged.
-				conf, err := generator.NewGolang(file, workingDir)
+				gen, err := generator.NewGolang(file, workingDir)
 				if err != nil {
-					return errors.Wrap(err, "generating evergreen config")
+					return errors.Wrapf(err, "creating generator from build file '%s'", file)
 				}
-				output, err := json.Marshal(conf)
+				conf, err := gen.Generate()
+				if err != nil {
+					return errors.Wrapf(err, "generating evergreen config from build file '%s'", file)
+				}
+
+				output, err := json.MarshalIndent(conf, "", "\t")
 				if err != nil {
 					return errors.Wrap(err, "marshalling evergreen config as JSON")
 				}
@@ -75,7 +80,7 @@ func generateGolang() cli.Command {
 						return errors.Wrapf(err, "writing JSON config to file '%s'", outputFile)
 					}
 				} else {
-					fmt.Println(output)
+					fmt.Println(string(output))
 				}
 			}
 
