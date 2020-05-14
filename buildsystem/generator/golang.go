@@ -42,22 +42,22 @@ type Golang struct {
 func NewGolang(file, workingDir string) (*Golang, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read configuration file")
+		return nil, errors.Wrap(err, "reading configuration file")
 	}
 
 	g := Golang{
 		WorkingDirectory: workingDir,
 	}
 	if err := yaml.UnmarshalStrict(b, &g); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal configuration file from YAML")
+		return nil, errors.Wrap(err, "unmarshalling configuration file from YAML")
 	}
 
 	if err := g.DiscoverPackages(); err != nil {
-		return nil, errors.Wrap(err, "error while automatically discovering test packages")
+		return nil, errors.Wrap(err, "automatically discovering test packages")
 	}
 
 	if err := g.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid golang generator configuration")
+		return nil, errors.Wrap(err, "golang generator configuration")
 	}
 
 	return &g, nil
@@ -117,7 +117,7 @@ func (g *Golang) validateEnvVars() error {
 	// to the working directory (if specified).
 	relGopath, err := g.relGopath()
 	if err != nil {
-		catcher.Wrap(err, "could not convert GOPATH to relative path")
+		catcher.Wrap(err, "converting GOPATH to relative path")
 	} else {
 		g.Environment["GOPATH"] = relGopath
 	}
@@ -206,7 +206,7 @@ func (g *Golang) DiscoverPackages() error {
 
 	projectPath, err := g.absProjectPath()
 	if err != nil {
-		return errors.Wrap(err, "could not get absolute project path")
+		return errors.Wrap(err, "getting project path as an absolute path")
 	}
 
 	if err := filepath.Walk(projectPath, func(path string, info os.FileInfo, err error) error {
@@ -227,7 +227,7 @@ func (g *Golang) DiscoverPackages() error {
 		dir := filepath.Dir(path)
 		dir, err = filepath.Rel(projectPath, dir)
 		if err != nil {
-			return errors.Wrap(err, "could not make path relative to root package")
+			return errors.Wrapf(err, "making package path '%s' relative to root package", path)
 		}
 		// If package has already been added, skip adding it.
 		if _, err = g.GetPackageByPath(dir); err == nil {
@@ -242,7 +242,7 @@ func (g *Golang) DiscoverPackages() error {
 
 		return nil
 	}); err != nil {
-		return errors.Wrapf(err, "could not walk the file system tree starting from path '%s'", projectPath)
+		return errors.Wrapf(err, "walking the file system tree starting from path '%s'", projectPath)
 	}
 
 	return nil
@@ -275,19 +275,19 @@ func (g *Golang) Generate(output io.Writer) (*shrub.Configuration, error) {
 				var pkgRef string
 				pkgs, pkgRef, err := g.getPackagesAndRef(vp)
 				if err != nil {
-					panic(errors.Wrapf(err, "could not get package definition for variant '%s'", gv.Name))
+					panic(errors.Wrapf(err, "package definition for variant '%s'", gv.Name))
 				}
 
 				newTasks, err := g.generateVariantTasksForPackageRef(c, gv, pkgs, pkgRef)
 				if err != nil {
-					panic(errors.Wrapf(err, "could not generate tasks for package ref '%s' in variant '%s'", pkgRef, gv.Name))
+					panic(errors.Wrapf(err, "generating task for package ref '%s' in variant '%s'", pkgRef, gv.Name))
 				}
 				tasksForVariant = append(tasksForVariant, newTasks...)
 			}
 
 			projectPath, err := g.relProjectPath()
 			if err != nil {
-				panic(errors.Wrap(err, "could not get project path"))
+				panic(errors.Wrap(err, "getting project path as a relative path"))
 			}
 			getProjectCmd := shrub.CmdGetProject{
 				Directory: projectPath,
@@ -314,7 +314,7 @@ func (g *Golang) Generate(output io.Writer) (*shrub.Configuration, error) {
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate evergreen configuration")
+		return nil, errors.Wrap(err, "generating evergreen configuration")
 	}
 
 	return conf, nil
@@ -333,13 +333,13 @@ func (g *Golang) getPackagesAndRef(vp VariantPackage) (pkgs []GolangPackage, pkg
 	if vp.Name != "" {
 		pkg, err = g.GetPackageByName(vp.Name)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "no packages named '%s'", vp.Name)
+			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", vp.Name)
 		}
 		pkgRef = vp.Name
 	} else if vp.Path != "" {
 		pkg, err = g.GetPackageByPath(vp.Path)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "no packages with path '%s'", vp.Path)
+			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", vp.Path)
 		}
 		pkgRef = vp.Path
 	} else {
@@ -355,7 +355,7 @@ func (g *Golang) generateVariantTasksForPackageRef(c *shrub.Configuration, gv Go
 	for _, pkg := range pkgs {
 		scriptCmd, err := g.subprocessScriptingCmd(gv, pkg)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not generate %s command for package '%s' in variant '%s'", shrub.CmdSubprocessScripting{}.Name(), pkg.Path, gv.Name)
+			return nil, errors.Wrapf(err, "generating %s command for package '%s' in variant '%s'", shrub.CmdSubprocessScripting{}.Name(), pkg.Path, gv.Name)
 		}
 		var taskName string
 		if len(pkgs) > 1 {
@@ -372,16 +372,16 @@ func (g *Golang) generateVariantTasksForPackageRef(c *shrub.Configuration, gv Go
 func (g *Golang) subprocessScriptingCmd(gv GolangVariant, pkg GolangPackage) (*shrub.CmdSubprocessScripting, error) {
 	gopath, err := g.relGopath()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get relative GOPATH")
+		return nil, errors.Wrap(err, "getting GOPATH as a relative path")
 	}
 	projectPath, err := g.relProjectPath()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get project path")
+		return nil, errors.Wrap(err, "getting project path as a relative path")
 	}
 
 	testOpts := pkg.Options
 	if gv.Options != nil {
-		testOpts = gv.Options.Merge(testOpts)
+		testOpts = testOpts.Merge(*gv.Options)
 	}
 
 	relPath := pkg.Path
@@ -415,7 +415,7 @@ func getTaskName(parts ...string) string {
 func (g *Golang) relProjectPath() (string, error) {
 	gopath, err := g.relGopath()
 	if err != nil {
-		return "", errors.Wrap(err, "cannot convert GOPATH into a path relative to the working directory")
+		return "", errors.Wrap(err, "getting GOPATH as a relative path")
 	}
 	return filepath.Join(gopath, "src", g.RootPackage), nil
 }
@@ -423,20 +423,23 @@ func (g *Golang) relProjectPath() (string, error) {
 func (g *Golang) absProjectPath() (string, error) {
 	gopath, err := g.absGopath()
 	if err != nil {
-		return "", errors.Wrap(err, "cannot convert GOPATH into an absolute path")
+		return "", errors.Wrap(err, "getting GOPATH as an absolute path")
 	}
 	return filepath.Join(gopath, "src", g.RootPackage), nil
 }
 
 // writeConfig writes the evergreen configuration to the given output as JSON.
+// TODO: probably will be moved to a different package since we don't write the
+// config JSON here.
+//nolint: deadcode
 func writeConfig(conf *shrub.Configuration, output io.Writer) error {
 	data, err := json.Marshal(conf)
 	if err != nil {
-		return errors.Wrap(err, "could not marshal configuration as JSON")
+		return errors.Wrap(err, "marshalling configuration as JSON")
 	}
 
 	if _, err = io.Copy(output, bytes.NewBuffer(data)); err != nil {
-		return errors.Wrapf(err, "could not write configuration")
+		return errors.Wrapf(err, "writing configuration to output")
 	}
 
 	return nil
@@ -493,7 +496,7 @@ func (gp *GolangPackage) Validate() error {
 		}
 		tags[tag] = struct{}{}
 	}
-	catcher.Add(gp.Options.Validate())
+	catcher.Wrap(gp.Options.Validate(), "invalid golang options")
 	return catcher.Resolve()
 }
 
@@ -574,16 +577,78 @@ type GolangRuntimeOptions struct {
 	Args []string `yaml:"args,omitempty"`
 }
 
-// TODO: validate options duplication.
+// Validate ensures that options to the scripting environment (i.e. the go
+// binary) do not contain duplicate flags.
 func (gro *GolangRuntimeOptions) Validate() error {
-	return nil
+	seen := map[string]struct{}{}
+	catcher := grip.NewBasicCatcher()
+	for _, flag := range gro.Args {
+		flag = cleanupFlag(flag)
+		// Don't allow the verbose flag because the scripting harness sets
+		// verbose.
+		if flagIsVerbose(flag) {
+			catcher.New("verbose flag is already specified")
+		}
+		if _, ok := seen[flag]; ok {
+			catcher.Errorf("duplicate flag '%s'", flag)
+			continue
+		}
+		seen[flag] = struct{}{}
+	}
+	return catcher.Resolve()
 }
 
-// TODO: this is probably not the best behavior since ideally it should
-// overwrite options specified in opts, but it's easiest to deal with for now.
-func (gro *GolangRuntimeOptions) Merge(toOverwrite GolangRuntimeOptions) GolangRuntimeOptions {
-	if len(gro.Args) != 0 {
-		toOverwrite.Args = gro.Args
+// flagIsVerbose returns whether or not the flag is the golang flag for verbose
+// testing.
+func flagIsVerbose(flag string) bool {
+	flag = cleanupFlag(flag)
+	return flag == "v"
+}
+
+// golangTestPrefix is the optiona prefix that each golang test flag can have.
+// Flags with this prefix have identical meaning to their non-prefixed flag.
+// (e.g. "test.v" and "v" are identical).
+const golangTestPrefix = "test."
+
+// cleanupFlag cleans up the golang-style flag and returns just the name of the
+// flag. Golang flags have the form -<flag_name>[=value].
+func cleanupFlag(flag string) string {
+	flag = strings.TrimPrefix(flag, "-")
+	flag = strings.TrimPrefix(flag, golangTestPrefix)
+
+	// We only care about the flag name, not its set value.
+	flagAndValue := strings.Split(flag, "=")
+	flag = flagAndValue[0]
+
+	return flag
+}
+
+// Merge returns the merged set of GolangRuntimeOptions. Unique flags between
+// the two flag sets are added together. Duplicate flags are handled by
+// overwriting conflicting flags with overwrite's flags.
+func (gro GolangRuntimeOptions) Merge(overwrite GolangRuntimeOptions) GolangRuntimeOptions {
+	merged := gro
+	for _, flag := range overwrite.Args {
+		if i := merged.flagIndex(flag); i != -1 {
+			merged.Args = append(merged.Args[:i], merged.Args[i+1:]...)
+			merged.Args = append(merged.Args, flag)
+		} else {
+			merged.Args = append(merged.Args, flag)
+		}
 	}
-	return toOverwrite
+
+	return merged
+}
+
+// flagIndex returns the index where the flag is set if it is present. If it is
+// absent, this returns -1.
+func (gro *GolangRuntimeOptions) flagIndex(flag string) int {
+	flag = cleanupFlag(flag)
+	for i, f := range gro.Args {
+		f = cleanupFlag(f)
+		if f == flag {
+			return i
+		}
+	}
+	return -1
 }

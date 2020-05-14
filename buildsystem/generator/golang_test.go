@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/evergreen-ci/shrub"
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -519,6 +520,100 @@ func TestDiscoverPackages(t *testing.T) {
 			testCase(t, &g, rootPath)
 		})
 	}
+}
+
+func TestGolangRuntimeOptions(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		for testName, testCase := range map[string]struct {
+			args        []string
+			expectError bool
+		}{
+			"PassesWithAllUniqueFlags": {
+				args: []string{"-cover", "-coverprofile", "-race"},
+			},
+			"FailsWithDuplicateFlags": {
+				args:        []string{"-race", "-race"},
+				expectError: true,
+			},
+			"FailsWithDuplicateEquivalentFlags": {
+				args:        []string{"-race", "-test.race"},
+				expectError: true,
+			},
+			"FailsWithVerboseFlag": {
+				args:        []string{"-v"},
+				expectError: true,
+			},
+		} {
+			t.Run(testName, func(t *testing.T) {
+				opts := GolangRuntimeOptions{Args: testCase.args}
+				err := opts.Validate()
+				if testCase.expectError {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+	})
+	t.Run("Merge", func(t *testing.T) {
+		for testName, testCase := range map[string]struct {
+			args      []string
+			overwrite []string
+			expected  []string
+		}{
+			"AllUniqueFlagsAreAppended": {
+				args:      []string{"-cover", "-race=true"},
+				overwrite: []string{"-coverprofile", "-outputdir=./dir"},
+				expected:  []string{"-cover", "-race=true", "-coverprofile", "-outputdir=./dir"},
+			},
+			"DuplicateFlagsAreCombined": {
+				args:      []string{"-cover"},
+				overwrite: []string{"-cover"},
+				expected:  []string{"-cover"},
+			},
+			"TestFlagsAreCheckedAgainstEquivalentFlags": {
+				args:      []string{"-test.race"},
+				overwrite: []string{"-race"},
+				expected:  []string{"-race"},
+			},
+			"ConflictingTestFlagsAreOverwritten": {
+				args:      []string{"-test.race=true"},
+				overwrite: []string{"-test.race=false"},
+				expected:  []string{"-test.race=false"},
+			},
+			"UniqueFlagsAreAppendedAndDuplicateFlagsAreCombined": {
+				args:      []string{"-cover"},
+				overwrite: []string{"-cover", "-coverprofile"},
+				expected:  []string{"-cover", "-coverprofile"},
+			},
+			"ConflictingFlagValuesAreOverwritten": {
+				args:      []string{"-race=false"},
+				overwrite: []string{"-race=true"},
+				expected:  []string{"-race=true"},
+			},
+			"UniqueFlagsAreAppendedAndConflictingFlagsAreOverwritten": {
+				args:      []string{"-cover", "-race=false"},
+				overwrite: []string{"-race=true"},
+				expected:  []string{"-cover", "-race=true"},
+			},
+			"DuplicateFlagsAreCombinedAndConflictingFlagsAreOverwritten": {
+				args:      []string{"-cover", "-race=false"},
+				overwrite: []string{"-cover", "-race=true"},
+				expected:  []string{"-cover", "-race=true"},
+			},
+		} {
+			t.Run(testName, func(t *testing.T) {
+				opts := GolangRuntimeOptions{Args: testCase.args}
+				overwrite := GolangRuntimeOptions{Args: testCase.overwrite}
+				merged := opts.Merge(overwrite)
+				assert.Len(t, merged.Args, len(testCase.expected))
+				for _, flag := range merged.Args {
+					assert.True(t, utility.StringSliceContains(testCase.expected, flag))
+				}
+			})
+		}
+
+	})
 }
 
 // TODO: more test coverage for generation
