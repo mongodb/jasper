@@ -59,6 +59,12 @@ $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
 	$(goEnv) $(gobin) build -o $@ $<
 # end benchmark setup targets
 
+# cli targets
+$(name): $(buildDir)/$(name)
+$(buildDir)/$(name): cmd/$(name)/$(name).go
+	@$(goEnv) $(gobin) build -o $@ $<
+# end cli targets
+
 # start test and coverage artifacts
 #    This varable includes everything that the tests actually need to
 #    run. (The "build" target is intentional and makes these targetsb
