@@ -156,20 +156,6 @@ type loggerConfigInfo struct {
 	Config RawLoggerConfig       `json:"config" bson:"config"`
 }
 
-// NewLoggerConfig is an entry point for creating a LoggerConfig with a raw
-// config. Typically, LoggerConfigs are created directly and setup with a
-// LoggerProducer using the Set method. This function does not validate the
-// config.
-func NewLoggerConfig(producerType string, format RawLoggerConfigFormat, config []byte) *LoggerConfig {
-	return &LoggerConfig{
-		info: loggerConfigInfo{
-			Type:   producerType,
-			Format: format,
-			Config: config,
-		},
-	}
-}
-
 func (lc *LoggerConfig) validate() error {
 	catcher := grip.NewBasicCatcher()
 
@@ -307,9 +293,9 @@ func (lc *LoggerConfig) resolveProducer() error {
 
 // BaseOptions are the base options necessary for setting up most loggers.
 type BaseOptions struct {
-	Level  send.LevelInfo
-	Buffer BufferOptions
-	Format LogFormat
+	Level  send.LevelInfo `json:"level" bson:"level"`
+	Buffer BufferOptions  `json:"buffer" bson:"buffer"`
+	Format LogFormat      `json:"format" bson:"format"`
 }
 
 // Validate ensures that BaseOptions is valid.
