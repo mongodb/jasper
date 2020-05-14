@@ -41,7 +41,7 @@ func TestMongodShutdownEvent(t *testing.T) {
 
 			opts = optslist[0]
 			logger := &options.LoggerConfig{}
-			require.NoError(t, logger.Set(&options.DefaultLoggerConfig{
+			require.NoError(t, logger.Set(&options.DefaultLoggerOptions{
 				Base: options.BaseOptions{
 					Format: options.LogFormatPlain,
 				},
