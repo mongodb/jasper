@@ -17,7 +17,7 @@ const (
 )
 
 // LogFormat specifies a certain format for logging by Jasper. See the
-// documentation for grip/send for more information on the various LogFormat's.
+// documentation for grip/send for more information on the various LogFormats.
 type LogFormat string
 
 const (
@@ -77,51 +77,109 @@ func (f RawLoggerConfigFormat) Validate() error {
 	}
 }
 
-func (f RawLoggerConfigFormat) unmarshal(data []byte, out LoggerProducer) error {
+func (f RawLoggerConfigFormat) marshal(in LoggerProducer) ([]byte, error) {
+	switch f {
+	case RawLoggerConfigFormatBSON:
+		return bson.Marshal(in)
+	case RawLoggerConfigFormatJSON:
+		return json.Marshal(in)
+	default:
+		return nil, errors.Errorf("unsupported format '%s'", f)
+	}
+}
+
+func (f RawLoggerConfigFormat) Unmarshal(data []byte, out interface{}) error {
 	switch f {
 	case RawLoggerConfigFormatBSON:
 		if err := bson.Unmarshal(data, out); err != nil {
 			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
 
 		}
-
-		return nil
 	case RawLoggerConfigFormatJSON:
 		if err := json.Unmarshal(data, out); err != nil {
 			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
 
 		}
-
-		return nil
 	default:
 		return errors.Errorf("unsupported format '%s'", f)
 	}
+
+	return nil
+}
+
+type RawLoggerConfig []byte
+
+func (lc *RawLoggerConfig) MarshalJSON() ([]byte, error) {
+	if len(*lc) > 0 {
+		return *lc, nil
+	}
+
+	return json.Marshal([]byte(*lc))
+}
+
+func (lc *RawLoggerConfig) UnmarshalJSON(b []byte) error {
+	*lc = b
+	return nil
+}
+
+func (lc RawLoggerConfig) MarshalBSON() ([]byte, error) {
+	if len(lc) > 0 {
+		return lc, nil
+	}
+
+	return bson.Marshal([]byte(lc))
+}
+
+func (lc *RawLoggerConfig) UnmarshalBSON(b []byte) error {
+	if len(b) > 0 {
+		*lc = b
+	} else {
+		*lc = []byte{}
+	}
+	return nil
 }
 
 // LoggerConfig represents the necessary information to construct a new grip
 // send.Sender. LoggerConfig implements the bson.MarshalBSON and
 // json.MarshalJSON interfaces.
 type LoggerConfig struct {
-	Type     string                `json:"type" bson:"type"`
-	Format   RawLoggerConfigFormat `json:"format" bson:"format"`
-	Config   []byte                `json:"config" bson:"config"`
-	Registry LoggerRegistry        `json:"-" bson:"-"`
+	info     loggerConfigInfo
+	registry LoggerRegistry
 
 	producer LoggerProducer
 	sender   send.Sender
 }
 
-// Validate ensures the LoggerConfig is valid.
-func (lc *LoggerConfig) Validate() error {
+type loggerConfigInfo struct {
+	Type   string                `json:"type" bson:"type"`
+	Format RawLoggerConfigFormat `json:"format" bson:"format"`
+	Config RawLoggerConfig       `json:"config" bson:"config"`
+}
+
+// NewLoggerConfig is an entry point for creating a LoggerConfig with a raw
+// config. Typically, LoggerConfigs are created directly and setup with a
+// LoggerProducer using the Set method. This function does not validate the
+// config.
+func NewLoggerConfig(producerType string, format RawLoggerConfigFormat, config []byte) *LoggerConfig {
+	return &LoggerConfig{
+		info: loggerConfigInfo{
+			Type:   producerType,
+			Format: format,
+			Config: config,
+		},
+	}
+}
+
+func (lc *LoggerConfig) validate() error {
 	catcher := grip.NewBasicCatcher()
 
-	catcher.NewWhen(lc.Type == "", "cannot have empty logger type")
-	if len(lc.Config) > 0 {
-		catcher.Add(lc.Format.Validate())
+	catcher.NewWhen(lc.info.Type == "", "cannot have empty logger type")
+	if len(lc.info.Config) > 0 {
+		catcher.Add(lc.info.Format.Validate())
 	}
 
-	if lc.Registry == nil {
-		lc.Registry = globalLoggerRegistry
+	if lc.registry == nil {
+		lc.registry = globalLoggerRegistry
 	}
 
 	return catcher.Resolve()
@@ -129,43 +187,36 @@ func (lc *LoggerConfig) Validate() error {
 
 // Set sets the logger producer and type for the logger config.
 func (lc *LoggerConfig) Set(producer LoggerProducer) error {
-	if lc.Registry == nil {
-		lc.Registry = globalLoggerRegistry
+	if lc.registry == nil {
+		lc.registry = globalLoggerRegistry
 	}
 
-	if !lc.Registry.Check(producer.Type()) {
+	if !lc.registry.Check(producer.Type()) {
 		return errors.New("unregistered logger producer")
 	}
-	lc.Type = producer.Type()
+
+	lc.info.Type = producer.Type()
 	lc.producer = producer
 
 	return nil
 }
 
-// GetProducer returns the underlying logger producer for this logger config,
+// Producer returns the underlying logger producer for this logger config,
 // which may be nil.
-func (lc *LoggerConfig) GetProducer() LoggerProducer { return lc.producer }
+func (lc *LoggerConfig) Producer() LoggerProducer { return lc.producer }
+
+// Type returns the type string.
+func (lc *LoggerConfig) Type() string { return lc.info.Type }
+
+// Config returns the raw logger config.
+func (lc *LoggerConfig) Config() RawLoggerConfig { return lc.info.Config }
 
 // Resolve resolves the LoggerConfig and returns the resulting grip
 // send.Sender.
 func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if lc.sender == nil {
-		if lc.producer == nil {
-			if err := lc.Validate(); err != nil {
-				return nil, errors.Wrap(err, "invalid logger config")
-			}
-
-			factory, ok := lc.Registry.Resolve(lc.Type)
-			if !ok {
-				return nil, errors.Errorf("unregistered logger type '%s'", lc.Type)
-			}
-			lc.producer = factory()
-
-			if len(lc.Config) > 0 {
-				if err := lc.Format.unmarshal(lc.Config, lc.producer); err != nil {
-					return nil, errors.Wrap(err, "problem unmarshalling data")
-				}
-			}
+		if err := lc.resolveProducer(); err != nil {
+			return nil, errors.Wrap(err, "problem resolve logger producer")
 		}
 
 		sender, err := lc.producer.Configure()
@@ -179,49 +230,79 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 }
 
 func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
-	if lc.Format == "" {
-		lc.Format = RawLoggerConfigFormatBSON
-	}
-	if lc.Format != RawLoggerConfigFormatBSON {
-		return nil, errors.New("cannot marshal misconfigured bson logger config")
+	if err := lc.resolveProducer(); err != nil {
+		return nil, errors.Wrap(err, "problem resolving logger producer")
 	}
 
-	if lc.producer != nil {
-		data, err := bson.Marshal(lc.producer)
-		if err != nil {
-			return nil, errors.Wrap(err, "problem producing logger config")
-		}
-		lc.Config = data
+	data, err := bson.Marshal(lc.producer)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem producing logger config")
 	}
 
-	return bson.Marshal(struct {
-		Type   string                `bson:"type"`
-		Format RawLoggerConfigFormat `bson:"format"`
-		Config []byte                `bson:"config"`
-	}{Type: lc.Type, Format: lc.Format, Config: lc.Config})
+	return bson.Marshal(&loggerConfigInfo{
+		Type:   lc.producer.Type(),
+		Format: RawLoggerConfigFormatBSON,
+		Config: data,
+	})
+}
+
+func (lc *LoggerConfig) UnmarshalBSON(b []byte) error {
+	info := loggerConfigInfo{}
+	if err := bson.Unmarshal(b, &info); err != nil {
+		return errors.Wrap(err, "problem unmarshalling config logger info")
+	}
+
+	lc.info = info
+	return nil
 }
 
 func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
-	if lc.Format == "" {
-		lc.Format = RawLoggerConfigFormatJSON
-	}
-	if lc.Format != RawLoggerConfigFormatJSON {
-		return nil, errors.New("cannot marshal misconfigured bson logger config")
+	if err := lc.resolveProducer(); err != nil {
+		return nil, errors.Wrap(err, "problem resolving logger producer")
 	}
 
-	if lc.producer != nil {
-		data, err := json.Marshal(lc.producer)
-		if err != nil {
-			return nil, errors.Wrap(err, "problem producing logger config")
+	data, err := json.Marshal(lc.producer)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem producing logger config")
+	}
+
+	return json.Marshal(&loggerConfigInfo{
+		Type:   lc.producer.Type(),
+		Format: RawLoggerConfigFormatJSON,
+		Config: data,
+	})
+}
+
+func (lc *LoggerConfig) UnmarshalJSON(b []byte) error {
+	info := loggerConfigInfo{}
+	if err := json.Unmarshal(b, &info); err != nil {
+		return errors.Wrap(err, "problem unmarshalling config logger info")
+	}
+
+	lc.info = info
+	return nil
+}
+
+func (lc *LoggerConfig) resolveProducer() error {
+	if lc.producer == nil {
+		if err := lc.validate(); err != nil {
+			return errors.Wrap(err, "invalid logger config")
 		}
-		lc.Config = data
+
+		factory, ok := lc.registry.Resolve(lc.info.Type)
+		if !ok {
+			return errors.Errorf("unregistered logger type '%s'", lc.info.Type)
+		}
+		lc.producer = factory()
+
+		if len(lc.info.Config) > 0 {
+			if err := lc.info.Format.Unmarshal(lc.info.Config, lc.producer); err != nil {
+				return errors.Wrap(err, "problem unmarshalling data")
+			}
+		}
 	}
 
-	return json.Marshal(struct {
-		Type   string                `json:"type"`
-		Format RawLoggerConfigFormat `json:"format"`
-		Config []byte                `json:"config"`
-	}{Type: lc.Type, Format: lc.Format, Config: lc.Config})
+	return nil
 }
 
 // BaseOptions are the base options necessary for setting up most loggers.

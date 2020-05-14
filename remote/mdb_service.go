@@ -289,8 +289,8 @@ func (s *mdbService) getBuildloggerURLs(ctx context.Context, w io.Writer, msg mo
 
 	urls := []string{}
 	for _, logger := range getProcInfoNoHang(ctx, proc).Options.Output.Loggers {
-		if logger.Type == options.LogBuildloggerV2 {
-			producer := logger.GetProducer()
+		if logger.Type() == options.LogBuildloggerV2 {
+			producer := logger.Producer()
 			if producer == nil {
 				continue
 			}

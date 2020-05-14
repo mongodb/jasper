@@ -262,9 +262,11 @@ func TestCreate(t *testing.T) {
 			require.NoError(t, err)
 			opts.Output.Loggers = []*LoggerConfig{
 				{
-					Type:   LogSumoLogic,
-					Format: RawLoggerConfigFormatBSON,
-					Config: config,
+					info: loggerConfigInfo{
+						Type:   LogSumoLogic,
+						Format: RawLoggerConfigFormatBSON,
+						Config: config,
+					},
 				},
 			}
 			cmd, _, err := opts.Resolve(ctx)
@@ -278,9 +280,11 @@ func TestCreate(t *testing.T) {
 			require.NoError(t, err)
 			opts.Output.Loggers = []*LoggerConfig{
 				{
-					Type:   LogSumoLogic,
-					Format: RawLoggerConfigFormatBSON,
-					Config: config,
+					info: loggerConfigInfo{
+						Type:   LogSumoLogic,
+						Format: RawLoggerConfigFormatBSON,
+						Config: config,
+					},
 				},
 			}
 			cmd, _, err := opts.Resolve(ctx)
@@ -294,9 +298,11 @@ func TestCreate(t *testing.T) {
 			require.NoError(t, err)
 			opts.Output.Loggers = []*LoggerConfig{
 				{
-					Type:   LogSumoLogic,
-					Format: RawLoggerConfigFormatJSON,
-					Config: config,
+					info: loggerConfigInfo{
+						Type:   LogSumoLogic,
+						Format: RawLoggerConfigFormatJSON,
+						Config: config,
+					},
 				},
 			}
 			opts.Output.SuppressOutput = true
@@ -435,8 +441,10 @@ func TestFileLogging(t *testing.T) {
 			opts := Create{Output: testParams.outOpts}
 			for _, file := range files {
 				logger := &LoggerConfig{
-					Type:   LogFile,
-					Format: RawLoggerConfigFormatJSON,
+					info: loggerConfigInfo{
+						Type:   LogFile,
+						Format: RawLoggerConfigFormatJSON,
+					},
 					producer: &FileLoggerOptions{
 						Filename: file.Name(),
 						Base:     BaseOptions{Format: LogFormatPlain},

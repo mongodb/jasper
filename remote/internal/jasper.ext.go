@@ -298,41 +298,31 @@ func (logger LoggerConfig) Export() (*options.LoggerConfig, error) {
 	case logger.GetBuildloggerv2() != nil:
 		producer = logger.GetBuildloggerv2().Export()
 	case logger.GetRaw() != nil:
-		return logger.GetRaw().Export(), nil
+		return logger.GetRaw().Export()
 	}
 	if producer == nil {
 		return nil, errors.New("logger config options invalid")
 	}
-	data, err := json.Marshal(producer)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem marshalling logger config options")
-	}
 
-	return &options.LoggerConfig{
-		Type:   producer.Type(),
-		Format: options.RawLoggerConfigFormatJSON,
-		Config: data,
-	}, nil
+	config := &options.LoggerConfig{}
+	config.Set(producer)
+	return config, nil
 }
 
 // ConvertLoggerConfig takes a Jasper options.LoggerConfig struct and returns
 // an equivalent protobuf RPC LoggerConfig struct. ConvertLoggerConfig is the
 // inverse of (LoggerConfig) Export().
 func ConvertLoggerConfig(config *options.LoggerConfig) (*LoggerConfig, error) {
-	if len(config.Config) == 0 {
-		config.Format = options.RawLoggerConfigFormatJSON
-		_, err := json.Marshal(&config)
-		if err != nil {
-			return nil, errors.Wrap(err, "problem marshaling logger config")
-		}
+	data, err := json.Marshal(config)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem marshalling logger config")
 	}
 
 	return &LoggerConfig{
 		Producer: &LoggerConfig_Raw{
 			Raw: &RawLoggerConfig{
-				Type:       config.Type,
-				Format:     ConvertRawLoggerConfigFormat(config.Format),
-				ConfigData: config.Config,
+				Format:     ConvertRawLoggerConfigFormat(options.RawLoggerConfigFormatJSON),
+				ConfigData: data,
 			},
 		},
 	}, nil
@@ -554,12 +544,12 @@ func ConvertRawLoggerConfigFormat(f options.RawLoggerConfigFormat) RawLoggerConf
 
 // Export takes a protobuf RPC RawLoggerConfig struct and returns the
 // analogous Jasper options.LoggerConfig
-func (opts RawLoggerConfig) Export() *options.LoggerConfig {
-	return &options.LoggerConfig{
-		Type:   opts.Type,
-		Format: opts.Format.Export(),
-		Config: opts.ConfigData,
+func (logger RawLoggerConfig) Export() (*options.LoggerConfig, error) {
+	config := &options.LoggerConfig{}
+	if err := logger.Format.Export().Unmarshal(logger.ConfigData, config); err != nil {
+		return nil, errors.Wrap(err, "problem unmarshalling raw config")
 	}
+	return config, nil
 }
 
 // Export takes a protobuf RPC BuildloggerURLs struct and returns the analogous

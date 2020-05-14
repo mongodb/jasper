@@ -45,7 +45,7 @@ func GetInMemoryLogStream(ctx context.Context, proc Process, count int) ([]strin
 		return nil, errors.New("cannot get output logs from nil process")
 	}
 	for _, logger := range proc.Info(ctx).Options.Output.Loggers {
-		if logger.Type != options.LogInMemory {
+		if logger.Type() != options.LogInMemory {
 			continue
 		}
 

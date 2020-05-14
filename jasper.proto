@@ -101,7 +101,6 @@ enum RawLoggerConfigFormat {
 }
 
 message RawLoggerConfig {
-  string type = 1;
   RawLoggerConfigFormat format = 2;
   bytes config_data = 3;
 }

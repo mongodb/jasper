@@ -252,8 +252,8 @@ func (s *Service) getBuildloggerURLs(rw http.ResponseWriter, r *http.Request) {
 	info := getProcInfoNoHang(ctx, proc)
 	urls := []string{}
 	for _, logger := range info.Options.Output.Loggers {
-		if logger.Type == options.LogBuildloggerV2 {
-			producer := logger.GetProducer()
+		if logger.Type() == options.LogBuildloggerV2 {
+			producer := logger.Producer()
 			if producer == nil {
 				continue
 			}

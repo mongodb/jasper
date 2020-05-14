@@ -445,8 +445,8 @@ func (s *jasperService) GetBuildloggerURLs(ctx context.Context, id *JasperProces
 
 	urls := []string{}
 	for _, logger := range getProcInfoNoHang(ctx, proc).Options.Output.Loggers {
-		if logger.Type == options.LogBuildloggerV2 {
-			producer := logger.GetProducer()
+		if logger.Type() == options.LogBuildloggerV2 {
+			producer := logger.Producer()
 			if producer == nil {
 				continue
 			}

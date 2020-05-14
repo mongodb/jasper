@@ -126,8 +126,10 @@ func TestOutputOptions(t *testing.T) {
 		"SuppressOutputWithLogger": func(t *testing.T, opts Output) {
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogDefault,
-					Format: RawLoggerConfigFormatBSON,
+					info: loggerConfigInfo{
+						Type:   LogDefault,
+						Format: RawLoggerConfigFormatBSON,
+					},
 				},
 			}
 			opts.SuppressOutput = true
@@ -136,8 +138,10 @@ func TestOutputOptions(t *testing.T) {
 		"SuppressErrorWithLogger": func(t *testing.T, opts Output) {
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogDefault,
-					Format: RawLoggerConfigFormatBSON,
+					info: loggerConfigInfo{
+						Type:   LogDefault,
+						Format: RawLoggerConfigFormatBSON,
+					},
 				},
 			}
 			opts.SuppressError = true
@@ -146,8 +150,10 @@ func TestOutputOptions(t *testing.T) {
 		"SuppressOutputAndErrorWithLogger": func(t *testing.T, opts Output) {
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogDefault,
-					Format: RawLoggerConfigFormatBSON,
+					info: loggerConfigInfo{
+						Type:   LogDefault,
+						Format: RawLoggerConfigFormatBSON,
+					},
 				},
 			}
 			opts.SuppressOutput = true
@@ -157,8 +163,10 @@ func TestOutputOptions(t *testing.T) {
 		"RedirectOutputWithLogger": func(t *testing.T, opts Output) {
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogDefault,
-					Format: RawLoggerConfigFormatBSON,
+					info: loggerConfigInfo{
+						Type:   LogDefault,
+						Format: RawLoggerConfigFormatBSON,
+					},
 				},
 			}
 			opts.SendOutputToError = true
@@ -167,8 +175,10 @@ func TestOutputOptions(t *testing.T) {
 		"RedirectErrorWithLogger": func(t *testing.T, opts Output) {
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogDefault,
-					Format: RawLoggerConfigFormatBSON,
+					info: loggerConfigInfo{
+						Type:   LogDefault,
+						Format: RawLoggerConfigFormatBSON,
+					},
 				},
 			}
 			opts.SendErrorToOutput = true
@@ -178,8 +188,10 @@ func TestOutputOptions(t *testing.T) {
 			opts.Output = stdout
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogInMemory,
-					Format: RawLoggerConfigFormatBSON,
+					info: loggerConfigInfo{
+						Type:   LogInMemory,
+						Format: RawLoggerConfigFormatBSON,
+					},
 					producer: &InMemoryLoggerOptions{
 						InMemoryCap: 100,
 						Base:        BaseOptions{Format: LogFormatPlain},
@@ -210,8 +222,10 @@ func TestOutputOptions(t *testing.T) {
 			opts.Error = stderr
 			opts.Loggers = []*LoggerConfig{
 				{
-					Type:   LogInMemory,
-					Format: RawLoggerConfigFormatJSON,
+					info: loggerConfigInfo{
+						Type:   LogInMemory,
+						Format: RawLoggerConfigFormatJSON,
+					},
 					producer: &InMemoryLoggerOptions{
 						InMemoryCap: 100,
 						Base:        BaseOptions{Format: LogFormatPlain},
