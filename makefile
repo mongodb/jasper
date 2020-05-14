@@ -2,7 +2,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli remote remote-internal options mock testutil internal-executor
+packages := $(name) cli remote remote-internal options mock testutil internal-executor buildsystem-generator
 lintPackages := $(packages) mock testutil
 testPackages := $(packages) mock
 projectPath := github.com/mongodb/jasper
@@ -58,6 +58,13 @@ $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup $(bui
 $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
 	$(goEnv) $(gobin) build -o $@ $<
 # end benchmark setup targets
+
+# cli targets
+cli: $(name)
+$(name): $(buildDir)/$(name)
+$(buildDir)/$(name): cmd/$(name)/$(name).go
+	@$(goEnv) $(gobin) build -o $@ $<
+# end cli targets
 
 # start test and coverage artifacts
 #    This varable includes everything that the tests actually need to
@@ -123,8 +130,8 @@ benchmarks:$(buildDir)/run-benchmarks $(buildDir) .FORCE
 	$(goEnv) ./$(buildDir)/run-benchmarks $(run-benchmark)
 coverage:$(buildDir) $(coverageOutput)
 coverage-html:$(buildDir) $(coverageHtmlOutput)
-phony += lint $(buildDir) test coverage coverage-html docker-setup docker-cleanup
-.PHONY: $(phony) .FORCE build
+phony += build lint $(buildDir) test coverage coverage-html docker-setup docker-cleanup $(buildDir)/$(name)
+.PHONY: $(phony) .FORCE
 .PRECIOUS:$(coverageOutput) $(coverageHtmlOutput)
 .PRECIOUS:$(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 .PRECIOUS:$(foreach target,$(packages),$(buildDir)/output.$(target).lint)

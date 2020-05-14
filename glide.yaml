@@ -12,6 +12,7 @@ import:
   - package: github.com/evergreen-ci/mrpc
   - package: github.com/evergreen-ci/poplar
   - package: github.com/evergreen-ci/service
+  - package: github.com/evergreen-ci/shrub
   - package: github.com/evergreen-ci/utility
   - package: github.com/tychoish/bond
   - package: github.com/tychoish/lru

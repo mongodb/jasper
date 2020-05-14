@@ -278,17 +278,17 @@ message ScriptingOptionsGolang {
   string gopath = 1;
   string goroot = 2;
   repeated string packages = 3;
-  string context = 4;
-  bool with_update = 5;
+  string directory = 4;
+  bool update_packages = 5;
 }
 
 message ScriptingOptionsPython {
   string virtual_env_path = 1;
   string requirements_path = 2;
-  string host_python = 3;
+  string interpreter_binary = 3;
   repeated string packages = 4;
   bool legacy_python = 5;
-  bool add_test_deps = 6;
+  bool add_test_reqs = 6;
 }
 
 message ScriptingOptionsRoswell {

@@ -35,14 +35,23 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 	e.cachedHash = e.opts.ID()
 	venvpy := e.opts.Interpreter()
 
-	cmd := e.manager.CreateCommand(ctx).AppendArgs(e.opts.HostPythonInterpreter, "-m", e.venvMod(), e.opts.VirtualEnvPath).Environment(e.opts.Environment)
+	cmd := e.manager.CreateCommand(ctx).AppendArgs(e.opts.InterpreterBinary, "-m", e.venvMod(), e.opts.VirtualEnvPath).Environment(e.opts.Environment)
 
-	if e.opts.RequirementsFilePath != "" {
-		cmd.AppendArgs(venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsFilePath)
+	if e.opts.RequirementsPath != "" {
+		args := []string{venvpy, "-m", "pip", "install", "-r", e.opts.RequirementsPath}
+		if e.opts.UpdatePackages {
+			args = append(args, "--upgrade")
+		}
+		cmd.Add(args)
 	}
 
 	for _, pkg := range e.opts.Packages {
-		cmd.AppendArgs(venvpy, "-m", "pip", "install", pkg)
+		args := []string{venvpy, "-m", "pip", "install"}
+		if e.opts.UpdatePackages {
+			args = append(args, "--update")
+		}
+		args = append(args, pkg)
+		cmd.Add(args)
 	}
 
 	cmd.PostHook(func(res error) error {

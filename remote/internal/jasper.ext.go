@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/grip/send"
@@ -803,8 +802,8 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 			Gopath:         val.Golang.Gopath,
 			Goroot:         val.Golang.Goroot,
 			Packages:       val.Golang.Packages,
-			Context:        val.Golang.Context,
-			WithUpdate:     val.Golang.WithUpdate,
+			Directory:      val.Golang.Directory,
+			UpdatePackages: val.Golang.UpdatePackages,
 			CachedDuration: time.Duration(o.Duration),
 			Environment:    o.Environment,
 			Output:         output,
@@ -815,15 +814,15 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 			return nil, errors.Wrap(err, "problem exporting output options")
 		}
 		return &options.ScriptingPython{
-			VirtualEnvPath:        val.Python.VirtualEnvPath,
-			RequirementsFilePath:  val.Python.RequirementsPath,
-			HostPythonInterpreter: val.Python.HostPython,
-			Packages:              val.Python.Packages,
-			LegacyPython:          val.Python.LegacyPython,
-			AddTestRequirements:   val.Python.AddTestDeps,
-			CachedDuration:        time.Duration(o.Duration),
-			Environment:           o.Environment,
-			Output:                output,
+			VirtualEnvPath:      val.Python.VirtualEnvPath,
+			RequirementsPath:    val.Python.RequirementsPath,
+			InterpreterBinary:   val.Python.InterpreterBinary,
+			Packages:            val.Python.Packages,
+			LegacyPython:        val.Python.LegacyPython,
+			AddTestRequirements: val.Python.AddTestReqs,
+			CachedDuration:      time.Duration(o.Duration),
+			Environment:         o.Environment,
+			Output:              output,
 		}, nil
 	case *ScriptingOptions_Roswell:
 		output, err := o.Output.Export()
@@ -859,11 +858,11 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 			Output:      &out,
 			Value: &ScriptingOptions_Golang{
 				Golang: &ScriptingOptionsGolang{
-					Gopath:     val.Gopath,
-					Goroot:     val.Goroot,
-					Packages:   val.Packages,
-					Context:    val.Context,
-					WithUpdate: val.WithUpdate,
+					Gopath:         val.Gopath,
+					Goroot:         val.Goroot,
+					Packages:       val.Packages,
+					Directory:      val.Directory,
+					UpdatePackages: val.UpdatePackages,
 				},
 			},
 		}, nil
@@ -878,12 +877,12 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 			Output:      &out,
 			Value: &ScriptingOptions_Python{
 				Python: &ScriptingOptionsPython{
-					VirtualEnvPath:   val.VirtualEnvPath,
-					RequirementsPath: val.RequirementsFilePath,
-					HostPython:       val.HostPythonInterpreter,
-					Packages:         val.Packages,
-					LegacyPython:     val.LegacyPython,
-					AddTestDeps:      val.AddTestRequirements,
+					VirtualEnvPath:    val.VirtualEnvPath,
+					RequirementsPath:  val.RequirementsPath,
+					InterpreterBinary: val.InterpreterBinary,
+					Packages:          val.Packages,
+					LegacyPython:      val.LegacyPython,
+					AddTestReqs:       val.AddTestRequirements,
 				},
 			},
 		}, nil
@@ -905,8 +904,7 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 			},
 		}, nil
 	default:
-		grip.Criticalf("'%T' is not supported", opts)
-		return nil, errors.Errorf("'%T' is not supported", opts)
+		return nil, errors.Errorf("scripting options for '%T' is not supported", opts)
 	}
 }
 
