@@ -77,17 +77,8 @@ func (f RawLoggerConfigFormat) Validate() error {
 	}
 }
 
-func (f RawLoggerConfigFormat) marshal(in LoggerProducer) ([]byte, error) {
-	switch f {
-	case RawLoggerConfigFormatBSON:
-		return bson.Marshal(in)
-	case RawLoggerConfigFormatJSON:
-		return json.Marshal(in)
-	default:
-		return nil, errors.Errorf("unsupported format '%s'", f)
-	}
-}
-
+// Unmarshal unmarshals the given data using the corresponding unmarshaler for
+// the RawLoggerConfigFormat type.
 func (f RawLoggerConfigFormat) Unmarshal(data []byte, out interface{}) error {
 	switch f {
 	case RawLoggerConfigFormatBSON:
@@ -107,6 +98,8 @@ func (f RawLoggerConfigFormat) Unmarshal(data []byte, out interface{}) error {
 	return nil
 }
 
+// RawLoggerConfig wraps []byte and implements the json and bson Marshaler and
+// Unmarshaler interfaces.
 type RawLoggerConfig []byte
 
 func (lc *RawLoggerConfig) MarshalJSON() ([]byte, error) {
@@ -131,21 +124,16 @@ func (lc RawLoggerConfig) MarshalBSON() ([]byte, error) {
 }
 
 func (lc *RawLoggerConfig) UnmarshalBSON(b []byte) error {
-	if len(b) > 0 {
-		*lc = b
-	} else {
-		*lc = []byte{}
-	}
+	*lc = b
 	return nil
 }
 
 // LoggerConfig represents the necessary information to construct a new grip
-// send.Sender. LoggerConfig implements the bson.MarshalBSON and
-// json.MarshalJSON interfaces.
+// send.Sender. LoggerConfig implements the json and bson Marshaler and
+// Unmarshaler interfaces.
 type LoggerConfig struct {
 	info     loggerConfigInfo
 	registry LoggerRegistry
-
 	producer LoggerProducer
 	sender   send.Sender
 }
@@ -202,7 +190,7 @@ func (lc *LoggerConfig) Config() RawLoggerConfig { return lc.info.Config }
 func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if lc.sender == nil {
 		if err := lc.resolveProducer(); err != nil {
-			return nil, errors.Wrap(err, "problem resolve logger producer")
+			return nil, errors.Wrap(err, "problem resolving logger producer")
 		}
 
 		sender, err := lc.producer.Configure()
@@ -330,6 +318,8 @@ func (opts *BufferOptions) Validate() error {
 	return nil
 }
 
+// SafeSender wraps a grip send.Sender and its base sender, ensuring that the
+// base sender is closed correctly.
 type SafeSender struct {
 	baseSender send.Sender
 	send.Sender
@@ -362,6 +352,7 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 	return sender, nil
 }
 
+// GetSender returns the underlying base grip send.Sender.
 func (s *SafeSender) GetSender() send.Sender {
 	if s.baseSender != nil {
 		return s.baseSender
