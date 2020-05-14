@@ -43,7 +43,7 @@ func TestScriptingHarness(t *testing.T) {
 	require.NoError(t, err)
 	defer manager.Close(ctx)
 
-	tmpdir, err := ioutil.TempDir(filepath.Join(testutil.GetDirectoryOfFile(), "..", "build"), "scripting_tests")
+	tmpdir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, os.RemoveAll(tmpdir))
@@ -270,7 +270,7 @@ func TestScriptingHarness(t *testing.T) {
 						defer func() {
 							assert.NoError(t, os.Remove(tmpFile))
 						}()
-						_, err := se.Build(ctx, testutil.GetDirectoryOfFile(), []string{
+						_, err := se.Build(ctx, testutil.BuildDirectory(), []string{
 							"-o", filepath.Join(tmpdir, "fake_script"),
 							tmpFile,
 						})

@@ -45,7 +45,7 @@ func (e *golangEnvironment) Setup(ctx context.Context) error {
 		}
 	}
 
-	cmd.SetHook(func(res error) error {
+	cmd.PostHook(func(res error) error {
 		if res == nil {
 			e.isConfigured = true
 		}
@@ -109,9 +109,8 @@ func (e *golangEnvironment) RunScript(ctx context.Context, script string) error 
 		Path:    path,
 		Content: []byte(script),
 	}
-
 	if err := e.manager.WriteFile(ctx, wo); err != nil {
-		return errors.Wrap(err, "problem writing file")
+		return errors.Wrap(err, "problem writing script file")
 	}
 
 	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).
