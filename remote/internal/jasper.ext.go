@@ -305,8 +305,7 @@ func (logger LoggerConfig) Export() (*options.LoggerConfig, error) {
 	}
 
 	config := &options.LoggerConfig{}
-	config.Set(producer)
-	return config, nil
+	return config, config.Set(producer)
 }
 
 // ConvertLoggerConfig takes a Jasper options.LoggerConfig struct and returns
