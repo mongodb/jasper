@@ -43,8 +43,6 @@ imports:
     version: d9382e39d76857e2fe92a379d89f3c86fe507c4d
   - name: github.com/evergreen-ci/shrub
     version: 36937cebcd32cbde53477fc167acd6f60bdd1aea
-  - name: github.com/evergreen-ci/timber
-    version: 9a33c650233106e021bcb51bfc87de1910a8b6fc
 
   # cgroup/docker requirements
   - name: github.com/containerd/cgroups

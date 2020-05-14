@@ -54,7 +54,7 @@ func (e *pythonEnvironment) Setup(ctx context.Context) error {
 		cmd.Add(args)
 	}
 
-	cmd.SetHook(func(res error) error {
+	cmd.PostHook(func(res error) error {
 		if res == nil {
 			e.isConfigured = true
 		}

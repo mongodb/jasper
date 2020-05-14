@@ -89,7 +89,11 @@ func (c *rpcClient) ID() string {
 }
 
 func (c *rpcClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-	proc, err := c.client.Create(ctx, internal.ConvertCreateOptions(opts))
+	convertedOpts, err := internal.ConvertCreateOptions(opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem converting create options")
+	}
+	proc, err := c.client.Create(ctx, convertedOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -336,7 +340,11 @@ type rpcLoggingCache struct {
 }
 
 func (lc *rpcLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
-	resp, err := lc.client.LoggingCacheCreate(lc.ctx, internal.ConvertLoggingCreateArgs(id, opts))
+	args, err := internal.ConvertLoggingCreateArgs(id, opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem converting create args")
+	}
+	resp, err := lc.client.LoggingCacheCreate(lc.ctx, args)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

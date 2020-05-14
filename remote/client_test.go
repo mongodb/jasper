@@ -536,10 +536,13 @@ func TestManager(t *testing.T) {
 									},
 								} {
 									t.Run(subTestName, func(t *testing.T) {
+										inMemLogger, err := jasper.NewInMemoryLogger(1)
+										require.NoError(t, err)
+
 										opts := &options.Create{
 											Args: []string{"bash", "-s"},
 											Output: options.Output{
-												Loggers: []options.Logger{jasper.NewInMemoryLogger(1)},
+												Loggers: []*options.LoggerConfig{inMemLogger},
 											},
 										}
 										modify.Options(opts)
@@ -677,16 +680,13 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "WithInMemoryLogger",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								inMemLogger, err := jasper.NewInMemoryLogger(100)
+								require.NoError(t, err)
 								output := "foo"
 								opts := &options.Create{
 									Args: []string{"echo", output},
 									Output: options.Output{
-										Loggers: []options.Logger{
-											{
-												Type:    options.LogInMemory,
-												Options: options.Log{InMemoryCap: 100, Format: options.LogFormatPlain},
-											},
-										},
+										Loggers: []*options.LoggerConfig{inMemLogger},
 									},
 								}
 								modify.Options(opts)
@@ -901,14 +901,14 @@ func TestManager(t *testing.T) {
 						clientTestCase{
 							Name: "GetBuildloggerURLsFailsWithoutBuildlogger",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								logger := options.Logger{
-									Type:    options.LogDefault,
-									Options: options.Log{Format: options.LogFormatPlain},
-								}
+								logger := &options.LoggerConfig{}
+								require.NoError(t, logger.Set(&options.DefaultLoggerOptions{
+									Base: options.BaseOptions{Format: options.LogFormatPlain},
+								}))
 								opts := &options.Create{
 									Args: []string{"echo", "foobar"},
 									Output: options.Output{
-										Loggers: []options.Logger{logger},
+										Loggers: []*options.LoggerConfig{logger},
 									},
 								}
 
@@ -940,18 +940,16 @@ func TestManager(t *testing.T) {
 								}()
 								require.NoError(t, file.Close())
 
-								logger := options.Logger{
-									Type: options.LogFile,
-									Options: options.Log{
-										FileName: file.Name(),
-										Format:   options.LogFormatPlain,
-									},
-								}
+								logger := &options.LoggerConfig{}
+								require.NoError(t, logger.Set(&options.FileLoggerOptions{
+									Filename: file.Name(),
+									Base:     options.BaseOptions{Format: options.LogFormatPlain},
+								}))
 								output := "foobar"
 								opts := &options.Create{
 									Args: []string{"echo", output},
 									Output: options.Output{
-										Loggers: []options.Logger{logger},
+										Loggers: []*options.LoggerConfig{logger},
 									},
 								}
 

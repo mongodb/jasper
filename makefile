@@ -196,18 +196,6 @@ vendor-clean:
 	rm -rf vendor/github.com/mholt/archiver/tarlz4.go
 	rm -rf vendor/github.com/mholt/archiver/tarsz.go
 	rm -rf vendor/github.com/mholt/archiver/tarxz.go
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/evergreen-ci/aviation/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/mongodb/grip/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/pkg/errors/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/stretchr/testify/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/github.com/golang/protobuf/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/google.golang.org/genproto/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/google.golang.org/grpc/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/net/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/sys/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/golang.org/x/text/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/gopkg.in/yaml.v2/
-	rm -rf vendor/github.com/evergreen-ci/timber/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/montanaflynn/stats/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/pkg/errors/
 	rm -rf vendor/go.mongodb.org/mongo-driver/vendor/github.com/stretchr/testify/
