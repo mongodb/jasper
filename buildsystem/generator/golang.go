@@ -11,8 +11,6 @@ import (
 
 	"github.com/evergreen-ci/shrub"
 	"github.com/evergreen-ci/utility"
-
-	// "github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -163,28 +161,28 @@ func (g *Golang) validateVariants() error {
 		}
 		varNames[gv.Name] = struct{}{}
 
-		for _, vp := range gv.Packages {
-			catcher.Wrapf(g.validatePackageRef(vp), "invalid package reference(s) in variant '%s'", gv.Name)
+		for _, gvp := range gv.Packages {
+			catcher.Wrapf(g.validatePackageRef(gvp), "invalid package reference(s) in variant '%s'", gv.Name)
 		}
 	}
 	return catcher.Resolve()
 }
 
-func (g *Golang) validatePackageRef(vp VariantPackage) error {
+func (g *Golang) validatePackageRef(gvp GolangVariantPackage) error {
 	catcher := grip.NewBasicCatcher()
-	if vp.Name != "" {
-		if _, err := g.GetPackageByName(vp.Name); err != nil {
-			catcher.Errorf("package named '%s' is undefined", vp.Name)
+	if gvp.Name != "" {
+		if _, err := g.GetPackageByName(gvp.Name); err != nil {
+			catcher.Errorf("package named '%s' is undefined", gvp.Name)
 		}
 	}
-	if vp.Path != "" {
-		if _, err := g.GetPackageByPath(vp.Path); err != nil {
-			catcher.Errorf("package with path '%s' is undefined", vp.Path)
+	if gvp.Path != "" {
+		if _, err := g.GetPackageByPath(gvp.Path); err != nil {
+			catcher.Errorf("package with path '%s' is undefined", gvp.Path)
 		}
 	}
-	if vp.Tag != "" {
-		if pkgs := g.GetPackagesByTag(vp.Tag); len(pkgs) == 0 {
-			catcher.Errorf("no packages matched tag '%s'", vp.Tag)
+	if gvp.Tag != "" {
+		if pkgs := g.GetPackagesByTag(gvp.Tag); len(pkgs) == 0 {
+			catcher.Errorf("no packages matched tag '%s'", gvp.Tag)
 		}
 	}
 	return catcher.Resolve()
@@ -270,10 +268,10 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 			// task per package, because we have to account for variant-level
 			// options possibly overriding package-level options, which requires
 			// making separate tasks with different commands.
-			for _, vp := range gv.Packages {
+			for _, gvp := range gv.Packages {
 				var pkgs []GolangPackage
 				var pkgRef string
-				pkgs, pkgRef, err := g.getPackagesAndRef(vp)
+				pkgs, pkgRef, err := g.getPackagesAndRef(gvp)
 				if err != nil {
 					panic(errors.Wrapf(err, "package definition for variant '%s'", gv.Name))
 				}
@@ -320,28 +318,28 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 	return conf, nil
 }
 
-func (g *Golang) getPackagesAndRef(vp VariantPackage) (pkgs []GolangPackage, pkgRef string, err error) {
-	if vp.Tag != "" {
-		pkgs = g.GetPackagesByTag(vp.Tag)
+func (g *Golang) getPackagesAndRef(gvp GolangVariantPackage) (pkgs []GolangPackage, pkgRef string, err error) {
+	if gvp.Tag != "" {
+		pkgs = g.GetPackagesByTag(gvp.Tag)
 		if len(pkgs) == 0 {
-			return nil, "", errors.Errorf("no packages matched tag '%s'", vp.Tag)
+			return nil, "", errors.Errorf("no packages matched tag '%s'", gvp.Tag)
 		}
-		return pkgs, vp.Tag, nil
+		return pkgs, gvp.Tag, nil
 	}
 
 	var pkg *GolangPackage
-	if vp.Name != "" {
-		pkg, err = g.GetPackageByName(vp.Name)
+	if gvp.Name != "" {
+		pkg, err = g.GetPackageByName(gvp.Name)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", vp.Name)
+			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", gvp.Name)
 		}
-		pkgRef = vp.Name
-	} else if vp.Path != "" {
-		pkg, err = g.GetPackageByPath(vp.Path)
+		pkgRef = gvp.Name
+	} else if gvp.Path != "" {
+		pkg, err = g.GetPackageByPath(gvp.Path)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", vp.Path)
+			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", gvp.Path)
 		}
-		pkgRef = vp.Path
+		pkgRef = gvp.Path
 	} else {
 		return nil, "", errors.New("empty package reference")
 	}
@@ -507,7 +505,7 @@ type GolangVariant struct {
 	Distros []string `yaml:"distros"`
 	// Packages lists a package name, path or or tagged group of packages
 	// relative to the root package.
-	Packages []VariantPackage `yaml:"packages"`
+	Packages []GolangVariantPackage `yaml:"packages"`
 	// Options are variant-specific options that modify test execution.
 	// Explicitly setting these values will override options specified under the
 	// definitions of packages.
@@ -549,15 +547,15 @@ func (gv *GolangVariant) Validate() error {
 	return catcher.Resolve()
 }
 
-type VariantPackage struct {
+type GolangVariantPackage struct {
 	Name string `yaml:"name,omitempty"`
 	Path string `yaml:"path,omitempty"`
 	Tag  string `yaml:"tag,omitempty"`
 }
 
-func (vp *VariantPackage) Validate() error {
+func (gvp *GolangVariantPackage) Validate() error {
 	var numRefs int
-	for _, ref := range []string{vp.Name, vp.Path, vp.Tag} {
+	for _, ref := range []string{gvp.Name, gvp.Path, gvp.Tag} {
 		if ref != "" {
 			numRefs++
 		}
