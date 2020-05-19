@@ -383,6 +383,22 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.NoError(t, g.Validate())
 		},
+		"FailsWithDuplicateGolangPackageReferences": func(t *testing.T, g *Golang) {
+			g.Packages = []GolangPackage{
+				{Path: "path", Tags: []string{"tag"}},
+			}
+			g.Variants = []GolangVariant{
+				{
+					Name:    "variant",
+					Distros: []string{"distro"},
+					Packages: []GolangVariantPackage{
+						{Path: "path"},
+						{Tag: "tag"},
+					},
+				},
+			}
+			assert.Error(t, g.Validate())
+		},
 		"FailsWithInvalidGolangVariantPackagePath": func(t *testing.T, g *Golang) {
 			g.Variants = []GolangVariant{
 				{

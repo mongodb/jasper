@@ -161,28 +161,27 @@ func (g *Golang) validateVariants() error {
 		}
 		varNames[gv.Name] = struct{}{}
 
+		pkgNames := map[string]struct{}{}
+		pkgPaths := map[string]struct{}{}
 		for _, gvp := range gv.Packages {
-			catcher.Wrapf(g.validatePackageRef(gvp), "invalid package reference(s) in variant '%s'", gv.Name)
-		}
-	}
-	return catcher.Resolve()
-}
-
-func (g *Golang) validatePackageRef(gvp GolangVariantPackage) error {
-	catcher := grip.NewBasicCatcher()
-	if gvp.Name != "" {
-		if _, err := g.GetPackageByName(gvp.Name); err != nil {
-			catcher.Errorf("package named '%s' is undefined", gvp.Name)
-		}
-	}
-	if gvp.Path != "" {
-		if _, err := g.GetPackageByPath(gvp.Path); err != nil {
-			catcher.Errorf("package with path '%s' is undefined", gvp.Path)
-		}
-	}
-	if gvp.Tag != "" {
-		if pkgs := g.GetPackagesByTag(gvp.Tag); len(pkgs) == 0 {
-			catcher.Errorf("no packages matched tag '%s'", gvp.Tag)
+			pkgs, _, err := g.getPackagesAndRef(gvp)
+			if err != nil {
+				catcher.Wrapf(err, "invalid package reference in variant '%s'", gv.Name)
+				continue
+			}
+			for _, pkg := range pkgs {
+				if pkg.Name != "" {
+					if _, ok := pkgNames[pkg.Name]; ok {
+						catcher.Errorf("duplicate reference to package name '%s' in variant '%s'", pkg.Name, gv.Name)
+					}
+					pkgNames[pkg.Name] = struct{}{}
+				} else if pkg.Path != "" {
+					if _, ok := pkgPaths[pkg.Path]; ok {
+						catcher.Errorf("duplicate reference to package path '%s' in variant '%s'", pkg.Path, gv.Name)
+					}
+					pkgPaths[pkg.Path] = struct{}{}
+				}
+			}
 		}
 	}
 	return catcher.Resolve()
@@ -318,33 +317,30 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 	return conf, nil
 }
 
-func (g *Golang) getPackagesAndRef(gvp GolangVariantPackage) (pkgs []GolangPackage, pkgRef string, err error) {
+func (g *Golang) getPackagesAndRef(gvp GolangVariantPackage) ([]GolangPackage, string, error) {
 	if gvp.Tag != "" {
-		pkgs = g.GetPackagesByTag(gvp.Tag)
+		pkgs := g.GetPackagesByTag(gvp.Tag)
 		if len(pkgs) == 0 {
 			return nil, "", errors.Errorf("no packages matched tag '%s'", gvp.Tag)
 		}
 		return pkgs, gvp.Tag, nil
 	}
 
-	var pkg *GolangPackage
 	if gvp.Name != "" {
-		pkg, err = g.GetPackageByName(gvp.Name)
+		pkg, err := g.GetPackageByName(gvp.Name)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", gvp.Name)
 		}
-		pkgRef = gvp.Name
+		return []GolangPackage{*pkg}, gvp.Name, nil
 	} else if gvp.Path != "" {
-		pkg, err = g.GetPackageByPath(gvp.Path)
+		pkg, err := g.GetPackageByPath(gvp.Path)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", gvp.Path)
 		}
-		pkgRef = gvp.Path
-	} else {
-		return nil, "", errors.New("empty package reference")
+		return []GolangPackage{*pkg}, gvp.Path, nil
 	}
 
-	return []GolangPackage{*pkg}, pkgRef, nil
+	return nil, "", errors.New("empty package reference")
 }
 
 func (g *Golang) generateVariantTasksForPackageRef(c *shrub.Configuration, gv GolangVariant, pkgs []GolangPackage, pkgRef string) ([]*shrub.Task, error) {
@@ -466,7 +462,6 @@ func (g *Golang) GetPackagesByTag(tag string) []GolangPackage {
 	for _, pkg := range g.Packages {
 		if utility.StringSliceContains(pkg.Tags, tag) {
 			pkgs = append(pkgs, pkg)
-			continue
 		}
 	}
 	return pkgs
@@ -539,6 +534,7 @@ func (gv *GolangVariant) Validate() error {
 				catcher.Errorf("duplicate reference to package tag '%s'", tag)
 			}
 			pkgTags[tag] = struct{}{}
+
 		}
 	}
 	if gv.Options != nil {
@@ -547,6 +543,7 @@ func (gv *GolangVariant) Validate() error {
 	return catcher.Resolve()
 }
 
+// GolangVariantPackage is a specifier that references a golang package.
 type GolangVariantPackage struct {
 	Name string `yaml:"name,omitempty"`
 	Path string `yaml:"path,omitempty"`
