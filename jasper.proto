@@ -16,7 +16,8 @@ message LoggerConfig {
     InMemoryLoggerOptions in_memory = 5;
     SplunkLoggerOptions splunk = 6;
     BuildloggerV2Options buildloggerv2 = 7;
-    RawLoggerConfig raw = 8;
+    BuildloggerV3Options buildloggerv3 = 8;
+    RawLoggerConfig raw = 9;
   }
 }
 
@@ -92,6 +93,36 @@ message BuildloggerV2Info {
 message BuildloggerV2Options {
   BuildloggerV2Info buildlogger = 1;
   BaseOptions base = 2;
+}
+
+message BuildloggerV3Info {
+  string project = 1;
+  string version = 2;
+  string variant = 3;
+  string task_name = 4;
+  string task_id = 5;
+  int32 execution = 6;
+  string test_name = 7;
+  int32 trial = 8;
+  string process_name = 9;
+  LogFormat format = 10;
+  repeated string tags = 11;
+  map<string, string> args = 12;
+  bool mainline = 13;
+  int64 max_buffer_size = 14;
+  int64 flush_interval = 15;
+  bool new_line_check_off = 16;
+  string rpc_address = 17;
+  bool insecure = 18;
+  string ca_file = 19;
+  string cert_file = 20;
+  string key_file = 21;
+}
+
+message BuildloggerV3Options {
+  BuildloggerV3Info buildloggerv3 = 1;
+  string name = 2;
+  LogLevel level = 3;
 }
 
 enum RawLoggerConfigFormat {

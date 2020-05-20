@@ -132,6 +132,19 @@ type loggerConfigInfo struct {
 	Config RawLoggerConfig       `json:"config" bson:"config"`
 }
 
+// NewLoggerConfig returns a LoggerConfig with the given info, this function
+// expects a raw logger config as a byte slice. When using a LoggerProducer
+// directly, use LoggerConfig's Set function.
+func NewLoggerConfig(producerType string, format RawLoggerConfigFormat, config []byte) *LoggerConfig {
+	return &LoggerConfig{
+		info: loggerConfigInfo{
+			Type:   producerType,
+			Format: format,
+			Config: config,
+		},
+	}
+}
+
 func (lc *LoggerConfig) validate() error {
 	catcher := grip.NewBasicCatcher()
 
