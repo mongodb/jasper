@@ -11,7 +11,8 @@ import (
 // VariantDistro represents a mapping between a variant name and the distros
 // that it runs on.
 type VariantDistro struct {
-	Name    string   `yaml:"name"`
+	// kim: TODO: maybe remove Name since we use maps now for naming
+	Name    string   `yaml:"-"`
 	Distros []string `yaml:"distros"`
 }
 

@@ -10,9 +10,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Make represents an evergreen config generator for Makefile-based projects.
 type Make struct {
-	Tasks    []MakeTask    `yaml:"tasks,omitempty"`
-	Variants []MakeVariant `yaml:"variants"`
+	Tasks    map[string]MakeTask    `yaml:"tasks,omitempty"`
+	Variants map[string]MakeVariant `yaml:"variants"`
 	// Environment defines global environment variables. Definitions can be
 	// overridden at the task or variant level.
 	Environment map[string]string `yaml:"environment,omitempty"`
@@ -38,76 +39,46 @@ func NewMake(file string) (*Make, error) {
 	return &m, nil
 }
 
+// MakeBuilder is used to build a Make generator from its component parts.
 type MakeBuilder struct {
-	Tasks       []MakeTask
-	Variants    []MakeVariant
+	Tasks       map[string]MakeTask
+	Variants    map[string]MakeVariant
 	Environment map[string]string
 }
 
-func (mb *MakeBuilder) MergeTasks(mts ...MakeTask) error {
-	for _, newMT := range mts {
-		for _, mt := range mb.Tasks {
-			if mt.Name == newMT.Name {
-				return errors.Errorf("duplicate definition of task '%s'", mt.Name)
-			}
+func (m *Make) MergeTasks(mts map[string]MakeTask) error {
+	for newName, newMT := range mts {
+		if _, ok := m.Tasks[newName]; ok {
+			return errors.Errorf("duplicate definition of task '%s'", newName)
 		}
+		m.Tasks[newName] = newMT
 	}
-	mb.Tasks = append(mb.Tasks, mts...)
 	return nil
 }
 
-// kim: TODO: merge duplicates by variant name?
-// kim: TODO: merge into Variants instead of splitting into separate
-// VariantDistros? We would have to ensure that MergeVariantDistros is
-// called _before_ MergeVariants is called to ensure the variant-distro
-// mappings exist before the tasks are assigned.
-// kim: NOTE: this is special case that allows merging of duplicate
-// names just because the variant distro mapping can be in a separate
-// location from the variants. We might just combine the parameters to this
-// with MergeVariants to ensure that they get merged at the same time and in
-// the right order (VariantDistros first, followed by Variants for
-// task references).
-
-// kim: TODO: merge with above functionality to avoid this duplication handling
-// business.
-func (mb *MakeBuilder) MergeVariants(vds []VariantDistro, mvs []MakeVariant) error {
-	for _, newVD := range vds {
-		var found bool
-		for i, mv := range mb.Variants {
-			if mv.Name == newVD.Name {
-				return errors.Errorf("duplicate variant distro mapping for variant '%s'", mv.Name)
-			}
+func (m *Make) MergeVariants(vds map[string]VariantDistro, mvps map[string]MakeVariantParameters) error {
+	for name, newVD := range vds {
+		if _, ok := m.Variants[name]; ok {
+			return errors.Errorf("duplicate variant distro mapping for variant '%s'", name)
 		}
-		mb.Variants = append(mb.Variants, MakeVariant{VariantDistro: newVD})
+		mv := m.Variants[name]
+		mv.VariantDistro = newVD
+		m.Variants[name] = mv
 	}
 
-	for _, newMV := range mvs {
-		var found bool
-		for i, mv := range mb.Variants {
-			if mv.Name == newMV.Name {
-				mb.Variants[i] = mv
-				found = true
-				break
-			}
-		}
-		if !found {
-			mb.Variants = append(mb.Variants, newMV)
-		}
+	for name, newMVP := range mvps {
+		mv := m.Variants[name]
+		mv.MakeVariantParameters = newMVP
+		m.Variants[name] = mv
 	}
-	return mb
+
+	return nil
 }
 
-// NOTE: this is the only case in which the result is to overwrite rather than
-// error on duplicates.
-func (mb *MakeBuilder) MergeEnvironments(envs ...map[string]string) *MakeBuilder {
+func (m *Make) MergeEnvironments(envs ...map[string]string) {
 	for _, env := range envs {
-		mb.Environment = MergeEnvironments(mb.Environment, env)
+		m.Environment = MergeEnvironments(m.Environment, env)
 	}
-	return mb
-}
-
-func (mb *MakeBuilder) Build() (*Make, error) {
-	return nil, errors.New("TODO: implement")
 }
 
 func (m *Make) Validate() error {
@@ -119,8 +90,8 @@ func (m *Make) Validate() error {
 
 func (m *Make) validateTasks() error {
 	catcher := grip.NewBasicCatcher()
-	for _, mt := range m.Tasks {
-		catcher.Wrapf(mt.Validate(), "invalid task '%s'", mt.Name)
+	for name, mt := range m.Tasks {
+		catcher.Wrapf(mt.Validate(), "invalid task '%s'", name)
 	}
 	return catcher.Resolve()
 }
@@ -128,45 +99,51 @@ func (m *Make) validateTasks() error {
 func (m *Make) validateVariants() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(m.Variants) == 0, "must have at least one variant")
-	for _, mv := range m.Variants {
-		catcher.Wrapf(mv.Validate(), "invalid definitions for variant '%s'", mv.Name)
+	for variantName, mv := range m.Variants {
+		catcher.Wrapf(mv.Validate(), "invalid definitions for variant '%s'", variantName)
 
 		taskNames := map[string]struct{}{}
 		for _, mvt := range mv.Tasks {
-			tasks, _, err := m.getTasksAndRef(mvt)
+			res, err := m.getTasksAndRef(mvt)
 			if err != nil {
-				catcher.Wrapf(err, "invalid task reference in variant '%s'", mv.Name)
+				catcher.Wrapf(err, "invalid task reference in variant '%s'", variantName)
 				continue
 			}
-			for _, mt := range tasks {
-				if _, ok := taskNames[mt.Name]; ok {
-					catcher.Errorf("duplicate reference to task name '%s' in variant '%s'", mt.Name, mv.Name)
+			for taskName := range res.tasks {
+				if _, ok := taskNames[taskName]; ok {
+					catcher.Errorf("duplicate reference to task name '%s' in variant '%s'", taskName, variantName)
 				}
-				taskNames[mt.Name] = struct{}{}
+				taskNames[taskName] = struct{}{}
 			}
 		}
 	}
 	return catcher.Resolve()
 }
 
-func (m *Make) getTasksAndRef(mvt MakeVariantTask) ([]MakeTask, string, error) {
+type taskReferenceResult struct {
+	tasks map[string]MakeTask
+	ref   string
+}
+
+func (m *Make) getTasksAndRef(mvt MakeVariantTask) (*taskReferenceResult, error) {
 	if mvt.Tag != "" {
 		tasks := m.GetTasksByTag(mvt.Tag)
 		if len(tasks) == 0 {
-			return nil, "", errors.Errorf("no tasks matched tag '%s'", mvt.Tag)
+			return nil, errors.Errorf("no tasks matched tag '%s'", mvt.Tag)
 		}
-		return tasks, mvt.Tag, nil
+		return &taskReferenceResult{tasks: tasks, ref: mvt.Tag}, nil
 	}
 
 	if mvt.Name != "" {
 		task, err := m.GetTaskByName(mvt.Name)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", mvt.Name)
+			return nil, errors.Wrapf(err, "finding definition for package named '%s'", mvt.Name)
 		}
-		return []MakeTask{*task}, mvt.Name, nil
+		tasks := map[string]MakeTask{mvt.Name: *task}
+		return &taskReferenceResult{tasks: tasks, ref: mvt.Name}, nil
 	}
 
-	return nil, "", errors.New("empty package reference")
+	return nil, errors.New("empty package reference")
 }
 
 func (m *Make) Generate() (*shrub.Configuration, error) {
@@ -192,26 +169,25 @@ func (m *Make) subprocessExecCmd(mvt MakeVariantTask, mt MakeTask) (*shrub.CmdEx
 }
 
 func (m *Make) GetTaskByName(name string) (*MakeTask, error) {
-	for _, mt := range m.Tasks {
-		if mt.Name == name {
-			return &mt, nil
-		}
+	if mt, ok := m.Tasks[name]; ok {
+		return &mt, nil
 	}
 	return nil, errors.Errorf("task with name '%s' not found", name)
 }
 
-func (m *Make) GetTasksByTag(tag string) []MakeTask {
-	var tasks []MakeTask
-	for _, mvt := range m.Tasks {
-		if utility.StringSliceContains(mvt.Tags, tag) {
-			tasks = append(tasks, mvt)
+func (m *Make) GetTasksByTag(tag string) map[string]MakeTask {
+	tasks := map[string]MakeTask{}
+	for name, mt := range m.Tasks {
+		if utility.StringSliceContains(mt.Tags, tag) {
+			tasks[name] = mt
 		}
 	}
 	return tasks
 }
 
 type MakeTask struct {
-	Name    string   `yaml:"name"`
+	// kim: TODO: possibly remove name
+	// Name    string   `yaml:"-"`
 	Targets []string `yaml:"targets"`
 	Tags    []string `yaml:"tags,omitempty"`
 	// Environment defines task-specific environment variables. This has higher
@@ -222,7 +198,7 @@ type MakeTask struct {
 
 func (mt *MakeTask) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(mt.Name == "", "missing task name")
+	// catcher.NewWhen(mt.Name == "", "missing task name")
 	catcher.NewWhen(len(mt.Targets) == 0, "need to specify at least one target")
 	tags := map[string]struct{}{}
 	for _, tag := range mt.Tags {
@@ -265,6 +241,8 @@ func (mv *MakeVariant) Validate() error {
 	return catcher.Resolve()
 }
 
+// MakeVariantTask represents a reference to a task or group of tasks by either
+// task name or tasks containing the tag.
 type MakeVariantTask struct {
 	Name string `yaml:"name,omitempty"`
 	Tag  string `yaml:"tag,omitempty"`
