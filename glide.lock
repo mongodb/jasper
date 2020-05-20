@@ -17,8 +17,8 @@ imports:
     version: f77a748d12a924cfbfcf396426dd58de5aa3a9e2
   - name: github.com/mholt/archiver
     version: de0d89e255e17c8d75a40122055763e743ab0593
-  - name: github.com/montanaflynn/stats
-    version: db72e6cae808b936b0c01fd330ff1fcd2c86c95e
+  - name: github.com/yargevad/filepathx
+    version: 907099cb5a626c26c0b04e01adca2798e63d030e
   - name: github.com/mongodb/amboy
     version: 89691c8c27abb1d0374f24fb0b645143fc043f74
   - name: github.com/google/shlex
