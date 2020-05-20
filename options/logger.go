@@ -120,8 +120,9 @@ func (lc *RawLoggerConfig) UnmarshalBSON(b []byte) error {
 // send.Sender. LoggerConfig implements the json and bson Marshaler and
 // Unmarshaler interfaces.
 type LoggerConfig struct {
+	Registry LoggerRegistry
+
 	info     loggerConfigInfo
-	registry LoggerRegistry
 	producer LoggerProducer
 	sender   send.Sender
 }
@@ -153,8 +154,8 @@ func (lc *LoggerConfig) validate() error {
 		catcher.Add(lc.info.Format.Validate())
 	}
 
-	if lc.registry == nil {
-		lc.registry = globalLoggerRegistry
+	if lc.Registry == nil {
+		lc.Registry = globalLoggerRegistry
 	}
 
 	return catcher.Resolve()
@@ -162,11 +163,11 @@ func (lc *LoggerConfig) validate() error {
 
 // Set sets the logger producer and type for the logger config.
 func (lc *LoggerConfig) Set(producer LoggerProducer) error {
-	if lc.registry == nil {
-		lc.registry = globalLoggerRegistry
+	if lc.Registry == nil {
+		lc.Registry = globalLoggerRegistry
 	}
 
-	if !lc.registry.Check(producer.Type()) {
+	if !lc.Registry.Check(producer.Type()) {
 		return errors.New("unregistered logger producer")
 	}
 
@@ -261,7 +262,7 @@ func (lc *LoggerConfig) resolveProducer() error {
 			return errors.Wrap(err, "invalid logger config")
 		}
 
-		factory, ok := lc.registry.Resolve(lc.info.Type)
+		factory, ok := lc.Registry.Resolve(lc.info.Type)
 		if !ok {
 			return errors.Errorf("unregistered logger type '%s'", lc.info.Type)
 		}
