@@ -22,6 +22,7 @@ type Golang struct {
 	// Environment defines any environment variables. GOPATH and GOROOT are
 	// required. If the working directory is specified, GOPATH must be specified
 	// as a subdirectory of the working directory.
+	// kim: TODO: make it optionally a separate file
 	Environment map[string]string `yaml:"environment"`
 	// RootPackage is the name of the root package for the project (e.g.
 	// github.com/mongodb/jasper).
@@ -46,6 +47,8 @@ func NewGolang(file, workingDir string) (*Golang, error) {
 	g := Golang{
 		WorkingDirectory: workingDir,
 	}
+	// kim: TODO: do not unmarshal strict and just rely on validators to
+	// properly validate YAML configuration.
 	if err := yaml.UnmarshalStrict(b, &g); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling configuration file from YAML")
 	}
@@ -60,6 +63,16 @@ func NewGolang(file, workingDir string) (*Golang, error) {
 
 	return &g, nil
 }
+
+// kim: TODO: need to construct single Golang object from parts. Parts need to
+// be constructed from subsets of Golang. Alternatively, create single builder
+// object representing different ways of splitting Golang and merge everything
+// at once when building object.
+// kim: NOTE: parts should all be unmarshalled strictly but not validated. The
+// merging phase will handle the validation for correctness.
+// func MakeGolangFromParts(parts ...*Golang) (*Golang, error) {
+//
+// }
 
 func (g *Golang) Validate() error {
 	catcher := grip.NewBasicCatcher()
@@ -496,8 +509,7 @@ func (gp *GolangPackage) Validate() error {
 // GolangVariant defines a mapping between distros that run packages and the
 // golang packages to run.
 type GolangVariant struct {
-	Name    string   `yaml:"name"`
-	Distros []string `yaml:"distros"`
+	VariantDistro `yaml:",inline"`
 	// Packages lists a package name, path or or tagged group of packages
 	// relative to the root package.
 	Packages []GolangVariantPackage `yaml:"packages"`
@@ -509,8 +521,7 @@ type GolangVariant struct {
 
 func (gv *GolangVariant) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(gv.Name == "", "missing variant name")
-	catcher.NewWhen(len(gv.Distros) == 0, "need to specify at least one distro")
+	catcher.Add(gv.VariantDistro.Validate())
 	catcher.NewWhen(len(gv.Packages) == 0, "need to specify at least one package")
 	pkgPaths := map[string]struct{}{}
 	pkgNames := map[string]struct{}{}
