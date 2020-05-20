@@ -53,16 +53,16 @@ func NewEnvironment(file string) (map[string]string, error) {
 	return env, nil
 }
 
-// MergeEnvironments returns the merged environment variable mappings. If there
-// are duplicate mappings in env and toMerge, the variable definition in toMerge
-// takes precedence over the one in env.
-func MergeEnvironments(env map[string]string, toMerge map[string]string) map[string]string {
+// MergeEnvironments returns the merged environment variable mappings where the
+// given input environments are ordered in increasing priority. If there are
+// duplicate environment variables, in the environments, the variable definition
+// of the higher priority environment takes precedence.
+func MergeEnvironments(envsByPriority ...map[string]string) map[string]string {
 	merged := map[string]string{}
-	for k, v := range env {
-		merged[k] = v
-	}
-	for k, v := range toMerge {
-		merged[k] = v
+	for _, env := range envsByPriority {
+		for k, v := range env {
+			merged[k] = v
+		}
 	}
 	return merged
 }

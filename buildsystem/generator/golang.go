@@ -64,16 +64,6 @@ func NewGolang(file, workingDir string) (*Golang, error) {
 	return &g, nil
 }
 
-// kim: TODO: need to construct single Golang object from parts. Parts need to
-// be constructed from subsets of Golang. Alternatively, create single builder
-// object representing different ways of splitting Golang and merge everything
-// at once when building object.
-// kim: NOTE: parts should all be unmarshalled strictly but not validated. The
-// merging phase will handle the validation for correctness.
-// func MakeGolangFromParts(parts ...*Golang) (*Golang, error) {
-//
-// }
-
 func (g *Golang) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
@@ -288,7 +278,7 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 					panic(errors.Wrapf(err, "package definition for variant '%s'", gv.Name))
 				}
 
-				newTasks, err := g.generateVariantTasksForPackageRef(c, gv, pkgs, pkgRef)
+				newTasks, err := g.generateVariantTasksForRef(c, gv, pkgs, pkgRef)
 				if err != nil {
 					panic(errors.Wrapf(err, "generating task for package ref '%s' in variant '%s'", pkgRef, gv.Name))
 				}
@@ -311,7 +301,7 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 				tg.SetupTask = shrub.CommandSequence{getProjectCmd.Resolve()}
 
 				for _, task := range variant.TaskSpecs {
-					tg.Task(task.Name)
+					_ = tg.Task(task.Name)
 				}
 				_ = variant.AddTasks(tg.GroupName)
 			} else {
@@ -356,7 +346,7 @@ func (g *Golang) getPackagesAndRef(gvp GolangVariantPackage) ([]GolangPackage, s
 	return nil, "", errors.New("empty package reference")
 }
 
-func (g *Golang) generateVariantTasksForPackageRef(c *shrub.Configuration, gv GolangVariant, pkgs []GolangPackage, pkgRef string) ([]*shrub.Task, error) {
+func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv GolangVariant, pkgs []GolangPackage, pkgRef string) ([]*shrub.Task, error) {
 	var tasks []*shrub.Task
 
 	for _, pkg := range pkgs {

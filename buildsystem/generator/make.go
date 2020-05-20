@@ -16,18 +16,19 @@ type Make struct {
 	Variants map[string]MakeVariant `yaml:"variants"`
 	// Environment defines global environment variables. Definitions can be
 	// overridden at the task or variant level.
-	Environment map[string]string `yaml:"environment,omitempty"`
+	Environment      map[string]string `yaml:"environment,omitempty"`
+	WorkingDirectory string            `yaml:"-"`
 }
 
 // NewMake creates a new evergreen config generator for Make from a single file
 // that contains all the necessary generation information.
-func NewMake(file string) (*Make, error) {
+func NewMake(file string, workingDir string) (*Make, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading configuration file")
 	}
 
-	var m Make
+	m := Make{WorkingDirectory: workingDir}
 	if err := yaml.UnmarshalStrict(b, &m); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling configuration file from YAML")
 	}
@@ -46,39 +47,40 @@ type MakeBuilder struct {
 	Environment map[string]string
 }
 
-func (m *Make) MergeTasks(mts map[string]MakeTask) error {
+// AddTasks adds new task definitions to the Make generator.
+func (m *Make) AddTasks(mts map[string]MakeTask) *Make {
 	for newName, newMT := range mts {
-		if _, ok := m.Tasks[newName]; ok {
-			return errors.Errorf("duplicate definition of task '%s'", newName)
-		}
 		m.Tasks[newName] = newMT
 	}
-	return nil
+	return m
 }
 
-func (m *Make) MergeVariants(vds map[string]VariantDistro, mvps map[string]MakeVariantParameters) error {
+// MergeVariantDistros adds new variant-distro mappings to the Make generator.
+func (m *Make) MergeVariantDistros(vds map[string]VariantDistro) *Make {
 	for name, newVD := range vds {
-		if _, ok := m.Variants[name]; ok {
-			return errors.Errorf("duplicate variant distro mapping for variant '%s'", name)
-		}
 		mv := m.Variants[name]
 		mv.VariantDistro = newVD
 		m.Variants[name] = mv
 	}
+	return m
+}
 
+// MergeVariants merges new variant parameters to the Make generator.
+func (m *Make) MergeVariants(vds map[string]VariantDistro, mvps map[string]MakeVariantParameters) *Make {
 	for name, newMVP := range mvps {
 		mv := m.Variants[name]
 		mv.MakeVariantParameters = newMVP
 		m.Variants[name] = mv
 	}
-
-	return nil
+	return m
 }
 
-func (m *Make) MergeEnvironments(envs ...map[string]string) {
-	for _, env := range envs {
-		m.Environment = MergeEnvironments(m.Environment, env)
-	}
+// MergeEnvironments merges the given environments with the existing environment
+// variables. Duplicates are overwritten in the order in which environments are
+// passed into the function.
+func (m *Make) MergeEnvironments(envs ...map[string]string) *Make {
+	m.Environment = MergeEnvironments(append([]map[string]string{m.Environment}, envs...)...)
+	return m
 }
 
 func (m *Make) Validate() error {
@@ -148,13 +150,38 @@ func (m *Make) getTasksAndRef(mvt MakeVariantTask) (*taskReferenceResult, error)
 
 func (m *Make) Generate() (*shrub.Configuration, error) {
 	conf, err := shrub.BuildConfiguration(func(c *shrub.Configuration) {
-		// kim: TODO: make subprocess.exec commands from variant references ->
-		// resolve task references -> make subprocess.exec commands with proper
-		// environment
-		// for _, mt := range m.Tasks {
-		//     m.subprocessExecCmd(mt)
-		//     _ = c.Task(mt.Name).Command()
-		// }
+		for vName, mv := range m.Variants {
+			variant := c.Variant(vName)
+			variant.DistroRunOn = mv.Distros
+
+			var tasksForVariant []*shrub.Task
+			for _, mvt := range mv.Tasks {
+				res, err := m.getTasksAndRef(mvt)
+				if err != nil {
+					panic(err)
+				}
+				tasksForVariant = append(tasksForVariant, m.generateVariantTasksForRef(c, vName, mv, res.tasks)...)
+			}
+
+			getProjectCmd := shrub.CmdGetProject{
+				Directory: m.WorkingDirectory,
+			}
+
+			if len(variant.TaskSpecs) >= minTasksForTaskGroup {
+				tg := c.TaskGroup(vName + "_group").SetMaxHosts(len(variant.TaskSpecs) / 2)
+				tg.SetupTask = shrub.CommandSequence{getProjectCmd.Resolve()}
+
+				for _, task := range variant.TaskSpecs {
+					_ = tg.Task(task.Name)
+				}
+				_ = variant.AddTasks(tg.GroupName)
+			} else {
+				for _, task := range tasksForVariant {
+					task.Commands = append([]*shrub.CommandDefinition{getProjectCmd.Resolve()}, task.Commands...)
+					_ = variant.AddTasks(task.Name)
+				}
+			}
+		}
 	})
 
 	if err != nil {
@@ -163,9 +190,28 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 	return conf, nil
 }
 
-func (m *Make) subprocessExecCmd(mvt MakeVariantTask, mt MakeTask) (*shrub.CmdExec, error) {
-	// kim: TODO: merge with priority: variant > task > global
-	return nil, errors.New("TODO: implement")
+func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, vName string, mv MakeVariant, mts map[string]MakeTask) []*shrub.Task {
+	var tasks []*shrub.Task
+	for name, mt := range mts {
+		cmds := m.subprocessExecCmds(mv, mt)
+		tasks = append(tasks, c.Task(getTaskName(vName, name)).Command(cmds...))
+	}
+	return tasks
+}
+
+func (m *Make) subprocessExecCmds(mv MakeVariant, mt MakeTask) []shrub.Command {
+	env := MergeEnvironments(m.Environment, mv.Environment, mt.Environment)
+	var cmds []shrub.Command
+	for _, target := range mt.Targets {
+		cmds = append(cmds, &shrub.CmdExec{
+			Binary: "make",
+			// kim: TODO: people should maybe be able to specify additional
+			// make args for tasks.
+			Args: []string{target},
+			Env:  env,
+		})
+	}
+	return cmds
 }
 
 func (m *Make) GetTaskByName(name string) (*MakeTask, error) {
@@ -186,8 +232,6 @@ func (m *Make) GetTasksByTag(tag string) map[string]MakeTask {
 }
 
 type MakeTask struct {
-	// kim: TODO: possibly remove name
-	// Name    string   `yaml:"-"`
 	Targets []string `yaml:"targets"`
 	Tags    []string `yaml:"tags,omitempty"`
 	// Environment defines task-specific environment variables. This has higher
@@ -215,9 +259,6 @@ type MakeVariant struct {
 	MakeVariantParameters `yaml:",inline"`
 }
 
-// kim: NOTE: if we actually want to split the variant-distro mappings from the
-// variant-target definitions, we will have to add a name field and figure out
-// how to consolidate them into the single MakeVariant struct.
 type MakeVariantParameters struct {
 	// Environment defines variant-specific environment variables. This has
 	// higher precedence than global or task-specific environment variables.
