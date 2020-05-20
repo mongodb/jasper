@@ -78,6 +78,7 @@ func requireOneFlag(names ...string) cli.BeforeFunc {
 	}
 }
 
+//nolint:deadcode
 func requireStringSliceFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if len(c.StringSlice(name)) == 0 {
