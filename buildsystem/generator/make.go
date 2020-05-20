@@ -47,15 +47,15 @@ type MakeBuilder struct {
 	Environment map[string]string
 }
 
-// AddTasks adds new task definitions to the Make generator.
-func (m *Make) AddTasks(mts map[string]MakeTask) *Make {
+// MergeTasks merges task definitions.
+func (m *Make) MergeTasks(mts map[string]MakeTask) *Make {
 	for newName, newMT := range mts {
 		m.Tasks[newName] = newMT
 	}
 	return m
 }
 
-// MergeVariantDistros adds new variant-distro mappings to the Make generator.
+// MergeVariantDistros merges variant-distro mappings.
 func (m *Make) MergeVariantDistros(vds map[string]VariantDistro) *Make {
 	for name, newVD := range vds {
 		mv := m.Variants[name]
@@ -65,8 +65,8 @@ func (m *Make) MergeVariantDistros(vds map[string]VariantDistro) *Make {
 	return m
 }
 
-// MergeVariants merges new variant parameters to the Make generator.
-func (m *Make) MergeVariants(vds map[string]VariantDistro, mvps map[string]MakeVariantParameters) *Make {
+// MergeVariants merges variant parameters.
+func (m *Make) MergeVariantParameters(mvps map[string]MakeVariantParameters) *Make {
 	for name, newMVP := range mvps {
 		mv := m.Variants[name]
 		mv.MakeVariantParameters = newMVP

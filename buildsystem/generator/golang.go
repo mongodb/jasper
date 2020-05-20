@@ -405,10 +405,6 @@ func (g *Golang) subprocessScriptingCmd(gv GolangVariant, pkg GolangPackage) (*s
 	}, nil
 }
 
-func getTaskName(parts ...string) string {
-	return strings.Join(parts, "-")
-}
-
 func (g *Golang) relProjectPath() (string, error) {
 	gopath, err := g.relGopath()
 	if err != nil {
