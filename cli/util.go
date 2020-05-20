@@ -59,6 +59,25 @@ func requireStringFlag(name string) cli.BeforeFunc {
 	}
 }
 
+func requireOneFlag(names ...string) cli.BeforeFunc {
+	return func(c *cli.Context) error {
+		var count int
+		for _, name := range names {
+			if c.IsSet(name) {
+				count++
+			}
+		}
+		if count != 1 {
+			var flagNames []string
+			for _, name := range names {
+				flagNames = append(flagNames, fmt.Sprintf("--%s", name))
+			}
+			return errors.Errorf("must specify exactly one flag from the following: %s", flagNames)
+		}
+		return nil
+	}
+}
+
 func requireStringSliceFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if len(c.StringSlice(name)) == 0 {

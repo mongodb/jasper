@@ -23,9 +23,10 @@ func Generate() cli.Command {
 }
 
 const (
-	workingDirFlagName = "working_dir"
-	filesFlagName      = "files"
-	outputFileFlagName = "output_file"
+	workingDirFlagName    = "working_dir"
+	generatorFileFlagName = "generator_file"
+	controlFileFlagName   = "control_file"
+	outputFileFlagName    = "output_file"
 )
 
 func generateGolang() cli.Command {
@@ -37,9 +38,13 @@ func generateGolang() cli.Command {
 				Name:  workingDirFlagName,
 				Usage: "The directory that contains the GOPATH as a subdirectory.",
 			},
-			cli.StringSliceFlag{
-				Name:  filesFlagName,
+			cli.StringFlag{
+				Name:  generatorFileFlagName,
 				Usage: "The build files necessary to generate the evergreen config.",
+			},
+			cli.StringFlag{
+				Name:  controlFileFlagName,
+				Usage: "The control file referencing all the necessary build files.",
 			},
 			cli.StringFlag{
 				Name:  outputFileFlagName,
@@ -48,11 +53,12 @@ func generateGolang() cli.Command {
 		},
 		Before: mergeBeforeFuncs(
 			requireStringFlag(workingDirFlagName),
-			requireStringSliceFlag(filesFlagName),
+			requireOneFlag(generatorFileFlagName, controlFileFlagName),
 		),
 		Action: func(c *cli.Context) error {
 			workingDir := c.String(workingDirFlagName)
-			files := c.StringSlice(filesFlagName)
+			genFile := c.String(generatorFileFlagName)
+			ctrlFile := c.String(generatorFileFlagName)
 			outputFile := c.String(outputFileFlagName)
 			var err error
 			if !filepath.IsAbs(workingDir) {
@@ -62,27 +68,33 @@ func generateGolang() cli.Command {
 				}
 			}
 
-			for _, file := range files {
-				gen, err := generator.NewGolang(file, workingDir)
+			var gen *generator.Golang
+			if genFile != "" {
+				gen, err = generator.NewGolang(genFile, workingDir)
 				if err != nil {
-					return errors.Wrapf(err, "creating generator from build file '%s'", file)
+					return errors.Wrapf(err, "creating generator from build file '%s'", genFile)
 				}
-				conf, err := gen.Generate()
-				if err != nil {
-					return errors.Wrapf(err, "generating evergreen config from build file '%s'", file)
-				}
+			} else if ctrlFile != "" {
+				gen = &generator.Golang{}
+				// kim: TODO: write Merge functions to gather all the parts
+				// files
+			}
 
-				output, err := json.MarshalIndent(conf, "", "\t")
-				if err != nil {
-					return errors.Wrap(err, "marshalling evergreen config as JSON")
+			conf, err := gen.Generate()
+			if err != nil {
+				return errors.Wrap(err, "generating evergreen config from golang build file(s)")
+			}
+
+			output, err := json.MarshalIndent(conf, "", "\t")
+			if err != nil {
+				return errors.Wrap(err, "marshalling evergreen config as JSON")
+			}
+			if outputFile != "" {
+				if err := ioutil.WriteFile(outputFile, output, 0644); err != nil {
+					return errors.Wrapf(err, "writing JSON config to file '%s'", outputFile)
 				}
-				if outputFile != "" {
-					if err := ioutil.WriteFile(outputFile, output, 0644); err != nil {
-						return errors.Wrapf(err, "writing JSON config to file '%s'", outputFile)
-					}
-				} else {
-					fmt.Println(string(output))
-				}
+			} else {
+				fmt.Println(string(output))
 			}
 
 			return nil
@@ -99,9 +111,13 @@ func generateMake() cli.Command {
 				Name:  workingDirFlagName,
 				Usage: "The directory where the project will be cloned.",
 			},
-			cli.StringSliceFlag{
-				Name:  filesFlagName,
+			cli.StringFlag{
+				Name:  generatorFileFlagName,
 				Usage: "The build files necessary to generate the evergreen config.",
+			},
+			cli.StringFlag{
+				Name:  controlFileFlagName,
+				Usage: "The control file referencing all the necessary build files.",
 			},
 			cli.StringFlag{
 				Name:  outputFileFlagName,
@@ -110,41 +126,46 @@ func generateMake() cli.Command {
 		},
 		Before: mergeBeforeFuncs(
 			requireStringFlag(workingDirFlagName),
-			requireStringSliceFlag(filesFlagName),
+			requireOneFlag(generatorFileFlagName, controlFileFlagName),
 		),
 		Action: func(c *cli.Context) error {
 			workingDir := c.String(workingDirFlagName)
-			files := c.StringSlice(filesFlagName)
+			genFile := c.String(generatorFileFlagName)
+			ctrlFile := c.String(controlFileFlagName)
 			outputFile := c.String(outputFileFlagName)
+
+			var gen *generator.Make
 			var err error
-			if !filepath.IsAbs(workingDir) {
-				workingDir, err = filepath.Abs(workingDir)
+			if genFile != "" {
+				gen, err = generator.NewMake(genFile, workingDir)
 				if err != nil {
-					return errors.Wrapf(err, "getting working directory '%s' as absolute path", workingDir)
+					return errors.Wrapf(err, "creating generator from build file '%s'", genFile)
+				}
+			} else if ctrlFile != "" {
+				mc, err := generator.NewMakeControl(ctrlFile)
+				if err != nil {
+					return errors.Wrapf(err, "building from control file '%s'", ctrlFile)
+				}
+				gen, err = mc.Build()
+				if err != nil {
+					return errors.Wrapf(err, "creating generator from control file '%s'", ctrlFile)
 				}
 			}
+			conf, err := gen.Generate()
+			if err != nil {
+				return errors.Wrapf(err, "generating evergreen config from build file(s)")
+			}
 
-			for _, file := range files {
-				gen, err := generator.NewMake(file, workingDir)
-				if err != nil {
-					return errors.Wrapf(err, "creating generator from build file '%s'", file)
+			output, err := json.MarshalIndent(conf, "", "\t")
+			if err != nil {
+				return errors.Wrap(err, "marshalling evergreen config as JSON")
+			}
+			if outputFile != "" {
+				if err := ioutil.WriteFile(outputFile, output, 0644); err != nil {
+					return errors.Wrapf(err, "writing JSON config to file '%s'", outputFile)
 				}
-				conf, err := gen.Generate()
-				if err != nil {
-					return errors.Wrapf(err, "generating evergreen config from build file '%s'", file)
-				}
-
-				output, err := json.MarshalIndent(conf, "", "\t")
-				if err != nil {
-					return errors.Wrap(err, "marshalling evergreen config as JSON")
-				}
-				if outputFile != "" {
-					if err := ioutil.WriteFile(outputFile, output, 0644); err != nil {
-						return errors.Wrapf(err, "writing JSON config to file '%s'", outputFile)
-					}
-				} else {
-					fmt.Println(string(output))
-				}
+			} else {
+				fmt.Println(string(output))
 			}
 
 			return nil
