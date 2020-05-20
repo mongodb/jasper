@@ -111,7 +111,7 @@ message BuildloggerV3Info {
   bool mainline = 13;
   int64 max_buffer_size = 14;
   int64 flush_interval = 15;
-  bool new_line_check_off = 16;
+  bool disable_new_line_check = 16;
   string rpc_address = 17;
   bool insecure = 18;
   string ca_file = 19;
