@@ -231,6 +231,7 @@ func (m *Make) GetTasksByTag(tag string) map[string]MakeTask {
 	return tasks
 }
 
+// MakeTask represents a task that runs Make targets.
 type MakeTask struct {
 	Targets []string `yaml:"targets"`
 	Tags    []string `yaml:"tags,omitempty"`
