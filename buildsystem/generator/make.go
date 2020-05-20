@@ -18,12 +18,6 @@ type Make struct {
 	Environment map[string]string `yaml:"environment,omitempty"`
 }
 
-// kim: TODO: define single YAML file that can be unmarshaled and later
-// merged with the remaining parts.
-// kim: TODO: will require writing merging functions for things that are
-// mergeable.
-// func NewMakePart
-
 // NewMake creates a new evergreen config generator for Make from a single file
 // that contains all the necessary generation information.
 func NewMake(file string) (*Make, error) {
@@ -45,10 +39,9 @@ func NewMake(file string) (*Make, error) {
 }
 
 type MakeBuilder struct {
-	Tasks          []MakeTask
-	VariantDistros []VariantDistro
-	Variants       []MakeVariant
-	Environment    map[string]string
+	Tasks       []MakeTask
+	Variants    []MakeVariant
+	Environment map[string]string
 }
 
 func (mb *MakeBuilder) MergeTasks(mts ...MakeTask) error {
@@ -63,38 +56,31 @@ func (mb *MakeBuilder) MergeTasks(mts ...MakeTask) error {
 	return nil
 }
 
-func (mb *MakeBuilder) MergeVariantDistros(vds ...VariantDistro) *MakeBuilder {
-	// kim: TODO: merge duplicates by variant name?
-	// kim: TODO: merge into Variants instead of splitting into separate
-	// VariantDistros? We would have to ensure that MergeVariantDistros is
-	// called _before_ MergeVariants is called to ensure the variant-distro
-	// mappings exist before the tasks are assigned.
-	// kim: NOTE: this is special case that allows merging of duplicate
-	// names just because the variant distro mapping can be in a separate
-	// location from the variants. We might just combine the parameters to this
-	// with MergeVariants to ensure that they get merged at the same time and in
-	// the right order (VariantDistros first, followed by Variants for
-	// task references).
+// kim: TODO: merge duplicates by variant name?
+// kim: TODO: merge into Variants instead of splitting into separate
+// VariantDistros? We would have to ensure that MergeVariantDistros is
+// called _before_ MergeVariants is called to ensure the variant-distro
+// mappings exist before the tasks are assigned.
+// kim: NOTE: this is special case that allows merging of duplicate
+// names just because the variant distro mapping can be in a separate
+// location from the variants. We might just combine the parameters to this
+// with MergeVariants to ensure that they get merged at the same time and in
+// the right order (VariantDistros first, followed by Variants for
+// task references).
+
+// kim: TODO: merge with above functionality to avoid this duplication handling
+// business.
+func (mb *MakeBuilder) MergeVariants(vds []VariantDistro, mvs []MakeVariant) error {
 	for _, newVD := range vds {
 		var found bool
 		for i, mv := range mb.Variants {
 			if mv.Name == newVD.Name {
-				mb.Variants[i].VariantDistro = newVD
-				found = true
-				break
+				return errors.Errorf("duplicate variant distro mapping for variant '%s'", mv.Name)
 			}
 		}
-		if !found {
-			mb.Variants = append(mb.Variants, MakeVariant{VariantDistro: newVD})
-		}
+		mb.Variants = append(mb.Variants, MakeVariant{VariantDistro: newVD})
 	}
-	return mb
-}
 
-// kim: TODO: merge with above functionality to avoid this duplication handling
-// business.
-func (mb *MakeBuilder) MergeVariants(mvs ...MakeVariant) *MakeBuilder {
-	// kim: TODO: merge duplicates by variant name? It should be fine
 	for _, newMV := range mvs {
 		var found bool
 		for i, mv := range mb.Variants {
@@ -249,41 +235,33 @@ func (mt *MakeTask) Validate() error {
 }
 
 type MakeVariant struct {
-	VariantDistro `yaml:",inline"`
+	VariantDistro         `yaml:",inline"`
+	MakeVariantParameters `yaml:",inline"`
+}
+
+// kim: NOTE: if we actually want to split the variant-distro mappings from the
+// variant-target definitions, we will have to add a name field and figure out
+// how to consolidate them into the single MakeVariant struct.
+type MakeVariantParameters struct {
 	// Environment defines variant-specific environment variables. This has
 	// higher precedence than global or task-specific environment variables.
 	Environment map[string]string `yaml:"environment,omitempty"`
 	Tasks       []MakeVariantTask `yaml:"tasks"`
 }
 
-// kim: TODO: probably remove since we don't want to do duplicate
-// reconciliation.
-// func (mv *MakeVariant) Merge(overwrite MakeVariant) (*MakeVariant, error) {
-//     if mv.Name != overwrite.Name {
-//         return nil, errors.Errorf("cannot merge variants '%s' and '%s' because the have different names", mv.Name, overwrite.Name)
-//     }
-//     merged := *mv
-//     merged.VariantDistro = merged.VariantDistro.Merge()
-//     merged.Environment = MergeEnvironments(merged.Environment, overwrite.Environment)
-//     for _, overwriteMVT := range overwrite.Tasks {
-//         for i, mvt := range merged.Tasks {
-//             if mvt.Name == overwriteMVT.Name || mvt.Tag == overwriteMVT.Tag {
-//                 merged.Tasks[i] = mvt
-//                 break
-//             }
-//             merged.Tasks = append(merged.Tasks, mvt)
-//         }
-//     }
-//     return &merged, nil
-// }
+func (mvp *MakeVariantParameters) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(len(mvp.Tasks) == 0, "need to specify at least one task")
+	for _, mvt := range mvp.Tasks {
+		catcher.Wrap(mvt.Validate(), "invalid task reference")
+	}
+	return catcher.Resolve()
+}
 
 func (mv *MakeVariant) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.Add(mv.VariantDistro.Validate())
-	for _, mvt := range mv.Tasks {
-		catcher.Wrap(mvt.Validate(), "invalid task reference")
-	}
-	catcher.NewWhen(len(mv.Tasks) == 0, "need to specify at least one task")
+	catcher.Add(mv.MakeVariantParameters.Validate())
 	return catcher.Resolve()
 }
 
