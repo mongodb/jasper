@@ -102,10 +102,11 @@ func (g *Golang) validateEnvVars() error {
 	catcher := grip.NewBasicCatcher()
 	for _, name := range []string{"GOPATH", "GOROOT"} {
 		if val, ok := g.Environment[name]; ok && val != "" {
+			g.Environment[name] = filepath.ToSlash(val)
 			continue
 		}
 		if val := os.Getenv(name); val != "" {
-			g.Environment[name] = val
+			g.Environment[name] = filepath.ToSlash(val)
 			continue
 		}
 		catcher.Errorf("environment variable '%s' must be explicitly defined or already present in the environment", name)
@@ -129,9 +130,10 @@ func (g *Golang) validateEnvVars() error {
 // relGopath returns the GOPATH in the environment relative to the working
 // directory (if it is defined).
 func (g *Golang) relGopath() (string, error) {
-	gopath := g.Environment["GOPATH"]
-	if g.WorkingDirectory != "" && strings.HasPrefix(gopath, g.WorkingDirectory) {
-		return filepath.Rel(g.WorkingDirectory, gopath)
+	gopath := filepath.ToSlash(g.Environment["GOPATH"])
+	workingDir := filepath.ToSlash(g.WorkingDirectory)
+	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
+		return filepath.Rel(workingDir, gopath)
 	}
 	if filepath.IsAbs(gopath) {
 		return "", errors.New("GOPATH is absolute path, but needs to be relative path")
@@ -142,9 +144,10 @@ func (g *Golang) relGopath() (string, error) {
 // absGopath converts the relative GOPATH in the environment into an absolute
 // path based on the working directory.
 func (g *Golang) absGopath() (string, error) {
-	gopath := g.Environment["GOPATH"]
-	if g.WorkingDirectory != "" && !strings.HasPrefix(gopath, g.WorkingDirectory) {
-		return filepath.Join(g.WorkingDirectory, gopath), nil
+	gopath := filepath.ToSlash(g.Environment["GOPATH"])
+	workingDir := filepath.ToSlash(g.WorkingDirectory)
+	if workingDir != "" && !strings.HasPrefix(gopath, workingDir) {
+		return filepath.Join(workingDir, gopath), nil
 	}
 	if !filepath.IsAbs(gopath) {
 		return "", errors.New("GOPATH is relative path, but needs to be absolute path")
