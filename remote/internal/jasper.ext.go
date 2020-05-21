@@ -296,6 +296,8 @@ func (logger LoggerConfig) Export() (*options.LoggerConfig, error) {
 		producer = logger.GetSplunk().Export()
 	case logger.GetBuildloggerv2() != nil:
 		producer = logger.GetBuildloggerv2().Export()
+	case logger.GetBuildloggerv3() != nil:
+		return logger.GetBuildloggerv3().Export()
 	case logger.GetRaw() != nil:
 		return logger.GetRaw().Export()
 	}
@@ -511,6 +513,15 @@ func (opts BuildloggerV2Options) Export() options.LoggerProducer {
 		Buildlogger: opts.Buildlogger.Export(),
 		Base:        opts.Base.Export(),
 	}
+}
+
+func (opts BuildloggerV3Options) Export() (*options.LoggerConfig, error) {
+	data, err := json.Marshal(&opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem marshaling buildlogger v3 options")
+	}
+
+	return options.NewLoggerConfig("BuildloggerV3", options.RawLoggerConfigFormatJSON, data), nil
 }
 
 // Export takes a protobuf RPC RawLoggerConfigFormat enum and returns the
