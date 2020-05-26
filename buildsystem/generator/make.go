@@ -1,13 +1,10 @@
 package generator
 
 import (
-	"io/ioutil"
-
 	"github.com/evergreen-ci/shrub"
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // Make represents an evergreen config generator for Makefile-based projects.
@@ -23,14 +20,9 @@ type Make struct {
 // NewMake creates a new evergreen config generator for Make from a single file
 // that contains all the necessary generation information.
 func NewMake(file string, workingDir string) (*Make, error) {
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading configuration file")
-	}
-
 	m := Make{WorkingDirectory: workingDir}
-	if err := yaml.UnmarshalStrict(b, &m); err != nil {
-		return nil, errors.Wrap(err, "unmarshalling configuration file from YAML")
+	if err := utility.ReadYAMLFileStrict(file, &m); err != nil {
+		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
 
 	if err := m.Validate(); err != nil {

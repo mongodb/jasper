@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // Golang represents a configuration for generating an evergreen configuration
@@ -39,18 +37,11 @@ type Golang struct {
 }
 
 func NewGolang(file, workingDir string) (*Golang, error) {
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading configuration file")
-	}
-
 	g := Golang{
 		WorkingDirectory: workingDir,
 	}
-	// kim: TODO: do not unmarshal strict and just rely on validators to
-	// properly validate YAML configuration.
-	if err := yaml.UnmarshalStrict(b, &g); err != nil {
-		return nil, errors.Wrap(err, "unmarshalling configuration file from YAML")
+	if err := utility.ReadYAMLFileStrict(file, &g); err != nil {
+		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
 
 	if err := g.DiscoverPackages(); err != nil {

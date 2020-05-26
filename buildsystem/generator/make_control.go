@@ -1,10 +1,10 @@
 package generator
 
 import (
-	"io/ioutil"
+	"path/filepath"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // MakeControl represents a Make generator constructed in parts from various
@@ -14,33 +14,28 @@ type MakeControl struct {
 	VariantParameterFiles []string `yaml:"variant_parameter_files"`
 	TaskFiles             []string `yaml:"task_files"`
 	EnvironmentFiles      []string `yaml:"environment_files"`
+
+	WorkDir string `yaml:"-"`
 }
 
 // NewMakeControl creates a new representation of a Make control file from the
 // given file.
 func NewMakeControl(file string) (*MakeControl, error) {
-	content, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading control file")
+	mc := MakeControl{
+		WorkDir: filepath.Dir(file),
 	}
-	mc := MakeControl{}
-	if err := yaml.UnmarshalStrict(content, &mc); err != nil {
-		return nil, errors.Wrap(err, "unmarshalling control file from YAML")
+	if err := utility.ReadYAMLFileStrict(file, &mc); err != nil {
+		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
 	return &mc, nil
 }
 
 func (mc *MakeControl) Build() (*Make, error) {
 	m := Make{}
-	if err := withGlobMatches(mc.VariantDistroFiles, func(file string) error {
-		content, err := ioutil.ReadFile(file)
-		if err != nil {
-			return errors.Wrap(err, "reading file")
-		}
-
+	if err := withMatchingFiles(mc.WorkDir, mc.VariantDistroFiles, func(file string) error {
 		vds := map[string]VariantDistro{}
-		if err := yaml.UnmarshalStrict(content, &vds); err != nil {
-			return errors.Wrap(err, "unmarshalling file from YAML")
+		if err := utility.ReadYAMLFileStrict(file, &vds); err != nil {
+			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
 		_ = m.MergeVariantDistros(vds)
@@ -50,15 +45,10 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building variant-distro mappings")
 	}
 
-	if err := withGlobMatches(mc.VariantParameterFiles, func(file string) error {
-		content, err := ioutil.ReadFile(file)
-		if err != nil {
-			return errors.Wrap(err, "reading file")
-		}
-
+	if err := withMatchingFiles(mc.WorkDir, mc.VariantParameterFiles, func(file string) error {
 		mvps := map[string]MakeVariantParameters{}
-		if err := yaml.UnmarshalStrict(content, &mvps); err != nil {
-			return errors.Wrap(err, "unmarshalling file from YAML")
+		if err := utility.ReadYAMLFileStrict(file, &mvps); err != nil {
+			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
 		_ = m.MergeVariantParameters(mvps)
@@ -68,15 +58,10 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building variant parameters")
 	}
 
-	if err := withGlobMatches(mc.TaskFiles, func(file string) error {
-		content, err := ioutil.ReadFile(file)
-		if err != nil {
-			return errors.Wrap(err, "reading file")
-		}
-
+	if err := withMatchingFiles(mc.WorkDir, mc.TaskFiles, func(file string) error {
 		mts := map[string]MakeTask{}
-		if err := yaml.UnmarshalStrict(content, &mts); err != nil {
-			return errors.Wrap(err, "unmarshalling file from YAML")
+		if err := utility.ReadYAMLFileStrict(file, &mts); err != nil {
+			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
 		_ = m.MergeTasks(mts)
@@ -86,16 +71,10 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building task definitions")
 	}
 
-	if err := withGlobMatches(mc.EnvironmentFiles, func(file string) error {
-		content, err := ioutil.ReadFile(file)
-
-		if err != nil {
-			return errors.Wrap(err, "reading file")
-		}
-
+	if err := withMatchingFiles(mc.WorkDir, mc.EnvironmentFiles, func(file string) error {
 		env := map[string]string{}
-		if err := yaml.UnmarshalStrict(content, &env); err != nil {
-			return errors.Wrap(err, "unmarshalling file from YAML")
+		if err := utility.ReadYAMLFileStrict(file, &env); err != nil {
+			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
 		_ = m.MergeEnvironments(env)

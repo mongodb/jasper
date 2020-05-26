@@ -1,21 +1,20 @@
 package generator
 
 import (
+	"path/filepath"
+
+	"github.com/evergreen-ci/utility"
 	"github.com/pkg/errors"
-	"github.com/yargevad/filepathx"
 )
 
-func withGlobMatches(patterns []string, op func(file string) error) error {
-	for _, pattern := range patterns {
-		matches, err := filepathx.Glob(pattern)
-		if err != nil {
-			return errors.Wrapf(err, "evaluating glob pattern '%s'", pattern)
-		}
-
-		for _, match := range matches {
-			if err := op(match); err != nil {
-				return errors.Wrapf(err, "file '%s'", match)
-			}
+func withMatchingFiles(workDir string, patterns []string, op func(file string) error) error {
+	files, err := utility.BuildFileList(workDir, patterns...)
+	if err != nil {
+		return errors.Wrap(err, "evaluating file patterns")
+	}
+	for _, file := range files {
+		if err := op(filepath.Join(workDir, file)); err != nil {
+			return errors.Wrapf(err, "file '%s'", file)
 		}
 	}
 
