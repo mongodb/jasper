@@ -17,8 +17,6 @@ imports:
     version: f77a748d12a924cfbfcf396426dd58de5aa3a9e2
   - name: github.com/mholt/archiver
     version: de0d89e255e17c8d75a40122055763e743ab0593
-  - name: github.com/yargevad/filepathx
-    version: 907099cb5a626c26c0b04e01adca2798e63d030e
   - name: github.com/mongodb/amboy
     version: 89691c8c27abb1d0374f24fb0b645143fc043f74
   - name: github.com/google/shlex
@@ -38,7 +36,7 @@ imports:
   - name: github.com/evergreen-ci/poplar
     version: 3043bd036e01aa6abbad6af0df031a8315308ff9
   - name: github.com/evergreen-ci/utility
-    version: 3fa5718f9200847b0982978361090cb94bb6f0fd
+    version: 4a870f24b0d693b3f280cc1e31db2a16e948919a
   - name: github.com/evergreen-ci/service
     version: d9382e39d76857e2fe92a379d89f3c86fe507c4d
   - name: github.com/evergreen-ci/shrub

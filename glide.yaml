@@ -17,7 +17,6 @@ import:
   - package: github.com/tychoish/bond
   - package: github.com/tychoish/lru
   - package: github.com/mholt/archiver
-  - package: github.com/yargevad/filepathx
   - package: github.com/containerd/cgroups
   - package: github.com/opencontainers/runtime-spec
   - package: github.com/docker/go-units
