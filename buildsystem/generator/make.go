@@ -27,6 +27,8 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 			variant.DistroRunOn = mv.Distros
 
 			var tasksForVariant []*shrub.Task
+			// kim: TODO: turn each task into a function and each
+			// variant-specific task passes in its own vars?
 			for _, mvt := range mv.Tasks {
 				tasks, err := m.GetTasksAndRef(mvt)
 				if err != nil {
@@ -35,6 +37,7 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 				tasksForVariant = append(tasksForVariant, m.generateVariantTasksForRef(c, vName, mv, tasks)...)
 			}
 
+			// kim: TODO: turn into a function?
 			getProjectCmd := shrub.CmdGetProject{
 				Directory: m.WorkingDirectory,
 			}

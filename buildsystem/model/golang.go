@@ -400,8 +400,8 @@ type GolangVariantPackage struct {
 	Tag  string `yaml:"tag,omitempty"`
 }
 
-// Validate ensures that exactly one kind of reference is specified in the
-// variant package reference.
+// Validate checks that exactly one kind of reference is specified in a package
+// reference for a variant.
 func (gvp *GolangVariantPackage) Validate() error {
 	var numRefs int
 	for _, ref := range []string{gvp.Name, gvp.Path, gvp.Tag} {

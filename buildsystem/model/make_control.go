@@ -30,6 +30,7 @@ func NewMakeControl(file string) (*MakeControl, error) {
 	return &mc, nil
 }
 
+// Build creates a Make model from the files referenced in the MakeControl.
 func (mc *MakeControl) Build() (*Make, error) {
 	m := Make{}
 	if err := withMatchingFiles(mc.WorkDir, mc.VariantDistroFiles, func(file string) error {
