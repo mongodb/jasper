@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -53,7 +54,7 @@ func unparseFlagSet(c *cli.Context, serviceType string) []string {
 func requireStringFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if c.String(name) == "" {
-			return errors.Errorf("must specify string for flag '--%s'", name)
+			return errors.Errorf("must specify string for flag '%s'", name)
 		}
 		return nil
 	}
@@ -68,11 +69,36 @@ func requireOneFlag(names ...string) cli.BeforeFunc {
 			}
 		}
 		if count != 1 {
-			var flagNames []string
-			for _, name := range names {
-				flagNames = append(flagNames, fmt.Sprintf("--%s", name))
+			return errors.Errorf("must specify exactly one flag from the following: ", names)
+		}
+		return nil
+	}
+}
+
+// cleanupFilePathSeparators fixes the file path separators to ensure they are
+// forward slashes (i.e. to clean up Windows file paths).
+func cleanupFilePathSeparators(names ...string) cli.BeforeFunc {
+	return func(c *cli.Context) error {
+		for _, name := range names {
+			cleanPath := filepath.ToSlash(c.String(name))
+			c.Set(name, cleanPath)
+		}
+		return nil
+	}
+}
+
+// requireRelativePath verifies that the path flag relPathFlagName is set to a
+// path relative to the directory path set for dirFlagName.
+func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
+	return func(c *cli.Context) error {
+		relPath := filepath.ToSlash(c.String(relPathFlagName))
+		path := filepath.ToSlash(c.String(pathFlagName))
+		if filepath.IsAbs(relPath) {
+			if strings.HasPrefix(relPath, path) {
+				relPath = strings.TrimPrefix(relPath, path)
+			} else {
+				return errors.Errorf("path '%s' must be relative to the path '%s'", relPath, path)
 			}
-			return errors.Errorf("must specify exactly one flag from the following: %s", flagNames)
 		}
 		return nil
 	}
@@ -82,7 +108,7 @@ func requireOneFlag(names ...string) cli.BeforeFunc {
 func requireStringSliceFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if len(c.StringSlice(name)) == 0 {
-			return errors.Errorf("must specify at least one string for flag '--%s'", name)
+			return errors.Errorf("must specify at least one string for flag '%s'", name)
 		}
 		return nil
 	}

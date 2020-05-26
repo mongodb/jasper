@@ -109,15 +109,15 @@ func generateMake() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  workingDirFlagName,
-				Usage: "The directory where the project will be cloned.",
+				Usage: "The directory containing the project and build files.",
 			},
 			cli.StringFlag{
 				Name:  generatorFileFlagName,
-				Usage: "The build files necessary to generate the evergreen config.",
+				Usage: "The build files necessary to generate the evergreen config (relative to the working directory).",
 			},
 			cli.StringFlag{
 				Name:  controlFileFlagName,
-				Usage: "The control file referencing all the necessary build files.",
+				Usage: "The control file referencing all the necessary build files (relative to the working directory).",
 			},
 			cli.StringFlag{
 				Name:  outputFileFlagName,
@@ -127,6 +127,9 @@ func generateMake() cli.Command {
 		Before: mergeBeforeFuncs(
 			requireStringFlag(workingDirFlagName),
 			requireOneFlag(generatorFileFlagName, controlFileFlagName),
+			cleanupFilePathSeparators(generatorFileFlagName, controlFileFlagName, workingDirFlagName),
+			requireRelativePath(generatorFileFlagName, workingDirFlagName),
+			requireRelativePath(controlFileFlagName, workingDirFlagName),
 		),
 		Action: func(c *cli.Context) error {
 			workingDir := c.String(workingDirFlagName)
