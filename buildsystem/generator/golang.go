@@ -34,14 +34,14 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 			// options possibly overriding package-level options, which requires
 			// making separate tasks with different commands.
 			for _, gvp := range gv.Packages {
-				var pkgs []model.GolangPackage
+				var gps []model.GolangPackage
 				var pkgRef string
-				pkgs, pkgRef, err := g.getPackagesAndRef(gvp)
+				gps, pkgRef, err := g.getPackagesAndRef(gvp)
 				if err != nil {
 					panic(errors.Wrapf(err, "package definition for variant '%s'", gv.Name))
 				}
 
-				newTasks, err := g.generateVariantTasksForRef(c, gv, pkgs, pkgRef)
+				newTasks, err := g.generateVariantTasksForRef(c, gv, gps, pkgRef)
 				if err != nil {
 					panic(errors.Wrapf(err, "generating task for package ref '%s' in variant '%s'", pkgRef, gv.Name))
 				}
@@ -85,41 +85,41 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 
 func (g *Golang) getPackagesAndRef(gvp model.GolangVariantPackage) ([]model.GolangPackage, string, error) {
 	if gvp.Tag != "" {
-		pkgs := g.GetPackagesByTag(gvp.Tag)
-		if len(pkgs) == 0 {
+		gps := g.GetPackagesByTag(gvp.Tag)
+		if len(gps) == 0 {
 			return nil, "", errors.Errorf("no packages matched tag '%s'", gvp.Tag)
 		}
-		return pkgs, gvp.Tag, nil
+		return gps, gvp.Tag, nil
 	}
 
 	if gvp.Name != "" {
-		pkg, err := g.GetPackageByName(gvp.Name)
+		gp, _, err := g.GetPackageIndexByName(gvp.Name)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", gvp.Name)
 		}
-		return []model.GolangPackage{*pkg}, gvp.Name, nil
+		return []model.GolangPackage{*gp}, gvp.Name, nil
 	} else if gvp.Path != "" {
-		pkg, err := g.GetPackageByPath(gvp.Path)
+		gp, _, err := g.GetUnnamedPackageIndexByPath(gvp.Path)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", gvp.Path)
 		}
-		return []model.GolangPackage{*pkg}, gvp.Path, nil
+		return []model.GolangPackage{*gp}, gvp.Path, nil
 	}
 
 	return nil, "", errors.New("empty package reference")
 }
 
-func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv model.GolangVariant, pkgs []model.GolangPackage, pkgRef string) ([]*shrub.Task, error) {
+func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv model.GolangVariant, gps []model.GolangPackage, pkgRef string) ([]*shrub.Task, error) {
 	var tasks []*shrub.Task
 
-	for _, pkg := range pkgs {
-		scriptCmd, err := g.subprocessScriptingCmd(gv, pkg)
+	for _, gp := range gps {
+		scriptCmd, err := g.subprocessScriptingCmd(gv, gp)
 		if err != nil {
-			return nil, errors.Wrapf(err, "generating %s command for package '%s' in variant '%s'", shrub.CmdSubprocessScripting{}.Name(), pkg.Path, gv.Name)
+			return nil, errors.Wrapf(err, "generating %s command for package '%s' in variant '%s'", shrub.CmdSubprocessScripting{}.Name(), gp.Path, gv.Name)
 		}
 		var taskName string
-		if len(pkgs) > 1 {
-			taskName = getTaskName(gv.Name, pkgRef, pkg.Path)
+		if len(gps) > 1 {
+			taskName = getTaskName(gv.Name, pkgRef, gp.Path)
 		} else {
 			taskName = getTaskName(gv.Name, pkgRef)
 		}
@@ -129,7 +129,7 @@ func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv model.Gol
 	return tasks, nil
 }
 
-func (g *Golang) subprocessScriptingCmd(gv model.GolangVariant, pkg model.GolangPackage) (*shrub.CmdSubprocessScripting, error) {
+func (g *Golang) subprocessScriptingCmd(gv model.GolangVariant, gp model.GolangPackage) (*shrub.CmdSubprocessScripting, error) {
 	gopath, err := g.RelGopath()
 	if err != nil {
 		return nil, errors.Wrap(err, "getting GOPATH as a relative path")
@@ -139,12 +139,12 @@ func (g *Golang) subprocessScriptingCmd(gv model.GolangVariant, pkg model.Golang
 		return nil, errors.Wrap(err, "getting project path as a relative path")
 	}
 
-	testOpts := pkg.Options
+	testOpts := gp.Options
 	if gv.Options != nil {
 		testOpts = testOpts.Merge(*gv.Options)
 	}
 
-	relPath := pkg.Path
+	relPath := gp.Path
 	if relPath != "." && !strings.HasPrefix(relPath, "./") {
 		relPath = "./" + relPath
 	}

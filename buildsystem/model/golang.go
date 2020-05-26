@@ -16,7 +16,6 @@ type Golang struct {
 	// Environment defines any environment variables. GOPATH and GOROOT are
 	// required. If the working directory is specified, GOPATH must be specified
 	// as a subdirectory of the working directory.
-	// kim: TODO: make it optionally a separate file
 	Environment map[string]string `yaml:"environment"`
 	// RootPackage is the name of the root package for the project (e.g.
 	// github.com/mongodb/jasper).
@@ -51,6 +50,71 @@ func NewGolang(file, workingDir string) (*Golang, error) {
 	}
 
 	return &g, nil
+}
+
+// MergeTasks merges task definitions with the existing ones by either package
+// name or package path. For a given package name or path, existing tasks are
+// overwritten if they are already defined.
+func (g *Golang) MergePackages(gps []GolangPackage) *Golang {
+	for _, gp := range gps {
+		if gp.Name != "" {
+			if _, i, err := g.GetPackageIndexByName(gp.Name); err == nil {
+				g.Packages[i] = gp
+			} else {
+				g.Packages = append(g.Packages, gp)
+			}
+		} else if gp.Path != "" {
+			if _, i, err := g.GetUnnamedPackageIndexByPath(gp.Path); err == nil {
+				g.Packages[i] = gp
+			} else {
+				g.Packages = append(g.Packages, gp)
+			}
+		}
+	}
+	return g
+}
+
+// MergeVariantDistros merges variant-distro mappings with the existing ones by
+// variant name. For a given variant name, existing variant-distro mappings are
+// overwritten if they are already defined.
+func (g *Golang) MergeVariantDistros(vds []VariantDistro) *Golang {
+	for _, vd := range vds {
+		if mv, i, err := g.GetVariantIndexByName(vd.Name); err == nil {
+			mv.VariantDistro = vd
+			g.Variants[i] = *mv
+		} else {
+			g.Variants = append(g.Variants, GolangVariant{
+				VariantDistro: vd,
+			})
+		}
+	}
+	return g
+}
+
+// MergeVariantParameters merges variant parameters with the existing ones by
+// name. For a given variant name, existing variant options are overwritten if
+// they are already defined.
+func (g *Golang) MergeVariantParameters(gvps []NamedGolangVariantParameters) *Golang {
+	for _, gvp := range gvps {
+		if gv, i, err := g.GetVariantIndexByName(gvp.Name); err == nil {
+			gv.GolangVariantParameters = gvp.GolangVariantParameters
+			g.Variants[i] = *gv
+		} else {
+			g.Variants = append(g.Variants, GolangVariant{
+				VariantDistro:           VariantDistro{Name: gvp.Name},
+				GolangVariantParameters: gvp.GolangVariantParameters,
+			})
+		}
+	}
+	return g
+}
+
+// MergeEnvironments merges the given environments with the existing environment
+// variables. Duplicates are overwritten in the order in which environments are
+// passed into the function.
+func (g *Golang) MergeEnvironments(envs ...map[string]string) *Golang {
+	g.Environment = MergeEnvironments(append([]map[string]string{g.Environment}, envs...)...)
+	return g
 }
 
 func (g *Golang) Validate() error {
@@ -221,9 +285,11 @@ func (g *Golang) DiscoverPackages() error {
 		if err != nil {
 			return errors.Wrapf(err, "making package path '%s' relative to root package", path)
 		}
-		// If package has already been added, skip adding it.
-		if _, err = g.GetPackageByPath(dir); err == nil {
-			return nil
+		// If package has already been defined, skip adding it.
+		for _, gp := range g.Packages {
+			if gp.Path == dir {
+				return nil
+			}
 		}
 
 		pkg := GolangPackage{
@@ -253,13 +319,13 @@ func (g *Golang) GetPackagesAndRef(gvp GolangVariantPackage) ([]GolangPackage, s
 	}
 
 	if gvp.Name != "" {
-		pkg, err := g.GetPackageByName(gvp.Name)
+		pkg, _, err := g.GetPackageIndexByName(gvp.Name)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", gvp.Name)
 		}
 		return []GolangPackage{*pkg}, gvp.Name, nil
 	} else if gvp.Path != "" {
-		pkg, err := g.GetPackageByPath(gvp.Path)
+		pkg, _, err := g.GetUnnamedPackageIndexByPath(gvp.Path)
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", gvp.Path)
 		}
@@ -288,24 +354,26 @@ func (g *Golang) AbsProjectPath() (string, error) {
 	return filepath.Join(gopath, "src", g.RootPackage), nil
 }
 
-// GetPackageByName returns the package matching the name.
-func (g *Golang) GetPackageByName(name string) (*GolangPackage, error) {
-	for _, pkg := range g.Packages {
-		if pkg.Name == name {
-			return &pkg, nil
+// GetPackageIndexByName finds the package by name and returns the task
+// definition and its index.
+func (g *Golang) GetPackageIndexByName(name string) (gp *GolangPackage, index int, err error) {
+	for i, p := range g.Packages {
+		if p.Name == name {
+			return &p, i, nil
 		}
 	}
-	return nil, errors.Errorf("package with name '%s' not found", name)
+	return nil, -1, errors.Errorf("package with name '%s' not found", name)
 }
 
-// GetPackageByPath returns the package matching the path.
-func (g *Golang) GetPackageByPath(path string) (*GolangPackage, error) {
-	for _, pkg := range g.Packages {
-		if pkg.Path == path {
-			return &pkg, nil
+// GetUnnamedPackageIndexByPath finds the unnamed package by path and returns
+// the task definition and its index.
+func (g *Golang) GetUnnamedPackageIndexByPath(path string) (gp *GolangPackage, index int, err error) {
+	for i, p := range g.Packages {
+		if p.Name == "" && p.Path == path {
+			return &p, i, nil
 		}
 	}
-	return nil, errors.Errorf("package with path '%s' not found", path)
+	return nil, -1, errors.Errorf("unnamed package with path '%s' not found", path)
 }
 
 // GetPackagesByTag returns the packages that match the tag.
@@ -317,6 +385,17 @@ func (g *Golang) GetPackagesByTag(tag string) []GolangPackage {
 		}
 	}
 	return pkgs
+}
+
+// GetVariantIndexByName finds the variant by name and returns the variant
+// definition and its index.
+func (g *Golang) GetVariantIndexByName(name string) (gv *GolangVariant, index int, err error) {
+	for i, v := range g.Variants {
+		if v.Name == name {
+			return &v, i, nil
+		}
+	}
+	return nil, -1, errors.Errorf("variant with name '%s' not found", name)
 }
 
 type GolangPackage struct {
@@ -348,7 +427,21 @@ func (gp *GolangPackage) Validate() error {
 // GolangVariant defines a mapping between distros that run packages and the
 // golang packages to run.
 type GolangVariant struct {
-	VariantDistro `yaml:",inline"`
+	VariantDistro           `yaml:",inline"`
+	GolangVariantParameters `yaml:",inline"`
+}
+
+// Validate checks that the variant-distro mapping and the Golang-specific
+// parameters are valid.
+func (gv *GolangVariant) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.Add(gv.VariantDistro.Validate())
+	catcher.Add(gv.GolangVariantParameters.Validate())
+	return catcher.Resolve()
+}
+
+// GolangVariantParameters describe Golang-specific variant configuration.
+type GolangVariantParameters struct {
 	// Packages lists a package name, path or or tagged group of packages
 	// relative to the root package.
 	Packages []GolangVariantPackage `yaml:"packages"`
@@ -358,14 +451,14 @@ type GolangVariant struct {
 	Options *GolangRuntimeOptions `yaml:"options,omitempty"`
 }
 
-func (gv *GolangVariant) Validate() error {
+// Validate checks that the Golang-specific variant parameters are valid.
+func (gvp *GolangVariantParameters) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.Add(gv.VariantDistro.Validate())
-	catcher.NewWhen(len(gv.Packages) == 0, "need to specify at least one package")
+	catcher.NewWhen(len(gvp.Packages) == 0, "need to specify at least one package")
 	pkgPaths := map[string]struct{}{}
 	pkgNames := map[string]struct{}{}
 	pkgTags := map[string]struct{}{}
-	for _, pkg := range gv.Packages {
+	for _, pkg := range gvp.Packages {
 		catcher.Wrap(pkg.Validate(), "invalid package reference")
 		if path := pkg.Path; path != "" {
 			if _, ok := pkgPaths[path]; ok {
@@ -387,10 +480,17 @@ func (gv *GolangVariant) Validate() error {
 
 		}
 	}
-	if gv.Options != nil {
-		catcher.Wrap(gv.Options.Validate(), "invalid runtime options")
+	if gvp.Options != nil {
+		catcher.Wrap(gvp.Options.Validate(), "invalid runtime options")
 	}
 	return catcher.Resolve()
+}
+
+// NamedGolangVariantParameters describes Golang-specific variant configuration
+// associated with a particular variant name.
+type NamedGolangVariantParameters struct {
+	Name                    string `yaml:"name"`
+	GolangVariantParameters `yaml:",inline"`
 }
 
 // GolangVariantPackage is a specifier that references a golang package.

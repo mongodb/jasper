@@ -16,14 +16,14 @@ func TestGolangGenerate(t *testing.T) {
 		"Succeeds": func(t *testing.T, g *Golang) {
 			conf, err := g.Generate()
 			require.NoError(t, err)
-			require.Len(t, conf.Tasks, 4)
-
-			for _, parts := range [][]string{
+			expected := [][]string{
 				{"variant1", "path1"},
-				{"variant1", "path2"},
+				{"variant1", "name2"},
 				{"variant2", "name2"},
-				{"variant2", "path2"},
-			} {
+			}
+			require.Len(t, conf.Tasks, len(expected))
+
+			for _, parts := range expected {
 				task := conf.Task(getTaskName(parts...))
 				require.Len(t, task.Commands, 2)
 
@@ -72,9 +72,11 @@ func TestGolangGenerate(t *testing.T) {
 								Name:    "variant1",
 								Distros: []string{"distro1"},
 							},
-							Packages: []model.GolangVariantPackage{
-								{Path: "path1"},
-								{Path: "path2"},
+							GolangVariantParameters: model.GolangVariantParameters{
+								Packages: []model.GolangVariantPackage{
+									{Path: "path1"},
+									{Name: "name2"},
+								},
 							},
 						},
 						{
@@ -82,9 +84,10 @@ func TestGolangGenerate(t *testing.T) {
 								Name:    "variant2",
 								Distros: []string{"distro2"},
 							},
-							Packages: []model.GolangVariantPackage{
-								{Name: "name2"},
-								{Path: "path2"},
+							GolangVariantParameters: model.GolangVariantParameters{
+								Packages: []model.GolangVariantPackage{
+									{Name: "name2"},
+								},
 							},
 						},
 					},

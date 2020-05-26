@@ -31,6 +31,62 @@ func NewMake(file string) (*Make, error) {
 	return &m, nil
 }
 
+// MergeTasks merges task definitions with the existing ones by task name. For a
+// given task name, existing tasks are overwritten if they are already defined.
+func (m *Make) MergeTasks(mts []MakeTask) *Make {
+	for _, mt := range mts {
+		if _, i, err := m.GetTaskIndexByName(mt.Name); err == nil {
+			m.Tasks[i] = mt
+		} else {
+			m.Tasks = append(m.Tasks, mt)
+		}
+	}
+	return m
+}
+
+// MergeVariantDistros merges variant-distro mappings with the existing ones by
+// variant name. For a given variant name, existing variant-distro mappings are
+// overwritten if they are already defined.
+func (m *Make) MergeVariantDistros(vds []VariantDistro) *Make {
+	for _, vd := range vds {
+		if mv, i, err := m.GetVariantIndexByName(vd.Name); err == nil {
+			mv.VariantDistro = vd
+			m.Variants[i] = *mv
+		} else {
+			m.Variants = append(m.Variants, MakeVariant{
+				VariantDistro: vd,
+			})
+		}
+	}
+	return m
+}
+
+// MergeVariantParameters merges variant parameters with the existing ones by
+// name. For a given variant name, existing variant options are overwritten if
+// they are already defined.
+func (m *Make) MergeVariantParameters(mvps []NamedMakeVariantParameters) *Make {
+	for _, mvp := range mvps {
+		if mv, i, err := m.GetVariantIndexByName(mvp.Name); err == nil {
+			mv.MakeVariantParameters = mvp.MakeVariantParameters
+			m.Variants[i] = *mv
+		} else {
+			m.Variants = append(m.Variants, MakeVariant{
+				VariantDistro:         VariantDistro{Name: mvp.Name},
+				MakeVariantParameters: mvp.MakeVariantParameters,
+			})
+		}
+	}
+	return m
+}
+
+// MergeEnvironments merges the given environments with the existing environment
+// variables. Duplicates are overwritten in the order in which environments are
+// passed into the function.
+func (m *Make) MergeEnvironments(envs ...map[string]string) *Make {
+	m.Environment = MergeEnvironments(append([]map[string]string{m.Environment}, envs...)...)
+	return m
+}
+
 // Validate checks that the task and variant definitions are valid.
 func (m *Make) Validate() error {
 	catcher := grip.NewBasicCatcher()
@@ -106,8 +162,8 @@ func (m *Make) GetTasksAndRef(mvt MakeVariantTask) ([]MakeTask, error) {
 	return nil, errors.New("empty package reference")
 }
 
-// GetTaskIndexByName finds the definition of the task and its index by the task
-// name.
+// GetTaskIndexByName finds the task by name and returns the task definition and
+// its index.
 func (m *Make) GetTaskIndexByName(name string) (mt *MakeTask, index int, err error) {
 	for i, t := range m.Tasks {
 		if t.Name == name {
@@ -128,6 +184,8 @@ func (m *Make) GetTasksByTag(tag string) []MakeTask {
 	return tasks
 }
 
+// GetVariantIndexByName finds the variant by name and returns the variant
+// definition and its index.
 func (m *Make) GetVariantIndexByName(name string) (mv *MakeVariant, index int, err error) {
 	for i, v := range m.Variants {
 		if v.Name == name {
@@ -178,12 +236,37 @@ func (mv *MakeVariant) Validate() error {
 	return catcher.Resolve()
 }
 
-// MakeVariantParameters describe Make-specific variant configuration.
+// MakeVariantParameters describes Make-specific variant configuration.
 type MakeVariantParameters struct {
+	Tasks []MakeVariantTask `yaml:"tasks"`
 	// Environment defines variant-specific environment variables. This has
 	// higher precedence than global or task-specific environment variables.
 	Environment map[string]string `yaml:"environment,omitempty"`
-	Tasks       []MakeVariantTask `yaml:"tasks"`
+}
+
+// Validate checks that task references are specified and each reference is
+// valid.
+func (mvp *MakeVariantParameters) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(len(mvp.Tasks) == 0, "must specify at least one task")
+	taskNames := map[string]struct{}{}
+	taskTags := map[string]struct{}{}
+	for _, mvt := range mvp.Tasks {
+		catcher.Wrap(mvt.Validate(), "invalid task reference")
+		if mvt.Name != "" {
+			if _, ok := taskNames[mvt.Name]; ok {
+				catcher.Errorf("duplicate reference to task name '%s'", mvt.Name)
+			}
+			taskNames[mvt.Name] = struct{}{}
+		}
+		if mvt.Tag != "" {
+			if _, ok := taskTags[mvt.Tag]; ok {
+				catcher.Errorf("duplicate reference to task tag '%s'", mvt.Tag)
+			}
+			taskTags[mvt.Tag] = struct{}{}
+		}
+	}
+	return catcher.Resolve()
 }
 
 // NamedMakeVariantParameters describes Make-specific variant configuration
@@ -191,16 +274,6 @@ type MakeVariantParameters struct {
 type NamedMakeVariantParameters struct {
 	Name                  string `yaml:"name"`
 	MakeVariantParameters `yaml:",inline"`
-}
-
-// Validate checks that tasks are defined and each task reference is valid.
-func (mvp *MakeVariantParameters) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(len(mvp.Tasks) == 0, "must specify at least one task")
-	for _, mvt := range mvp.Tasks {
-		catcher.Wrap(mvt.Validate(), "invalid task reference")
-	}
-	return catcher.Resolve()
 }
 
 // MakeVariantTask represents either a reference to a task by task name, or a
@@ -220,60 +293,4 @@ func (mvt *MakeVariantTask) Validate() error {
 		return errors.New("cannot specify both task name and tag")
 	}
 	return nil
-}
-
-// MergeTasks merges task definitions with the existing ones by task name. For a
-// given task name, existing tasks are overwritten if they are already defined.
-func (m *Make) MergeTasks(mts []MakeTask) *Make {
-	for _, mt := range mts {
-		if _, i, err := m.GetTaskIndexByName(mt.Name); err == nil {
-			m.Tasks[i] = mt
-		} else {
-			m.Tasks = append(m.Tasks, mt)
-		}
-	}
-	return m
-}
-
-// MergeVariantDistros merges variant-distro mappings with the existing ones by
-// variant name. For a given variant name, existing variant-distro mappings are
-// overwritten if they are already defined.
-func (m *Make) MergeVariantDistros(vds []VariantDistro) *Make {
-	for _, vd := range vds {
-		if mv, i, err := m.GetVariantIndexByName(vd.Name); err == nil {
-			mv.VariantDistro = vd
-			m.Variants[i] = *mv
-		} else {
-			m.Variants = append(m.Variants, MakeVariant{
-				VariantDistro: vd,
-			})
-		}
-	}
-	return m
-}
-
-// MergeVariantParameters merges variant parameters with the existing ones by
-// name. For a given variant name, existing variant options are overwritten if
-// they are already defined.
-func (m *Make) MergeVariantParameters(mvps []NamedMakeVariantParameters) *Make {
-	for _, mvp := range mvps {
-		if mv, i, err := m.GetVariantIndexByName(mvp.Name); err == nil {
-			mv.MakeVariantParameters = mvp.MakeVariantParameters
-			m.Variants[i] = *mv
-		} else {
-			m.Variants = append(m.Variants, MakeVariant{
-				VariantDistro:         VariantDistro{Name: mvp.Name},
-				MakeVariantParameters: mvp.MakeVariantParameters,
-			})
-		}
-	}
-	return m
-}
-
-// MergeEnvironments merges the given environments with the existing environment
-// variables. Duplicates are overwritten in the order in which environments are
-// passed into the function.
-func (m *Make) MergeEnvironments(envs ...map[string]string) *Make {
-	m.Environment = MergeEnvironments(append([]map[string]string{m.Environment}, envs...)...)
-	return m
 }

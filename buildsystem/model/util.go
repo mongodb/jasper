@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// withMatchingFiles performs the given operation op on all files that match the
+// gitignore-style globbing patterns within the working directory workDir.
 func withMatchingFiles(workDir string, patterns []string, op func(file string) error) error {
 	files, err := utility.BuildFileList(workDir, patterns...)
 	if err != nil {

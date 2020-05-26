@@ -76,9 +76,14 @@ func generateGolang() cli.Command {
 					return errors.Wrapf(err, "creating generator from build file '%s'", genFile)
 				}
 			} else if ctrlFile != "" {
-				// gen = &generator.Golang{}
-				// kim: TODO: write Merge functions to gather all the parts
-				// files
+				gc, err := model.NewGolangControl(ctrlFile, workingDir)
+				if err != nil {
+					return errors.Wrapf(err, "creating builder from control file '%s'", ctrlFile)
+				}
+				g, err = gc.Build()
+				if err != nil {
+					return errors.Wrapf(err, "creating model from control file '%s'", ctrlFile)
+				}
 			}
 
 			gen := generator.NewGolang(*g)

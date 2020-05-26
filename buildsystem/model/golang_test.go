@@ -112,10 +112,12 @@ func TestGolangVariant(t *testing.T) {
 						Name:    "var_name",
 						Distros: []string{"distro1", "distro2"},
 					},
-					Packages: []GolangVariantPackage{
-						{Name: "name"},
-						{Path: "path"},
-						{Tag: "tag"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Name: "name"},
+							{Path: "path"},
+							{Tag: "tag"},
+						},
 					},
 				}
 				testCase(t, &gv)
@@ -150,16 +152,18 @@ func TestGolangPackage(t *testing.T) {
 	})
 }
 
-func TestGolangGetPackagesByName(t *testing.T) {
+func TestGolangGetPackageIndexByName(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
 		"Succeeds": func(t *testing.T, g *Golang) {
-			gp, err := g.GetPackageByName("package1")
+			gp, i, err := g.GetPackageIndexByName("package1")
 			require.NoError(t, err)
+			assert.Equal(t, 0, i)
 			assert.Equal(t, "package1", gp.Name)
 		},
 		"FailsForPackageNotFound": func(t *testing.T, g *Golang) {
-			gp, err := g.GetPackageByName("")
+			gp, i, err := g.GetPackageIndexByName("")
 			assert.Error(t, err)
+			assert.Equal(t, -1, i)
 			assert.Nil(t, gp)
 		},
 	} {
@@ -175,16 +179,24 @@ func TestGolangGetPackagesByName(t *testing.T) {
 	}
 }
 
-func TestGolangGetPackagesByPath(t *testing.T) {
+func TestGolangGetUnnamedPackagesByPath(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
 		"Succeeds": func(t *testing.T, g *Golang) {
-			gp, err := g.GetPackageByPath("path1")
+			gp, i, err := g.GetUnnamedPackageIndexByPath("path1")
 			require.NoError(t, err)
+			assert.Equal(t, 0, i)
 			assert.Equal(t, "path1", gp.Path)
 		},
 		"FailsForPackageNotFound": func(t *testing.T, g *Golang) {
-			gp, err := g.GetPackageByPath("")
+			gp, i, err := g.GetUnnamedPackageIndexByPath("")
 			assert.Error(t, err)
+			assert.Equal(t, -1, i)
+			assert.Nil(t, gp)
+		},
+		"FailsForNamedPackageWithPath": func(t *testing.T, g *Golang) {
+			gp, i, err := g.GetUnnamedPackageIndexByPath("path3")
+			assert.Error(t, err)
+			assert.Equal(t, -1, i)
 			assert.Nil(t, gp)
 		},
 	} {
@@ -193,6 +205,7 @@ func TestGolangGetPackagesByPath(t *testing.T) {
 				Packages: []GolangPackage{
 					{Path: "path1"},
 					{Path: "path2"},
+					{Name: "name3", Path: "path3"},
 				},
 			}
 			testCase(t, &g)
@@ -284,7 +297,7 @@ func TestGolangValidate(t *testing.T) {
 		},
 		"PassesWithUniquePackageNames": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
-				{Name: "name1", Path: "path1"},
+				{Path: "path1"},
 				{Name: "name2", Path: "path2"},
 			}
 			assert.NoError(t, g.Validate())
@@ -307,6 +320,20 @@ func TestGolangValidate(t *testing.T) {
 			g.Packages = []GolangPackage{
 				{Name: "name1", Path: "path1"},
 				{Name: "name2", Path: "path1"},
+			}
+			g.Variants = []GolangVariant{
+				{
+					VariantDistro: VariantDistro{
+						Name:    "variant",
+						Distros: []string{"distro"},
+					},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Name: "name1"},
+							{Name: "name2"},
+						},
+					},
+				},
 			}
 			assert.NoError(t, g.Validate())
 		},
@@ -332,8 +359,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Path: "path1"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Path: "path1"},
+						},
 					},
 				},
 				{
@@ -341,8 +370,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Path: "path2"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Path: "path2"},
+						},
 					},
 				},
 			}
@@ -357,8 +388,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Name: "name"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Name: "name"},
+						},
 					},
 				},
 			}
@@ -371,8 +404,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Name: "nonexistent"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Name: "nonexistent"},
+						},
 					},
 				},
 			}
@@ -388,8 +423,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Path: "path"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Path: "path"},
+						},
 					},
 				},
 			}
@@ -405,9 +442,11 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Path: "path"},
-						{Tag: "tag"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Path: "path"},
+							{Tag: "tag"},
+						},
 					},
 				},
 			}
@@ -420,8 +459,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Path: "nonexistent"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Path: "nonexistent"},
+						},
 					},
 				},
 			}
@@ -437,8 +478,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Tag: "tag"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Tag: "tag"},
+						},
 					},
 				},
 			}
@@ -451,8 +494,10 @@ func TestGolangValidate(t *testing.T) {
 						Name:    "variant",
 						Distros: []string{"distro"},
 					},
-					Packages: []GolangVariantPackage{
-						{Tag: "nonexistent"},
+					GolangVariantParameters: GolangVariantParameters{
+						Packages: []GolangVariantPackage{
+							{Tag: "nonexistent"},
+						},
 					},
 				},
 			}
@@ -476,8 +521,10 @@ func TestGolangValidate(t *testing.T) {
 							Name:    "variant",
 							Distros: []string{"distro"},
 						},
-						Packages: []GolangVariantPackage{
-							{Path: "path1"},
+						GolangVariantParameters: GolangVariantParameters{
+							Packages: []GolangVariantPackage{
+								{Path: "path1"},
+							},
 						},
 					},
 				},
