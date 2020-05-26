@@ -71,6 +71,10 @@ tasks:
     tags: ["test"]
     name: test-buildsystem-generator
 
+  - <<: *run-build
+    tags: ["test"]
+    name: test-buildsystem-model
+
   - name: compile-base
     tags: ["legacy-check"]
     commands:

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/mongodb/jasper/buildsystem/generator"
+	"github.com/mongodb/jasper/buildsystem/model"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -68,18 +69,19 @@ func generateGolang() cli.Command {
 				}
 			}
 
-			var gen *generator.Golang
+			var g *model.Golang
 			if genFile != "" {
-				gen, err = generator.NewGolang(genFile, workingDir)
+				g, err = model.NewGolang(genFile, workingDir)
 				if err != nil {
 					return errors.Wrapf(err, "creating generator from build file '%s'", genFile)
 				}
 			} else if ctrlFile != "" {
-				gen = &generator.Golang{}
+				// gen = &generator.Golang{}
 				// kim: TODO: write Merge functions to gather all the parts
 				// files
 			}
 
+			gen := generator.NewGolang(*g)
 			conf, err := gen.Generate()
 			if err != nil {
 				return errors.Wrap(err, "generating evergreen config from golang build file(s)")
@@ -137,23 +139,26 @@ func generateMake() cli.Command {
 			ctrlFile := c.String(controlFileFlagName)
 			outputFile := c.String(outputFileFlagName)
 
-			var gen *generator.Make
+			var m *model.Make
 			var err error
 			if genFile != "" {
-				gen, err = generator.NewMake(genFile, workingDir)
+				m, err = model.NewMake(genFile)
 				if err != nil {
-					return errors.Wrapf(err, "creating generator from build file '%s'", genFile)
+					return errors.Wrapf(err, "creating model from build file '%s'", genFile)
 				}
 			} else if ctrlFile != "" {
-				mc, err := generator.NewMakeControl(ctrlFile)
+				var mc *model.MakeControl
+				mc, err = model.NewMakeControl(ctrlFile)
 				if err != nil {
-					return errors.Wrapf(err, "building from control file '%s'", ctrlFile)
+					return errors.Wrapf(err, "creating builder from control file '%s'", ctrlFile)
 				}
-				gen, err = mc.Build()
+				m, err = mc.Build()
 				if err != nil {
-					return errors.Wrapf(err, "creating generator from control file '%s'", ctrlFile)
+					return errors.Wrapf(err, "creating model from control file '%s'", ctrlFile)
 				}
 			}
+
+			gen := generator.NewMake(*m, workingDir)
 			conf, err := gen.Generate()
 			if err != nil {
 				return errors.Wrapf(err, "generating evergreen config from build file(s)")
