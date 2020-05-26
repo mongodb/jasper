@@ -5,15 +5,12 @@ import "github.com/mongodb/grip"
 // VariantDistro represents a mapping between a variant name and the distros
 // that it runs on.
 type VariantDistro struct {
-	// kim: TODO: remove Name since we use maps now instead of slices
-	Name    string   `yaml:"-"`
+	Name    string   `yaml:"name"`
 	Distros []string `yaml:"distros"`
 }
 
 func (vd *VariantDistro) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	// kim: TODO: remove this once golang is migrated to use maps instead of
-	// slices.
 	catcher.NewWhen(vd.Name == "", "missing variant name")
 	catcher.NewWhen(len(vd.Distros) == 0, "need to specify at least one distro")
 	return catcher.Resolve()

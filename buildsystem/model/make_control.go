@@ -34,7 +34,7 @@ func NewMakeControl(file string) (*MakeControl, error) {
 func (mc *MakeControl) Build() (*Make, error) {
 	m := Make{}
 	if err := withMatchingFiles(mc.WorkDir, mc.VariantDistroFiles, func(file string) error {
-		vds := map[string]VariantDistro{}
+		vds := []VariantDistro{}
 		if err := utility.ReadYAMLFileStrict(file, &vds); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
@@ -47,7 +47,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 	}
 
 	if err := withMatchingFiles(mc.WorkDir, mc.VariantParameterFiles, func(file string) error {
-		mvps := map[string]MakeVariantParameters{}
+		mvps := []NamedMakeVariantParameters{}
 		if err := utility.ReadYAMLFileStrict(file, &mvps); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
@@ -60,7 +60,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 	}
 
 	if err := withMatchingFiles(mc.WorkDir, mc.TaskFiles, func(file string) error {
-		mts := map[string]MakeTask{}
+		mts := []MakeTask{}
 		if err := utility.ReadYAMLFileStrict(file, &mts); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
@@ -83,6 +83,10 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil
 	}); err != nil {
 		return nil, errors.Wrap(err, "building environment variables")
+	}
+
+	if err := m.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid configuration model")
 	}
 
 	return &m, nil

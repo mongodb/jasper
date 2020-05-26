@@ -74,13 +74,13 @@ func (g *Golang) validatePackages() error {
 
 		if pkg.Name == "" {
 			if _, ok := unnamedPkgPaths[pkg.Path]; ok {
-				catcher.Errorf("cannot have duplicate unnamed package definitions for path '%s'", pkg.Path)
+				catcher.Errorf("duplicate unnamed package definitions for path '%s'", pkg.Path)
 			}
 			unnamedPkgPaths[pkg.Path] = struct{}{}
 			continue
 		}
 		if _, ok := pkgNames[pkg.Name]; ok {
-			catcher.Errorf("cannot have duplicate package named '%s'", pkg.Name)
+			catcher.Errorf("duplicate package named '%s'", pkg.Name)
 		}
 		pkgNames[pkg.Name] = struct{}{}
 	}

@@ -22,8 +22,8 @@ func NewMake(m model.Make, workingDir string) *Make {
 
 func (m *Make) Generate() (*shrub.Configuration, error) {
 	conf, err := shrub.BuildConfiguration(func(c *shrub.Configuration) {
-		for vName, mv := range m.Variants {
-			variant := c.Variant(vName)
+		for _, mv := range m.Variants {
+			variant := c.Variant(mv.Name)
 			variant.DistroRunOn = mv.Distros
 
 			var tasksForVariant []*shrub.Task
@@ -34,7 +34,7 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 				if err != nil {
 					panic(err)
 				}
-				tasksForVariant = append(tasksForVariant, m.generateVariantTasksForRef(c, vName, mv, tasks)...)
+				tasksForVariant = append(tasksForVariant, m.generateVariantTasksForRef(c, mv, tasks)...)
 			}
 
 			// kim: TODO: turn into a function?
@@ -43,7 +43,7 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 			}
 
 			if len(variant.TaskSpecs) >= minTasksForTaskGroup {
-				tg := c.TaskGroup(vName + "_group").SetMaxHosts(len(variant.TaskSpecs) / 2)
+				tg := c.TaskGroup(mv.Name + "_group").SetMaxHosts(len(variant.TaskSpecs) / 2)
 				tg.SetupTask = shrub.CommandSequence{getProjectCmd.Resolve()}
 
 				for _, task := range variant.TaskSpecs {
@@ -65,11 +65,11 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 	return conf, nil
 }
 
-func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, vName string, mv model.MakeVariant, mts map[string]model.MakeTask) []*shrub.Task {
+func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, mv model.MakeVariant, mts []model.MakeTask) []*shrub.Task {
 	var tasks []*shrub.Task
-	for name, mt := range mts {
+	for _, mt := range mts {
 		cmds := m.subprocessExecCmds(mv, mt)
-		tasks = append(tasks, c.Task(getTaskName(vName, name)).Command(cmds...))
+		tasks = append(tasks, c.Task(getTaskName(mv.Name, mt.Name)).Command(cmds...))
 	}
 	return tasks
 }
