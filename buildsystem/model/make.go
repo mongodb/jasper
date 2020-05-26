@@ -8,9 +8,11 @@ import (
 
 // Make represents the configuration for Make-based projects.
 type Make struct {
-	// kim: TODO: add definitions for specific targets (e.g. tags)
-	Tasks    []MakeTask    `yaml:"tasks,omitempty"`
-	Variants []MakeVariant `yaml:"variants"`
+	// kim: TODO: add definitions for specific targets (e.g. for environments
+	// or options)?
+	TargetSequences []MakeTargetSequence `yaml:"sequences,omitempty"`
+	Tasks           []MakeTask           `yaml:"tasks,omitempty"`
+	Variants        []MakeVariant        `yaml:"variants"`
 	// Environment defines global environment variables. Definitions can be
 	// overridden at the task or variant level.
 	Environment map[string]string `yaml:"environment,omitempty"`
@@ -29,6 +31,20 @@ func NewMake(file string) (*Make, error) {
 	}
 
 	return &m, nil
+}
+
+// MergeTargetSequences merges target sequence definitions with the existing
+// ones by sequence name. For a given sequence name, existing targets are
+// overwritten if they are already defined.
+func (m *Make) MergeTargetSequences(mtss []MakeTargetSequence) *Make {
+	for _, mts := range mtss {
+		if _, i, err := m.GetTargetSequenceIndexByName(mts.Name); err == nil {
+			m.TargetSequences[i] = mts
+		} else {
+			m.TargetSequences = append(m.TargetSequences, mts)
+		}
+	}
+	return m
 }
 
 // MergeTasks merges task definitions with the existing ones by task name. For a
@@ -124,7 +140,7 @@ func (m *Make) validateVariants() error {
 
 		taskNames := map[string]struct{}{}
 		for _, mvt := range mv.Tasks {
-			tasks, err := m.GetTasksAndRef(mvt)
+			tasks, err := m.GetTasks(mvt)
 			if err != nil {
 				catcher.Wrapf(err, "invalid task reference in variant '%s'", variantName)
 				continue
@@ -140,9 +156,36 @@ func (m *Make) validateVariants() error {
 	return catcher.Resolve()
 }
 
-// GetTasksAndRef returns the tasks that match the reference specified in the
+// GetTargets returns the resolved targets from the reference specified in the
+// given MakeTaskTarget.
+func (m *Make) GetTargets(mtt MakeTaskTarget) ([]string, error) {
+	if len(mtt.Names) != 0 {
+		return mtt.Names, nil
+	}
+	if mtt.Sequence != "" {
+		mts, _, err := m.GetTargetSequenceIndexByName(mtt.Sequence)
+		if err != nil {
+			return nil, errors.Wrapf(err, "finding definition for target sequence '%s'", mtt.Sequence)
+		}
+		return mts.Targets, nil
+	}
+	return nil, errors.New("empty target reference")
+}
+
+// GetTargetSequenceIndexByName finds the target sequence by name and returns
+// the target sequence definition and its index.
+func (m *Make) GetTargetSequenceIndexByName(name string) (mts *MakeTargetSequence, index int, err error) {
+	for i, ts := range m.TargetSequences {
+		if ts.Name == name {
+			return &ts, i, nil
+		}
+	}
+	return nil, -1, errors.Errorf("target sequence with name '%s' not found", name)
+}
+
+// GetTasks returns the tasks that match the reference specified in the
 // given MakeVariantTask.
-func (m *Make) GetTasksAndRef(mvt MakeVariantTask) ([]MakeTask, error) {
+func (m *Make) GetTasks(mvt MakeVariantTask) ([]MakeTask, error) {
 	if mvt.Tag != "" {
 		tasks := m.GetTasksByTag(mvt.Tag)
 		if len(tasks) == 0 {
@@ -159,7 +202,7 @@ func (m *Make) GetTasksAndRef(mvt MakeVariantTask) ([]MakeTask, error) {
 		return []MakeTask{*task}, nil
 	}
 
-	return nil, errors.New("empty package reference")
+	return nil, errors.New("empty task reference")
 }
 
 // GetTaskIndexByName finds the task by name and returns the task definition and
@@ -195,18 +238,50 @@ func (m *Make) GetVariantIndexByName(name string) (mv *MakeVariant, index int, e
 	return nil, -1, errors.Errorf("variant with name '%s' not found", name)
 }
 
-// MakeTask represents a task that runs a group of Make targets.
-type MakeTask struct {
+// MakeTargetSequence represents an ordered sequence of targets to execute.
+type MakeTargetSequence struct {
 	Name    string   `yaml:"name"`
 	Targets []string `yaml:"targets"`
-	Tags    []string `yaml:"tags,omitempty"`
+}
+
+// MakeTask represents a task that runs a group of Make targets.
+type MakeTask struct {
+	Name    string           `yaml:"name"`
+	Targets []MakeTaskTarget `yaml:"targets"`
+	Tags    []string         `yaml:"tags,omitempty"`
 	// Environment defines task-specific environment variables. This has higher
 	// precedence than global environment variables but lower precedence than
 	// variant-specific environment variables.
 	Environment map[string]string `yaml:"environment,omitempty"`
+	// Options are task-specific options that modify runtime execution. If
+	// options are specified at the target level, these options will be appended.
+	Options MakeRuntimeOptions `yaml:"options,omitempty"`
 }
 
-// Validate checks that targets are defined and all tags are unique.
+// MakeTarget represents a reference to a single Make target or a sequence of
+// targets.
+type MakeTaskTarget struct {
+	// Names are the names of targets to run.
+	Names []string `yaml:"names"`
+	// Sequences is a reference to a defined target sequence.
+	Sequence string `yaml:"sequence"`
+	// Options are target-specific options that modify runtime execution.
+	Options MakeRuntimeOptions `yaml:"options,omitempty"`
+}
+
+// Validate checks that exactly one kind of reference is specified in a target
+// reference for a task.
+func (mtt *MakeTaskTarget) Validate() error {
+	if len(mtt.Names) == 0 && mtt.Sequence == "" {
+		return errors.New("must specify either a target name or sequence")
+	}
+	if len(mtt.Names) != 0 && mtt.Sequence != "" {
+		return errors.New("cannot specify both a target name and sequence")
+	}
+	return nil
+}
+
+// Validate checks that targets are valid and all tags are unique.
 func (mt *MakeTask) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(mt.Name == "", "missing task name")
@@ -221,10 +296,28 @@ func (mt *MakeTask) Validate() error {
 	return catcher.Resolve()
 }
 
+// MakeRuntimeOptions specify additional optional to the make binary to modify
+// the behavior of runtime execution.
+type MakeRuntimeOptions []string
+
+// Merge appends the new runtime options to the existing ones. Duplicates and
+// conflicting flags are appended.
+func (mro MakeRuntimeOptions) Merge(toAdd ...MakeRuntimeOptions) MakeRuntimeOptions {
+	merged := mro
+	for _, opts := range toAdd {
+		merged = append(merged, opts...)
+	}
+	return merged
+}
+
 // MakeVariant defines a variant that runs Make tasks.
 type MakeVariant struct {
 	VariantDistro         `yaml:",inline"`
 	MakeVariantParameters `yaml:",inline"`
+	// Options are variant-specific options that modify runtime execution. If
+	// options are specified at the task or target level, these options will be
+	// appended.
+	Options MakeRuntimeOptions `yaml:"options,omitempty"`
 }
 
 // Validate checks that the variant-distro mapping and the Make-specific

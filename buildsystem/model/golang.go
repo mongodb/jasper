@@ -406,7 +406,8 @@ type GolangPackage struct {
 	// subpackage called "util" within the root package.
 	Path string `yaml:"path"`
 	// Tags are labels that allow you to logically group related packages.
-	Tags    []string             `yaml:"tags,omitempty"`
+	Tags []string `yaml:"tags,omitempty"`
+	// Options are package-specific options that modify runtime execution.
 	Options GolangRuntimeOptions `yaml:"options,omitempty"`
 }
 
@@ -445,7 +446,7 @@ type GolangVariantParameters struct {
 	// Packages lists a package name, path or or tagged group of packages
 	// relative to the root package.
 	Packages []GolangVariantPackage `yaml:"packages"`
-	// Options are variant-specific options that modify test execution.
+	// Options are variant-specific options that modify runtime execution.
 	// Explicitly setting these values will override options specified under the
 	// definitions of packages.
 	Options *GolangRuntimeOptions `yaml:"options,omitempty"`
@@ -515,8 +516,8 @@ func (gvp *GolangVariantPackage) Validate() error {
 	return nil
 }
 
-// GolangRuntimeOptions specify additional options to modify behavior of runtime
-// execution.
+// GolangRuntimeOptions specify additional options to the go binary to modify
+// behavior of runtime execution.
 type GolangRuntimeOptions []string
 
 // Validate ensures that options to the scripting environment (i.e. the go

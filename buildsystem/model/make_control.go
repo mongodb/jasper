@@ -10,9 +10,10 @@ import (
 // MakeControl represents a Make generator constructed in parts from various
 // files.
 type MakeControl struct {
+	TargetSequenceFiles   []string `yaml:"target_sequence_files"`
+	TaskFiles             []string `yaml:"task_files"`
 	VariantDistroFiles    []string `yaml:"variant_distro_files"`
 	VariantParameterFiles []string `yaml:"variant_parameter_files"`
-	TaskFiles             []string `yaml:"task_files"`
 	EnvironmentFiles      []string `yaml:"environment_files"`
 
 	WorkDir string `yaml:"-"`
@@ -33,6 +34,19 @@ func NewMakeControl(file string) (*MakeControl, error) {
 // Build creates a Make model from the files referenced in the MakeControl.
 func (mc *MakeControl) Build() (*Make, error) {
 	var m Make
+
+	if err := withMatchingFiles(mc.WorkDir, mc.TargetSequenceFiles, func(file string) error {
+		mtss := []MakeTargetSequence{}
+		if err := utility.ReadYAMLFileStrict(file, &mtss); err != nil {
+			return errors.Wrap(err, "unmarshalling from YAML file")
+		}
+
+		_ = m.MergeTargetSequences(mtss)
+
+		return nil
+	}); err != nil {
+		return nil, errors.Wrap(err, "building target sequence definitions")
+	}
 
 	if err := withMatchingFiles(mc.WorkDir, mc.TaskFiles, func(file string) error {
 		mts := []MakeTask{}
