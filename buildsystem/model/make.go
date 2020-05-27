@@ -101,7 +101,7 @@ func (m *Make) MergeEnvironments(envs ...map[string]string) *Make {
 	return m
 }
 
-// Validate checks that the task and variant definitions are valid.
+// Validate checks that the entire Make build configuration is valid.
 func (m *Make) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.Wrap(m.validateTargetSequences(), "invalid target sequence definitions")
@@ -112,7 +112,7 @@ func (m *Make) Validate() error {
 
 // validateTargetSequences checks that:
 // - Each target name is unique.
-// - Each target is valid.
+// - Each target definition is valid.
 func (m *Make) validateTargetSequences() error {
 	catcher := grip.NewBasicCatcher()
 	seqNames := map[string]struct{}{}
@@ -128,7 +128,7 @@ func (m *Make) validateTargetSequences() error {
 // validateTasks checks that:
 // - Tasks are defined.
 // - Each task name is unique.
-// - Each task is valid.
+// - Each task definition is valid.
 // - Each target referencing a sequence is a defined sequence.
 func (m *Make) validateTasks() error {
 	catcher := grip.NewBasicCatcher()
@@ -154,7 +154,7 @@ func (m *Make) validateTasks() error {
 // validateVariants checks that:
 // - Variants are defined.
 // - Each variant name is unique.
-// - Each task referenced in a variant references a defined task.
+// - Each task referenced in a variant has a defined task.
 // - Each variant does not specify a duplicate task.
 func (m *Make) validateVariants() error {
 	catcher := grip.NewBasicCatcher()

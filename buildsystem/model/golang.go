@@ -20,7 +20,8 @@ type Golang struct {
 	// RootPackage is the name of the root package for the project (e.g.
 	// github.com/mongodb/jasper).
 	RootPackage string `yaml:"root_package"`
-	// Packages explicitly sets options for packages that should be tested.
+	// Packages define packages that should be tested. They can be either
+	// explicitly defined via configuration or automatically discovered.
 	Packages []GolangPackage `yaml:"packages,omitempty"`
 	// Variants describe the mapping between packages and distros to run them
 	// on.
@@ -117,6 +118,7 @@ func (g *Golang) MergeEnvironments(envs ...map[string]string) *Golang {
 	return g
 }
 
+// Validate checks that the entire Golang build configuration is valid.
 func (g *Golang) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
@@ -128,6 +130,11 @@ func (g *Golang) Validate() error {
 	return catcher.Resolve()
 }
 
+// validatePackages checks that:
+// - Packages are defined.
+// - Each package has a unique name. If it's unnamed, it must be the only
+//   unnamed package with its path.
+// - Each package definition is valid.
 func (g *Golang) validatePackages() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(g.Packages) == 0, "must have at least one package to test")
@@ -136,21 +143,25 @@ func (g *Golang) validatePackages() error {
 	for _, pkg := range g.Packages {
 		catcher.Wrapf(pkg.Validate(), "invalid package definition '%s'", pkg.Path)
 
-		if pkg.Name == "" {
+		if pkg.Name != "" {
+			if _, ok := pkgNames[pkg.Name]; ok {
+				catcher.Errorf("duplicate package named '%s'", pkg.Name)
+			}
+			pkgNames[pkg.Name] = struct{}{}
+		} else {
 			if _, ok := unnamedPkgPaths[pkg.Path]; ok {
 				catcher.Errorf("duplicate unnamed package definitions for path '%s'", pkg.Path)
 			}
 			unnamedPkgPaths[pkg.Path] = struct{}{}
-			continue
 		}
-		if _, ok := pkgNames[pkg.Name]; ok {
-			catcher.Errorf("duplicate package named '%s'", pkg.Name)
-		}
-		pkgNames[pkg.Name] = struct{}{}
 	}
 	return catcher.Resolve()
 }
 
+// validateEnvVars checks that:
+// - GOROOT is defined.
+// - GOPATH is defined and can be converted to a path relative to the working
+//   directory.
 func (g *Golang) validateEnvVars() error {
 	catcher := grip.NewBasicCatcher()
 	for _, name := range []string{"GOPATH", "GOROOT"} {
@@ -180,34 +191,12 @@ func (g *Golang) validateEnvVars() error {
 	return catcher.Resolve()
 }
 
-// RelGopath returns the GOPATH in the environment relative to the working
-// directory (if it is defined).
-func (g *Golang) RelGopath() (string, error) {
-	gopath := filepath.ToSlash(g.Environment["GOPATH"])
-	workingDir := filepath.ToSlash(g.WorkingDirectory)
-	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
-		return filepath.Rel(workingDir, gopath)
-	}
-	if filepath.IsAbs(gopath) {
-		return "", errors.New("GOPATH is absolute path, but needs to be relative path")
-	}
-	return gopath, nil
-}
-
-// AbsGopath converts the relative GOPATH in the environment into an absolute
-// path based on the working directory.
-func (g *Golang) AbsGopath() (string, error) {
-	gopath := filepath.ToSlash(g.Environment["GOPATH"])
-	workingDir := filepath.ToSlash(g.WorkingDirectory)
-	if workingDir != "" && !strings.HasPrefix(gopath, workingDir) {
-		return filepath.Join(workingDir, gopath), nil
-	}
-	if !filepath.IsAbs(gopath) {
-		return "", errors.New("GOPATH is relative path, but needs to be absolute path")
-	}
-	return gopath, nil
-}
-
+// validateVariants checks that:
+// - Variants are defined.
+// - Each variant name is unique.
+// - Each variant definition is valid.
+// - Each package referenced in a variant has a defined package.
+// - Each variant does not specify a duplicate package.
 func (g *Golang) validateVariants() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(g.Variants) == 0, "must specify at least one variant")
@@ -246,11 +235,13 @@ func (g *Golang) validateVariants() error {
 	return catcher.Resolve()
 }
 
-// golangTestFileSuffix is the suffix indicating that a golang file is meant to
-// be run as a test.
 const (
+	// golangTestFileSuffix is the suffix indicating that a golang file is meant to
+	// be run as a test.
 	golangTestFileSuffix = "_test.go"
-	golangVendorDir      = "vendor"
+	// golangVendorDir is the special vendor directory for vendoring
+	// dependencies.
+	golangVendorDir = "vendor"
 )
 
 // DiscoverPackages discovers directories containing tests in the local file
@@ -335,14 +326,32 @@ func (g *Golang) GetPackagesAndRef(gvp GolangVariantPackage) ([]GolangPackage, s
 	return nil, "", errors.New("empty package reference")
 }
 
-// RelProjectPath returns the path to the project relative to the working
-// directory.
-func (g *Golang) RelProjectPath() (string, error) {
-	gopath, err := g.RelGopath()
-	if err != nil {
-		return "", errors.Wrap(err, "getting GOPATH as a relative path")
+// AbsGopath converts the relative GOPATH in the environment into an absolute
+// path based on the working directory.
+func (g *Golang) AbsGopath() (string, error) {
+	gopath := filepath.ToSlash(g.Environment["GOPATH"])
+	workingDir := filepath.ToSlash(g.WorkingDirectory)
+	if workingDir != "" && !strings.HasPrefix(gopath, workingDir) {
+		return filepath.Join(workingDir, gopath), nil
 	}
-	return filepath.Join(gopath, "src", g.RootPackage), nil
+	if !filepath.IsAbs(gopath) {
+		return "", errors.New("GOPATH is relative path, but needs to be absolute path")
+	}
+	return gopath, nil
+}
+
+// RelGopath returns the GOPATH in the environment relative to the working
+// directory (if it is defined).
+func (g *Golang) RelGopath() (string, error) {
+	gopath := filepath.ToSlash(g.Environment["GOPATH"])
+	workingDir := filepath.ToSlash(g.WorkingDirectory)
+	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
+		return filepath.Rel(workingDir, gopath)
+	}
+	if filepath.IsAbs(gopath) {
+		return "", errors.New("GOPATH is absolute path, but needs to be relative path")
+	}
+	return gopath, nil
 }
 
 // AbsProjectPath returns the absolute path to the project.
@@ -350,6 +359,16 @@ func (g *Golang) AbsProjectPath() (string, error) {
 	gopath, err := g.AbsGopath()
 	if err != nil {
 		return "", errors.Wrap(err, "getting GOPATH as an absolute path")
+	}
+	return filepath.Join(gopath, "src", g.RootPackage), nil
+}
+
+// RelProjectPath returns the path to the project relative to the working
+// directory.
+func (g *Golang) RelProjectPath() (string, error) {
+	gopath, err := g.RelGopath()
+	if err != nil {
+		return "", errors.Wrap(err, "getting GOPATH as a relative path")
 	}
 	return filepath.Join(gopath, "src", g.RootPackage), nil
 }
