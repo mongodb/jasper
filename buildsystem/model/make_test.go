@@ -321,13 +321,13 @@ func TestMakeGetTasksByTag(t *testing.T) {
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			g := Make{
+			m := Make{
 				Tasks: []MakeTask{
 					{Name: "task1", Tags: []string{"tag1", "tag2"}},
 					{Name: "task2", Tags: []string{"tag1", "tag3"}},
 				},
 			}
-			testCase(t, &g)
+			testCase(t, &m)
 		})
 	}
 }
@@ -704,4 +704,189 @@ func TestMakeValidate(t *testing.T) {
 	}
 }
 
-// kim: TODO: test merging
+func TestMakeMergeTasks(t *testing.T) {
+	mts := []MakeTask{
+		{
+			Name: "task1",
+			Targets: []MakeTaskTarget{
+				{Name: "target1"},
+			},
+		},
+	}
+
+	for testName, testCase := range map[string]func(t *testing.T, m *Make){
+		"OverwritesExistingTaskWithMatchingName": func(t *testing.T, m *Make) {
+			mt := MakeTask{
+				Name: "task1",
+				Targets: []MakeTaskTarget{
+					{Name: "target2"},
+				},
+				Tags: []string{"tag2"},
+			}
+			_ = m.MergeTasks(mt)
+			require.Len(t, m.Tasks, 1)
+			assert.Equal(t, mt, m.Tasks[0])
+		},
+		"AddsNewTask": func(t *testing.T, m *Make) {
+			mt := MakeTask{
+				Tags: []string{"tag1"},
+			}
+			_ = m.MergeTasks(mt)
+			require.Len(t, m.Tasks, 2)
+			assert.Equal(t, mts[0], m.Tasks[0])
+			assert.Equal(t, mt, m.Tasks[1])
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Make{
+				Tasks: mts,
+			}
+			testCase(t, &m)
+		})
+	}
+}
+
+func TestMakeMergeVariantDistros(t *testing.T) {
+	mvs := []MakeVariant{
+		{
+			VariantDistro: VariantDistro{
+				Name:    "variant1",
+				Distros: []string{"distro1"},
+			},
+		},
+		{
+			VariantDistro: VariantDistro{
+				Name:    "variant2",
+				Distros: []string{"distro2"},
+			},
+		},
+	}
+
+	for testName, testCase := range map[string]func(t *testing.T, m *Make){
+		"OverwritesExistingWithMatchingName": func(t *testing.T, m *Make) {
+			vd := VariantDistro{
+				Name:    "variant1",
+				Distros: []string{"distro3"},
+			}
+			_ = m.MergeVariantDistros(vd)
+			require.Len(t, m.Variants, 2)
+			assert.Equal(t, vd, m.Variants[0].VariantDistro)
+			assert.Equal(t, mvs[1], m.Variants[1])
+		},
+		"AddsNewVariant": func(t *testing.T, m *Make) {
+			vd := VariantDistro{
+				Name:    "variant3",
+				Distros: []string{"distro3"},
+			}
+			_ = m.MergeVariantDistros(vd)
+			require.Len(t, m.Variants, 3)
+			assert.Equal(t, mvs[0:2], m.Variants[0:2])
+			assert.Equal(t, vd, m.Variants[2].VariantDistro)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Make{
+				Variants: mvs,
+			}
+			testCase(t, &m)
+		})
+	}
+}
+
+func TestMakeMergeVariantParameters(t *testing.T) {
+	mvs := []MakeVariant{
+		{
+			VariantDistro: VariantDistro{
+				Name: "variant1",
+			},
+			MakeVariantParameters: MakeVariantParameters{
+				Tasks: []MakeVariantTask{
+					{Name: "task1"},
+				},
+			},
+		},
+		{
+			VariantDistro: VariantDistro{
+				Name: "variant2",
+			},
+			MakeVariantParameters: MakeVariantParameters{
+				Tasks: []MakeVariantTask{
+					{Name: "task2"},
+				},
+			},
+		},
+	}
+
+	for testName, testCase := range map[string]func(t *testing.T, m *Make){
+		"OverwritesExistingWithMatchingName": func(t *testing.T, m *Make) {
+			nmvp := NamedMakeVariantParameters{
+				Name: "variant1",
+				MakeVariantParameters: MakeVariantParameters{
+					Tasks: []MakeVariantTask{
+						{Name: "task3"},
+					},
+				},
+			}
+			_ = m.MergeVariantParameters(nmvp)
+			require.Len(t, m.Variants, 2)
+			assert.Equal(t, nmvp.MakeVariantParameters, m.Variants[0].MakeVariantParameters)
+			assert.Equal(t, mvs[1], m.Variants[1])
+		},
+		"AddsNewVariant": func(t *testing.T, m *Make) {
+			nmvp := NamedMakeVariantParameters{
+				Name: "variant3",
+				MakeVariantParameters: MakeVariantParameters{
+					Tasks: []MakeVariantTask{
+						{Name: "task3"},
+					},
+				},
+			}
+			_ = m.MergeVariantParameters(nmvp)
+			require.Len(t, m.Variants, 3)
+			assert.Equal(t, mvs[0:2], m.Variants[0:2])
+			assert.Equal(t, nmvp.MakeVariantParameters, m.Variants[2].MakeVariantParameters)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Make{
+				Variants: mvs,
+			}
+			testCase(t, &m)
+		})
+	}
+}
+
+func TestMakeMergeEnvironments(t *testing.T) {
+	env := map[string]string{
+		"key1": "val1",
+		"key2": "val2",
+	}
+	for testName, testCase := range map[string]func(t *testing.T, m *Make){
+		"OverwritesExistingWithMatchingName": func(t *testing.T, m *Make) {
+			newEnv := map[string]string{
+				"key1": "val3",
+			}
+			_ = m.MergeEnvironments(newEnv)
+			assert.Len(t, m.Environment, 2)
+			assert.Equal(t, newEnv["key1"], m.Environment["key1"])
+			assert.Equal(t, env["key2"], m.Environment["key2"])
+		},
+		"AddsNewEnvVars": func(t *testing.T, m *Make) {
+			newEnv := map[string]string{
+				"key3": "val3",
+			}
+			_ = m.MergeEnvironments(newEnv)
+			assert.Len(t, m.Environment, 3)
+			assert.Equal(t, env["key1"], m.Environment["key1"])
+			assert.Equal(t, env["key2"], m.Environment["key2"])
+			assert.Equal(t, newEnv["key3"], m.Environment["key3"])
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Make{
+				Environment: env,
+			}
+			testCase(t, &m)
+		})
+	}
+}

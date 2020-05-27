@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/evergreen-ci/utility"
-	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -435,8 +434,6 @@ func TestGolangGetVariantIndexByName(t *testing.T) {
 	}
 }
 
-// kim: TODO: test mergers
-
 func TestGolangValidate(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
 		"Succeeds": func(t *testing.T, g *Golang) {
@@ -577,7 +574,6 @@ func TestGolangValidate(t *testing.T) {
 					},
 				},
 			}
-			pp.Println(g.Validate())
 			assert.Error(t, g.Validate())
 		},
 		"SucceedsWithValidVariantPackageName": func(t *testing.T, g *Golang) {
@@ -897,4 +893,214 @@ func TestGolangRuntimeOptions(t *testing.T) {
 		}
 
 	})
+}
+
+func TestGolangMergePackages(t *testing.T) {
+	gps := []GolangPackage{
+		{
+			Name: "package1",
+			Path: "path1",
+		},
+		{
+			Path: "path1",
+		},
+	}
+
+	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
+		"OverwritesExistingPackageWithMatchingName": func(t *testing.T, g *Golang) {
+			gp := GolangPackage{
+				Name: "package1",
+				Path: "path2",
+				Tags: []string{"tag1"},
+			}
+			_ = g.MergePackages(gp)
+			require.Len(t, g.Packages, 2)
+			assert.Equal(t, gp, g.Packages[0])
+			assert.Equal(t, gps[1], g.Packages[1])
+		},
+		"OverwritesExistingUnnamedPackageWithMatchingPath": func(t *testing.T, g *Golang) {
+			gp := GolangPackage{
+				Path: "path1",
+				Tags: []string{"tag1"},
+			}
+			_ = g.MergePackages(gp)
+			require.Len(t, g.Packages, 2)
+			assert.Equal(t, gps[0], g.Packages[0])
+			assert.Equal(t, gp, g.Packages[1])
+		},
+		"AddsNewNamedPackage": func(t *testing.T, g *Golang) {
+			gp := GolangPackage{
+				Name: "package2",
+				Path: "path1",
+				Tags: []string{"tag1"},
+			}
+			_ = g.MergePackages(gp)
+			require.Len(t, g.Packages, 3)
+			assert.Equal(t, gps[0:2], g.Packages[0:2])
+			assert.Equal(t, gp, g.Packages[2])
+		},
+		"AddsNewUnnamedPackage": func(t *testing.T, g *Golang) {
+			gp := GolangPackage{
+				Name: "package2",
+				Path: "path2",
+				Tags: []string{"tag1"},
+			}
+			_ = g.MergePackages(gp)
+			require.Len(t, g.Packages, 3)
+			assert.Equal(t, gps[0:2], g.Packages[0:2])
+			assert.Equal(t, gp, g.Packages[2])
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			g := Golang{
+				Packages: gps,
+			}
+			testCase(t, &g)
+		})
+	}
+}
+
+func TestGolangMergeVariantDistros(t *testing.T) {
+	gvs := []GolangVariant{
+		{
+			VariantDistro: VariantDistro{
+				Name:    "variant1",
+				Distros: []string{"distro1"},
+			},
+		},
+		{
+			VariantDistro: VariantDistro{
+				Name:    "variant2",
+				Distros: []string{"distro2"},
+			},
+		},
+	}
+
+	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
+		"OverwritesExistingWithMatchingName": func(t *testing.T, g *Golang) {
+			vd := VariantDistro{
+				Name:    "variant1",
+				Distros: []string{"distro3"},
+			}
+			_ = g.MergeVariantDistros(vd)
+			require.Len(t, g.Variants, 2)
+			assert.Equal(t, vd, g.Variants[0].VariantDistro)
+			assert.Equal(t, gvs[1], g.Variants[1])
+		},
+		"AddsNewVariant": func(t *testing.T, g *Golang) {
+			vd := VariantDistro{
+				Name:    "variant3",
+				Distros: []string{"distro3"},
+			}
+			_ = g.MergeVariantDistros(vd)
+			require.Len(t, g.Variants, 3)
+			assert.Equal(t, gvs[0:2], g.Variants[0:2])
+			assert.Equal(t, vd, g.Variants[2].VariantDistro)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			g := Golang{
+				Variants: gvs,
+			}
+			testCase(t, &g)
+		})
+	}
+}
+
+func TestGolangMergeVariantParameters(t *testing.T) {
+	gvs := []GolangVariant{
+		{
+			VariantDistro: VariantDistro{
+				Name: "variant1",
+			},
+			GolangVariantParameters: GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Name: "package1"},
+				},
+			},
+		},
+		{
+			VariantDistro: VariantDistro{
+				Name: "variant2",
+			},
+			GolangVariantParameters: GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Name: "package2"},
+				},
+			},
+		},
+	}
+
+	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
+		"OverwritesExistingWithMatchingName": func(t *testing.T, g *Golang) {
+			ngvp := NamedGolangVariantParameters{
+				Name: "variant1",
+				GolangVariantParameters: GolangVariantParameters{
+					Packages: []GolangVariantPackage{
+						{Name: "package3"},
+					},
+				},
+			}
+			_ = g.MergeVariantParameters(ngvp)
+			require.Len(t, g.Variants, 2)
+			assert.Equal(t, ngvp.GolangVariantParameters, g.Variants[0].GolangVariantParameters)
+			assert.Equal(t, gvs[1], g.Variants[1])
+		},
+		"AddsNewVariant": func(t *testing.T, g *Golang) {
+			ngvp := NamedGolangVariantParameters{
+				Name: "variant3",
+				GolangVariantParameters: GolangVariantParameters{
+					Packages: []GolangVariantPackage{
+						{Name: "package3"},
+					},
+				},
+			}
+			_ = g.MergeVariantParameters(ngvp)
+			require.Len(t, g.Variants, 3)
+			assert.Equal(t, gvs[0:2], g.Variants[0:2])
+			assert.Equal(t, ngvp.GolangVariantParameters, g.Variants[2].GolangVariantParameters)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			g := Golang{
+				Variants: gvs,
+			}
+			testCase(t, &g)
+		})
+	}
+}
+
+func TestGolangMergeEnvironments(t *testing.T) {
+	env := map[string]string{
+		"key1": "val1",
+		"key2": "val2",
+	}
+	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
+		"OverwritesExistingWithMatchingName": func(t *testing.T, g *Golang) {
+			newEnv := map[string]string{
+				"key1": "val3",
+			}
+			_ = g.MergeEnvironments(newEnv)
+			assert.Len(t, g.Environment, 2)
+			assert.Equal(t, newEnv["key1"], g.Environment["key1"])
+			assert.Equal(t, env["key2"], g.Environment["key2"])
+		},
+		"AddsNewEnvVars": func(t *testing.T, g *Golang) {
+			newEnv := map[string]string{
+				"key3": "val3",
+			}
+			_ = g.MergeEnvironments(newEnv)
+			assert.Len(t, g.Environment, 3)
+			assert.Equal(t, env["key1"], g.Environment["key1"])
+			assert.Equal(t, env["key2"], g.Environment["key2"])
+			assert.Equal(t, newEnv["key3"], g.Environment["key3"])
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			g := Golang{
+				Environment: env,
+			}
+			testCase(t, &g)
+		})
+	}
 }
