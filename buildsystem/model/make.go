@@ -369,6 +369,13 @@ type NamedMakeVariantParameters struct {
 	MakeVariantParameters `yaml:",inline"`
 }
 
+func (nmvp *NamedMakeVariantParameters) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(nmvp.Name == "", "must specify variant name")
+	catcher.Add(nmvp.MakeVariantParameters.Validate())
+	return catcher.Resolve()
+}
+
 // MakeVariantTask represents either a reference to a task by task name, or a
 // group of tasks containing a particular tag.
 type MakeVariantTask struct {

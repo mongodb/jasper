@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/evergreen-ci/utility"
+	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
@@ -37,6 +38,14 @@ func (gc *GolangControl) Build() (*Golang, error) {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
+		catcher := grip.NewBasicCatcher()
+		for _, gp := range gps {
+			catcher.Wrapf(gp.Validate(), "package '%s'", gp.Name)
+		}
+		if catcher.HasErrors() {
+			return errors.Wrap(catcher.Resolve(), "invalid package definitions")
+		}
+
 		_ = g.MergePackages(gps)
 
 		return nil
@@ -50,6 +59,14 @@ func (gc *GolangControl) Build() (*Golang, error) {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
+		catcher := grip.NewBasicCatcher()
+		for _, vd := range vds {
+			catcher.Wrapf(vd.Validate(), "variant '%s'", vd.Name)
+		}
+		if catcher.HasErrors() {
+			return errors.Wrap(catcher.Resolve(), "invalid variant-distro mappings")
+		}
+
 		_ = g.MergeVariantDistros(vds)
 
 		return nil
@@ -58,12 +75,20 @@ func (gc *GolangControl) Build() (*Golang, error) {
 	}
 
 	if err := withMatchingFiles(gc.WorkDir, gc.VariantParameterFiles, func(file string) error {
-		gvps := []NamedGolangVariantParameters{}
-		if err := utility.ReadYAMLFileStrict(file, &gvps); err != nil {
+		ngvps := []NamedGolangVariantParameters{}
+		if err := utility.ReadYAMLFileStrict(file, &ngvps); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
-		_ = g.MergeVariantParameters(gvps)
+		catcher := grip.NewBasicCatcher()
+		for _, ngvp := range ngvps {
+			catcher.Wrapf(ngvp.Validate(), "variant '%s'", ngvp.Name)
+		}
+		if catcher.HasErrors() {
+			return errors.Wrap(catcher.Resolve(), "invalid variant parameters")
+		}
+
+		_ = g.MergeVariantParameters(ngvps)
 
 		return nil
 	}); err != nil {

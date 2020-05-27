@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/evergreen-ci/utility"
+	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
@@ -54,6 +55,14 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
+		catcher := grip.NewBasicCatcher()
+		for _, mt := range mts {
+			catcher.Wrapf(mt.Validate(), "task '%s'", mt.Name)
+		}
+		if catcher.HasErrors() {
+			return errors.Wrap(catcher.Resolve(), "invalid task definitions")
+		}
+
 		_ = m.MergeTasks(mts)
 
 		return nil
@@ -67,6 +76,14 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
+		catcher := grip.NewBasicCatcher()
+		for _, vd := range vds {
+			catcher.Wrapf(vd.Validate(), "variant '%s'", vd.Name)
+		}
+		if catcher.HasErrors() {
+			return errors.Wrap(catcher.Resolve(), "invalid variant-distro mappings")
+		}
+
 		_ = m.MergeVariantDistros(vds)
 
 		return nil
@@ -75,12 +92,20 @@ func (mc *MakeControl) Build() (*Make, error) {
 	}
 
 	if err := withMatchingFiles(mc.WorkDir, mc.VariantParameterFiles, func(file string) error {
-		mvps := []NamedMakeVariantParameters{}
-		if err := utility.ReadYAMLFileStrict(file, &mvps); err != nil {
+		nmvps := []NamedMakeVariantParameters{}
+		if err := utility.ReadYAMLFileStrict(file, &nmvps); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
-		_ = m.MergeVariantParameters(mvps)
+		catcher := grip.NewBasicCatcher()
+		for _, nmvp := range nmvps {
+			catcher.Wrapf(nmvp.Validate(), "variant '%s'", nmvp.Name)
+		}
+		if catcher.HasErrors() {
+			return errors.Wrap(catcher.Resolve(), "invalid variant parameters")
+		}
+
+		_ = m.MergeVariantParameters(nmvps)
 
 		return nil
 	}); err != nil {

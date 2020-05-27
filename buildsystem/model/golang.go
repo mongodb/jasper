@@ -490,8 +490,17 @@ func (gvp *GolangVariantParameters) Validate() error {
 // NamedGolangVariantParameters describes Golang-specific variant configuration
 // associated with a particular variant name.
 type NamedGolangVariantParameters struct {
+	// Name is the variant name.
 	Name                    string `yaml:"name"`
 	GolangVariantParameters `yaml:",inline"`
+}
+
+// Validate checks that the has a variant name and valid parameters.
+func (ngvp *NamedGolangVariantParameters) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(ngvp.Name == "", "must specify variant name")
+	catcher.Add(ngvp.GolangVariantParameters.Validate())
+	return catcher.Resolve()
 }
 
 // GolangVariantPackage is a specifier that references a golang package.
@@ -530,7 +539,7 @@ func (gro GolangRuntimeOptions) Validate() error {
 		// Don't allow the verbose flag because the scripting harness sets
 		// verbose.
 		if flagIsVerbose(flag) {
-			catcher.New("verbose flag is already specified")
+			catcher.New("verbose flag is always specified")
 		}
 		if _, ok := seen[flag]; ok {
 			catcher.Errorf("duplicate flag '%s'", flag)
