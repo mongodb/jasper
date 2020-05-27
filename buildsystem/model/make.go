@@ -131,6 +131,7 @@ func (m *Make) validateTargetSequences() error {
 // - Tasks are defined.
 // - Each task name is unique.
 // - Each task is valid.
+// - Each target referencing a sequence is a defined sequence.
 func (m *Make) validateTasks() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(m.Tasks) == 0, "must have at least one task")
@@ -141,30 +142,44 @@ func (m *Make) validateTasks() error {
 		}
 		taskNames[mt.Name] = struct{}{}
 		catcher.Wrapf(mt.Validate(), "invalid task '%s'", mt.Name)
+
+		for _, mtt := range mt.Targets {
+			if mtt.Sequence != "" {
+				_, _, err := m.GetTargetSequenceIndexByName(mtt.Sequence)
+				catcher.Wrapf(err, "invalid target sequence reference '%s' in task '%s'", mtt.Sequence, mt.Name)
+			}
+		}
 	}
 	return catcher.Resolve()
 }
 
 // validateVariants checks that:
 // - Variants are defined.
+// - Each variant name is unique.
 // - Each task referenced in a variant references a defined task.
 // - Each variant does not specify a duplicate task.
 func (m *Make) validateVariants() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(m.Variants) == 0, "must have at least one variant")
-	for variantName, mv := range m.Variants {
-		catcher.Wrapf(mv.Validate(), "invalid definitions for variant '%s'", variantName)
+	varNames := map[string]struct{}{}
+	for _, mv := range m.Variants {
+		catcher.Wrapf(mv.Validate(), "invalid definitions for variant '%s'", mv.Name)
+
+		if _, ok := varNames[mv.Name]; ok {
+			catcher.Errorf("cannot have duplicate variant name '%s'", mv.Name)
+		}
+		varNames[mv.Name] = struct{}{}
 
 		taskNames := map[string]struct{}{}
 		for _, mvt := range mv.Tasks {
 			tasks, err := m.GetTasksFromRef(mvt)
 			if err != nil {
-				catcher.Wrapf(err, "invalid task reference in variant '%s'", variantName)
+				catcher.Wrapf(err, "invalid task reference in variant '%s'", mv.Name)
 				continue
 			}
 			for _, mt := range tasks {
 				if _, ok := taskNames[mt.Name]; ok {
-					catcher.Errorf("duplicate reference to task '%s' in variant '%s'", mt.Name, variantName)
+					catcher.Errorf("duplicate reference to task '%s' in variant '%s'", mt.Name, mv.Name)
 				}
 				taskNames[mt.Name] = struct{}{}
 			}
