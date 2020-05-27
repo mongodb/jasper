@@ -46,7 +46,7 @@ func (gc *GolangControl) Build() (*Golang, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid package definitions")
 		}
 
-		_ = g.MergePackages(gps)
+		_ = g.MergePackages(gps...)
 
 		return nil
 	}); err != nil {
@@ -67,7 +67,7 @@ func (gc *GolangControl) Build() (*Golang, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid variant-distro mappings")
 		}
 
-		_ = g.MergeVariantDistros(vds)
+		_ = g.MergeVariantDistros(vds...)
 
 		return nil
 	}); err != nil {
@@ -88,7 +88,7 @@ func (gc *GolangControl) Build() (*Golang, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid variant parameters")
 		}
 
-		_ = g.MergeVariantParameters(ngvps)
+		_ = g.MergeVariantParameters(ngvps...)
 
 		return nil
 	}); err != nil {

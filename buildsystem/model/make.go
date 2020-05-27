@@ -8,8 +8,6 @@ import (
 
 // Make represents the configuration for Make-based projects.
 type Make struct {
-	// kim: TODO: add definitions for specific targets (e.g. for environments
-	// or options)?
 	TargetSequences []MakeTargetSequence `yaml:"sequences,omitempty"`
 	Tasks           []MakeTask           `yaml:"tasks,omitempty"`
 	Variants        []MakeVariant        `yaml:"variants"`
@@ -36,7 +34,7 @@ func NewMake(file string) (*Make, error) {
 // MergeTargetSequences merges target sequence definitions with the existing
 // ones by sequence name. For a given sequence name, existing targets are
 // overwritten if they are already defined.
-func (m *Make) MergeTargetSequences(mtss []MakeTargetSequence) *Make {
+func (m *Make) MergeTargetSequences(mtss ...MakeTargetSequence) *Make {
 	for _, mts := range mtss {
 		if _, i, err := m.GetTargetSequenceIndexByName(mts.Name); err == nil {
 			m.TargetSequences[i] = mts
@@ -49,7 +47,7 @@ func (m *Make) MergeTargetSequences(mtss []MakeTargetSequence) *Make {
 
 // MergeTasks merges task definitions with the existing ones by task name. For a
 // given task name, existing tasks are overwritten if they are already defined.
-func (m *Make) MergeTasks(mts []MakeTask) *Make {
+func (m *Make) MergeTasks(mts ...MakeTask) *Make {
 	for _, mt := range mts {
 		if _, i, err := m.GetTaskIndexByName(mt.Name); err == nil {
 			m.Tasks[i] = mt
@@ -63,7 +61,7 @@ func (m *Make) MergeTasks(mts []MakeTask) *Make {
 // MergeVariantDistros merges variant-distro mappings with the existing ones by
 // variant name. For a given variant name, existing variant-distro mappings are
 // overwritten if they are already defined.
-func (m *Make) MergeVariantDistros(vds []VariantDistro) *Make {
+func (m *Make) MergeVariantDistros(vds ...VariantDistro) *Make {
 	for _, vd := range vds {
 		if mv, i, err := m.GetVariantIndexByName(vd.Name); err == nil {
 			mv.VariantDistro = vd
@@ -80,15 +78,15 @@ func (m *Make) MergeVariantDistros(vds []VariantDistro) *Make {
 // MergeVariantParameters merges variant parameters with the existing ones by
 // name. For a given variant name, existing variant options are overwritten if
 // they are already defined.
-func (m *Make) MergeVariantParameters(mvps []NamedMakeVariantParameters) *Make {
-	for _, mvp := range mvps {
-		if mv, i, err := m.GetVariantIndexByName(mvp.Name); err == nil {
-			mv.MakeVariantParameters = mvp.MakeVariantParameters
+func (m *Make) MergeVariantParameters(nmvps ...NamedMakeVariantParameters) *Make {
+	for _, nmvp := range nmvps {
+		if mv, i, err := m.GetVariantIndexByName(nmvp.Name); err == nil {
+			mv.MakeVariantParameters = nmvp.MakeVariantParameters
 			m.Variants[i] = *mv
 		} else {
 			m.Variants = append(m.Variants, MakeVariant{
-				VariantDistro:         VariantDistro{Name: mvp.Name},
-				MakeVariantParameters: mvp.MakeVariantParameters,
+				VariantDistro:         VariantDistro{Name: nmvp.Name},
+				MakeVariantParameters: nmvp.MakeVariantParameters,
 			})
 		}
 	}

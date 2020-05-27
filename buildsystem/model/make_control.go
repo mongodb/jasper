@@ -42,7 +42,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
-		_ = m.MergeTargetSequences(mtss)
+		_ = m.MergeTargetSequences(mtss...)
 
 		return nil
 	}); err != nil {
@@ -63,7 +63,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid task definitions")
 		}
 
-		_ = m.MergeTasks(mts)
+		_ = m.MergeTasks(mts...)
 
 		return nil
 	}); err != nil {
@@ -84,7 +84,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid variant-distro mappings")
 		}
 
-		_ = m.MergeVariantDistros(vds)
+		_ = m.MergeVariantDistros(vds...)
 
 		return nil
 	}); err != nil {
@@ -105,7 +105,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid variant parameters")
 		}
 
-		_ = m.MergeVariantParameters(nmvps)
+		_ = m.MergeVariantParameters(nmvps...)
 
 		return nil
 	}); err != nil {

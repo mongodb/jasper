@@ -55,7 +55,7 @@ func NewGolang(file, workingDir string) (*Golang, error) {
 // MergeTasks merges task definitions with the existing ones by either package
 // name or package path. For a given package name or path, existing tasks are
 // overwritten if they are already defined.
-func (g *Golang) MergePackages(gps []GolangPackage) *Golang {
+func (g *Golang) MergePackages(gps ...GolangPackage) *Golang {
 	for _, gp := range gps {
 		if gp.Name != "" {
 			if _, i, err := g.GetPackageIndexByName(gp.Name); err == nil {
@@ -77,7 +77,7 @@ func (g *Golang) MergePackages(gps []GolangPackage) *Golang {
 // MergeVariantDistros merges variant-distro mappings with the existing ones by
 // variant name. For a given variant name, existing variant-distro mappings are
 // overwritten if they are already defined.
-func (g *Golang) MergeVariantDistros(vds []VariantDistro) *Golang {
+func (g *Golang) MergeVariantDistros(vds ...VariantDistro) *Golang {
 	for _, vd := range vds {
 		if mv, i, err := g.GetVariantIndexByName(vd.Name); err == nil {
 			mv.VariantDistro = vd
@@ -94,15 +94,15 @@ func (g *Golang) MergeVariantDistros(vds []VariantDistro) *Golang {
 // MergeVariantParameters merges variant parameters with the existing ones by
 // name. For a given variant name, existing variant options are overwritten if
 // they are already defined.
-func (g *Golang) MergeVariantParameters(gvps []NamedGolangVariantParameters) *Golang {
-	for _, gvp := range gvps {
-		if gv, i, err := g.GetVariantIndexByName(gvp.Name); err == nil {
-			gv.GolangVariantParameters = gvp.GolangVariantParameters
+func (g *Golang) MergeVariantParameters(ngvps ...NamedGolangVariantParameters) *Golang {
+	for _, ngvp := range ngvps {
+		if gv, i, err := g.GetVariantIndexByName(ngvp.Name); err == nil {
+			gv.GolangVariantParameters = ngvp.GolangVariantParameters
 			g.Variants[i] = *gv
 		} else {
 			g.Variants = append(g.Variants, GolangVariant{
-				VariantDistro:           VariantDistro{Name: gvp.Name},
-				GolangVariantParameters: gvp.GolangVariantParameters,
+				VariantDistro:           VariantDistro{Name: ngvp.Name},
+				GolangVariantParameters: ngvp.GolangVariantParameters,
 			})
 		}
 	}
