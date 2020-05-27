@@ -495,7 +495,7 @@ type NamedGolangVariantParameters struct {
 	GolangVariantParameters `yaml:",inline"`
 }
 
-// Validate checks that the has a variant name and valid parameters.
+// Validate checks that there is a variant name and valid parameters.
 func (ngvp *NamedGolangVariantParameters) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(ngvp.Name == "", "must specify variant name")

@@ -28,7 +28,7 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 
 			var tasksForVariant []*shrub.Task
 			for _, mvt := range mv.Tasks {
-				tasks, err := m.GetTasks(mvt)
+				tasks, err := m.GetTasksFromRef(mvt)
 				if err != nil {
 					panic(err)
 				}
@@ -82,7 +82,7 @@ func (m *Make) subprocessExecCmds(mv model.MakeVariant, mt model.MakeTask) ([]sh
 	env := model.MergeEnvironments(m.Environment, mv.Environment, mt.Environment)
 	var cmds []shrub.Command
 	for _, target := range mt.Targets {
-		targetNames, err := m.GetTargets(target)
+		targetNames, err := m.GetTargetsFromRef(target)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolving targets")
 		}

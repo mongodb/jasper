@@ -106,8 +106,24 @@ func (m *Make) MergeEnvironments(envs ...map[string]string) *Make {
 // Validate checks that the task and variant definitions are valid.
 func (m *Make) Validate() error {
 	catcher := grip.NewBasicCatcher()
+	catcher.Wrap(m.validateTargetSequences(), "invalid target sequence definitions")
 	catcher.Wrap(m.validateTasks(), "invalid task definitions")
 	catcher.Wrap(m.validateVariants(), "invalid variant definitions")
+	return catcher.Resolve()
+}
+
+// validateTargetSequences checks that:
+// - Each target name is unique.
+// - Each target is valid.
+func (m *Make) validateTargetSequences() error {
+	catcher := grip.NewBasicCatcher()
+	seqNames := map[string]struct{}{}
+	for _, mts := range m.TargetSequences {
+		if _, ok := seqNames[mts.Name]; ok {
+			catcher.Errorf("duplicate target sequence '%s'", mts.Name)
+		}
+		catcher.Wrapf(mts.Validate(), "invalid target sequence '%s'", mts.Name)
+	}
 	return catcher.Resolve()
 }
 
@@ -123,6 +139,7 @@ func (m *Make) validateTasks() error {
 		if _, ok := taskNames[mt.Name]; ok {
 			catcher.Errorf("duplicate task name '%s'", mt.Name)
 		}
+		taskNames[mt.Name] = struct{}{}
 		catcher.Wrapf(mt.Validate(), "invalid task '%s'", mt.Name)
 	}
 	return catcher.Resolve()
@@ -140,7 +157,7 @@ func (m *Make) validateVariants() error {
 
 		taskNames := map[string]struct{}{}
 		for _, mvt := range mv.Tasks {
-			tasks, err := m.GetTasks(mvt)
+			tasks, err := m.GetTasksFromRef(mvt)
 			if err != nil {
 				catcher.Wrapf(err, "invalid task reference in variant '%s'", variantName)
 				continue
@@ -158,9 +175,9 @@ func (m *Make) validateVariants() error {
 
 // GetTargets returns the resolved targets from the reference specified in the
 // given MakeTaskTarget.
-func (m *Make) GetTargets(mtt MakeTaskTarget) ([]string, error) {
-	if len(mtt.Names) != 0 {
-		return mtt.Names, nil
+func (m *Make) GetTargetsFromRef(mtt MakeTaskTarget) ([]string, error) {
+	if mtt.Name != "" {
+		return []string{mtt.Name}, nil
 	}
 	if mtt.Sequence != "" {
 		mts, _, err := m.GetTargetSequenceIndexByName(mtt.Sequence)
@@ -185,7 +202,7 @@ func (m *Make) GetTargetSequenceIndexByName(name string) (mts *MakeTargetSequenc
 
 // GetTasks returns the tasks that match the reference specified in the
 // given MakeVariantTask.
-func (m *Make) GetTasks(mvt MakeVariantTask) ([]MakeTask, error) {
+func (m *Make) GetTasksFromRef(mvt MakeVariantTask) ([]MakeTask, error) {
 	if mvt.Tag != "" {
 		tasks := m.GetTasksByTag(mvt.Tag)
 		if len(tasks) == 0 {
@@ -244,6 +261,13 @@ type MakeTargetSequence struct {
 	Targets []string `yaml:"targets"`
 }
 
+func (mts *MakeTargetSequence) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(mts.Name == "", "missing target sequence name")
+	catcher.NewWhen(len(mts.Targets) == 0, "must specify at least one target")
+	return catcher.Resolve()
+}
+
 // MakeTask represents a task that runs a group of Make targets.
 type MakeTask struct {
 	Name    string           `yaml:"name"`
@@ -261,8 +285,8 @@ type MakeTask struct {
 // MakeTarget represents a reference to a single Make target or a sequence of
 // targets.
 type MakeTaskTarget struct {
-	// Names are the names of targets to run.
-	Names []string `yaml:"names"`
+	// Name is the name of target to run.
+	Name string `yaml:"name"`
 	// Sequences is a reference to a defined target sequence.
 	Sequence string `yaml:"sequence"`
 	// Options are target-specific options that modify runtime execution.
@@ -272,10 +296,10 @@ type MakeTaskTarget struct {
 // Validate checks that exactly one kind of reference is specified in a target
 // reference for a task.
 func (mtt *MakeTaskTarget) Validate() error {
-	if len(mtt.Names) == 0 && mtt.Sequence == "" {
+	if mtt.Name == "" && mtt.Sequence == "" {
 		return errors.New("must specify either a target name or sequence")
 	}
-	if len(mtt.Names) != 0 && mtt.Sequence != "" {
+	if mtt.Name != "" && mtt.Sequence != "" {
 		return errors.New("cannot specify both a target name and sequence")
 	}
 	return nil
@@ -286,6 +310,9 @@ func (mt *MakeTask) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(mt.Name == "", "missing task name")
 	catcher.NewWhen(len(mt.Targets) == 0, "must specify at least one target")
+	for _, mtt := range mt.Targets {
+		catcher.Wrap(mtt.Validate(), "invalid target")
+	}
 	tags := map[string]struct{}{}
 	for _, tag := range mt.Tags {
 		if _, ok := tags[tag]; ok {
@@ -365,10 +392,12 @@ func (mvp *MakeVariantParameters) Validate() error {
 // NamedMakeVariantParameters describes Make-specific variant configuration
 // associated with a particular variant name.
 type NamedMakeVariantParameters struct {
+	// Name is the variant name.
 	Name                  string `yaml:"name"`
 	MakeVariantParameters `yaml:",inline"`
 }
 
+// Validate checks that there is a variant name and valid parameters.
 func (nmvp *NamedMakeVariantParameters) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(nmvp.Name == "", "must specify variant name")
