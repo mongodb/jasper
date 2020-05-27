@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/evergreen-ci/utility"
+	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,50 +15,50 @@ import (
 
 func TestGolangVariantPackage(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
-		t.Run("FailsForNoRef", func(t *testing.T) {
-			vp := GolangVariantPackage{}
-			assert.Error(t, vp.Validate())
+		t.Run("FailsWithoutRef", func(t *testing.T) {
+			gvp := GolangVariantPackage{}
+			assert.Error(t, gvp.Validate())
 		})
 		t.Run("SucceedsIfNameSet", func(t *testing.T) {
-			vp := GolangVariantPackage{Name: "name"}
-			assert.NoError(t, vp.Validate())
+			gvp := GolangVariantPackage{Name: "name"}
+			assert.NoError(t, gvp.Validate())
 		})
 		t.Run("SucceedsIfPathSet", func(t *testing.T) {
-			vp := GolangVariantPackage{Path: "path"}
-			assert.NoError(t, vp.Validate())
+			gvp := GolangVariantPackage{Path: "path"}
+			assert.NoError(t, gvp.Validate())
 		})
 		t.Run("SucceedsIfTagSet", func(t *testing.T) {
-			vp := GolangVariantPackage{Tag: "tag"}
-			assert.NoError(t, vp.Validate())
+			gvp := GolangVariantPackage{Tag: "tag"}
+			assert.NoError(t, gvp.Validate())
 		})
 		t.Run("FailsIfNameAndPathSet", func(t *testing.T) {
-			vp := GolangVariantPackage{
+			gvp := GolangVariantPackage{
 				Name: "name",
 				Path: "path",
 			}
-			assert.Error(t, vp.Validate())
+			assert.Error(t, gvp.Validate())
 		})
 		t.Run("FailsIfNameAndTagSet", func(t *testing.T) {
-			vp := GolangVariantPackage{
+			gvp := GolangVariantPackage{
 				Name: "name",
 				Tag:  "tag",
 			}
-			assert.Error(t, vp.Validate())
+			assert.Error(t, gvp.Validate())
 		})
 		t.Run("FailsIfPathAndTagSet", func(t *testing.T) {
-			vp := GolangVariantPackage{
+			gvp := GolangVariantPackage{
 				Path: "path",
 				Tag:  "tag",
 			}
-			assert.Error(t, vp.Validate())
+			assert.Error(t, gvp.Validate())
 		})
 		t.Run("FailsIfAllSet", func(t *testing.T) {
-			vp := GolangVariantPackage{
+			gvp := GolangVariantPackage{
 				Name: "name",
 				Path: "path",
 				Tag:  "tag",
 			}
-			assert.Error(t, vp.Validate())
+			assert.Error(t, gvp.Validate())
 		})
 	})
 }
@@ -65,7 +66,7 @@ func TestGolangVariantPackage(t *testing.T) {
 func TestGolangVariant(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		for testName, testCase := range map[string]func(t *testing.T, v *GolangVariant){
-			"Passes": func(t *testing.T, gv *GolangVariant) {
+			"Succeeds": func(t *testing.T, gv *GolangVariant) {
 				assert.NoError(t, gv.Validate())
 			},
 			"FailsWithoutName": func(t *testing.T, gv *GolangVariant) {
@@ -80,25 +81,25 @@ func TestGolangVariant(t *testing.T) {
 				gv.Packages = nil
 				assert.Error(t, gv.Validate())
 			},
-			"FailsForInvalidPackage": func(t *testing.T, gv *GolangVariant) {
+			"FailsWithInvalidPackage": func(t *testing.T, gv *GolangVariant) {
 				gv.Packages = []GolangVariantPackage{{}}
 				assert.Error(t, gv.Validate())
 			},
-			"FailsForDuplicatePackageName": func(t *testing.T, gv *GolangVariant) {
+			"FailsWithDuplicatePackageName": func(t *testing.T, gv *GolangVariant) {
 				gv.Packages = []GolangVariantPackage{
 					{Name: "name"},
 					{Name: "name"},
 				}
 				assert.Error(t, gv.Validate())
 			},
-			"FailsForDuplicatePackagePath": func(t *testing.T, gv *GolangVariant) {
+			"FailsWithDuplicatePackagePath": func(t *testing.T, gv *GolangVariant) {
 				gv.Packages = []GolangVariantPackage{
 					{Path: "path"},
 					{Path: "path"},
 				}
 				assert.Error(t, gv.Validate())
 			},
-			"FailsForDuplicatePackageTag": func(t *testing.T, gv *GolangVariant) {
+			"FailsWithDuplicatePackageTag": func(t *testing.T, gv *GolangVariant) {
 				gv.Packages = []GolangVariantPackage{
 					{Tag: "tag"},
 					{Tag: "tag"},
@@ -126,10 +127,120 @@ func TestGolangVariant(t *testing.T) {
 	})
 }
 
+func TestGolangVariantParameters(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("SucceedsWithName", func(t *testing.T) {
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Name: "name"},
+				},
+			}
+			assert.NoError(t, gvp.Validate())
+		})
+		t.Run("SucceedsWithPath", func(t *testing.T) {
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Path: "path"},
+				},
+			}
+			assert.NoError(t, gvp.Validate())
+		})
+		t.Run("SucceedsWithTag", func(t *testing.T) {
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Tag: "tag"},
+				},
+			}
+			assert.NoError(t, gvp.Validate())
+		})
+		t.Run("SucceedsWithMultiple", func(t *testing.T) {
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Name: "name1"},
+					{Name: "name2"},
+					{Path: "path1"},
+					{Path: "path2"},
+					{Tag: "tag1"},
+					{Tag: "tag2"},
+				},
+			}
+			assert.NoError(t, gvp.Validate())
+		})
+		t.Run("FailsWithEmpty", func(t *testing.T) {
+			gvp := GolangVariantParameters{}
+			assert.Error(t, gvp.Validate())
+		})
+		t.Run("FailsWithDuplicateName", func(t *testing.T) {
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Name: "name"},
+					{Name: "name"},
+				},
+			}
+			assert.Error(t, gvp.Validate())
+		})
+		t.Run("FailsWithDuplicatePath", func(t *testing.T) {
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Path: "path"},
+					{Path: "path"},
+				},
+			}
+			assert.Error(t, gvp.Validate())
+		})
+		t.Run("FailsWithInvalidOptions", func(t *testing.T) {
+			opts := GolangRuntimeOptions([]string{"-v"})
+			gvp := GolangVariantParameters{
+				Packages: []GolangVariantPackage{
+					{Name: "name"},
+				},
+				Options: &opts,
+			}
+			assert.Error(t, gvp.Validate())
+		})
+	})
+}
+
+func TestNamedGolangVariantParameters(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("Succeeds", func(t *testing.T) {
+			ngvp := NamedGolangVariantParameters{
+				Name: "variant",
+				GolangVariantParameters: GolangVariantParameters{
+					Packages: []GolangVariantPackage{
+						{Name: "package"},
+					},
+				},
+			}
+			assert.NoError(t, ngvp.Validate())
+		})
+		t.Run("FailsWithEmpty", func(t *testing.T) {
+			ngvp := NamedGolangVariantParameters{}
+			assert.Error(t, ngvp.Validate())
+		})
+		t.Run("FailsWithoutName", func(t *testing.T) {
+			ngvp := NamedGolangVariantParameters{
+				GolangVariantParameters: GolangVariantParameters{
+					Packages: []GolangVariantPackage{
+						{Name: "package"},
+					},
+				},
+			}
+			assert.Error(t, ngvp.Validate())
+		})
+		t.Run("FailsWithInvalidParameters", func(t *testing.T) {
+			ngvp := NamedGolangVariantParameters{
+				Name: "variant",
+			}
+			assert.Error(t, ngvp.Validate())
+		})
+	})
+}
+
 func TestGolangPackage(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		for testName, testCase := range map[string]func(t *testing.T, gp *GolangPackage){
-			"Passes": func(t *testing.T, gp *GolangPackage) {
+			"Succeeds": func(t *testing.T, gp *GolangPackage) {
 				assert.NoError(t, gp.Validate())
 			},
 			"FailsWithoutPath": func(t *testing.T, gp *GolangPackage) {
@@ -160,11 +271,11 @@ func TestGolangGetPackageIndexByName(t *testing.T) {
 			assert.Equal(t, 0, i)
 			assert.Equal(t, "package1", gp.Name)
 		},
-		"FailsForPackageNotFound": func(t *testing.T, g *Golang) {
-			gp, i, err := g.GetPackageIndexByName("")
+		"FailsIfPackageNotFound": func(t *testing.T, g *Golang) {
+			gp, i, err := g.GetPackageIndexByName("foo")
 			assert.Error(t, err)
 			assert.Equal(t, -1, i)
-			assert.Nil(t, gp)
+			assert.Zero(t, gp)
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
@@ -187,17 +298,17 @@ func TestGolangGetUnnamedPackagesByPath(t *testing.T) {
 			assert.Equal(t, 0, i)
 			assert.Equal(t, "path1", gp.Path)
 		},
-		"FailsForPackageNotFound": func(t *testing.T, g *Golang) {
+		"FailsIfPackageNotFound": func(t *testing.T, g *Golang) {
 			gp, i, err := g.GetUnnamedPackageIndexByPath("")
 			assert.Error(t, err)
 			assert.Equal(t, -1, i)
-			assert.Nil(t, gp)
+			assert.Zero(t, gp)
 		},
-		"FailsForNamedPackageWithPath": func(t *testing.T, g *Golang) {
+		"FailsIfNamedPackageWithPath": func(t *testing.T, g *Golang) {
 			gp, i, err := g.GetUnnamedPackageIndexByPath("path3")
 			assert.Error(t, err)
 			assert.Equal(t, -1, i)
-			assert.Nil(t, gp)
+			assert.Zero(t, gp)
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
@@ -220,8 +331,8 @@ func TestGolangGetPackagesByTag(t *testing.T) {
 			require.Len(t, gps, 1)
 			assert.Equal(t, "path1", gps[0].Path)
 		},
-		"FailsForPackageNotFound": func(t *testing.T, g *Golang) {
-			gps := g.GetPackagesByTag("")
+		"FailsIfPackageNotFound": func(t *testing.T, g *Golang) {
+			gps := g.GetPackagesByTag("foo")
 			assert.Empty(t, gps)
 		},
 	} {
@@ -237,16 +348,105 @@ func TestGolangGetPackagesByTag(t *testing.T) {
 	}
 }
 
+func TestGolangGetPackagesAndRef(t *testing.T) {
+	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
+		"SucceedsWithName": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{Name: "package1"})
+			require.NoError(t, err)
+			require.Len(t, gps, 1)
+			assert.Equal(t, "package1", ref)
+			assert.Equal(t, g.Packages[0], gps[0])
+		},
+		"SucceedsWithPath": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{Path: "path1"})
+			require.NoError(t, err)
+			require.Len(t, gps, 1)
+			assert.Equal(t, "path1", ref)
+			assert.Equal(t, g.Packages[1], gps[0])
+		},
+		"SucceedsWithTag": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{Tag: "tag"})
+			require.NoError(t, err)
+			require.Len(t, gps, 2)
+			assert.Equal(t, "tag", ref)
+			assert.Equal(t, g.Packages[0], gps[0])
+		},
+		"FailsWithEmpty": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{})
+			assert.Error(t, err)
+			assert.Zero(t, ref)
+			assert.Zero(t, gps)
+		},
+		"FailsWithUnmatchedName": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{Name: "foo"})
+			assert.Error(t, err)
+			assert.Zero(t, ref)
+			assert.Zero(t, gps)
+		},
+		"FailsWithUnmatchedPath": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{Path: "foo"})
+			assert.Error(t, err)
+			assert.Zero(t, ref)
+			assert.Zero(t, gps)
+		},
+		"FailsWithUnmatchedTag": func(t *testing.T, g *Golang) {
+			gps, ref, err := g.GetPackagesAndRef(GolangVariantPackage{Tag: "foo"})
+			assert.Error(t, err)
+			assert.Zero(t, ref)
+			assert.Zero(t, gps)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			g := Golang{
+				Packages: []GolangPackage{
+					{Name: "package1", Path: "path1", Tags: []string{"tag"}},
+					{Path: "path1"},
+					{Name: "package2", Path: "path2", Tags: []string{"tag"}},
+				},
+			}
+			testCase(t, &g)
+		})
+	}
+}
+
+func TestGolangGetVariantIndexByName(t *testing.T) {
+	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
+		"Succeeds": func(t *testing.T, g *Golang) {
+			gv, i, err := g.GetVariantIndexByName("variant")
+			require.NoError(t, err)
+			assert.Equal(t, 0, i)
+			assert.Equal(t, "variant", gv.Name)
+		},
+		"FailsIfVariantNotFound": func(t *testing.T, g *Golang) {
+			gv, i, err := g.GetVariantIndexByName("foo")
+			assert.Error(t, err)
+			assert.Equal(t, -1, i)
+			assert.Zero(t, gv)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			g := Golang{
+				Variants: []GolangVariant{
+					{VariantDistro: VariantDistro{Name: "variant"}},
+				},
+			}
+			testCase(t, &g)
+		})
+	}
+}
+
+// kim: TODO: test mergers
+
 func TestGolangValidate(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang){
-		"Passes": func(t *testing.T, g *Golang) {
+		"Succeeds": func(t *testing.T, g *Golang) {
 			assert.NoError(t, g.Validate())
 		},
 		"FailsWithoutRootPackage": func(t *testing.T, g *Golang) {
 			g.RootPackage = ""
 			assert.Error(t, g.Validate())
 		},
-		"PassesWithGOROOTInEnvironment": func(t *testing.T, g *Golang) {
+		"SucceedsWithGOROOTInEnvironment": func(t *testing.T, g *Golang) {
 			goroot := os.Getenv("GOROOT")
 			if goroot == "" {
 				t.Skip("GOROOT is not defined in environment")
@@ -265,7 +465,7 @@ func TestGolangValidate(t *testing.T) {
 			delete(g.Environment, "GOROOT")
 			assert.Error(t, g.Validate())
 		},
-		"PassesIfGOPATHInEnvironmentAndIsWithinWorkingDirectory": func(t *testing.T, g *Golang) {
+		"SucceedsIfGOPATHInEnvironmentAndIsWithinWorkingDirectory": func(t *testing.T, g *Golang) {
 			gopath := os.Getenv("GOPATH")
 			if gopath == "" {
 				t.Skip("GOPATH not defined in environment")
@@ -295,7 +495,7 @@ func TestGolangValidate(t *testing.T) {
 			g.Packages = []GolangPackage{{}}
 			assert.Error(t, g.Validate())
 		},
-		"PassesWithUniquePackageNames": func(t *testing.T, g *Golang) {
+		"SucceedsWithUniquePackageNames": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
 				{Path: "path1"},
 				{Name: "name2", Path: "path2"},
@@ -309,14 +509,14 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.Error(t, g.Validate())
 		},
-		"PassesWithUniquePackagePaths": func(t *testing.T, g *Golang) {
+		"SucceedsWithUniquePackagePaths": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
 				{Path: "path1"},
 				{Path: "path2"},
 			}
 			assert.NoError(t, g.Validate())
 		},
-		"PassesWithDuplicatePackagePathButUniqueNames": func(t *testing.T, g *Golang) {
+		"SucceedsWithDuplicatePackagePathButUniqueNames": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
 				{Name: "name1", Path: "path1"},
 				{Name: "name2", Path: "path1"},
@@ -372,13 +572,15 @@ func TestGolangValidate(t *testing.T) {
 					},
 					GolangVariantParameters: GolangVariantParameters{
 						Packages: []GolangVariantPackage{
-							{Path: "path2"},
+							{Path: "path1"},
 						},
 					},
 				},
 			}
+			pp.Println(g.Validate())
+			assert.Error(t, g.Validate())
 		},
-		"PassesWithValidGolangVariantPackageName": func(t *testing.T, g *Golang) {
+		"SucceedsWithValidVariantPackageName": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
 				{Name: "name", Path: "path"},
 			}
@@ -397,7 +599,7 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.NoError(t, g.Validate())
 		},
-		"FailsWithInvalidGolangVariantPackageName": func(t *testing.T, g *Golang) {
+		"FailsWithInvalidVariantPackageName": func(t *testing.T, g *Golang) {
 			g.Variants = []GolangVariant{
 				{
 					VariantDistro: VariantDistro{
@@ -413,7 +615,7 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.Error(t, g.Validate())
 		},
-		"PassesWithValidGolangVariantPackagePath": func(t *testing.T, g *Golang) {
+		"SucceedsWithValidVariantPackagePath": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
 				{Path: "path"},
 			}
@@ -452,7 +654,7 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.Error(t, g.Validate())
 		},
-		"FailsWithInvalidGolangVariantPackagePath": func(t *testing.T, g *Golang) {
+		"FailsWithInvalidVariantPackagePath": func(t *testing.T, g *Golang) {
 			g.Variants = []GolangVariant{
 				{
 					VariantDistro: VariantDistro{
@@ -468,7 +670,7 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.Error(t, g.Validate())
 		},
-		"PassesWithValidGolangVariantPackageTag": func(t *testing.T, g *Golang) {
+		"SucceedsWithValidVariantPackageTag": func(t *testing.T, g *Golang) {
 			g.Packages = []GolangPackage{
 				{Path: "path", Tags: []string{"tag"}},
 			}
@@ -487,7 +689,7 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.NoError(t, g.Validate())
 		},
-		"FailsWithInvalidGolangVariantPackageTag": func(t *testing.T, g *Golang) {
+		"FailsWithInvalidVariantPackageTag": func(t *testing.T, g *Golang) {
 			g.Variants = []GolangVariant{
 				{
 					VariantDistro: VariantDistro{
@@ -536,7 +738,7 @@ func TestGolangValidate(t *testing.T) {
 
 func TestDiscoverPackages(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, g *Golang, rootPath string){
-		"FailsForPackageNotFound": func(t *testing.T, g *Golang, rootPath string) {
+		"FailsIfPackageNotFound": func(t *testing.T, g *Golang, rootPath string) {
 			g.RootPackage = "foo"
 			assert.Error(t, g.DiscoverPackages())
 		},
@@ -612,7 +814,7 @@ func TestGolangRuntimeOptions(t *testing.T) {
 			opts        GolangRuntimeOptions
 			expectError bool
 		}{
-			"PassesWithAllUniqueFlags": {
+			"SucceedsWithAllUniqueFlags": {
 				opts: []string{"-cover", "-coverprofile", "-race"},
 			},
 			"FailsWithDuplicateFlags": {
