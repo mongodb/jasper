@@ -36,7 +36,7 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 			for _, gvp := range gv.Packages {
 				var gps []model.GolangPackage
 				var pkgRef string
-				gps, pkgRef, err := g.getPackagesAndRef(gvp)
+				gps, pkgRef, err := g.GetPackagesAndRef(gvp)
 				if err != nil {
 					panic(errors.Wrapf(err, "package definition for variant '%s'", gv.Name))
 				}
@@ -59,11 +59,11 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 			// Only use a task group for this variant if it meets the threshold
 			// number of tasks. Otherwise, just run regular tasks for this
 			// variant.
-			if len(variant.TaskSpecs) >= minTasksForTaskGroup {
-				tg := c.TaskGroup(gv.Name + "_group").SetMaxHosts(len(variant.TaskSpecs) / 2)
+			if len(tasksForVariant) >= minTasksForTaskGroup {
+				tg := c.TaskGroup(getTaskGroupName(gv.Name)).SetMaxHosts(len(tasksForVariant) / 2)
 				tg.SetupTask = shrub.CommandSequence{getProjectCmd.Resolve()}
 
-				for _, task := range variant.TaskSpecs {
+				for _, task := range tasksForVariant {
 					_ = tg.Task(task.Name)
 				}
 				_ = variant.AddTasks(tg.GroupName)
@@ -83,32 +83,6 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 	return conf, nil
 }
 
-func (g *Golang) getPackagesAndRef(gvp model.GolangVariantPackage) ([]model.GolangPackage, string, error) {
-	if gvp.Tag != "" {
-		gps := g.GetPackagesByTag(gvp.Tag)
-		if len(gps) == 0 {
-			return nil, "", errors.Errorf("no packages matched tag '%s'", gvp.Tag)
-		}
-		return gps, gvp.Tag, nil
-	}
-
-	if gvp.Name != "" {
-		gp, _, err := g.GetPackageIndexByName(gvp.Name)
-		if err != nil {
-			return nil, "", errors.Wrapf(err, "finding definition for package named '%s'", gvp.Name)
-		}
-		return []model.GolangPackage{*gp}, gvp.Name, nil
-	} else if gvp.Path != "" {
-		gp, _, err := g.GetUnnamedPackageIndexByPath(gvp.Path)
-		if err != nil {
-			return nil, "", errors.Wrapf(err, "finding definition for package path '%s'", gvp.Path)
-		}
-		return []model.GolangPackage{*gp}, gvp.Path, nil
-	}
-
-	return nil, "", errors.New("empty package reference")
-}
-
 func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv model.GolangVariant, gps []model.GolangPackage, pkgRef string) ([]*shrub.Task, error) {
 	var tasks []*shrub.Task
 
@@ -119,7 +93,11 @@ func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv model.Gol
 		}
 		var taskName string
 		if len(gps) > 1 {
-			taskName = getTaskName(gv.Name, pkgRef, gp.Path)
+			id := gp.Path
+			if gp.Name != "" {
+				id = gp.Name
+			}
+			taskName = getTaskName(gv.Name, pkgRef, id)
 		} else {
 			taskName = getTaskName(gv.Name, pkgRef)
 		}

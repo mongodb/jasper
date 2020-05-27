@@ -11,9 +11,17 @@ const (
 	// to use single-host task groups, we must have at least four tasks in the
 	// group to make a multi-host task group.
 	minTasksForTaskGroup = 4
+
+	// taskGroupSuffix is used to name task groups.
+	taskGroupSuffix = "_group"
 )
 
 // getTaskName returns an auto-generated task name.
 func getTaskName(parts ...string) string {
 	return strings.Join(parts, "-")
+}
+
+// getTaskGroupName returns an auto-generated task group name.
+func getTaskGroupName(name string) string {
+	return name + taskGroupSuffix
 }
