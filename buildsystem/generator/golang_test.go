@@ -226,7 +226,7 @@ func TestGolangGenerate(t *testing.T) {
 			assert.Zero(t, conf)
 		},
 		"FailsWithGOPATHNotWithinWorkingDirectory": func(t *testing.T, g *Golang) {
-			g.Environment["GOPATH"] = filepath.Join("/path", "outside", "working", "directory")
+			g.Environment["GOPATH"] = filepath.ToSlash(filepath.Join("/path", "outside", "working", "directory"))
 			conf, err := g.Generate()
 			assert.Error(t, err)
 			assert.Zero(t, conf)
