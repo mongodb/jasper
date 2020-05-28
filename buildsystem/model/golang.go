@@ -14,10 +14,6 @@ import (
 // Golang represents a configuration for generating an evergreen configuration
 // from a project that uses golang.
 type Golang struct {
-	// Environment defines any environment variables. GOPATH and GOROOT are
-	// required. If the working directory is specified, GOPATH must be specified
-	// as a subdirectory of the working directory.
-	Environment map[string]string `yaml:"environment"`
 	// RootPackage is the name of the root package for the project (e.g.
 	// github.com/mongodb/jasper).
 	RootPackage string `yaml:"root_package"`
@@ -27,6 +23,11 @@ type Golang struct {
 	// Variants describe the mapping between packages and distros to run them
 	// on.
 	Variants []GolangVariant `yaml:"variants"`
+	// Environment defines any environment variables. GOPATH and GOROOT are
+	// required. If the working directory is specified, GOPATH must be specified
+	// as a subdirectory of the working directory.
+	Environment map[string]string `yaml:"environment"`
+	DefaultTags []string          `yaml:"default_tags,omitempty"`
 
 	// WorkingDirectory is the absolute path to the base directory where the
 	// GOPATH directory is located.
@@ -47,11 +48,25 @@ func NewGolang(file, workingDir string) (*Golang, error) {
 		return nil, errors.Wrap(err, "automatically discovering test packages")
 	}
 
+	g.ApplyDefaultTags()
+
 	if err := g.Validate(); err != nil {
 		return nil, errors.Wrap(err, "golang generator configuration")
 	}
 
 	return &g, nil
+}
+
+// ApplyDefaultTags applies all the default tags to the existing tasks, subject
+// to package-level exclusion rules.
+func (g *Golang) ApplyDefaultTags() {
+	for _, tag := range g.DefaultTags {
+		for i, gp := range g.Packages {
+			if !utility.StringSliceContains(gp.Tags, tag) && !utility.StringSliceContains(gp.ExcludeTags, tag) {
+				g.Packages[i].Tags = append(g.Packages[i].Tags, tag)
+			}
+		}
+	}
 }
 
 // MergeTasks merges task definitions with the existing ones by either package
@@ -119,6 +134,17 @@ func (g *Golang) MergeEnvironments(envs ...map[string]string) *Golang {
 	return g
 }
 
+// MergeDefaultTags merges the given tags with the existing default tags.
+// Duplicates are ignored.
+func (g *Golang) MergeDefaultTags(tags ...string) *Golang {
+	for _, tag := range tags {
+		if !utility.StringSliceContains(g.DefaultTags, tag) {
+			g.DefaultTags = append(g.DefaultTags, tag)
+		}
+	}
+	return g
+}
+
 // Validate checks that the entire Golang build configuration is valid.
 func (g *Golang) Validate() error {
 	catcher := grip.NewBasicCatcher()
@@ -134,12 +160,14 @@ func (g *Golang) Validate() error {
 // validatePackages checks that:
 // - Packages are defined.
 // - Each package has a unique name. If it's unnamed, it must be the only
-//   unnamed package with its path.
+//   unnamed package with its path. Furthermore, no package can be named the
+//   same as the path of an unnamed package.
 // - Each package definition is valid.
 func (g *Golang) validatePackages() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(g.Packages) == 0, "must have at least one package to test")
 	pkgNames := map[string]struct{}{}
+	pkgPaths := map[string]struct{}{}
 	unnamedPkgPaths := map[string]struct{}{}
 	for _, pkg := range g.Packages {
 		catcher.Wrapf(pkg.Validate(), "invalid package definition '%s'", pkg.Path)
@@ -155,7 +183,16 @@ func (g *Golang) validatePackages() error {
 			}
 			unnamedPkgPaths[pkg.Path] = struct{}{}
 		}
+		pkgPaths[pkg.Path] = struct{}{}
 	}
+	// Don't allow packages with a name that matches an unnamed package
+	// containing a path.
+	for pkgPath := range unnamedPkgPaths {
+		if _, ok := pkgNames[pkgPath]; ok {
+			catcher.Errorf("cannot have package named '%s' because it would be ambiguous with unnamed package with path '%s'", pkgPath, pkgPath)
+		}
+	}
+
 	return catcher.Resolve()
 }
 
@@ -427,6 +464,9 @@ type GolangPackage struct {
 	Path string `yaml:"path"`
 	// Tags are labels that allow you to logically group related packages.
 	Tags []string `yaml:"tags,omitempty"`
+	// ExcludeTags allows you to specify tags that should not be applied to the
+	// task. This can be useful for excluding a package from the default tags.
+	ExcludeTags []string `yaml:"exclude_tags,omitempty"`
 	// Options are package-specific options that modify runtime execution.
 	Options GolangRuntimeOptions `yaml:"options,omitempty"`
 }

@@ -541,6 +541,13 @@ func TestGolangValidate(t *testing.T) {
 			}
 			assert.Error(t, g.Validate())
 		},
+		"FailsWithPackageNameMatchingUnnamedPackagePath": func(t *testing.T, g *Golang) {
+			g.Packages = []GolangPackage{
+				{Name: "path", Path: "path"},
+				{Path: "path"},
+			}
+			assert.Error(t, g.Validate())
+		},
 		"FailsWithoutVariants": func(t *testing.T, g *Golang) {
 			g.Variants = nil
 			assert.Error(t, g.Validate())
@@ -1101,6 +1108,83 @@ func TestGolangMergeEnvironments(t *testing.T) {
 				Environment: env,
 			}
 			testCase(t, &g)
+		})
+	}
+}
+
+func TestGolangMergeDefaultTags(t *testing.T) {
+	defaultTags := []string{"tag"}
+	for testName, testCase := range map[string]func(t *testing.T, m *Golang){
+		"AddsNewTags": func(t *testing.T, m *Golang) {
+			_ = m.MergeDefaultTags("newTag1", "newTag2")
+			assert.Len(t, m.DefaultTags, len(defaultTags)+2)
+			assert.Subset(t, m.DefaultTags, defaultTags)
+			assert.Contains(t, m.DefaultTags, "newTag1")
+			assert.Contains(t, m.DefaultTags, "newTag2")
+		},
+		"IgnoresDuplicateTags": func(t *testing.T, m *Golang) {
+			_ = m.MergeDefaultTags("tag")
+			assert.Len(t, m.DefaultTags, len(defaultTags))
+			assert.Subset(t, m.DefaultTags, defaultTags)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Golang{
+				DefaultTags: defaultTags,
+			}
+			testCase(t, &m)
+		})
+	}
+}
+
+func TestGolangApplyDefaultTags(t *testing.T) {
+	defaultTags := []string{"default_tag1", "default_tag2"}
+	for testName, testCase := range map[string]func(t *testing.T, m *Golang){
+		"AddsNewDefaultTags": func(t *testing.T, m *Golang) {
+			tags := []string{"tag"}
+			m.Packages = []GolangPackage{
+				{
+					Name: "task",
+					Tags: tags,
+				},
+			}
+			m.ApplyDefaultTags()
+			assert.Len(t, m.Packages[0].Tags, len(tags)+len(defaultTags))
+			assert.Subset(t, m.Packages[0].Tags, tags)
+			assert.Subset(t, m.Packages[0].Tags, defaultTags)
+		},
+		"IgnoresTagsThatAlreadyExist": func(t *testing.T, m *Golang) {
+			tags := append([]string{"tag"}, defaultTags...)
+			m.Packages = []GolangPackage{
+				{
+					Name: "task",
+					Tags: tags,
+				},
+			}
+			m.ApplyDefaultTags()
+			assert.Len(t, m.Packages[0].Tags, len(tags))
+			assert.Subset(t, m.Packages[0].Tags, tags)
+		},
+		"IgnoresExcludedTags": func(t *testing.T, m *Golang) {
+			tags := []string{"tag"}
+			m.Packages = []GolangPackage{
+				{
+					Name:        "task",
+					Tags:        tags,
+					ExcludeTags: defaultTags[:1],
+				},
+			}
+			m.ApplyDefaultTags()
+			assert.Len(t, m.Packages[0].Tags, len(tags)+len(defaultTags)-1)
+			assert.Subset(t, m.Packages[0].Tags, tags)
+			assert.Subset(t, m.Packages[0].Tags, defaultTags[1:])
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Golang{
+				DefaultTags: defaultTags,
+			}
+			testCase(t, &m)
 		})
 	}
 }

@@ -890,3 +890,80 @@ func TestMakeMergeEnvironments(t *testing.T) {
 		})
 	}
 }
+
+func TestMakeMergeDefaultTags(t *testing.T) {
+	defaultTags := []string{"tag"}
+	for testName, testCase := range map[string]func(t *testing.T, m *Make){
+		"AddsNewTags": func(t *testing.T, m *Make) {
+			_ = m.MergeDefaultTags("newTag1", "newTag2")
+			assert.Len(t, m.DefaultTags, len(defaultTags)+2)
+			assert.Subset(t, m.DefaultTags, defaultTags)
+			assert.Contains(t, m.DefaultTags, "newTag1")
+			assert.Contains(t, m.DefaultTags, "newTag2")
+		},
+		"IgnoresDuplicateTags": func(t *testing.T, m *Make) {
+			_ = m.MergeDefaultTags("tag")
+			assert.Len(t, m.DefaultTags, len(defaultTags))
+			assert.Subset(t, m.DefaultTags, defaultTags)
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Make{
+				DefaultTags: defaultTags,
+			}
+			testCase(t, &m)
+		})
+	}
+}
+
+func TestMakeApplyDefaultTags(t *testing.T) {
+	defaultTags := []string{"default_tag1", "default_tag2"}
+	for testName, testCase := range map[string]func(t *testing.T, m *Make){
+		"AddsNewDefaultTags": func(t *testing.T, m *Make) {
+			tags := []string{"tag"}
+			m.Tasks = []MakeTask{
+				{
+					Name: "task",
+					Tags: tags,
+				},
+			}
+			m.ApplyDefaultTags()
+			assert.Len(t, m.Tasks[0].Tags, len(tags)+len(defaultTags))
+			assert.Subset(t, m.Tasks[0].Tags, tags)
+			assert.Subset(t, m.Tasks[0].Tags, defaultTags)
+		},
+		"IgnoresTagsThatAlreadyExist": func(t *testing.T, m *Make) {
+			tags := append([]string{"tag"}, defaultTags...)
+			m.Tasks = []MakeTask{
+				{
+					Name: "task",
+					Tags: tags,
+				},
+			}
+			m.ApplyDefaultTags()
+			assert.Len(t, m.Tasks[0].Tags, len(tags))
+			assert.Subset(t, m.Tasks[0].Tags, tags)
+		},
+		"IgnoresExcludedTags": func(t *testing.T, m *Make) {
+			tags := []string{"tag"}
+			m.Tasks = []MakeTask{
+				{
+					Name:        "task",
+					Tags:        tags,
+					ExcludeTags: defaultTags[:1],
+				},
+			}
+			m.ApplyDefaultTags()
+			assert.Len(t, m.Tasks[0].Tags, len(tags)+len(defaultTags)-1)
+			assert.Subset(t, m.Tasks[0].Tags, tags)
+			assert.Subset(t, m.Tasks[0].Tags, defaultTags[1:])
+		},
+	} {
+		t.Run(testName, func(t *testing.T) {
+			m := Make{
+				DefaultTags: defaultTags,
+			}
+			testCase(t, &m)
+		})
+	}
+}

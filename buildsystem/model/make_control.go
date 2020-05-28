@@ -16,15 +16,16 @@ type MakeControl struct {
 	VariantDistroFiles    []string `yaml:"variant_distro_files"`
 	VariantParameterFiles []string `yaml:"variant_parameter_files"`
 	EnvironmentFiles      []string `yaml:"environment_files"`
+	DefaultTagFiles       []string `yaml:"default_tag_files"`
 
-	WorkDir string `yaml:"-"`
+	WorkingDirectory string `yaml:"-"`
 }
 
 // NewMakeControl creates a new representation of a Make control file from the
 // given file.
 func NewMakeControl(file string) (*MakeControl, error) {
 	mc := MakeControl{
-		WorkDir: filepath.Dir(file),
+		WorkingDirectory: filepath.Dir(file),
 	}
 	if err := utility.ReadYAMLFileStrict(file, &mc); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
@@ -36,7 +37,7 @@ func NewMakeControl(file string) (*MakeControl, error) {
 func (mc *MakeControl) Build() (*Make, error) {
 	var m Make
 
-	if err := withMatchingFiles(mc.WorkDir, mc.TargetSequenceFiles, func(file string) error {
+	if err := withMatchingFiles(mc.WorkingDirectory, mc.TargetSequenceFiles, func(file string) error {
 		mtss := []MakeTargetSequence{}
 		if err := utility.ReadYAMLFileStrict(file, &mtss); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
@@ -49,7 +50,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building target sequence definitions")
 	}
 
-	if err := withMatchingFiles(mc.WorkDir, mc.TaskFiles, func(file string) error {
+	if err := withMatchingFiles(mc.WorkingDirectory, mc.TaskFiles, func(file string) error {
 		mts := []MakeTask{}
 		if err := utility.ReadYAMLFileStrict(file, &mts); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
@@ -70,7 +71,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building task definitions")
 	}
 
-	if err := withMatchingFiles(mc.WorkDir, mc.VariantDistroFiles, func(file string) error {
+	if err := withMatchingFiles(mc.WorkingDirectory, mc.VariantDistroFiles, func(file string) error {
 		vds := []VariantDistro{}
 		if err := utility.ReadYAMLFileStrict(file, &vds); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
@@ -91,7 +92,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building variant-distro mappings")
 	}
 
-	if err := withMatchingFiles(mc.WorkDir, mc.VariantParameterFiles, func(file string) error {
+	if err := withMatchingFiles(mc.WorkingDirectory, mc.VariantParameterFiles, func(file string) error {
 		nmvps := []NamedMakeVariantParameters{}
 		if err := utility.ReadYAMLFileStrict(file, &nmvps); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
@@ -112,7 +113,7 @@ func (mc *MakeControl) Build() (*Make, error) {
 		return nil, errors.Wrap(err, "building variant parameters")
 	}
 
-	if err := withMatchingFiles(mc.WorkDir, mc.EnvironmentFiles, func(file string) error {
+	if err := withMatchingFiles(mc.WorkingDirectory, mc.EnvironmentFiles, func(file string) error {
 		env := map[string]string{}
 		if err := utility.ReadYAMLFileStrict(file, &env); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
@@ -124,6 +125,21 @@ func (mc *MakeControl) Build() (*Make, error) {
 	}); err != nil {
 		return nil, errors.Wrap(err, "building environment variables")
 	}
+
+	if err := withMatchingFiles(mc.WorkingDirectory, mc.DefaultTagFiles, func(file string) error {
+		tags := []string{}
+		if err := utility.ReadYAMLFileStrict(file, &tags); err != nil {
+			return errors.Wrap(err, "unmarshalling from YAML file")
+		}
+
+		_ = m.MergeDefaultTags(tags...)
+
+		return nil
+	}); err != nil {
+		return nil, errors.Wrap(err, "building default tags")
+	}
+
+	m.ApplyDefaultTags()
 
 	if err := m.Validate(); err != nil {
 		return nil, errors.Wrap(err, "invalid configuration")

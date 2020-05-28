@@ -11,6 +11,7 @@ type Make struct {
 	TargetSequences []MakeTargetSequence `yaml:"sequences,omitempty"`
 	Tasks           []MakeTask           `yaml:"tasks,omitempty"`
 	Variants        []MakeVariant        `yaml:"variants"`
+	DefaultTags     []string             `yaml:"default_tags,omitempty"`
 	// Environment defines global environment variables. Definitions can be
 	// overridden at the task or variant level.
 	Environment map[string]string `yaml:"environment,omitempty"`
@@ -24,11 +25,25 @@ func NewMake(file string) (*Make, error) {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
 
+	m.ApplyDefaultTags()
+
 	if err := m.Validate(); err != nil {
 		return nil, errors.Wrap(err, "make generator configuration")
 	}
 
 	return &m, nil
+}
+
+// ApplyDefaultTags applies all the default tags to the existing tasks, subject
+// to task-level exclusion rules.
+func (m *Make) ApplyDefaultTags() {
+	for _, tag := range m.DefaultTags {
+		for i, mt := range m.Tasks {
+			if !utility.StringSliceContains(mt.Tags, tag) && !utility.StringSliceContains(mt.ExcludeTags, tag) {
+				m.Tasks[i].Tags = append(m.Tasks[i].Tags, tag)
+			}
+		}
+	}
 }
 
 // MergeTargetSequences merges target sequence definitions with the existing
@@ -98,6 +113,17 @@ func (m *Make) MergeVariantParameters(nmvps ...NamedMakeVariantParameters) *Make
 // passed into the function.
 func (m *Make) MergeEnvironments(envs ...map[string]string) *Make {
 	m.Environment = MergeEnvironments(append([]map[string]string{m.Environment}, envs...)...)
+	return m
+}
+
+// MergeDefaultTags merges the given tags with the existing default tags.
+// Duplicates are ignored.
+func (m *Make) MergeDefaultTags(tags ...string) *Make {
+	for _, tag := range tags {
+		if !utility.StringSliceContains(m.DefaultTags, tag) {
+			m.DefaultTags = append(m.DefaultTags, tag)
+		}
+	}
 	return m
 }
 
@@ -283,9 +309,15 @@ func (mts *MakeTargetSequence) Validate() error {
 
 // MakeTask represents a task that runs a group of Make targets.
 type MakeTask struct {
-	Name    string           `yaml:"name"`
+	// Name is the name of the task.
+	Name string `yaml:"name"`
+	// Targets are the names of targets or sequences of targets to run.
 	Targets []MakeTaskTarget `yaml:"targets"`
-	Tags    []string         `yaml:"tags,omitempty"`
+	// Tags are labels that allow you to logically group related tasks.
+	Tags []string `yaml:"tags,omitempty"`
+	// ExcludeTags allows you to specify tags that should not be applied to the
+	// task. This can be useful for excluding a task from the default tags.
+	ExcludeTags []string `yaml:"exclude_tags,omitempty"`
 	// Environment defines task-specific environment variables. This has higher
 	// precedence than global environment variables but lower precedence than
 	// variant-specific environment variables.
