@@ -9,7 +9,7 @@ import (
 // Make represents an evergreen config generator for Make-based projects.
 type Make struct {
 	model.Make
-	WorkingDirectory string `yaml:"-"`
+	WorkingDirectory string
 }
 
 // NewMake returns a generator for Make.
@@ -87,11 +87,13 @@ func (m *Make) subprocessExecCmds(mv model.MakeVariant, mt model.MakeTask) ([]sh
 			return nil, errors.Wrap(err, "resolving targets")
 		}
 		opts := target.Options.Merge(mt.Options, mv.Options)
-		cmds = append(cmds, &shrub.CmdExec{
-			Binary: "make",
-			Args:   append(opts, targetNames...),
-			Env:    env,
-		})
+		for _, targetName := range targetNames {
+			cmds = append(cmds, &shrub.CmdExec{
+				Binary: "make",
+				Args:   append(opts, targetName),
+				Env:    env,
+			})
+		}
 	}
 	return cmds, nil
 }

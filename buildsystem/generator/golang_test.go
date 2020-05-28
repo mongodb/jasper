@@ -32,7 +32,7 @@ func TestGolangGenerate(t *testing.T) {
 		assert.EqualValues(t, g.Environment["GOROOT"], env["GOROOT"])
 	}
 
-	checkTaskGroupTask := func(t *testing.T, g *Golang, task *shrub.Task) {
+	checkTaskInTaskGroup := func(t *testing.T, g *Golang, task *shrub.Task) {
 		projectPath, err := g.RelProjectPath()
 		require.Len(t, task.Commands, 1)
 		scriptingCmd := task.Commands[0]
@@ -89,28 +89,15 @@ func TestGolangGenerate(t *testing.T) {
 				getTaskName(expectedTasks[2]...),
 			})
 		},
-		"CreatesTaskGroups": func(t *testing.T, g *Golang) {
-			g.Packages = []model.GolangPackage{
-				{
-					Name: "name1",
-					Path: "path1",
+		"CreatesTaskGroup": func(t *testing.T, g *Golang) {
+			numTasks := minTasksForTaskGroup
+			g.Packages = nil
+			for i := 1; i <= numTasks; i++ {
+				g.Packages = append(g.Packages, model.GolangPackage{
+					Name: "name" + string(i),
+					Path: "path" + string(i),
 					Tags: []string{"tag"},
-				},
-				{
-					Name: "name2",
-					Path: "path2",
-					Tags: []string{"tag"},
-				},
-				{
-					Name: "name3",
-					Path: "path3",
-					Tags: []string{"tag"},
-				},
-				{
-					Name: "name4",
-					Path: "path4",
-					Tags: []string{"tag"},
-				},
+				})
 			}
 			g.Variants = []model.GolangVariant{
 				{
@@ -125,22 +112,28 @@ func TestGolangGenerate(t *testing.T) {
 					},
 				},
 			}
-			require.NoError(t, g.Validate())
 
 			conf, err := g.Generate()
 			require.NoError(t, err)
 
-			taskNames := []string{}
+			var taskNames []string
 			for _, gp := range g.Packages {
 				taskName := getTaskName(g.Variants[0].Name, gp.Tags[0], gp.Name)
 				taskNames = append(taskNames, taskName)
 				task := conf.Task(taskName)
-				checkTaskGroupTask(t, g, task)
+				checkTaskInTaskGroup(t, g, task)
 			}
 
 			taskGroup := conf.TaskGroup(getTaskGroupName(g.Variants[0].Name))
-			assert.Equal(t, 2, taskGroup.MaxHosts)
-			assert.Len(t, taskGroup.Tasks, 4)
+
+			assert.Equal(t, numTasks/2, taskGroup.MaxHosts)
+			assert.Len(t, taskGroup.Tasks, numTasks)
+			require.Len(t, taskGroup.SetupTask, 1)
+			getProjectCmd := taskGroup.SetupTask[0]
+			assert.Equal(t, shrub.CmdGetProject{}.Name(), getProjectCmd.CommandName)
+			projectPath, err := g.RelProjectPath()
+			require.NoError(t, err)
+			assert.Equal(t, projectPath, getProjectCmd.Params["directory"])
 			assert.Subset(t, taskGroup.Tasks, taskNames)
 
 			variant := conf.Variant(g.Variants[0].Name)
@@ -171,16 +164,20 @@ func TestGolangGenerate(t *testing.T) {
 					},
 				},
 			}
-			require.NoError(t, g.Validate())
 
 			conf, err := g.Generate()
 			require.NoError(t, err)
 
 			require.Len(t, conf.Tasks, 2)
-			task := conf.Task(getTaskName(g.Variants[0].Name, g.Packages[0].Tags[0], g.Packages[0].Path))
-			checkTask(t, g, task)
-			task = conf.Task(getTaskName(g.Variants[0].Name, g.Packages[0].Tags[0], g.Packages[1].Name))
-			checkTask(t, g, task)
+			task1 := conf.Task(getTaskName(g.Variants[0].Name, g.Packages[0].Tags[0], g.Packages[0].Path))
+			checkTask(t, g, task1)
+
+			task2 := conf.Task(getTaskName(g.Variants[0].Name, g.Packages[0].Tags[0], g.Packages[1].Name))
+			checkTask(t, g, task2)
+
+			variant := conf.Variant(g.Variants[0].Name)
+			expectedTasks := []string{task1.Name, task2.Name}
+			checkVariantForTasks(t, variant, g.Variants[0].Distros, expectedTasks)
 		},
 		"FailsWithVariantReferenceToNonexistentPackage": func(t *testing.T, g *Golang) {
 			g.Variants = append(g.Variants, model.GolangVariant{
@@ -190,6 +187,36 @@ func TestGolangGenerate(t *testing.T) {
 				GolangVariantParameters: model.GolangVariantParameters{
 					Packages: []model.GolangVariantPackage{
 						{Name: "nonexistent"},
+					},
+				},
+			})
+			conf, err := g.Generate()
+			assert.Error(t, err)
+			assert.Zero(t, conf)
+		},
+		"FailsWithVariantReferenceToNonexistentPath": func(t *testing.T, g *Golang) {
+			g.Variants = append(g.Variants, model.GolangVariant{
+				VariantDistro: model.VariantDistro{
+					Name: "newVariant",
+				},
+				GolangVariantParameters: model.GolangVariantParameters{
+					Packages: []model.GolangVariantPackage{
+						{Path: "nonexistent"},
+					},
+				},
+			})
+			conf, err := g.Generate()
+			assert.Error(t, err)
+			assert.Zero(t, conf)
+		},
+		"FailsWithVariantReferenceToNonexistentTag": func(t *testing.T, g *Golang) {
+			g.Variants = append(g.Variants, model.GolangVariant{
+				VariantDistro: model.VariantDistro{
+					Name: "newVariant",
+				},
+				GolangVariantParameters: model.GolangVariantParameters{
+					Packages: []model.GolangVariantPackage{
+						{Tag: "nonexistent"},
 					},
 				},
 			})
@@ -208,52 +235,53 @@ func TestGolangGenerate(t *testing.T) {
 			rootPackage := filepath.Join("github.com", "fake_user", "fake_repo")
 			gopath := "gopath"
 
-			g := Golang{
-				Golang: model.Golang{
-					Environment: map[string]string{
-						"GOPATH": gopath,
-						"GOROOT": "some_goroot",
-					},
-					RootPackage: rootPackage,
-					Packages: []model.GolangPackage{
-						{
-							Path: "path1",
-						},
-						{
-							Name: "name2",
-							Path: "path2",
-						},
-					},
-					Variants: []model.GolangVariant{
-						{
-							VariantDistro: model.VariantDistro{
-								Name:    "variant1",
-								Distros: []string{"distro1"},
-							},
-							GolangVariantParameters: model.GolangVariantParameters{
-								Packages: []model.GolangVariantPackage{
-									{Path: "path1"},
-									{Name: "name2"},
-								},
-							},
-						},
-						{
-							VariantDistro: model.VariantDistro{
-								Name:    "variant2",
-								Distros: []string{"distro2"},
-							},
-							GolangVariantParameters: model.GolangVariantParameters{
-								Packages: []model.GolangVariantPackage{
-									{Name: "name2"},
-								},
-							},
-						},
-					},
-					WorkingDirectory: filepath.Dir(gopath),
+			mg := model.Golang{
+				Environment: map[string]string{
+					"GOPATH": gopath,
+					"GOROOT": "some_goroot",
 				},
+				RootPackage: rootPackage,
+				Packages: []model.GolangPackage{
+					{
+						Path: "path1",
+					},
+					{
+						Name: "name2",
+						Path: "path2",
+					},
+				},
+				Variants: []model.GolangVariant{
+					{
+						VariantDistro: model.VariantDistro{
+							Name:    "variant1",
+							Distros: []string{"distro1"},
+						},
+						GolangVariantParameters: model.GolangVariantParameters{
+							Packages: []model.GolangVariantPackage{
+								{Path: "path1"},
+								{Name: "name2"},
+							},
+						},
+					},
+					{
+						VariantDistro: model.VariantDistro{
+							Name:    "variant2",
+							Distros: []string{"distro2"},
+						},
+						GolangVariantParameters: model.GolangVariantParameters{
+							Packages: []model.GolangVariantPackage{
+								{Name: "name2"},
+							},
+						},
+					},
+				},
+				WorkingDirectory: filepath.Dir(gopath),
 			}
+
+			g := NewGolang(mg)
 			require.NoError(t, g.Validate())
-			testCase(t, &g)
+
+			testCase(t, g)
 		})
 	}
 }
