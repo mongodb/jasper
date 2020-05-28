@@ -81,6 +81,8 @@ imports:
     version: a6b53ec6cb22a3699387a57a161566f9402ee85b
   - name: github.com/PuerkitoBio/rehttp
     version: 3acc8749c14f0a6368ee715d142dddf24c72d632
+  - name: github.com/sabhiram/go-git-ignore
+    version: d3107576ba9425fc1c85f4b3569c4631b805a02e
   - name: golang.org/x/oauth2
     version: bf48bf16ab8d622ce64ec6ce98d2c98f916b6303
   - name: gopkg.in/yaml.v2
