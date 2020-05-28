@@ -6,6 +6,7 @@ import (
 
 	"github.com/evergreen-ci/shrub"
 	"github.com/mongodb/jasper/buildsystem/model"
+	"github.com/mongodb/jasper/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -226,14 +227,14 @@ func TestGolangGenerate(t *testing.T) {
 			assert.Zero(t, conf)
 		},
 		"FailsWithGOPATHNotWithinWorkingDirectory": func(t *testing.T, g *Golang) {
-			g.Environment["GOPATH"] = filepath.ToSlash(filepath.Join("/path", "outside", "working", "directory"))
+			g.Environment["GOPATH"] = util.ConsistentFilepath("/path", "outside", "working", "directory")
 			conf, err := g.Generate()
 			assert.Error(t, err)
 			assert.Zero(t, conf)
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			rootPackage := filepath.Join("github.com", "fake_user", "fake_repo")
+			rootPackage := util.ConsistentFilepath("github.com", "fake_user", "fake_repo")
 			gopath := "gopath"
 
 			mg := model.Golang{

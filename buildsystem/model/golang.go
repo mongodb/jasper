@@ -7,6 +7,7 @@ import (
 
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -166,11 +167,11 @@ func (g *Golang) validateEnvVars() error {
 	catcher := grip.NewBasicCatcher()
 	for _, name := range []string{"GOPATH", "GOROOT"} {
 		if val, ok := g.Environment[name]; ok && val != "" {
-			g.Environment[name] = filepath.ToSlash(val)
+			g.Environment[name] = util.ConsistentFilepath(val)
 			continue
 		}
 		if val := os.Getenv(name); val != "" {
-			g.Environment[name] = filepath.ToSlash(val)
+			g.Environment[name] = util.ConsistentFilepath(val)
 			continue
 		}
 		catcher.Errorf("environment variable '%s' must be explicitly defined or already present in the environment", name)
@@ -329,10 +330,10 @@ func (g *Golang) GetPackagesAndRef(gvp GolangVariantPackage) ([]GolangPackage, s
 // AbsGopath converts the relative GOPATH in the environment into an absolute
 // path based on the working directory.
 func (g *Golang) AbsGopath() (string, error) {
-	gopath := filepath.ToSlash(g.Environment["GOPATH"])
-	workingDir := filepath.ToSlash(g.WorkingDirectory)
+	gopath := util.ConsistentFilepath(g.Environment["GOPATH"])
+	workingDir := util.ConsistentFilepath(g.WorkingDirectory)
 	if workingDir != "" && !strings.HasPrefix(gopath, workingDir) {
-		return filepath.Join(workingDir, gopath), nil
+		return util.ConsistentFilepath(workingDir, gopath), nil
 	}
 	if !filepath.IsAbs(gopath) {
 		return "", errors.New("GOPATH is relative path, but needs to be absolute path")
@@ -343,8 +344,8 @@ func (g *Golang) AbsGopath() (string, error) {
 // RelGopath returns the GOPATH in the environment relative to the working
 // directory (if it is defined).
 func (g *Golang) RelGopath() (string, error) {
-	gopath := filepath.ToSlash(g.Environment["GOPATH"])
-	workingDir := filepath.ToSlash(g.WorkingDirectory)
+	gopath := util.ConsistentFilepath(g.Environment["GOPATH"])
+	workingDir := util.ConsistentFilepath(g.WorkingDirectory)
 	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
 		return filepath.Rel(workingDir, gopath)
 	}
@@ -360,7 +361,7 @@ func (g *Golang) AbsProjectPath() (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "getting GOPATH as an absolute path")
 	}
-	return filepath.Join(gopath, "src", g.RootPackage), nil
+	return util.ConsistentFilepath(gopath, "src", g.RootPackage), nil
 }
 
 // RelProjectPath returns the path to the project relative to the working
@@ -370,7 +371,7 @@ func (g *Golang) RelProjectPath() (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "getting GOPATH as a relative path")
 	}
-	return filepath.Join(gopath, "src", g.RootPackage), nil
+	return util.ConsistentFilepath(gopath, "src", g.RootPackage), nil
 }
 
 // GetPackageIndexByName finds the package by name and returns the task

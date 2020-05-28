@@ -80,7 +80,7 @@ func requireOneFlag(names ...string) cli.BeforeFunc {
 func cleanupFilePathSeparators(names ...string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		for _, name := range names {
-			cleanPath := filepath.ToSlash(c.String(name))
+			cleanPath := util.ConsistentFilepath(c.String(name))
 			return errors.Wrapf(c.Set(name, cleanPath), "cleaning up flag '%s'", name)
 		}
 		return nil
@@ -91,8 +91,8 @@ func cleanupFilePathSeparators(names ...string) cli.BeforeFunc {
 // path relative to the directory path set for dirFlagName.
 func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
-		relPath := filepath.ToSlash(c.String(relPathFlagName))
-		path := filepath.ToSlash(c.String(pathFlagName))
+		relPath := util.ConsistentFilepath(c.String(relPathFlagName))
+		path := util.ConsistentFilepath(c.String(pathFlagName))
 		if filepath.IsAbs(relPath) {
 			if strings.HasPrefix(relPath, path) {
 				relPath = strings.TrimPrefix(relPath, path)
