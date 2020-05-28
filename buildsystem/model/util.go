@@ -1,9 +1,8 @@
 package model
 
 import (
-	"path/filepath"
-
 	"github.com/evergreen-ci/utility"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +14,7 @@ func withMatchingFiles(workDir string, patterns []string, op func(file string) e
 		return errors.Wrap(err, "evaluating file patterns")
 	}
 	for _, file := range files {
-		if err := op(filepath.Join(workDir, file)); err != nil {
+		if err := op(util.ConsistentFilepath(workDir, file)); err != nil {
 			return errors.Wrapf(err, "file '%s'", file)
 		}
 	}

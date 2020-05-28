@@ -280,6 +280,8 @@ const (
 	// golangVendorDir is the special vendor directory for vendoring
 	// dependencies.
 	golangVendorDir = "vendor"
+	// golangTestDataDir is the special data directory for tests.
+	golangTestDataDir = "testdata"
 )
 
 // DiscoverPackages discovers directories containing tests in the local file
@@ -303,6 +305,9 @@ func (g *Golang) DiscoverPackages() error {
 		if fileName == golangVendorDir {
 			return filepath.SkipDir
 		}
+		if fileName == golangTestDataDir {
+			return filepath.SkipDir
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -314,6 +319,7 @@ func (g *Golang) DiscoverPackages() error {
 		if err != nil {
 			return errors.Wrapf(err, "making package path '%s' relative to root package", path)
 		}
+		dir = util.ConsistentFilepath(dir)
 		// If package has already been defined, skip adding it.
 		for _, gp := range g.Packages {
 			if gp.Path == dir {
@@ -384,7 +390,11 @@ func (g *Golang) RelGopath() (string, error) {
 	gopath := util.ConsistentFilepath(g.Environment["GOPATH"])
 	workingDir := util.ConsistentFilepath(g.WorkingDirectory)
 	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
-		return filepath.Rel(workingDir, gopath)
+		relGopath, err := filepath.Rel(workingDir, gopath)
+		if err != nil {
+			return "", errors.Wrap(err, "making GOPATH relative")
+		}
+		return util.ConsistentFilepath(relGopath), nil
 	}
 	if filepath.IsAbs(gopath) {
 		return "", errors.New("GOPATH is absolute path, but needs to be relative path")

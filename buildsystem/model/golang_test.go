@@ -8,6 +8,7 @@ import (
 
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/testutil"
+	"github.com/mongodb/jasper/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -467,12 +468,12 @@ func TestGolangValidate(t *testing.T) {
 			if gopath == "" {
 				t.Skip("GOPATH not defined in environment")
 			}
-			g.WorkingDirectory = filepath.Dir(gopath)
+			g.WorkingDirectory = util.ConsistentFilepath(filepath.Dir(gopath))
 			delete(g.Environment, "GOPATH")
 			assert.NoError(t, g.Validate())
 			relGopath, err := filepath.Rel(g.WorkingDirectory, gopath)
 			require.NoError(t, err)
-			assert.Equal(t, relGopath, g.Environment["GOPATH"])
+			assert.Equal(t, util.ConsistentFilepath(relGopath), util.ConsistentFilepath(g.Environment["GOPATH"]))
 		},
 		"FailsWithoutGOPATHEnvVar": func(t *testing.T, g *Golang) {
 			if gopath, ok := os.LookupEnv("GOPATH"); ok {
@@ -789,13 +790,13 @@ func TestDiscoverPackages(t *testing.T) {
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			rootPackage := filepath.Join("github.com", "fake_user", "fake_repo")
+			rootPackage := util.ConsistentFilepath("github.com", "fake_user", "fake_repo")
 			gopath, err := ioutil.TempDir(testutil.BuildDirectory(), "gopath")
 			require.NoError(t, err)
 			defer func() {
 				assert.NoError(t, os.RemoveAll(gopath))
 			}()
-			rootPath := filepath.Join(gopath, "src", rootPackage)
+			rootPath := util.ConsistentFilepath(gopath, "src", rootPackage)
 			require.NoError(t, os.MkdirAll(rootPath, 0777))
 
 			g := Golang{
@@ -804,7 +805,7 @@ func TestDiscoverPackages(t *testing.T) {
 					"GOROOT": "some_goroot",
 				},
 				RootPackage:      rootPackage,
-				WorkingDirectory: filepath.Dir(gopath),
+				WorkingDirectory: util.ConsistentFilepath(filepath.Dir(gopath)),
 			}
 			testCase(t, &g, rootPath)
 		})

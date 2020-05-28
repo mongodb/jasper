@@ -5,6 +5,7 @@ import (
 
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
+	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +26,7 @@ type MakeControl struct {
 // given file.
 func NewMakeControl(file string) (*MakeControl, error) {
 	mc := MakeControl{
-		WorkingDirectory: filepath.Dir(file),
+		WorkingDirectory: util.ConsistentFilepath(filepath.Dir(file)),
 	}
 	if err := utility.ReadYAMLFileStrict(file, &mc); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
