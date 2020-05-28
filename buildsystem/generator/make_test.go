@@ -19,6 +19,7 @@ func TestMakeGenerate(t *testing.T) {
 
 		for i, execCmd := range task.Commands[1:] {
 			assert.Equal(t, shrub.CmdExec{}.Name(), execCmd.CommandName)
+			assert.Equal(t, m.WorkingDirectory, execCmd.Params["working_dir"])
 			execArgs, ok := execCmd.Params["args"].([]interface{})
 			require.True(t, ok)
 			assert.Subset(t, execArgs, opts)
@@ -45,6 +46,7 @@ func TestMakeGenerate(t *testing.T) {
 		require.Len(t, task.Commands, len(targets))
 		for i, execCmd := range task.Commands {
 			assert.Equal(t, shrub.CmdExec{}.Name(), execCmd.CommandName)
+			assert.Equal(t, m.WorkingDirectory, execCmd.Params["working_dir"])
 			execArgs, ok := execCmd.Params["args"].([]interface{})
 			require.True(t, ok)
 			assert.Subset(t, execArgs, opts)

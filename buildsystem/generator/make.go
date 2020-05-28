@@ -87,9 +87,10 @@ func (m *Make) subprocessExecCmds(mv model.MakeVariant, mt model.MakeTask) ([]sh
 		opts := target.Options.Merge(mt.Options, mv.Options)
 		for _, targetName := range targetNames {
 			cmds = append(cmds, &shrub.CmdExec{
-				Binary: "make",
-				Args:   append(opts, targetName),
-				Env:    env,
+				Binary:           "make",
+				Args:             append(opts, targetName),
+				Env:              env,
+				WorkingDirectory: m.WorkingDirectory,
 			})
 		}
 	}
