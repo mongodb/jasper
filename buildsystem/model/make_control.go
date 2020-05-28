@@ -37,18 +37,80 @@ func NewMakeControl(file string) (*MakeControl, error) {
 func (mc *MakeControl) Build() (*Make, error) {
 	var m Make
 
+	mtss, err := mc.buildTargetSequences()
+	if err != nil {
+		return nil, errors.Wrap(err, "building target sequence definitions")
+	}
+	_ = m.MergeTargetSequences(mtss...)
+
+	mts, err := mc.buildTasks()
+	if err != nil {
+		return nil, errors.Wrap(err, "building target definitions")
+	}
+	_ = m.MergeTasks(mts...)
+
+	vds, err := mc.buildVariantDistros()
+	if err != nil {
+		return nil, errors.Wrap(err, "building variant-distro mappings")
+	}
+	_ = m.MergeVariantDistros(vds...)
+
+	nmvps, err := mc.buildVariantParameters()
+	if err != nil {
+		return nil, errors.Wrap(err, "building variant parameters")
+	}
+	_ = m.MergeVariantParameters(nmvps...)
+
+	envs, err := mc.buildEnvironments()
+	if err != nil {
+		return nil, errors.Wrap(err, "building environment variables")
+	}
+	_ = m.MergeEnvironments(envs...)
+
+	tags, err := mc.buildDefaultTags()
+	if err != nil {
+		return nil, errors.Wrap(err, "building default tags")
+	}
+	_ = m.MergeDefaultTags(tags...)
+
+	m.ApplyDefaultTags()
+
+	if err := m.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid build configuration")
+	}
+
+	return &m, nil
+}
+
+func (mc *MakeControl) buildTargetSequences() ([]MakeTargetSequence, error) {
+	var all []MakeTargetSequence
+
 	if err := withMatchingFiles(mc.WorkingDirectory, mc.TargetSequenceFiles, func(file string) error {
 		mtss := []MakeTargetSequence{}
 		if err := utility.ReadYAMLFileStrict(file, &mtss); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
-		_ = m.MergeTargetSequences(mtss...)
+		catcher := grip.NewBasicCatcher()
+		for _, mts := range mtss {
+			catcher.Wrapf(mts.Validate(), "target sequence '%s'", mts.Name)
+		}
+		if catcher.HasErrors() {
+			return catcher.Resolve()
+		}
+
+		all = append(all, mtss...)
 
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "building target sequence definitions")
+		return nil, errors.WithStack(err)
 	}
+
+	return all, nil
+}
+
+func (mc *MakeControl) buildTasks() ([]MakeTask, error) {
+	var all []MakeTask
 
 	if err := withMatchingFiles(mc.WorkingDirectory, mc.TaskFiles, func(file string) error {
 		mts := []MakeTask{}
@@ -64,12 +126,18 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid task definitions")
 		}
 
-		_ = m.MergeTasks(mts...)
+		all = append(all, mts...)
 
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "building task definitions")
+		return nil, errors.WithStack(err)
 	}
+
+	return all, nil
+}
+
+func (mc *MakeControl) buildVariantDistros() ([]VariantDistro, error) {
+	var all []VariantDistro
 
 	if err := withMatchingFiles(mc.WorkingDirectory, mc.VariantDistroFiles, func(file string) error {
 		vds := []VariantDistro{}
@@ -85,12 +153,18 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid variant-distro mappings")
 		}
 
-		_ = m.MergeVariantDistros(vds...)
+		all = append(all, vds...)
 
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "building variant-distro mappings")
+		return nil, errors.WithStack(err)
 	}
+
+	return all, nil
+}
+
+func (mc *MakeControl) buildVariantParameters() ([]NamedMakeVariantParameters, error) {
+	var all []NamedMakeVariantParameters
 
 	if err := withMatchingFiles(mc.WorkingDirectory, mc.VariantParameterFiles, func(file string) error {
 		nmvps := []NamedMakeVariantParameters{}
@@ -106,12 +180,18 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(catcher.Resolve(), "invalid variant parameters")
 		}
 
-		_ = m.MergeVariantParameters(nmvps...)
+		all = append(all, nmvps...)
 
 		return nil
 	}); err != nil {
 		return nil, errors.Wrap(err, "building variant parameters")
 	}
+
+	return all, nil
+}
+
+func (mc *MakeControl) buildEnvironments() ([]map[string]string, error) {
+	var all []map[string]string
 
 	if err := withMatchingFiles(mc.WorkingDirectory, mc.EnvironmentFiles, func(file string) error {
 		env := map[string]string{}
@@ -119,31 +199,30 @@ func (mc *MakeControl) Build() (*Make, error) {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
-		_ = m.MergeEnvironments(env)
+		all = append(all, env)
 
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "building environment variables")
+		return nil, errors.WithStack(err)
 	}
 
+	return all, nil
+}
+
+func (mc *MakeControl) buildDefaultTags() ([]string, error) {
+	var all []string
 	if err := withMatchingFiles(mc.WorkingDirectory, mc.DefaultTagFiles, func(file string) error {
 		tags := []string{}
 		if err := utility.ReadYAMLFileStrict(file, &tags); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
 
-		_ = m.MergeDefaultTags(tags...)
+		all = append(all, tags...)
 
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "building default tags")
+		return nil, errors.WithStack(err)
 	}
 
-	m.ApplyDefaultTags()
-
-	if err := m.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid configuration")
-	}
-
-	return &m, nil
+	return all, nil
 }
