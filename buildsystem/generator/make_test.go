@@ -273,9 +273,10 @@ func TestMakeGenerate(t *testing.T) {
 						},
 					},
 				},
+				WorkingDirectory: "working_dir",
 			}
 
-			m := NewMake(mm, "working_dir")
+			m := NewMake(mm)
 			require.NoError(t, m.Validate())
 
 			testCase(t, m)

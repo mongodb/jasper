@@ -9,14 +9,12 @@ import (
 // Make represents an evergreen config generator for Make-based projects.
 type Make struct {
 	model.Make
-	WorkingDirectory string
 }
 
 // NewMake returns a generator for Make.
-func NewMake(m model.Make, workingDir string) *Make {
+func NewMake(m model.Make) *Make {
 	return &Make{
-		Make:             m,
-		WorkingDirectory: workingDir,
+		Make: m,
 	}
 }
 

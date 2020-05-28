@@ -9,6 +9,7 @@ type VariantDistro struct {
 	Distros []string `yaml:"distros"`
 }
 
+// Validate checks that the variant name is set and distros are specified.
 func (vd *VariantDistro) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(vd.Name == "", "missing variant name")

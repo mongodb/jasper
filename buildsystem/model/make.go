@@ -15,12 +15,16 @@ type Make struct {
 	// Environment defines global environment variables. Definitions can be
 	// overridden at the task or variant level.
 	Environment map[string]string `yaml:"environment,omitempty"`
+
+	WorkingDirectory string `yaml:"-"`
 }
 
 // NewMake creates a new evergreen config generator for Make from a single file
 // that contains all the necessary generation information.
-func NewMake(file string) (*Make, error) {
-	m := Make{}
+func NewMake(file, workingDir string) (*Make, error) {
+	m := Make{
+		WorkingDirectory: workingDir,
+	}
 	if err := utility.ReadYAMLFileStrict(file, &m); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}

@@ -147,13 +147,13 @@ func generateMake() cli.Command {
 			var m *model.Make
 			var err error
 			if genFile != "" {
-				m, err = model.NewMake(genFile)
+				m, err = model.NewMake(genFile, workingDir)
 				if err != nil {
 					return errors.Wrapf(err, "creating model from build file '%s'", genFile)
 				}
 			} else if ctrlFile != "" {
 				var mc *model.MakeControl
-				mc, err = model.NewMakeControl(ctrlFile)
+				mc, err = model.NewMakeControl(ctrlFile, workingDir)
 				if err != nil {
 					return errors.Wrapf(err, "creating builder from control file '%s'", ctrlFile)
 				}
@@ -163,7 +163,7 @@ func generateMake() cli.Command {
 				}
 			}
 
-			gen := generator.NewMake(*m, workingDir)
+			gen := generator.NewMake(*m)
 			conf, err := gen.Generate()
 			if err != nil {
 				return errors.Wrapf(err, "generating evergreen config from build file(s)")
