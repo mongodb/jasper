@@ -33,7 +33,6 @@ func TestGolangGenerate(t *testing.T) {
 	}
 
 	checkTaskInTaskGroup := func(t *testing.T, g *Golang, task *shrub.Task) {
-		projectPath, err := g.RelProjectPath()
 		require.Len(t, task.Commands, 1)
 		scriptingCmd := task.Commands[0]
 		assert.Equal(t, shrub.CmdSubprocessScripting{}.Name(), scriptingCmd.CommandName)
@@ -41,6 +40,8 @@ func TestGolangGenerate(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, gopath, scriptingCmd.Params["harness_path"])
 		assert.Equal(t, g.WorkingDirectory, scriptingCmd.Params["working_dir"])
+		projectPath, err := g.RelProjectPath()
+		require.NoError(t, err)
 		assert.Equal(t, projectPath, scriptingCmd.Params["test_dir"])
 		env, ok := scriptingCmd.Params["env"].(map[string]interface{})
 		require.True(t, ok)

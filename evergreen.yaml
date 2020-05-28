@@ -114,6 +114,10 @@ tasks:
     tags: ["report"]
     name: lint-buildsystem-generator
 
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-buildsystem-model
+
 task_groups:
   - name: lintGroup
     tasks: [ ".report"]

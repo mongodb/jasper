@@ -69,7 +69,7 @@ func requireOneFlag(names ...string) cli.BeforeFunc {
 			}
 		}
 		if count != 1 {
-			return errors.Errorf("must specify exactly one flag from the following: ", names)
+			return errors.Errorf("must specify exactly one flag from the following: %s", names)
 		}
 		return nil
 	}
@@ -81,7 +81,7 @@ func cleanupFilePathSeparators(names ...string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		for _, name := range names {
 			cleanPath := filepath.ToSlash(c.String(name))
-			c.Set(name, cleanPath)
+			return errors.Wrapf(c.Set(name, cleanPath), "cleaning up flag '%s'", name)
 		}
 		return nil
 	}
@@ -96,9 +96,9 @@ func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
 		if filepath.IsAbs(relPath) {
 			if strings.HasPrefix(relPath, path) {
 				relPath = strings.TrimPrefix(relPath, path)
-			} else {
-				return errors.Errorf("path '%s' must be relative to the path '%s'", relPath, path)
+				return errors.Wrapf(c.Set(relPathFlagName, relPath), "setting flag '%s' to relative path", relPathFlagName)
 			}
+			return errors.Errorf("path '%s' must be relative to the path '%s'", relPath, path)
 		}
 		return nil
 	}
