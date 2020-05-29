@@ -2,7 +2,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
-packages := $(name) cli remote remote-internal options mock testutil internal-executor buildsystem-generator
+packages := $(name) cli remote remote-internal options mock testutil internal-executor buildsystem-generator buildsystem-model
 lintPackages := $(packages) mock testutil
 testPackages := $(packages) mock
 projectPath := github.com/mongodb/jasper
@@ -146,7 +146,6 @@ clean-results:
 	rm -rf $(buildDir)/output.*
 
 vendor-clean:
-	rm -rf vendor/github.com/evergreen-ci/utility/parsing.go
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/google/uuid/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/google/uuid/
