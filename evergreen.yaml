@@ -84,11 +84,23 @@ tasks:
 
   - <<: *run-build
     tags: ["report"]
+    name: lint-buildsystem-generator
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-buildsystem-model
+
+  - <<: *run-build
+    tags: ["report"]
     name: lint-cli
 
   - <<: *run-build
     tags: ["report"]
     name: lint-internal-executor
+
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-jasper
 
   - <<: *run-build
     tags: ["report"]
@@ -109,14 +121,6 @@ tasks:
   - <<: *run-build
     tags: ["report"]
     name: lint-testutil
-
-  - <<: *run-build
-    tags: ["report"]
-    name: lint-buildsystem-generator
-
-  - <<: *run-build
-    tags: ["report"]
-    name: lint-buildsystem-model
 
 task_groups:
   - name: lintGroup

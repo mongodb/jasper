@@ -122,7 +122,7 @@ $(buildDir)/:
 proto:
 	@mkdir -p remote/internal
 	protoc --go_out=plugins=grpc:remote/internal *.proto
-lint:$(buildDir) $(foreach target,$(packages),$(buildDir)/output.$(target).lint)
+lint:$(buildDir) $(foreach target,$(lintPackages),$(buildDir)/output.$(target).lint)
 
 test:$(buildDir) $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 
