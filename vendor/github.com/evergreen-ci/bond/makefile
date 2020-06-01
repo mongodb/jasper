@@ -2,7 +2,7 @@
 name := bond
 buildDir := build
 packages := $(name) recall
-orgPath := github.com/tychoish
+orgPath := github.com/evergreen-ci
 projectPath := $(orgPath)/$(name)
 # end project configuration
 

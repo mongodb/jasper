@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/evergreen-ci/bond"
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/amboy/queue"
 	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
-	"github.com/tychoish/bond"
 )
 
 // DownloadReleases accesses the feed and, based on the arguments

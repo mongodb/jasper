@@ -4,5 +4,5 @@ imports:
 - name: github.com/pkg/errors
   version: 839d9e913e063e28dfd0e6c7b7512793e0a48be9
 - name: github.com/mongodb/grip
-  version: 07578aa100ecdf0d5a1611e2ef43742ff6c77240
+  version: 0c6d5f1374e2a07a8ce72cfd765bea028aa6b7ec
 devImports: []

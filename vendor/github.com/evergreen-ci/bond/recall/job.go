@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/evergreen-ci/bond"
 	"github.com/mholt/archiver"
 	"github.com/mongodb/amboy"
 	"github.com/mongodb/amboy/dependency"
@@ -20,7 +21,6 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	"github.com/pkg/errors"
-	"github.com/tychoish/bond"
 )
 
 // DownloadFileJob is an amboy.Job implementation that supports

@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/evergreen-ci/bond"
 	"github.com/mongodb/grip"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/tychoish/bond"
 )
 
 type ReactorSuite struct {

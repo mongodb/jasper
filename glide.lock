@@ -11,10 +11,10 @@ imports:
     version: ae76e68cb2ba6041c76c4abcd013b00cd52bacee
   - name: github.com/evergreen-ci/gimlet
     version: 8a317d725d0315a97c5d0c08ec04921f3ba498d5
-  - name: github.com/tychoish/bond
-    version: f64dbbe9148d8a2fb93ff2bbe02d7234109947b6
-  - name: github.com/tychoish/lru
-    version: f77a748d12a924cfbfcf396426dd58de5aa3a9e2
+  - name: github.com/evergreen-ci/bond
+    version: e4a29fb10c31b3651cb623b73655bc66035f83e7
+  - name: github.com/evergreen-ci/lru
+    version: d1b427740b3b78780272eb34942e4ed27e0e101d
   - name: github.com/mholt/archiver
     version: de0d89e255e17c8d75a40122055763e743ab0593
   - name: github.com/mongodb/amboy

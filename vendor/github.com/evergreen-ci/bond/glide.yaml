@@ -1,4 +1,4 @@
-package: github.com/tychoish/bond
+package: github.com/evergreen-ci/bond
 import:
 - package: github.com/mongodb/amboy
 - package: github.com/mongodb/grip
