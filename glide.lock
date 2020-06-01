@@ -36,7 +36,7 @@ imports:
   - name: github.com/evergreen-ci/poplar
     version: 3043bd036e01aa6abbad6af0df031a8315308ff9
   - name: github.com/evergreen-ci/utility
-    version: 4a870f24b0d693b3f280cc1e31db2a16e948919a
+    version: 282a6f91af567e4826cecb85349f1cfb379ae183
   - name: github.com/evergreen-ci/service
     version: d9382e39d76857e2fe92a379d89f3c86fe507c4d
   - name: github.com/evergreen-ci/shrub
