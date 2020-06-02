@@ -96,9 +96,9 @@ type Output struct {
 type UploadOptions struct {
 	// Format describes the format of the output to upload.
 	Format OutputFormat `yaml:"format,omitempty"`
-	// kim: TODO: no idea what this field means.
+	// Report indicates that the output should be reported as test results.
 	Report bool `yaml:"report,omitempty"`
-	// kim:TODO: isn't this superfluous with archive options?
+	// UploadArchive indicates that the output should be uploaded as an archive.
 	UploadArchive bool `yaml:"upload_archive,omitempty"`
 	// UploadPath is the remote path where the output will be uploaded.
 	UploadPath string `yaml:"upload_path,omitempty"`
