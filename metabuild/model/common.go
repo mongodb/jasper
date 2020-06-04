@@ -31,7 +31,6 @@ func MergeEnvironments(envsByPriority ...map[string]string) map[string]string {
 	return merged
 }
 
-// kim: TODO: test
 // FileReport defines options to report output files.
 type FileReport struct {
 	// ReportFiles are the files used to create the report.

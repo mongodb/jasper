@@ -64,6 +64,8 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 	return conf, nil
 }
 
+// generateVariantTasksForRef generates the tasks for the given variant from a
+// single task reference in the given variant.
 func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, mv model.MakeVariant, mts []model.MakeTask) ([]*shrub.Task, error) {
 	var tasks []*shrub.Task
 	for _, mt := range mts {
@@ -76,7 +78,8 @@ func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, mv model.MakeV
 	return tasks, nil
 }
 
-// kim: TODO: test
+// taskCmds returns the commands that should be executed for the given task
+// within the given variant.
 func (m *Make) taskCmds(mv model.MakeVariant, mt model.MakeTask) ([]shrub.Command, error) {
 	env := model.MergeEnvironments(m.Environment, mv.Environment, mt.Environment)
 	var cmds []shrub.Command

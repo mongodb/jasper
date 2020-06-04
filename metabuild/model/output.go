@@ -8,14 +8,14 @@ type ReportFormat string
 const (
 	Artifact      ReportFormat = "artifact"
 	EvergreenJSON ReportFormat = "evg-json"
-	Gotest        ReportFormat = "gotest"
+	GoTest        ReportFormat = "gotest"
 	XUnit         ReportFormat = "xunit"
 )
 
 // Validate checks that the report format is recognized.
 func (r ReportFormat) Validate() error {
 	switch r {
-	case EvergreenJSON, Gotest, XUnit, Artifact:
+	case Artifact, EvergreenJSON, GoTest, XUnit:
 		return nil
 	default:
 		return errors.Errorf("unrecognized format '%s'", r)

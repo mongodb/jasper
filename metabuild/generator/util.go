@@ -32,7 +32,6 @@ func getTaskGroupName(name string) string {
 
 // fileReportCmds converts the given files to report to the evergreen command
 // that will report the file.
-// kim: TODO: test
 func fileReportCmds(frs ...model.FileReport) ([]shrub.Command, error) {
 	var cmds []shrub.Command
 	for _, fr := range frs {
@@ -47,7 +46,6 @@ func fileReportCmds(frs ...model.FileReport) ([]shrub.Command, error) {
 
 // fileReportCmd converts a single file report to the evergreen command that
 // will report the file.
-// kim: TODO: test
 func fileReportCmd(fr model.FileReport) (shrub.Command, error) {
 	switch fr.Format {
 	case model.Artifact:
@@ -61,7 +59,7 @@ func fileReportCmd(fr model.FileReport) (shrub.Command, error) {
 		return shrub.CmdResultsJSON{
 			File: fr.Files[0],
 		}, nil
-	case model.Gotest:
+	case model.GoTest:
 		return shrub.CmdResultsGoTest{
 			LegacyFormat: true,
 			Files:        fr.Files,
