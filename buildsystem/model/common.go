@@ -30,3 +30,21 @@ func MergeEnvironments(envsByPriority ...map[string]string) map[string]string {
 	}
 	return merged
 }
+
+// kim: TODO: test
+// FileReport defines options to report output files.
+type FileReport struct {
+	// ReportFiles are the files used to create the report.
+	Files []string `yaml:"files"`
+	// Format is the kind of format of the files to report.
+	Format ReportFormat `yaml:"format"`
+}
+
+// Validate checks that the file report contains files and the format is valid.
+func (fr *FileReport) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(len(fr.Files) == 0, "must specify at least one file to report")
+	catcher.Wrap(fr.Format.Validate(), "invalid report format")
+	catcher.NewWhen(fr.Format == EvergreenJSON && len(fr.Files) != 1, "evergreen JSON results format requires exactly one file to be reported")
+	return catcher.Resolve()
+}

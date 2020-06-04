@@ -16,8 +16,9 @@ type MakeControl struct {
 	TaskFiles             []string `yaml:"task_files"`
 	VariantDistroFiles    []string `yaml:"variant_distro_files"`
 	VariantParameterFiles []string `yaml:"variant_parameter_files"`
-	EnvironmentFiles      []string `yaml:"environment_files"`
-	DefaultTagFiles       []string `yaml:"default_tag_files"`
+	EnvironmentFiles      []string `yaml:"environment_files,omitempty"`
+	DefaultTagFiles       []string `yaml:"default_tag_files,omitempty"`
+	TestResultsFiles      []string `yaml:"test_results_files,omitempty"`
 
 	WorkingDirectory string `yaml:"-"`
 	ControlDirectory string `yaml:"-"`

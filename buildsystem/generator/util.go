@@ -2,6 +2,10 @@ package generator
 
 import (
 	"strings"
+
+	"github.com/evergreen-ci/shrub"
+	"github.com/mongodb/jasper/buildsystem/model"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -24,4 +28,49 @@ func getTaskName(parts ...string) string {
 // getTaskGroupName returns an auto-generated task group name.
 func getTaskGroupName(name string) string {
 	return name + taskGroupSuffix
+}
+
+// fileReportCmds converts the given files to report to the evergreen command
+// that will report the file.
+// kim: TODO: test
+func fileReportCmds(frs ...model.FileReport) ([]shrub.Command, error) {
+	var cmds []shrub.Command
+	for _, fr := range frs {
+		cmd, err := fileReportCmd(fr)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		cmds = append(cmds, cmd)
+	}
+	return cmds, nil
+}
+
+// fileReportCmd converts a single file report to the evergreen command that
+// will report the file.
+// kim: TODO: test
+func fileReportCmd(fr model.FileReport) (shrub.Command, error) {
+	switch fr.Format {
+	case model.Artifact:
+		return shrub.CmdAttachArtifacts{
+			Files: fr.Files,
+		}, nil
+	case model.EvergreenJSON:
+		if len(fr.Files) != 1 {
+			return nil, errors.New("evergreen JSON results format requires exactly one test results file to be provided")
+		}
+		return shrub.CmdResultsJSON{
+			File: fr.Files[0],
+		}, nil
+	case model.Gotest:
+		return shrub.CmdResultsGoTest{
+			LegacyFormat: true,
+			Files:        fr.Files,
+		}, nil
+	case model.XUnit:
+		return shrub.CmdResultsXunit{
+			Files: fr.Files,
+		}, nil
+	default:
+		return nil, errors.Errorf("unrecognized file report format '%s'", fr.Format)
+	}
 }

@@ -67,7 +67,7 @@ func (m *Make) Generate() (*shrub.Configuration, error) {
 func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, mv model.MakeVariant, mts []model.MakeTask) ([]*shrub.Task, error) {
 	var tasks []*shrub.Task
 	for _, mt := range mts {
-		cmds, err := m.subprocessExecCmds(mv, mt)
+		cmds, err := m.taskCmds(mv, mt)
 		if err != nil {
 			return nil, errors.Wrap(err, "generating commands to run")
 		}
@@ -76,13 +76,14 @@ func (m *Make) generateVariantTasksForRef(c *shrub.Configuration, mv model.MakeV
 	return tasks, nil
 }
 
-func (m *Make) subprocessExecCmds(mv model.MakeVariant, mt model.MakeTask) ([]shrub.Command, error) {
+// kim: TODO: test
+func (m *Make) taskCmds(mv model.MakeVariant, mt model.MakeTask) ([]shrub.Command, error) {
 	env := model.MergeEnvironments(m.Environment, mv.Environment, mt.Environment)
 	var cmds []shrub.Command
 	for _, target := range mt.Targets {
 		targetNames, err := m.GetTargetsFromRef(target)
 		if err != nil {
-			return nil, errors.Wrap(err, "resolving targets")
+			return nil, errors.Wrap(err, "resolving commands for targets")
 		}
 		opts := target.Options.Merge(mt.Options, mv.Options)
 		for _, targetName := range targetNames {
@@ -93,6 +94,18 @@ func (m *Make) subprocessExecCmds(mv model.MakeVariant, mt model.MakeTask) ([]sh
 				WorkingDirectory: m.WorkingDirectory,
 			})
 		}
+		reportCmds, err := fileReportCmds(target.Reports...)
+		if err != nil {
+			return nil, errors.Wrapf(err, "resolving target file report commands")
+		}
+		cmds = append(cmds, reportCmds...)
 	}
+
+	reportCmds, err := fileReportCmds(mt.Reports...)
+	if err != nil {
+		return nil, errors.Wrap(err, "resolving task file report commands")
+	}
+	cmds = append(cmds, reportCmds...)
+
 	return cmds, nil
 }

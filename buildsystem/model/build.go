@@ -95,7 +95,7 @@ type Output struct {
 // UploadOptions describe how the output should be uploaded to a remote store.
 type UploadOptions struct {
 	// Format describes the format of the output to upload.
-	Format OutputFormat `yaml:"format,omitempty"`
+	Format ReportFormat `yaml:"format,omitempty"`
 	// Report indicates that the output should be reported as test results.
 	Report bool `yaml:"report,omitempty"`
 	// UploadArchive indicates that the output should be uploaded as an archive.
@@ -103,12 +103,3 @@ type UploadOptions struct {
 	// UploadPath is the remote path where the output will be uploaded.
 	UploadPath string `yaml:"upload_path,omitempty"`
 }
-
-// OutputFormat is a recognized output format.
-type OutputFormat string
-
-const (
-	XUnitFormat  OutputFormat = "xunit"
-	GotestFormat OutputFormat = "gotest"
-	PoplarFormat OutputFormat = "poplar"
-)

@@ -16,6 +16,8 @@ type Make struct {
 	// overridden at the task or variant level.
 	Environment map[string]string `yaml:"environment,omitempty"`
 
+	// WorkingDirectory determines the project working directory where the
+	// project will be cloned.
 	WorkingDirectory string `yaml:"-"`
 }
 
@@ -329,6 +331,9 @@ type MakeTask struct {
 	// Options are task-specific options that modify runtime execution. If
 	// options are specified at the target level, these options will be appended.
 	Options MakeRuntimeOptions `yaml:"options,omitempty"`
+	// Report describe how test results are reported after the task is
+	// complete.
+	Reports []FileReport `yaml:"reports,omitempty"`
 }
 
 // MakeTarget represents a reference to a single Make target or a sequence of
@@ -340,18 +345,20 @@ type MakeTaskTarget struct {
 	Sequence string `yaml:"sequence"`
 	// Options are target-specific options that modify runtime execution.
 	Options MakeRuntimeOptions `yaml:"options,omitempty"`
+	// Reports describe how output files are reported after running the target.
+	Reports []FileReport `yaml:"reports,omitempty"`
 }
 
 // Validate checks that exactly one kind of reference is specified in a target
 // reference for a task.
 func (mtt *MakeTaskTarget) Validate() error {
-	if mtt.Name == "" && mtt.Sequence == "" {
-		return errors.New("must specify either a target name or sequence")
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(mtt.Name == "" && mtt.Sequence == "", "must specify either a target name or sequence")
+	catcher.NewWhen(mtt.Name != "" && mtt.Sequence != "", "cannot specify both a target name and sequence")
+	for _, fr := range mtt.Reports {
+		catcher.Wrap(fr.Validate(), "invalid file report specification")
 	}
-	if mtt.Name != "" && mtt.Sequence != "" {
-		return errors.New("cannot specify both a target name and sequence")
-	}
-	return nil
+	return catcher.Resolve()
 }
 
 // Validate checks that targets are valid and all tags are unique.
@@ -368,6 +375,9 @@ func (mt *MakeTask) Validate() error {
 			catcher.Errorf("duplicate tag '%s'", tag)
 		}
 		tags[tag] = struct{}{}
+	}
+	for _, fr := range mt.Reports {
+		catcher.Wrap(fr.Validate(), "invalid file report specification")
 	}
 	return catcher.Resolve()
 }
