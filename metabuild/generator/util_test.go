@@ -39,8 +39,7 @@ func TestFileReportCmds(t *testing.T) {
 			"CreatesCommandFromGoTest": {
 				format: model.GoTest,
 				testCase: func(t *testing.T, fr model.FileReport, cmd *shrub.CommandDefinition) {
-					// kim: TODO: remove once shrub is fixed
-					assert.Equal(t, "gotest.parse_files", cmd.CommandName)
+					assert.Equal(t, shrub.CmdResultsGoTest{LegacyFormat: true}.Name(), cmd.CommandName)
 					i, ok := cmd.Params["files"]
 					require.True(t, ok)
 					files, ok := i.([]interface{})
