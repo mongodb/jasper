@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/evergreen-ci/shrub"
-	"github.com/mongodb/jasper/buildsystem/model"
+	"github.com/mongodb/jasper/metabuild/model"
 	"github.com/pkg/errors"
 )
 
