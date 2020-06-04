@@ -62,12 +62,12 @@ func TestFileReport(t *testing.T) {
 		t.Run("Succeeds", func(t *testing.T) {
 			fr := FileReport{
 				Files:  []string{"file1", "file2"},
-				Format: Gotest,
+				Format: GoTest,
 			}
 			assert.NoError(t, fr.Validate())
 		})
 		t.Run("SucceedsWithValidFormat", func(t *testing.T) {
-			for _, format := range []ReportFormat{Artifact, EvergreenJSON, Gotest, XUnit} {
+			for _, format := range []ReportFormat{Artifact, EvergreenJSON, GoTest, XUnit} {
 				fr := FileReport{
 					Files:  []string{"file"},
 					Format: format,
@@ -95,7 +95,7 @@ func TestFileReport(t *testing.T) {
 		})
 		t.Run("FailsWithoutFiles", func(t *testing.T) {
 			fr := FileReport{
-				Format: Gotest,
+				Format: GoTest,
 			}
 			assert.Error(t, fr.Validate())
 		})
