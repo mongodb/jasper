@@ -37,12 +37,15 @@ type Golang struct {
 // NewGolang returns a model of a Golang build configuration from a single file
 // and working directory where the GOPATH directory is located.
 func NewGolang(file, workingDir string) (*Golang, error) {
-	g := Golang{
-		WorkingDirectory: workingDir,
-	}
-	if err := utility.ReadYAMLFileStrict(file, &g); err != nil {
+	gv := struct {
+		Golang    `yaml:",inline"`
+		Variables interface{} `yaml:"variables,omitempty"`
+	}{}
+	if err := utility.ReadYAMLFileStrict(file, &gv); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
+	g := gv.Golang
+	g.WorkingDirectory = workingDir
 
 	if err := g.DiscoverPackages(); err != nil {
 		return nil, errors.Wrap(err, "automatically discovering test packages")

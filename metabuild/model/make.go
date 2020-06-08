@@ -24,12 +24,15 @@ type Make struct {
 // NewMake creates a new evergreen config generator for Make from a single file
 // that contains all the necessary generation information.
 func NewMake(file, workingDir string) (*Make, error) {
-	m := Make{
-		WorkingDirectory: workingDir,
-	}
-	if err := utility.ReadYAMLFileStrict(file, &m); err != nil {
+	mv := struct {
+		Make      `yaml:",inline"`
+		Variables interface{} `yaml:"variables,omitempty"`
+	}{}
+	if err := utility.ReadYAMLFileStrict(file, &mv); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
+	m := mv.Make
+	m.WorkingDirectory = workingDir
 
 	m.ApplyDefaultTags()
 
