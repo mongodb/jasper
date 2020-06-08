@@ -14,32 +14,124 @@ import (
 // Golang represents a configuration for generating an evergreen configuration
 // from a project that uses golang.
 type Golang struct {
-	// RootPackage is the name of the root package for the project (e.g.
-	// github.com/mongodb/jasper).
-	RootPackage string `yaml:"root_package"`
+	GolangGeneralConfig `yaml:"general,inline"`
 	// Packages define packages that should be tested. They can be either
 	// explicitly defined via configuration or automatically discovered.
 	Packages []GolangPackage `yaml:"packages,omitempty"`
 	// Variants describe the mapping between packages and distros to run them
 	// on.
 	Variants []GolangVariant `yaml:"variants"`
-	// Environment defines any environment variables. GOPATH and GOROOT are
-	// required. If the working directory is specified, GOPATH must be specified
-	// as a subdirectory of the working directory.
-	Environment map[string]string `yaml:"environment"`
-	DefaultTags []string          `yaml:"default_tags,omitempty"`
+}
+
+// GolangGeneralConfig defines general top-level configuration for Golang.
+type GolangGeneralConfig struct {
+	// GeneralConfig requires that GOPATH and GOROOT be defined in the
+	// environment. If the working directory is specified, GOPATH must be
+	// specified as a subdirectory of the working directory. DefaultTags are
+	// applied to all packages (discovered or explicitly defined).
+	GeneralConfig `yaml:",inline"`
+	// RootPackage is the name of the root package for the project (e.g.
+	// github.com/mongodb/jasper).
+	RootPackage string `yaml:"root_package"`
 
 	// WorkingDirectory is the absolute path to the base directory where the
 	// GOPATH directory is located.
 	WorkingDirectory string `yaml:"-"`
 }
 
+func (ggc *GolangGeneralConfig) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(ggc.RootPackage == "", "must specify the import path of the root package of the project")
+	catcher.Wrap(ggc.validateEnvVars(), "invalid environment variables")
+	return catcher.Resolve()
+}
+
+func (ggc *GolangGeneralConfig) validateEnvVars() error {
+	catcher := grip.NewBasicCatcher()
+	for _, name := range []string{"GOPATH", "GOROOT"} {
+		if val, ok := ggc.Environment[name]; ok && val != "" {
+			ggc.Environment[name] = util.ConsistentFilepath(val)
+			continue
+		}
+		if val := os.Getenv(name); val != "" {
+			ggc.Environment[name] = util.ConsistentFilepath(val)
+			continue
+		}
+		catcher.Errorf("environment variable '%s' must be explicitly defined or already present in the environment", name)
+	}
+	if catcher.HasErrors() {
+		return catcher.Resolve()
+	}
+
+	// According to the semantics of the generator's GOPATH, it must be relative
+	// to the working directory (if specified).
+	relGopath, err := ggc.RelGopath()
+	if err != nil {
+		catcher.Wrap(err, "converting GOPATH to relative path")
+	} else {
+		ggc.Environment["GOPATH"] = relGopath
+	}
+
+	return catcher.Resolve()
+}
+
+// AbsGopath converts the relative GOPATH in the environment into an absolute
+// path based on the working directory.
+func (ggc *GolangGeneralConfig) AbsGopath() (string, error) {
+	gopath := util.ConsistentFilepath(ggc.Environment["GOPATH"])
+	workingDir := util.ConsistentFilepath(ggc.WorkingDirectory)
+	if workingDir != "" && !strings.HasPrefix(gopath, workingDir) {
+		return util.ConsistentFilepath(workingDir, gopath), nil
+	}
+	if !filepath.IsAbs(gopath) {
+		return "", errors.New("GOPATH is relative path, but needs to be absolute path")
+	}
+	return gopath, nil
+}
+
+// RelGopath returns the GOPATH in the environment relative to the working
+// directory (if it is defined).
+func (ggc *GolangGeneralConfig) RelGopath() (string, error) {
+	gopath := util.ConsistentFilepath(ggc.Environment["GOPATH"])
+	workingDir := util.ConsistentFilepath(ggc.WorkingDirectory)
+	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
+		relGopath, err := filepath.Rel(workingDir, gopath)
+		if err != nil {
+			return "", errors.Wrap(err, "making GOPATH relative")
+		}
+		return util.ConsistentFilepath(relGopath), nil
+	}
+	if filepath.IsAbs(gopath) {
+		return "", errors.New("GOPATH is absolute path, but needs to be relative path")
+	}
+	return gopath, nil
+}
+
+// AbsProjectPath returns the absolute path to the project.
+func (ggc *GolangGeneralConfig) AbsProjectPath() (string, error) {
+	gopath, err := ggc.AbsGopath()
+	if err != nil {
+		return "", errors.Wrap(err, "getting GOPATH as an absolute path")
+	}
+	return util.ConsistentFilepath(gopath, "src", ggc.RootPackage), nil
+}
+
+// RelProjectPath returns the path to the project relative to the working
+// directory.
+func (ggc *Golang) RelProjectPath() (string, error) {
+	gopath, err := ggc.RelGopath()
+	if err != nil {
+		return "", errors.Wrap(err, "getting GOPATH as a relative path")
+	}
+	return util.ConsistentFilepath(gopath, "src", ggc.RootPackage), nil
+}
+
 // NewGolang returns a model of a Golang build configuration from a single file
 // and working directory where the GOPATH directory is located.
 func NewGolang(file, workingDir string) (*Golang, error) {
 	gv := struct {
-		Golang    `yaml:",inline"`
-		Variables interface{} `yaml:"variables,omitempty"`
+		Golang           `yaml:",inline"`
+		VariablesSection `yaml:",inline"`
 	}{}
 	if err := utility.ReadYAMLFileStrict(file, &gv); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
@@ -75,7 +167,7 @@ func (g *Golang) ApplyDefaultTags() {
 // MergeTasks merges task definitions with the existing ones by either package
 // name or package path. For a given package name or path, existing tasks are
 // overwritten if they are already defined.
-func (g *Golang) MergePackages(gps ...GolangPackage) *Golang {
+func (g *Golang) MergePackages(gps ...GolangPackage) {
 	for _, gp := range gps {
 		if gp.Name != "" {
 			if _, i, err := g.GetPackageIndexByName(gp.Name); err == nil {
@@ -91,70 +183,27 @@ func (g *Golang) MergePackages(gps ...GolangPackage) *Golang {
 			}
 		}
 	}
-	return g
 }
 
-// MergeVariantDistros merges variant-distro mappings with the existing ones by
-// variant name. For a given variant name, existing variant-distro mappings are
-// overwritten if they are already defined.
-func (g *Golang) MergeVariantDistros(vds ...VariantDistro) *Golang {
-	for _, vd := range vds {
-		if mv, i, err := g.GetVariantIndexByName(vd.Name); err == nil {
-			mv.VariantDistro = vd
-			g.Variants[i] = *mv
+// MergeVariants merges variants with the existing ones by variant name. For a
+// given variant name, existing variants are overwritten if they are already
+// defined.
+func (g *Golang) MergeVariants(vs ...GolangVariant) {
+	for _, v := range vs {
+		if _, i, err := g.GetVariantIndexByName(v.Name); err == nil {
+			g.Variants[i] = v
 		} else {
-			g.Variants = append(g.Variants, GolangVariant{
-				VariantDistro: vd,
-			})
+			g.Variants = append(g.Variants, v)
 		}
 	}
-	return g
-}
-
-// MergeVariantParameters merges variant parameters with the existing ones by
-// name. For a given variant name, existing variant options are overwritten if
-// they are already defined.
-func (g *Golang) MergeVariantParameters(ngvps ...NamedGolangVariantParameters) *Golang {
-	for _, ngvp := range ngvps {
-		if gv, i, err := g.GetVariantIndexByName(ngvp.Name); err == nil {
-			gv.GolangVariantParameters = ngvp.GolangVariantParameters
-			g.Variants[i] = *gv
-		} else {
-			g.Variants = append(g.Variants, GolangVariant{
-				VariantDistro:           VariantDistro{Name: ngvp.Name},
-				GolangVariantParameters: ngvp.GolangVariantParameters,
-			})
-		}
-	}
-	return g
-}
-
-// MergeEnvironments merges the given environments with the existing environment
-// variables. Duplicates are overwritten in the order in which environments are
-// passed into the function.
-func (g *Golang) MergeEnvironments(envs ...map[string]string) *Golang {
-	g.Environment = MergeEnvironments(append([]map[string]string{g.Environment}, envs...)...)
-	return g
-}
-
-// MergeDefaultTags merges the given tags with the existing default tags.
-// Duplicates are ignored.
-func (g *Golang) MergeDefaultTags(tags ...string) *Golang {
-	for _, tag := range tags {
-		if !utility.StringSliceContains(g.DefaultTags, tag) {
-			g.DefaultTags = append(g.DefaultTags, tag)
-		}
-	}
-	return g
 }
 
 // Validate checks that the entire Golang build configuration is valid.
 func (g *Golang) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
-	catcher.NewWhen(g.RootPackage == "", "must specify the import path of the root package of the project")
+	catcher.Wrap(g.GolangGeneralConfig.Validate(), "invalid top-level configuration")
 	catcher.Wrap(g.validatePackages(), "invalid package definitions")
-	catcher.Wrap(g.validateEnvVars(), "invalid environment variables")
 	catcher.Wrap(g.validateVariants(), "invalid variant definitions")
 
 	return catcher.Resolve()
@@ -203,35 +252,6 @@ func (g *Golang) validatePackages() error {
 // - GOROOT is defined.
 // - GOPATH is defined and can be converted to a path relative to the working
 //   directory.
-func (g *Golang) validateEnvVars() error {
-	catcher := grip.NewBasicCatcher()
-	for _, name := range []string{"GOPATH", "GOROOT"} {
-		if val, ok := g.Environment[name]; ok && val != "" {
-			g.Environment[name] = util.ConsistentFilepath(val)
-			continue
-		}
-		if val := os.Getenv(name); val != "" {
-			g.Environment[name] = util.ConsistentFilepath(val)
-			continue
-		}
-		catcher.Errorf("environment variable '%s' must be explicitly defined or already present in the environment", name)
-	}
-	if catcher.HasErrors() {
-		return catcher.Resolve()
-	}
-
-	// According to the semantics of the generator's GOPATH, it must be relative
-	// to the working directory (if specified).
-	relGopath, err := g.RelGopath()
-	if err != nil {
-		catcher.Wrap(err, "converting GOPATH to relative path")
-	} else {
-		g.Environment["GOPATH"] = relGopath
-	}
-
-	return catcher.Resolve()
-}
-
 // validateVariants checks that:
 // - Variants are defined.
 // - Each variant name is unique.
@@ -373,57 +393,6 @@ func (g *Golang) GetPackagesAndRef(gvp GolangVariantPackage) ([]GolangPackage, s
 	return nil, "", errors.New("empty package reference")
 }
 
-// AbsGopath converts the relative GOPATH in the environment into an absolute
-// path based on the working directory.
-func (g *Golang) AbsGopath() (string, error) {
-	gopath := util.ConsistentFilepath(g.Environment["GOPATH"])
-	workingDir := util.ConsistentFilepath(g.WorkingDirectory)
-	if workingDir != "" && !strings.HasPrefix(gopath, workingDir) {
-		return util.ConsistentFilepath(workingDir, gopath), nil
-	}
-	if !filepath.IsAbs(gopath) {
-		return "", errors.New("GOPATH is relative path, but needs to be absolute path")
-	}
-	return gopath, nil
-}
-
-// RelGopath returns the GOPATH in the environment relative to the working
-// directory (if it is defined).
-func (g *Golang) RelGopath() (string, error) {
-	gopath := util.ConsistentFilepath(g.Environment["GOPATH"])
-	workingDir := util.ConsistentFilepath(g.WorkingDirectory)
-	if workingDir != "" && strings.HasPrefix(gopath, workingDir) {
-		relGopath, err := filepath.Rel(workingDir, gopath)
-		if err != nil {
-			return "", errors.Wrap(err, "making GOPATH relative")
-		}
-		return util.ConsistentFilepath(relGopath), nil
-	}
-	if filepath.IsAbs(gopath) {
-		return "", errors.New("GOPATH is absolute path, but needs to be relative path")
-	}
-	return gopath, nil
-}
-
-// AbsProjectPath returns the absolute path to the project.
-func (g *Golang) AbsProjectPath() (string, error) {
-	gopath, err := g.AbsGopath()
-	if err != nil {
-		return "", errors.Wrap(err, "getting GOPATH as an absolute path")
-	}
-	return util.ConsistentFilepath(gopath, "src", g.RootPackage), nil
-}
-
-// RelProjectPath returns the path to the project relative to the working
-// directory.
-func (g *Golang) RelProjectPath() (string, error) {
-	gopath, err := g.RelGopath()
-	if err != nil {
-		return "", errors.Wrap(err, "getting GOPATH as a relative path")
-	}
-	return util.ConsistentFilepath(gopath, "src", g.RootPackage), nil
-}
-
 // GetPackageIndexByName finds the package by name and returns the task
 // definition and its index.
 func (g *Golang) GetPackageIndexByName(name string) (gp *GolangPackage, index int, err error) {
@@ -501,21 +470,7 @@ func (gp *GolangPackage) Validate() error {
 // GolangVariant defines a mapping between distros that run packages and the
 // golang packages to run.
 type GolangVariant struct {
-	VariantDistro           `yaml:",inline"`
-	GolangVariantParameters `yaml:",inline"`
-}
-
-// Validate checks that the variant-distro mapping and the Golang-specific
-// parameters are valid.
-func (gv *GolangVariant) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	catcher.Add(gv.VariantDistro.Validate())
-	catcher.Add(gv.GolangVariantParameters.Validate())
-	return catcher.Resolve()
-}
-
-// GolangVariantParameters describe Golang-specific variant configuration.
-type GolangVariantParameters struct {
+	VariantDistro `yaml:",inline"`
 	// Packages lists a package name, path or or tagged group of packages
 	// relative to the root package.
 	Packages []GolangVariantPackage `yaml:"packages"`
@@ -525,28 +480,41 @@ type GolangVariantParameters struct {
 	Options *GolangRuntimeOptions `yaml:"options,omitempty"`
 }
 
-// Validate checks that the Golang-specific variant parameters are valid.
-func (gvp *GolangVariantParameters) Validate() error {
+// Validate checks that the variant-distro mapping and the Golang-specific
+// parameters are valid.
+func (gv *GolangVariant) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(len(gvp.Packages) == 0, "need to specify at least one package")
+	catcher.Add(gv.VariantDistro.Validate())
+	catcher.Wrap(gv.validatePackages(), "invalid package references")
+
+	if gv.Options != nil {
+		catcher.Wrap(gv.Options.Validate(), "invalid runtime options")
+	}
+
+	return catcher.Resolve()
+}
+
+func (gv *GolangVariant) validatePackages() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(len(gv.Packages) == 0, "need to specify at least one package")
 	pkgPaths := map[string]struct{}{}
 	pkgNames := map[string]struct{}{}
 	pkgTags := map[string]struct{}{}
-	for _, pkg := range gvp.Packages {
-		catcher.Wrap(pkg.Validate(), "invalid package reference")
-		if path := pkg.Path; path != "" {
+	for _, gvp := range gv.Packages {
+		catcher.Wrap(gvp.Validate(), "invalid package reference")
+		if path := gvp.Path; path != "" {
 			if _, ok := pkgPaths[path]; ok {
 				catcher.Errorf("duplicate reference to package path '%s'", path)
 			}
 			pkgPaths[path] = struct{}{}
 		}
-		if name := pkg.Name; name != "" {
+		if name := gvp.Name; name != "" {
 			if _, ok := pkgNames[name]; ok {
 				catcher.Errorf("duplicate reference to package name '%s'", name)
 			}
 			pkgNames[name] = struct{}{}
 		}
-		if tag := pkg.Tag; tag != "" {
+		if tag := gvp.Tag; tag != "" {
 			if _, ok := pkgTags[tag]; ok {
 				catcher.Errorf("duplicate reference to package tag '%s'", tag)
 			}
@@ -554,25 +522,6 @@ func (gvp *GolangVariantParameters) Validate() error {
 
 		}
 	}
-	if gvp.Options != nil {
-		catcher.Wrap(gvp.Options.Validate(), "invalid runtime options")
-	}
-	return catcher.Resolve()
-}
-
-// NamedGolangVariantParameters describes Golang-specific variant configuration
-// associated with a particular variant name.
-type NamedGolangVariantParameters struct {
-	// Name is the variant name.
-	Name                    string `yaml:"name"`
-	GolangVariantParameters `yaml:",inline"`
-}
-
-// Validate checks that there is a variant name and valid parameters.
-func (ngvp *NamedGolangVariantParameters) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(ngvp.Name == "", "must specify variant name")
-	catcher.Add(ngvp.GolangVariantParameters.Validate())
 	return catcher.Resolve()
 }
 
