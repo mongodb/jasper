@@ -56,7 +56,7 @@ $(buildDir)/run-linter:cmd/run-linter/run-linter.go $(buildDir)/.lintSetup $(bui
 
 # benchmark setup targets
 $(buildDir)/run-benchmarks:cmd/run-benchmarks/run_benchmarks.go $(buildDir)
-	$(goEnv) $(gobin) build -ldflags "-w" -o $@ $<
+	$(goEnv) $(gobin) build -o $@ $<
 # end benchmark setup targets
 
 # cli targets
