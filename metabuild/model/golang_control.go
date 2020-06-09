@@ -47,11 +47,11 @@ func (gc *GolangControl) Build() (*Golang, error) {
 	}
 	g.MergePackages(gps...)
 
-	vs, err := gc.buildVariants()
+	gvs, err := gc.buildVariants()
 	if err != nil {
 		return nil, errors.Wrap(err, "building variant definitions")
 	}
-	g.MergeVariants(vs...)
+	g.MergeVariants(gvs...)
 
 	ggc, err := gc.buildGeneral()
 	if err != nil {
@@ -59,11 +59,11 @@ func (gc *GolangControl) Build() (*Golang, error) {
 	}
 	g.GolangGeneralConfig = ggc
 
+	g.WorkingDirectory = gc.WorkingDirectory
+
 	if err := g.DiscoverPackages(); err != nil {
 		return nil, errors.Wrap(err, "automatically discovering test packages")
 	}
-
-	g.WorkingDirectory = gc.WorkingDirectory
 
 	g.ApplyDefaultTags()
 
@@ -107,24 +107,24 @@ func (gc *GolangControl) buildPackages() ([]GolangPackage, error) {
 func (gc *GolangControl) buildVariants() ([]GolangVariant, error) {
 	var all []GolangVariant
 	if err := withMatchingFiles(gc.ControlDirectory, gc.VariantFiles, func(file string) error {
-		vsv := struct {
+		gvsv := struct {
 			Variants         []GolangVariant `yaml:"variants"`
 			VariablesSection `yaml:",inline"`
 		}{}
-		if err := utility.ReadYAMLFileStrict(file, &vsv); err != nil {
+		if err := utility.ReadYAMLFileStrict(file, &gvsv); err != nil {
 			return errors.Wrap(err, "unmarshalling from YAML file")
 		}
-		vs := vsv.Variants
+		gvs := gvsv.Variants
 
 		catcher := grip.NewBasicCatcher()
-		for _, v := range vs {
-			catcher.Wrapf(v.Validate(), "variant '%s'", v.Name)
+		for _, gv := range gvs {
+			catcher.Wrapf(gv.Validate(), "variant '%s'", gv.Name)
 		}
 		if catcher.HasErrors() {
 			return errors.Wrap(catcher.Resolve(), "invalid variant definition(s)")
 		}
 
-		all = append(all, vs...)
+		all = append(all, gvs...)
 
 		return nil
 	}); err != nil {
@@ -139,6 +139,7 @@ func (gc *GolangControl) buildGeneral() (GolangGeneralConfig, error) {
 		GolangGeneralConfig `yaml:"general"`
 		VariablesSection    `yaml:",inline"`
 	}{}
+
 	if err := utility.ReadYAMLFileStrict(gc.GeneralFile, &ggcv); err != nil {
 		return GolangGeneralConfig{}, errors.Wrap(err, "unmarshalling from YAML file")
 	}

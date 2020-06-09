@@ -25,18 +25,18 @@ type Golang struct {
 
 // GolangGeneralConfig defines general top-level configuration for Golang.
 type GolangGeneralConfig struct {
-	// GeneralConfig requires that GOPATH and GOROOT be defined in the
-	// environment. If the working directory is specified, GOPATH must be
-	// specified as a subdirectory of the working directory. DefaultTags are
-	// applied to all packages (discovered or explicitly defined).
+	// GeneralConfig defines generic top-level configuration.
+	// WorkingDirectory is the absolute path to the base directory where the
+	// GOPATH directory is located.
+	// Environment requires that GOPATH and GOROOT be defined. If the working
+	// directory is specified, GOPATH must be specified as a subdirectory of the
+	// working directory.
+	// DefaultTags are applied to all packages (discovered or explicitly
+	// defined) unless explicitly excluded.
 	GeneralConfig `yaml:",inline"`
 	// RootPackage is the name of the root package for the project (e.g.
 	// github.com/mongodb/jasper).
 	RootPackage string `yaml:"root_package"`
-
-	// WorkingDirectory is the absolute path to the base directory where the
-	// GOPATH directory is located.
-	WorkingDirectory string `yaml:"-"`
 }
 
 func (ggc *GolangGeneralConfig) Validate() error {
@@ -118,7 +118,7 @@ func (ggc *GolangGeneralConfig) AbsProjectPath() (string, error) {
 
 // RelProjectPath returns the path to the project relative to the working
 // directory.
-func (ggc *Golang) RelProjectPath() (string, error) {
+func (ggc *GolangGeneralConfig) RelProjectPath() (string, error) {
 	gopath, err := ggc.RelGopath()
 	if err != nil {
 		return "", errors.Wrap(err, "getting GOPATH as a relative path")
@@ -203,8 +203,8 @@ func (g *Golang) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
 	catcher.Wrap(g.GolangGeneralConfig.Validate(), "invalid top-level configuration")
-	catcher.Wrap(g.validatePackages(), "invalid package definitions")
-	catcher.Wrap(g.validateVariants(), "invalid variant definitions")
+	catcher.Wrap(g.validatePackages(), "invalid package definition(s)")
+	catcher.Wrap(g.validateVariants(), "invalid variant definition(s)")
 
 	return catcher.Resolve()
 }
@@ -222,7 +222,7 @@ func (g *Golang) validatePackages() error {
 	pkgPaths := map[string]struct{}{}
 	unnamedPkgPaths := map[string]struct{}{}
 	for _, pkg := range g.Packages {
-		catcher.Wrapf(pkg.Validate(), "invalid package definition '%s'", pkg.Path)
+		catcher.Wrapf(pkg.Validate(), "invalid package definition for package named '%s' and path '%s'", pkg.Name, pkg.Path)
 
 		if pkg.Name != "" {
 			if _, ok := pkgNames[pkg.Name]; ok {
@@ -444,7 +444,6 @@ type GolangPackage struct {
 	// example, "." refers to the root package while "util" refers to a
 	// subpackage called "util" within the root package.
 	Path string `yaml:"path"`
-	// kim: TODO: refactor Tags and ExcludeTags into TagSelector
 	// Tags are labels that allow you to logically group related packages.
 	Tags []string `yaml:"tags,omitempty"`
 	// ExcludeTags allows you to specify tags that should not be applied to the
@@ -468,7 +467,7 @@ func (gp *GolangPackage) Validate() error {
 		}
 		tags[tag] = struct{}{}
 	}
-	catcher.Wrap(gp.Flags.Validate(), "invalid flags")
+	catcher.Wrap(gp.Flags.Validate(), "invalid flag(s)")
 	return catcher.Resolve()
 }
 
@@ -490,10 +489,10 @@ type GolangVariant struct {
 func (gv *GolangVariant) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.Add(gv.VariantDistro.Validate())
-	catcher.Wrap(gv.validatePackages(), "invalid package references")
+	catcher.Add(gv.validatePackages())
 
 	if gv.Flags != nil {
-		catcher.Wrap(gv.Flags.Validate(), "invalid flags")
+		catcher.Wrap(gv.Flags.Validate(), "invalid flag(s)")
 	}
 
 	return catcher.Resolve()

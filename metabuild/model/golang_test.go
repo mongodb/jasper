@@ -124,7 +124,7 @@ func TestGolangVariant(t *testing.T) {
 				}
 				assert.NoError(t, gv.Validate())
 			},
-			"SucceedsWithMultiplePackages": func(t *testing.T, gv *GolangVariant) {
+			"SucceedsWithMultiplePackageReferences": func(t *testing.T, gv *GolangVariant) {
 				gv.Packages = []GolangVariantPackage{
 					{Name: "name1"},
 					{Name: "name2"},
@@ -135,13 +135,13 @@ func TestGolangVariant(t *testing.T) {
 				}
 				assert.NoError(t, gv.Validate())
 			},
-			"FailsWithEmpty": func(t *testing.T, gv *GolangVariant) {
-				gv = &GolangVariant{}
+			"FailsWithEmpty": func(t *testing.T, _ *GolangVariant) {
+				gv := &GolangVariant{}
 				assert.Error(t, gv.Validate())
 			},
 			"FailsWithInvalidOptions": func(t *testing.T, gv *GolangVariant) {
-				opts := GolangRuntimeOptions([]string{"-v"})
-				gv.Options = &opts
+				flags := GolangFlags([]string{"-v"})
+				gv.Flags = &flags
 				assert.Error(t, gv.Validate())
 			},
 		} {
@@ -714,9 +714,9 @@ func TestDiscoverPackages(t *testing.T) {
 							"GOPATH": gopath,
 							"GOROOT": "some_goroot",
 						},
+						WorkingDirectory: util.ConsistentFilepath(filepath.Dir(gopath)),
 					},
-					RootPackage:      rootPackage,
-					WorkingDirectory: util.ConsistentFilepath(filepath.Dir(gopath)),
+					RootPackage: rootPackage,
 				},
 			}
 			testCase(t, &g, rootPath)
@@ -724,10 +724,10 @@ func TestDiscoverPackages(t *testing.T) {
 	}
 }
 
-func TestGolangRuntimeOptions(t *testing.T) {
+func TestGolangFlags(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		for testName, testCase := range map[string]struct {
-			opts        GolangRuntimeOptions
+			opts        GolangFlags
 			expectError bool
 		}{
 			"SucceedsWithAllUniqueFlags": {
@@ -758,53 +758,53 @@ func TestGolangRuntimeOptions(t *testing.T) {
 	})
 	t.Run("Merge", func(t *testing.T) {
 		for testName, testCase := range map[string]struct {
-			opts      GolangRuntimeOptions
-			overwrite GolangRuntimeOptions
-			expected  GolangRuntimeOptions
+			flags     GolangFlags
+			overwrite GolangFlags
+			expected  GolangFlags
 		}{
 			"AllUniqueFlagsAreAppended": {
-				opts:      []string{"-cover", "-race=true"},
+				flags:     []string{"-cover", "-race=true"},
 				overwrite: []string{"-coverprofile", "-outputdir=./dir"},
 				expected:  []string{"-cover", "-race=true", "-coverprofile", "-outputdir=./dir"},
 			},
 			"DuplicateFlagsAreCombined": {
-				opts:      []string{"-cover"},
+				flags:     []string{"-cover"},
 				overwrite: []string{"-cover"},
 				expected:  []string{"-cover"},
 			},
 			"TestFlagsAreCheckedAgainstEquivalentFlags": {
-				opts:      []string{"-test.race"},
+				flags:     []string{"-test.race"},
 				overwrite: []string{"-race"},
 				expected:  []string{"-race"},
 			},
 			"ConflictingTestFlagsAreOverwritten": {
-				opts:      []string{"-test.race=true"},
+				flags:     []string{"-test.race=true"},
 				overwrite: []string{"-test.race=false"},
 				expected:  []string{"-test.race=false"},
 			},
 			"UniqueFlagsAreAppendedAndDuplicateFlagsAreCombined": {
-				opts:      []string{"-cover"},
+				flags:     []string{"-cover"},
 				overwrite: []string{"-cover", "-coverprofile"},
 				expected:  []string{"-cover", "-coverprofile"},
 			},
 			"ConflictingFlagValuesAreOverwritten": {
-				opts:      []string{"-race=false"},
+				flags:     []string{"-race=false"},
 				overwrite: []string{"-race=true"},
 				expected:  []string{"-race=true"},
 			},
 			"UniqueFlagsAreAppendedAndConflictingFlagsAreOverwritten": {
-				opts:      []string{"-cover", "-race=false"},
+				flags:     []string{"-cover", "-race=false"},
 				overwrite: []string{"-race=true"},
 				expected:  []string{"-cover", "-race=true"},
 			},
 			"DuplicateFlagsAreCombinedAndConflictingFlagsAreOverwritten": {
-				opts:      []string{"-cover", "-race=false"},
+				flags:     []string{"-cover", "-race=false"},
 				overwrite: []string{"-cover", "-race=true"},
 				expected:  []string{"-cover", "-race=true"},
 			},
 		} {
 			t.Run(testName, func(t *testing.T) {
-				merged := testCase.opts.Merge(testCase.overwrite)
+				merged := testCase.flags.Merge(testCase.overwrite)
 				assert.Len(t, merged, len(testCase.expected))
 				for _, flag := range merged {
 					assert.True(t, utility.StringSliceContains(testCase.expected, flag))

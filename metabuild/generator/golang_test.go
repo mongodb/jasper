@@ -236,9 +236,9 @@ func TestGolangGenerate(t *testing.T) {
 							"GOPATH": gopath,
 							"GOROOT": "some_goroot",
 						},
+						WorkingDirectory: util.ConsistentFilepath(filepath.Dir(gopath)),
 					},
-					RootPackage:      rootPackage,
-					WorkingDirectory: util.ConsistentFilepath(filepath.Dir(gopath)),
+					RootPackage: rootPackage,
 				},
 				Packages: []model.GolangPackage{
 					{

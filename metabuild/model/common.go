@@ -14,7 +14,8 @@ type GeneralConfig struct {
 	// Environment defines global environment variables.
 	Environment map[string]string `yaml:"env,omitempty"`
 	// DefaultTags are tags that apply to all units of work.
-	DefaultTags []string `yaml:"default_tags,omitempty"`
+	DefaultTags      []string `yaml:"default_tags,omitempty"`
+	WorkingDirectory string   `yaml:"-"`
 }
 
 // VariantDistro represents a mapping between a variant name and the distros
