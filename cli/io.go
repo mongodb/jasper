@@ -272,14 +272,14 @@ func BuildScriptingOptions(in options.ScriptingHarness) (*ScriptingOptions, erro
 	switch opts := in.(type) {
 	case *options.ScriptingPython:
 		if opts.LegacyPython {
-			out.ImplementationType = "python2"
+			out.ImplementationType = options.Python2().Name()
 		} else {
-			out.ImplementationType = "python3"
+			out.ImplementationType = options.Python3().Name()
 		}
 	case *options.ScriptingGolang:
-		out.ImplementationType = "golang"
+		out.ImplementationType = options.Golang().Name()
 	case *options.ScriptingRoswell:
-		out.ImplementationType = "lisp"
+		out.ImplementationType = options.Roswell().Name()
 	default:
 		return nil, errors.Errorf("unsupported scripting type [%T]", in)
 	}
