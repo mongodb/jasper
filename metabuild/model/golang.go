@@ -14,7 +14,7 @@ import (
 // Golang represents a configuration for generating an evergreen configuration
 // from a project that uses golang.
 type Golang struct {
-	GolangGeneralConfig `yaml:"general,inline"`
+	GolangGeneralConfig `yaml:",inline"`
 	// Packages define packages that should be tested. They can be either
 	// explicitly defined via configuration or automatically discovered.
 	Packages []GolangPackage `yaml:"packages,omitempty"`
@@ -444,15 +444,20 @@ type GolangPackage struct {
 	// example, "." refers to the root package while "util" refers to a
 	// subpackage called "util" within the root package.
 	Path string `yaml:"path"`
+	// kim: TODO: refactor Tags and ExcludeTags into TagSelector
 	// Tags are labels that allow you to logically group related packages.
 	Tags []string `yaml:"tags,omitempty"`
 	// ExcludeTags allows you to specify tags that should not be applied to the
 	// task. This can be useful for excluding a package from the default tags.
 	ExcludeTags []string `yaml:"exclude_tags,omitempty"`
-	// Options are package-specific options that modify runtime execution.
-	Options GolangRuntimeOptions `yaml:"options,omitempty"`
+	// Flags are package-specific Golang flags that modify runtime execution.
+	Flags GolangFlags `yaml:"flags,omitempty"`
 }
 
+// Validate ensures that for each package:
+// - It specifies a package path.
+// - There are no duplicate tags.
+// - The flags are valid.
 func (gp *GolangPackage) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(gp.Path == "", "need to specify package path")
@@ -463,7 +468,7 @@ func (gp *GolangPackage) Validate() error {
 		}
 		tags[tag] = struct{}{}
 	}
-	catcher.Wrap(gp.Options.Validate(), "invalid golang options")
+	catcher.Wrap(gp.Flags.Validate(), "invalid flags")
 	return catcher.Resolve()
 }
 
@@ -474,10 +479,10 @@ type GolangVariant struct {
 	// Packages lists a package name, path or or tagged group of packages
 	// relative to the root package.
 	Packages []GolangVariantPackage `yaml:"packages"`
-	// Options are variant-specific options that modify runtime execution.
-	// Explicitly setting these values will override options specified under the
-	// definitions of packages.
-	Options *GolangRuntimeOptions `yaml:"options,omitempty"`
+	// Golang are variant-specific flags that modify runtime execution.
+	// Explicitly setting these values will override any flags specified under
+	// the package definitions.
+	Flags *GolangFlags `yaml:"flags,omitempty"`
 }
 
 // Validate checks that the variant-distro mapping and the Golang-specific
@@ -487,8 +492,8 @@ func (gv *GolangVariant) Validate() error {
 	catcher.Add(gv.VariantDistro.Validate())
 	catcher.Wrap(gv.validatePackages(), "invalid package references")
 
-	if gv.Options != nil {
-		catcher.Wrap(gv.Options.Validate(), "invalid runtime options")
+	if gv.Flags != nil {
+		catcher.Wrap(gv.Flags.Validate(), "invalid flags")
 	}
 
 	return catcher.Resolve()
@@ -547,16 +552,15 @@ func (gvp *GolangVariantPackage) Validate() error {
 	return nil
 }
 
-// GolangRuntimeOptions specify additional options to the go binary to modify
-// behavior of runtime execution.
-type GolangRuntimeOptions []string
+// GolangFlags specify additional flags to the go binary to modify behavior of
+// runtime execution.
+type GolangFlags []string
 
-// Validate ensures that options to the scripting environment (i.e. the go
-// binary) do not contain duplicate flags.
-func (gro GolangRuntimeOptions) Validate() error {
+// Validate ensures that flags to the go binary do not contain duplicate flags.
+func (gf GolangFlags) Validate() error {
 	seen := map[string]struct{}{}
 	catcher := grip.NewBasicCatcher()
-	for _, flag := range gro {
+	for _, flag := range gf {
 		flag = cleanupFlag(flag)
 		// Don't allow the verbose flag because the scripting harness sets
 		// verbose.
@@ -597,11 +601,11 @@ func cleanupFlag(flag string) string {
 	return flag
 }
 
-// Merge returns the merged set of GolangRuntimeOptions. Unique flags between
+// Merge returns the merged set of GolangFlags. Unique flags between
 // the two flag sets are added together. Duplicate flags are handled by
 // overwriting conflicting flags with overwrite's flags.
-func (gro GolangRuntimeOptions) Merge(overwrite GolangRuntimeOptions) GolangRuntimeOptions {
-	merged := gro
+func (gf GolangFlags) Merge(overwrite GolangFlags) GolangFlags {
+	merged := gf
 	for _, flag := range overwrite {
 		if i := merged.flagIndex(flag); i != -1 {
 			merged = append(merged[:i], merged[i+1:]...)
@@ -616,9 +620,9 @@ func (gro GolangRuntimeOptions) Merge(overwrite GolangRuntimeOptions) GolangRunt
 
 // flagIndex returns the index where the flag is set if it is present. If it is
 // absent, this returns -1.
-func (gro GolangRuntimeOptions) flagIndex(flag string) int {
+func (gf GolangFlags) flagIndex(flag string) int {
 	flag = cleanupFlag(flag)
-	for i, f := range gro {
+	for i, f := range gf {
 		f = cleanupFlag(f)
 		if f == flag {
 			return i

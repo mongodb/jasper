@@ -38,7 +38,6 @@ func NewGolangControl(file, workingDir string) (*GolangControl, error) {
 }
 
 // Build creates a Golang model from the files referenced in the GolangControl.
-// kim: TODO: refactor Make in equivalent way
 func (gc *GolangControl) Build() (*Golang, error) {
 	g := Golang{}
 
