@@ -42,7 +42,7 @@ func NewRoswellScriptingEnvironment(path string, systems ...string) ScriptingHar
 
 // Type is part of the options.ScriptingEnvironment interface and
 // returns the type of the interface.
-func (opts *ScriptingRoswell) Type() string { return Roswell().Name() }
+func (opts *ScriptingRoswell) Type() string { return RoswellScriptingType }
 
 // Interpreter is part of the options.ScriptingEnvironment interface
 // and returns the path to the interpreter or binary that runs scripts.
@@ -87,21 +87,4 @@ func (opts *ScriptingRoswell) ID() string {
 	opts.cachedAt = time.Now()
 
 	return opts.cachedHash
-}
-
-// Roswell returns a factory for producing scripting harnesses for roswell.
-func Roswell() ScriptingHarnessFactory { return roswell{} }
-
-type roswell struct{}
-
-func (r roswell) Name() string {
-	return "roswell"
-}
-
-func (r roswell) Names() []string {
-	return []string{"ros", "roswell", "lisp"}
-}
-
-func (r roswell) New() ScriptingHarness {
-	return &ScriptingRoswell{}
 }

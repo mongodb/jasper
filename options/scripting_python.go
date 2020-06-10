@@ -58,9 +58,9 @@ func NewPythonScriptingEnvironment(path, reqtxt string, packages ...string) Scri
 // returns the type of the interface.
 func (opts *ScriptingPython) Type() string {
 	if opts.LegacyPython {
-		return Python2().Name()
+		return Python2ScriptingType
 	}
-	return Python3().Name()
+	return Python3ScriptingType
 }
 
 // Interpreter is part of the options.ScriptingEnvironment interface
@@ -136,34 +136,4 @@ func appendWhenNotContains(list []string, value string) []string {
 	}
 
 	return append(list, value)
-}
-
-// Python2 returns a factory for producing scripting harnesses for python 2.
-func Python2() ScriptingHarnessFactory { return python2{} }
-
-type python2 struct{}
-
-func (p python2) Name() string { return "python2" }
-
-func (p python2) Names() []string {
-	return []string{"python2"}
-}
-
-func (p python2) New() ScriptingHarness {
-	return &ScriptingPython{LegacyPython: true}
-}
-
-// Python3 returns a factory for producing scripting harnesses for python 3.
-func Python3() ScriptingHarnessFactory { return python3{} }
-
-type python3 struct{}
-
-func (p python3) Name() string { return "python3" }
-
-func (p python3) Names() []string {
-	return []string{"python", "python3"}
-}
-
-func (p python3) New() ScriptingHarness {
-	return &ScriptingPython{}
 }

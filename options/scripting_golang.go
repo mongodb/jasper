@@ -48,7 +48,7 @@ func NewGolangScriptingEnvironment(gopath, goroot string, packages ...string) Sc
 
 // Type is part of the options.ScriptingEnvironment interface and
 // returns the type of the interface.
-func (opts *ScriptingGolang) Type() string { return Golang().Name() }
+func (opts *ScriptingGolang) Type() string { return GolangScriptingType }
 
 // Interpreter is part of the options.ScriptingEnvironment interface
 // and returns the path to the interpreter or binary that runs scripts.
@@ -93,19 +93,4 @@ func (opts *ScriptingGolang) ID() string {
 	opts.cachedHash = fmt.Sprintf("%x", hash.Sum(nil))
 	opts.cachedAt = time.Now()
 	return opts.cachedHash
-}
-
-// Golang returns a factory for producing scripting harnesses for golang.
-func Golang() ScriptingHarnessFactory { return golang{} }
-
-type golang struct{}
-
-func (g golang) Name() string { return "golang" }
-
-func (g golang) Names() []string {
-	return []string{"go", "golang"}
-}
-
-func (g golang) New() ScriptingHarness {
-	return &ScriptingGolang{}
 }

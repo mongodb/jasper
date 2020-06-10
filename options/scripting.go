@@ -1,7 +1,6 @@
 package options
 
 import (
-	"github.com/evergreen-ci/utility"
 	"github.com/pkg/errors"
 )
 
@@ -23,40 +22,30 @@ type ScriptingHarness interface {
 	Validate() error
 }
 
-// ScriptingHarnessFactory represents a factory for producing scripting
-// harnesses of a particular type.
-type ScriptingHarnessFactory interface {
-	// Name returns the preferred name for the scripting harness.
-	Name() string
-	// Names are all recognized names for the scripting harness.
-	Names() []string
-	// New returns a new unconfigured instance of the scripting harness type.
-	New() ScriptingHarness
-}
+const (
+	GolangScriptingType  = "golang"
+	Python2ScriptingType = "python2"
+	Python3ScriptingType = "python3"
+	RoswellScriptingType = "roswell"
+)
 
 // AllScriptingHarnesses returns all supported scripting harnesses.
-func AllScriptingHarnesses() []ScriptingHarnessFactory {
-	return []ScriptingHarnessFactory{
-		Golang(),
-		Python2(),
-		Python3(),
-		Roswell(),
+func AllScriptingHarnesses() map[string]func() ScriptingHarness {
+	return map[string]func() ScriptingHarness{
+		GolangScriptingType:  func() ScriptingHarness { return &ScriptingGolang{} },
+		Python2ScriptingType: func() ScriptingHarness { return &ScriptingPython{LegacyPython: true} },
+		Python3ScriptingType: func() ScriptingHarness { return &ScriptingPython{} },
+		RoswellScriptingType: func() ScriptingHarness { return &ScriptingRoswell{} },
 	}
-}
-
-// MatchesScriptingHarness returns whether or not the scripting harness factory
-// matches the given named scripting environment.
-func MatchesScriptingHarness(kind ScriptingHarnessFactory, name string) bool {
-	return utility.StringSliceContains(kind.Names(), name)
 }
 
 // NewScriptingHarness provides a factory to generate concrete
 // implementations of the ScriptingEnvironment interface for use in
 // marshaling arbitrary values for a known environment.
 func NewScriptingHarness(se string) (ScriptingHarness, error) {
-	for _, harness := range AllScriptingHarnesses() {
-		if MatchesScriptingHarness(harness, se) {
-			return harness.New(), nil
+	for harnessName, makeHarness := range AllScriptingHarnesses() {
+		if harnessName == se {
+			return makeHarness(), nil
 		}
 	}
 	return nil, errors.Errorf("no supported scripting environment named '%s'", se)
