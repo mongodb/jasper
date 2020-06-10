@@ -306,7 +306,7 @@ type MakeTask struct {
 	// Environment defines task-specific environment variables. This has higher
 	// precedence than global environment variables but lower precedence than
 	// variant-specific environment variables.
-	Environment map[string]string `yaml:"environment,omitempty"`
+	Environment map[string]string `yaml:"env,omitempty"`
 	// Flags are task-specific flags that modify runtime execution. If
 	// flags are specified at the target level, these flags will be appended.
 	Flags MakeFlags `yaml:"flags,omitempty"`
@@ -381,7 +381,7 @@ type MakeVariant struct {
 	Tasks         []MakeVariantTask `yaml:"tasks"`
 	// Environment defines variant-specific environment variables. This has
 	// higher precedence than global or task-specific environment variables.
-	Environment map[string]string `yaml:"environment,omitempty"`
+	Environment map[string]string `yaml:"env,omitempty"`
 	// Flags are variant-specific flags that modify runtime execution. If
 	// flags are specified at the task or target level, these flags will be
 	// appended.
