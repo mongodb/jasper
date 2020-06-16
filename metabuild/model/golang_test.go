@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/evergreen-ci/utility"
@@ -408,7 +409,11 @@ func TestGolangValidate(t *testing.T) {
 			assert.Equal(t, util.ConsistentFilepath(relGopath), util.ConsistentFilepath(g.Environment["GOPATH"]))
 		},
 		"FailsIfGOPATHNotWithinWorkingDirectory": func(t *testing.T, g *Golang) {
-			g.Environment["GOPATH"] = util.ConsistentFilepath("/gopath")
+			if runtime.GOOS == "windows" {
+				g.Environment["GOPATH"] = util.ConsistentFilepath("C:", "gopath")
+			} else {
+				g.Environment["GOPATH"] = util.ConsistentFilepath("/gopath")
+			}
 			g.WorkingDirectory = util.ConsistentFilepath("/working", "directory")
 			assert.Error(t, g.Validate())
 		},
