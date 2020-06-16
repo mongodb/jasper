@@ -145,8 +145,14 @@ func TestGolangVariant(t *testing.T) {
 				assert.Error(t, gv.Validate())
 			},
 			"FailsWithAbsoluteGOPATH": func(t *testing.T, gv *GolangVariant) {
-				gv.Environment = map[string]string{
-					"GOPATH": util.ConsistentFilepath("/absolute", "gopath"),
+				if runtime.GOOS == "windows" {
+					gv.Environment = map[string]string{
+						"GOPATH": util.ConsistentFilepath("C:", "gopath"),
+					}
+				} else {
+					gv.Environment = map[string]string{
+						"GOPATH": util.ConsistentFilepath("/gopath"),
+					}
 				}
 				assert.Error(t, gv.Validate())
 			},
