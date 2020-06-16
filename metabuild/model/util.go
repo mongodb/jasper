@@ -33,7 +33,7 @@ var errNotRelativeToWorkingDir = errors.New("converting to path relative to work
 // absolute and can be successfully converted to a relative path, it returns the
 // relative path and nil error. Otherwise, if path is absolute and cannot be
 // made relative to the working directory, it returns the path and
-// errNotRelativeToWorkingDir.  kim: TODO: update docs if necessary.
+// errNotRelativeToWorkingDir.
 func relToPath(path, workingDir string) (string, error) {
 	workingDir = util.ConsistentFilepath(workingDir)
 	path = util.ConsistentFilepath(path)
