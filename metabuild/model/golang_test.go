@@ -140,8 +140,7 @@ func TestGolangVariant(t *testing.T) {
 				assert.Error(t, gv.Validate())
 			},
 			"FailsWithInvalidOptions": func(t *testing.T, gv *GolangVariant) {
-				flags := GolangFlags([]string{"-v"})
-				gv.Flags = &flags
+				gv.Flags = GolangFlags([]string{"-v"})
 				assert.Error(t, gv.Validate())
 			},
 		} {
