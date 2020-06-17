@@ -147,7 +147,7 @@ func TestGolangVariant(t *testing.T) {
 			"FailsWithAbsoluteGOPATH": func(t *testing.T, gv *GolangVariant) {
 				if runtime.GOOS == "windows" {
 					gv.Environment = map[string]string{
-						"GOPATH": util.ConsistentFilepath("C:", "gopath"),
+						"GOPATH": util.ConsistentFilepath("C:", "/gopath"),
 					}
 				} else {
 					gv.Environment = map[string]string{
@@ -384,7 +384,7 @@ func TestGolangValidate(t *testing.T) {
 			assert.Error(t, g.Validate())
 		},
 		"SucceedsWithGOROOTInEnvironment": func(t *testing.T, g *Golang) {
-			goroot := os.Getenv("GOROOT")
+			goroot := util.ConsistentFilepath(os.Getenv("GOROOT"))
 			if goroot == "" {
 				t.Skip("GOROOT is not defined in environment")
 			}
@@ -416,7 +416,7 @@ func TestGolangValidate(t *testing.T) {
 		},
 		"FailsIfGOPATHNotWithinWorkingDirectory": func(t *testing.T, g *Golang) {
 			if runtime.GOOS == "windows" {
-				g.Environment["GOPATH"] = util.ConsistentFilepath("C:", "gopath")
+				g.Environment["GOPATH"] = util.ConsistentFilepath("C:", "/gopath")
 			} else {
 				g.Environment["GOPATH"] = util.ConsistentFilepath("/gopath")
 			}
