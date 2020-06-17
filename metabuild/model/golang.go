@@ -461,6 +461,11 @@ func (gp *GolangPackage) Validate() error {
 	}
 	catcher.Wrap(gp.Flags.Validate(), "invalid flag(s)")
 
+	// Do not allow GOPATH to be defined at the package level, because changing
+	// the value will conflict with the value used by the variant, which
+	// determines the location to git clone the repository. Changing GOPATH here
+	// would also interact poorly with task groups due to the assumption that
+	// all packages within a variant share the same project directory location.
 	catcher.ErrorfWhen(gp.Environment["GOPATH"] != "", "cannot define package-level GOPATH in environment")
 
 	return catcher.Resolve()
