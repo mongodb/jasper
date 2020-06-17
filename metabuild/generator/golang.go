@@ -46,6 +46,8 @@ func (g *Golang) Generate() (*shrub.Configuration, error) {
 			}
 
 			gopath := g.Environment["GOPATH"]
+			// kim: TODO: test that this is modified if the variant specifies a
+			// GOPATH.
 			if val := gv.Environment["GOPATH"]; val != "" {
 				gopath = val
 			}
@@ -104,6 +106,8 @@ func (g *Golang) generateVariantTasksForRef(c *shrub.Configuration, gv model.Gol
 
 func (g *Golang) subprocessScriptingCmd(gv model.GolangVariant, gp model.GolangPackage) *shrub.CmdSubprocessScripting {
 	gopath := g.Environment["GOPATH"]
+	// kim: TODO: test that this is modified if the variant specifies a
+	// GOPATH.
 	if val := gv.Environment["GOPATH"]; val != "" {
 		gopath = val
 	}
