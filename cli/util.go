@@ -106,7 +106,8 @@ func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
 }
 
 // requireStringSliceFlag verifies that the flag name is set to a non-empty
-// value.
+// string slice.
+//nolint: deadcode
 func requireStringSliceFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if len(c.StringSlice(name)) == 0 {
