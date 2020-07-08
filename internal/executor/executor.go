@@ -73,26 +73,37 @@ func (s Status) String() string {
 	}
 }
 
+// Before returns whether or not the given state occurs before the current
+// state.
 func (s Status) Before(other Status) bool {
 	return s < other
 }
 
+// BeforeInclusive is the same as Before but returns true if the given state is
+// identical to the current state.
 func (s Status) BeforeInclusive(other Status) bool {
 	return s <= other
 }
 
+// After returns whether or not the given state occurs before the current state.
 func (s Status) After(other Status) bool {
 	return s > other
 }
 
+// AfterInclusive is the same as After but returns true if the given state is
+// identical to the current state.
 func (s Status) AfterInclusive(other Status) bool {
 	return s >= other
 }
 
+// Between returns whether or not the state occurs after the given lower state
+// and after the given upper state.
 func (s Status) Between(lower Status, upper Status) bool {
 	return lower < s && s < upper
 }
 
+// BetweenInclusive is the same as Between but returns true if the given
+// state is identical ot the given lower or upper state.
 func (s Status) BetweenInclusive(lower Status, upper Status) bool {
 	return lower <= s && s <= upper
 }
