@@ -576,7 +576,6 @@ func TestProcessImplementations(t *testing.T) {
 							case <-ctx.Done():
 								assert.Fail(t, "call to Wait() took too long to finish")
 							}
-							require.NoError(t, Terminate(ctx, proc)) // Clean up.
 						},
 						"InfoHasTimeoutWhenProcessTimesOut": func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
 							opts := testutil.SleepCreateOpts(100)

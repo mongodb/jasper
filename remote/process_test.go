@@ -328,7 +328,6 @@ func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
 				case <-ctx.Done():
 					assert.Fail(t, "call to Wait() took too long to finish")
 				}
-				require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
 			},
 		},
 		{
