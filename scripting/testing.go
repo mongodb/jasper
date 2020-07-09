@@ -24,7 +24,7 @@ type TestOptions struct {
 	Count   int           `bson:"count" json:"count" yaml:"count"`
 }
 
-// TestResult capture the data about a specific test run.
+// TestResult captures the data about a specific test run.
 type TestResult struct {
 	Name     string        `bson:"name" json:"name" yaml:"name"`
 	StartAt  time.Time     `bson:"start_at" json:"start_at" yaml:"start_at"`

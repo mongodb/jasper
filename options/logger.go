@@ -20,7 +20,7 @@ const (
 // documentation for grip/send for more information on the various LogFormats.
 type LogFormat string
 
-// Constants represents formats for logging.
+// Constants representing formats for logging.
 const (
 	LogFormatPlain   LogFormat = "plain"
 	LogFormatDefault LogFormat = "default"

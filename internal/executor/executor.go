@@ -79,8 +79,8 @@ func (s Status) Before(other Status) bool {
 	return s < other
 }
 
-// BeforeInclusive is the same as Before but returns true if the given state is
-// identical to the current state.
+// BeforeInclusive is the same as Before but also returns true if the given
+// state is identical to the current state.
 func (s Status) BeforeInclusive(other Status) bool {
 	return s <= other
 }
@@ -90,8 +90,8 @@ func (s Status) After(other Status) bool {
 	return s > other
 }
 
-// AfterInclusive is the same as After but returns true if the given state is
-// identical to the current state.
+// AfterInclusive is the same as After but also returns true if the given state
+// is identical to the current state.
 func (s Status) AfterInclusive(other Status) bool {
 	return s >= other
 }
@@ -102,8 +102,8 @@ func (s Status) Between(lower Status, upper Status) bool {
 	return lower < s && s < upper
 }
 
-// BetweenInclusive is the same as Between but returns true if the given
-// state is identical ot the given lower or upper state.
+// BetweenInclusive is the same as Between but also returns true if the given
+// state is identical to the given lower or upper state.
 func (s Status) BetweenInclusive(lower Status, upper Status) bool {
 	return lower <= s && s <= upper
 }

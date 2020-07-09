@@ -198,10 +198,10 @@ func (opts *InMemoryLoggerOptions) Configure() (send.Sender, error) {
 // Sumo Logic Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-// LogSumoLogic is the name for the sumo logic logger.
+// LogSumoLogic is the name for the Sumo Logic logger.
 const LogSumoLogic = "sumo-logic"
 
-// SumoLogicLoggerOptions encapsualtes the options for creating a Sumo Logic
+// SumoLogicLoggerOptions encapsulates the options for creating a Sumo Logic
 // logger.
 type SumoLogicLoggerOptions struct {
 	SumoEndpoint string      `json:"sumo_endpoint" bson:"sumo_endpoint"`
