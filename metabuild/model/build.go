@@ -47,9 +47,6 @@ type Dependency struct {
 	// Targets are names of other targets that this target depends on.
 	Targets []string `yaml:"targets,omitempty"`
 	// Files are files that this target depends on.
-	// kim: TODO: if a target depends on another file which does not exist, how
-	// will the build system know how to generate said file (same problem as
-	// Make)?
 	Files []string `yaml:"files,omitempty"`
 }
 
