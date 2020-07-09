@@ -314,8 +314,8 @@ func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
 				require.NotNil(t, proc)
 
 				var exitCode int
-				cctx, cancel := context.WithCancel(ctx)
 				waitFinished := make(chan bool)
+				cctx, cancel := context.WithCancel(ctx)
 				cancel()
 				go func() {
 					exitCode, err = proc.Wait(cctx)
