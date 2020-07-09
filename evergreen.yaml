@@ -16,11 +16,6 @@ variables:
     commands:
       - func: run-make
         vars: { target: "${task_name}" }
-        command: subprocess.exec
-        type: test
-        params:
-          binary: echo
-          args: ["hello", "world"]
 
 #######################################
 #              Functions              #
