@@ -22,9 +22,9 @@ type Target struct {
 	Output Output `yaml:"output,omitempty"`
 }
 
-// DependencyInfo describes a defines necessary prerequisite dependencies and
-// outputs to determine if a target's dependencies are satisfied and if the
-// target is up-to-date.
+// DependencyInfo defines necessary prerequisite dependencies and outputs to
+// determine if a target's dependencies are satisfied and if the target is
+// up-to-date.
 type DependencyInfo struct {
 	Dependencies []Dependency `yaml:"dependencies,omitempty"`
 	// ProducesFiles provides a hint to determine if the target is up-to-date.
@@ -42,11 +42,14 @@ type DependencyInfo struct {
 	IgnoreDependencies bool `yaml:"ignore_dependencies,omitempty"`
 }
 
-// Dependency describes
+// Dependency describes prerequisites for running a target.
 type Dependency struct {
 	// Targets are names of other targets that this target depends on.
 	Targets []string `yaml:"targets,omitempty"`
 	// Files are files that this target depends on.
+	// kim: TODO: if a target depends on another file which does not exist, how
+	// will the build system know how to generate said file (same problem as
+	// Make)?
 	Files []string `yaml:"files,omitempty"`
 }
 
