@@ -309,18 +309,18 @@ func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
 		{
 			Name: "WaitGivesNegativeOneOnAlternativeError",
 			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makep jasper.ProcessConstructor) {
-				cctx, cancel := context.WithCancel(ctx)
 				proc, err := makep(ctx, testutil.SleepCreateOpts(100))
 				require.NoError(t, err)
 				require.NotNil(t, proc)
 
 				var exitCode int
+				cctx, cancel := context.WithCancel(ctx)
 				waitFinished := make(chan bool)
+				cancel()
 				go func() {
 					exitCode, err = proc.Wait(cctx)
 					waitFinished <- true
 				}()
-				cancel()
 				select {
 				case <-waitFinished:
 					require.Error(t, err)
@@ -329,7 +329,6 @@ func AddBasicProcessTests(tests ...ProcessTestCase) []ProcessTestCase {
 					assert.Fail(t, "call to Wait() took too long to finish")
 				}
 				require.NoError(t, jasper.Terminate(ctx, proc)) // Clean up.
-
 			},
 		},
 		{
