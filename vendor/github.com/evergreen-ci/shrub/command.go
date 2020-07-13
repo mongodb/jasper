@@ -54,10 +54,10 @@ type commandFactory func() Command
 
 type CommandDefinition struct {
 	FunctionName  string                 `json:"func,omitempty" yaml:"function_name,omitempty"`
-	ExecutionType string                 `json:"type,omitempty" yaml:"execution_type,omitempty"`
+	ExecutionType string                 `json:"type,omitempty" yaml:"type,omitempty"`
 	DisplayName   string                 `json:"display_name,omitempty" yaml:"display_name,omitempty"`
-	CommandName   string                 `json:"command,omitempty" yaml:"command_name,omitempty"`
-	RunVariants   []string               `json:"variants,omitempty" yaml:"run_variants,omitempty"`
+	CommandName   string                 `json:"command,omitempty" yaml:"command,omitempty"`
+	RunVariants   []string               `json:"variants,omitempty" yaml:"variants,omitempty"`
 	TimeoutSecs   int                    `json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
 	Params        map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty"`
 	Vars          map[string]string      `json:"vars,omitempty" yaml:"vars,omitempty"`

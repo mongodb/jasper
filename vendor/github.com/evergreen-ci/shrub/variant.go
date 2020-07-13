@@ -1,7 +1,7 @@
 package shrub
 
 type Variant struct {
-	BuildName        string                  `json:"name,omitempty" yaml:"build_name,omitempty"`
+	BuildName        string                  `json:"name,omitempty" yaml:"name,omitempty"`
 	BuildDisplayName string                  `json:"display_name,omitempty" yaml:"display_name,omitempty"`
 	BatchTimeSecs    int                     `json:"batchtime,omitempty" yaml:"batchtime,omitempty"`
 	TaskSpecs        []TaskSpec              `json:"tasks,omitmepty" yaml:"tasks,omitempty"`
