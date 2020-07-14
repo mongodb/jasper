@@ -32,17 +32,18 @@ const (
 	yamlFormat = "yaml"
 )
 
-type configFormatter func(*shrub.Configuration) ([]byte, error)
-
-func generatedConfigFormats() map[string]configFormatter {
-	return map[string]configFormatter{
-		jsonFormat: func(conf *shrub.Configuration) ([]byte, error) {
+func generatedConfigFormatter(format string) (func(*shrub.Configuration) ([]byte, error), error) {
+	switch strings.ToLower(format) {
+	case jsonFormat:
+		return func(conf *shrub.Configuration) ([]byte, error) {
 			return json.MarshalIndent(conf, "", "\t")
-		},
-		yamlFormat: func(conf *shrub.Configuration) ([]byte, error) {
+		}, nil
+	case yamlFormat:
+		return func(conf *shrub.Configuration) ([]byte, error) {
 			return yaml.Marshal(conf)
-		},
+		}, nil
 	}
+	return nil, errors.Errorf("unrecognized format '%s'", format)
 }
 
 const (
@@ -151,6 +152,11 @@ func generateMake() cli.Command {
 				Name:  outputFileFlagName,
 				Usage: "The output file. If unspecified, the config will be written to stdout.",
 			},
+			cli.StringFlag{
+				Name:  outputFormatFlagName,
+				Usage: "The output format (JSON or YAML).",
+				Value: yamlFormat,
+			},
 		},
 		Before: mergeBeforeFuncs(
 			requireStringFlag(workingDirFlagName),
@@ -199,9 +205,9 @@ func generateMake() cli.Command {
 }
 
 func formatAndOutputGeneratedConfig(conf *shrub.Configuration, format, file string) error {
-	doFormatting, ok := generatedConfigFormats()[format]
-	if !ok {
-		return errors.Errorf("unrecognized output format '%s'", format)
+	doFormatting, err := generatedConfigFormatter(format)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	output, err := doFormatting(conf)
 	if err != nil {
@@ -221,13 +227,9 @@ func formatAndOutputGeneratedConfig(conf *shrub.Configuration, format, file stri
 }
 
 func checkGeneratedConfigFormat(c *cli.Context) error {
-	format := strings.ToLower(c.String(outputFormatFlagName))
-	var formats []string
-	for f := range generatedConfigFormats() {
-		if format == f {
-			return nil
-		}
-		formats = append(formats, format)
+	format := c.String(outputFormatFlagName)
+	if _, err := generatedConfigFormatter(format); err != nil {
+		return errors.WithStack(err)
 	}
-	return errors.Errorf("output format '%s' not in allowed formats: %s", format, strings.Join(formats, ", "))
+	return nil
 }
