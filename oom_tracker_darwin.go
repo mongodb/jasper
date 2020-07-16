@@ -29,18 +29,18 @@ func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	analyzer := logAnalyzer{
 		cmdArgs:        []string{"log", "show"},
 		lineHasOOMKill: logContainsOOMKill,
-		extractPid:     getPidFromLog,
+		extractPID:     getPIDFromLog,
 	}
 	wasOOMKilled, pids, err := analyzer.analyzeKernelLog(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error searching log")
 	}
 	o.WasOOMKilled = wasOOMKilled
-	o.Pids = pids
+	o.PIDs = pids
 	return nil
 }
 
-func getPidFromLog(line string) (int, bool) {
+func getPIDFromLog(line string) (int, bool) {
 	r := regexp.MustCompile(`pid (\d+)`)
 	matches := r.FindStringSubmatch(line)
 	if len(matches) != 2 {

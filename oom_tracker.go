@@ -10,7 +10,7 @@ import (
 
 type oomTrackerImpl struct {
 	WasOOMKilled bool  `json:"was_oom_killed"`
-	Pids         []int `json:"pids"`
+	PIDs         []int `json:"pids"`
 }
 
 // OOMTracker provides a tool for detecting if there have been OOM
@@ -26,7 +26,7 @@ type OOMTracker interface {
 // NewOOMTracker returns an implementation of the OOMTracker interface
 // for the current platform.
 func NewOOMTracker() OOMTracker                 { return &oomTrackerImpl{} }
-func (o *oomTrackerImpl) Report() (bool, []int) { return o.WasOOMKilled, o.Pids }
+func (o *oomTrackerImpl) Report() (bool, []int) { return o.WasOOMKilled, o.PIDs }
 
 func isSudo(ctx context.Context) (bool, error) {
 	if err := exec.CommandContext(ctx, "sudo", "-n", "date").Run(); err != nil {
@@ -44,7 +44,7 @@ func isSudo(ctx context.Context) (bool, error) {
 type logAnalyzer struct {
 	cmdArgs        []string
 	lineHasOOMKill func(string) bool
-	extractPid     func(string) (int, bool)
+	extractPID     func(string) (int, bool)
 }
 
 func (a *logAnalyzer) analyzeKernelLog(ctx context.Context) (bool, []int, error) {
@@ -74,7 +74,7 @@ func (a *logAnalyzer) analyzeKernelLog(ctx context.Context) (bool, []int, error)
 		line := scanner.Text()
 		if a.lineHasOOMKill(line) {
 			wasOOMKilled = true
-			if pid, hasPid := a.extractPid(line); hasPid {
+			if pid, hasPID := a.extractPID(line); hasPID {
 				pids = append(pids, pid)
 			}
 		}

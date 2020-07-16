@@ -29,14 +29,14 @@ func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	analyzer := logAnalyzer{
 		cmdArgs:        []string{"dmesg"},
 		lineHasOOMKill: dmesgContainsOOMKill,
-		extractPid:     getPidFromDmesg,
+		extractPID:     getPIDFromDmesg,
 	}
 	wasOOMKilled, pids, err := analyzer.analyzeKernelLog(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error searching log")
 	}
 	o.WasOOMKilled = wasOOMKilled
-	o.Pids = pids
+	o.PIDs = pids
 	return nil
 }
 
@@ -46,7 +46,7 @@ func dmesgContainsOOMKill(line string) bool {
 		strings.Contains(line, "OOM-killer")
 }
 
-func getPidFromDmesg(line string) (int, bool) {
+func getPIDFromDmesg(line string) (int, bool) {
 	r := regexp.MustCompile(`Killed process (\d+)`)
 	matches := r.FindStringSubmatch(line)
 	if len(matches) != 2 {
