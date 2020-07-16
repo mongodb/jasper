@@ -1,11 +1,9 @@
 package jasper
 
 import (
+	"bufio"
 	"context"
 	"os/exec"
-	"regexp"
-	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -43,34 +41,51 @@ func isSudo(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func dmesgContainsOOMKill(line string) bool {
-	return strings.Contains(line, "Out of memory") ||
-		strings.Contains(line, "Killed process") || strings.Contains(line, "OOM killer") ||
-		strings.Contains(line, "OOM-killer")
+type logAnalyzer struct {
+	cmdArgs        []string
+	lineHasOOMKill func(string) bool
+	extractPid     func(string) (int, bool)
 }
 
-func getPidFromDmesg(line string) (int, bool) {
-	r := regexp.MustCompile(`Killed process (\d+)`)
-	matches := r.FindStringSubmatch(line)
-	if len(matches) != 2 {
-		return 0, false
-	}
-	pid, err := strconv.Atoi(matches[1])
+func (a *logAnalyzer) analyzeKernelLog(ctx context.Context) (bool, []int, error) {
+	sudo, err := isSudo(ctx)
 	if err != nil {
-		return 0, false
+		return false, nil, errors.Wrap(err, "error checking sudo")
 	}
-	return pid, true
-}
 
-func getPidFromLog(line string) (int, bool) {
-	r := regexp.MustCompile(`pid (\d+)`)
-	matches := r.FindStringSubmatch(line)
-	if len(matches) != 2 {
-		return 0, false
+	var cmd *exec.Cmd
+	if sudo {
+		cmd = exec.CommandContext(ctx, "sudo", a.cmdArgs...)
+	} else {
+		cmd = exec.CommandContext(ctx, a.cmdArgs[0], a.cmdArgs[1:]...)
 	}
-	pid, err := strconv.Atoi(matches[1])
+	logPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return 0, false
+		return false, nil, errors.Wrap(err, "error creating StdoutPipe for log command")
 	}
-	return pid, true
+	scanner := bufio.NewScanner(logPipe)
+	if err := cmd.Start(); err != nil {
+		return false, nil, errors.Wrap(err, "Error starting log command")
+	}
+
+	wasOOMKilled := false
+	pids := []int{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		if a.lineHasOOMKill(line) {
+			wasOOMKilled = true
+			if pid, hasPid := a.extractPid(line); hasPid {
+				pids = append(pids, pid)
+			}
+		}
+	}
+
+	errs := make(chan error, 1)
+	select {
+	case <-ctx.Done():
+		return false, nil, errors.New("request cancelled")
+	case errs <- cmd.Wait():
+		err = <-errs
+		return wasOOMKilled, pids, errors.Wrap(err, "Error waiting for log command")
+	}
 }
