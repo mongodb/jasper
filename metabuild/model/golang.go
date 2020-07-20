@@ -43,8 +43,8 @@ type GolangGeneralConfig struct {
 	// default, packages will only be discovered if they contain test files
 	// (i.e. file that ends in "_test.go").
 	DiscoverSourceFiles bool `yaml:"discover_source_files,omitempty"`
-	// DiscoveryDir is the directory where package discovery should occur.
-	DiscoveryDir string `yaml:"-"`
+	// DiscoveryDirectory is the directory where package discovery should occur.
+	DiscoveryDirectory string `yaml:"-"`
 }
 
 // Validate checks that the all the required top-level configuration is
@@ -66,7 +66,7 @@ func NewGolang(file, discoveryDir string) (*Golang, error) {
 		return nil, errors.Wrap(err, "unmarshalling from YAML file")
 	}
 	g := gv.Golang
-	gv.DiscoveryDir = discoveryDir
+	gv.DiscoveryDirectory = discoveryDir
 
 	if err := g.DiscoverPackages(); err != nil {
 		return nil, errors.Wrap(err, "automatically discovering test packages")
@@ -266,19 +266,15 @@ const (
 // DiscoverPackages discovers directories containing tests in the local file
 // system and adds them if they are not already defined.
 func (g *Golang) DiscoverPackages() error {
-	if err := g.validateEnvVars(); err != nil {
-		return errors.Wrap(err, "invalid environment variables")
-	}
-
-	if !filepath.IsAbs(g.DiscoveryDir) {
-		discoveryDir, err := filepath.Abs(g.DiscoveryDir)
+	if !filepath.IsAbs(g.DiscoveryDirectory) {
+		discoveryDir, err := filepath.Abs(g.DiscoveryDirectory)
 		if err != nil {
-			return errors.Wrapf(err, "converting package discovery root directory '%s' into absolute path", discoveryDir)
+			return errors.Wrapf(err, "converting package discovery root directory '%s' into absolute path", g.DiscoveryDirectory)
 		}
-		g.DiscoveryDir = discoveryDir
+		g.DiscoveryDirectory = discoveryDir
 	}
 
-	if err := filepath.Walk(g.DiscoveryDir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(g.DiscoveryDirectory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -299,7 +295,7 @@ func (g *Golang) DiscoverPackages() error {
 			return nil
 		}
 		dir := filepath.Dir(path)
-		dir, err = filepath.Rel(g.DiscoveryDir, dir)
+		dir, err = filepath.Rel(g.DiscoveryDirectory, dir)
 		if err != nil {
 			return errors.Wrapf(err, "making package path '%s' relative to root package", path)
 		}
@@ -319,7 +315,7 @@ func (g *Golang) DiscoverPackages() error {
 
 		return nil
 	}); err != nil {
-		return errors.Wrapf(err, "walking the file system tree starting from path '%s'", g.DiscoveryDir)
+		return errors.Wrapf(err, "walking the file system tree starting from path '%s'", g.DiscoveryDirectory)
 	}
 
 	return nil

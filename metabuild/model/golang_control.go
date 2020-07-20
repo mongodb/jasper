@@ -16,8 +16,8 @@ type GolangControl struct {
 	VariantFiles []string `yaml:"variants"`
 	PackageFiles []string `yaml:"packages,omitempty"`
 
-	ControlDirectory string `yaml:"-"`
-	DiscoveryDir     string `yaml:"-"`
+	ControlDirectory   string `yaml:"-"`
+	DiscoveryDirectory string `yaml:"-"`
 }
 
 // NewGolangControl creates a new representation of a Golang control file from
@@ -32,7 +32,7 @@ func NewGolangControl(file string, discoveryDir string) (*GolangControl, error) 
 	}
 	gc := gcv.GolangControl
 	gc.ControlDirectory = util.ConsistentFilepath(filepath.Dir(file))
-	gc.DiscoveryDir = util.ConsistentFilepath(discoveryDir)
+	gc.DiscoveryDirectory = util.ConsistentFilepath(discoveryDir)
 	return &gc, nil
 }
 
@@ -58,7 +58,7 @@ func (gc *GolangControl) Build() (*Golang, error) {
 	}
 	g.GolangGeneralConfig = ggc
 
-	g.DiscoveryDir = gc.DiscoveryDir
+	g.DiscoveryDirectory = gc.DiscoveryDirectory
 
 	if err := g.DiscoverPackages(); err != nil {
 		return nil, errors.Wrap(err, "automatically discovering test packages")
