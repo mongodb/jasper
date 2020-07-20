@@ -141,7 +141,8 @@ func (g *Golang) Validate() error {
 
 // validateEnvVars checks that:
 // - GOROOT is defined at the top-level global environment.
-// - GOPATH is defined at the top-level global environment
+// - GOPATH is defined at the top-level global environment and is a relative
+//   path.
 func (g *Golang) validateEnvVars() error {
 	catcher := grip.NewBasicCatcher()
 	for _, name := range []string{"GOPATH", "GOROOT"} {
@@ -153,6 +154,12 @@ func (g *Golang) validateEnvVars() error {
 	}
 	if catcher.HasErrors() {
 		return catcher.Resolve()
+	}
+
+	// According to the semantics of this GOPATH, it must be relative to the
+	// task working directory.
+	if gopath := g.Environment["GOPATH"]; filepath.IsAbs(gopath) {
+		catcher.Errorf("global GOPATH '%s' is absolute path, but should be relative to the task working directory", gopath)
 	}
 
 	return catcher.Resolve()
@@ -479,7 +486,7 @@ func (gv *GolangVariant) Validate() error {
 	}
 
 	if gopath := gv.Environment["GOPATH"]; gopath != "" && filepath.IsAbs(gopath) {
-		catcher.Errorf("variant-level GOPATH '%s' must be relative to the working directory", gopath)
+		catcher.Errorf("variant-level GOPATH '%s' is absolute path, but should be relative to the task working directory", gopath)
 	}
 
 	return catcher.Resolve()

@@ -86,6 +86,7 @@ func generateGolang() cli.Command {
 			requireStringFlag(discoveryDirFlagName),
 			requireOneFlag(generatorFileFlagName, controlFileFlagName),
 			checkGeneratedConfigFormat,
+			cleanupFilePathSeparators(generatorFileFlagName, controlFileFlagName, discoveryDirFlagName),
 		),
 		Action: func(c *cli.Context) error {
 			discoveryDir := c.String(discoveryDirFlagName)
