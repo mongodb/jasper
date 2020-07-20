@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/evergreen-ci/utility"
-	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/mongodb/jasper/util"
 	"github.com/stretchr/testify/assert"
@@ -155,7 +154,6 @@ func TestGolangVariant(t *testing.T) {
 						"GOPATH": util.ConsistentFilepath("/gopath"),
 					}
 				}
-				pp.Println(gv.Validate())
 				assert.Error(t, gv.Validate())
 			},
 		} {
