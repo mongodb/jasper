@@ -179,7 +179,7 @@ func TestManagerImplementations(t *testing.T) {
 				"ListErrorsWithInvalidFilter": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					procs, err := manager.List(ctx, options.Filter("foo"))
 					assert.Error(t, err)
-					assert.Nil(t, procs)
+					assert.Empty(t, procs)
 				},
 				"GetMethodErrorsWithNonexistentProcess": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					proc, err := manager.Get(ctx, "foo")

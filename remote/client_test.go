@@ -201,7 +201,7 @@ func addBasicClientTests(modify testutil.OptsModify, tests ...clientTestCase) []
 			Case: func(ctx context.Context, t *testing.T, client Manager) {
 				procs, err := client.List(ctx, options.Filter("foo"))
 				assert.Error(t, err)
-				assert.Nil(t, procs)
+				assert.Empty(t, procs)
 			},
 		},
 		{
