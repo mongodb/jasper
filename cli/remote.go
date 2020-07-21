@@ -18,6 +18,7 @@ const (
 	GetLogStreamCommand       = "get-log-stream"
 	SignalEventCommand        = "signal-event"
 	WriteFileCommand          = "write-file"
+	SendMessagesCommand       = "send-messages"
 )
 
 // Remote creates a cli.Command that allows the remote-specific methods in the
