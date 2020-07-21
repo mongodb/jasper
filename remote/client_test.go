@@ -499,19 +499,19 @@ func TestManagerImplementations(t *testing.T) {
 				return client
 			},
 		},
-		// {
-		//     Name: "REST",
-		//     Constructor: func(ctx context.Context, t *testing.T) Manager {
-		//         _, port, err := startRESTService(ctx, httpClient)
-		//         require.NoError(t, err)
-		//
-		//         client := &restClient{
-		//             prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
-		//             client: httpClient,
-		//         }
-		//         return client
-		//     },
-		// },
+		{
+			Name: "REST",
+			Constructor: func(ctx context.Context, t *testing.T) Manager {
+				_, port, err := startRESTService(ctx, httpClient)
+				require.NoError(t, err)
+
+				client := &restClient{
+					prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
+					client: httpClient,
+				}
+				return client
+			},
+		},
 	} {
 		t.Run(factory.Name, func(t *testing.T) {
 			for _, modify := range []struct {
