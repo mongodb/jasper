@@ -22,9 +22,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewRestClient creates a REST client that connecst to the given address
+// NewRESTClient creates a REST client that connects to the given address
 // running the Jasper REST service.
-func NewRestClient(addr net.Addr) Manager {
+func NewRESTClient(addr net.Addr) Manager {
 	return &restClient{
 		prefix: fmt.Sprintf("http://%s/jasper/v1", addr),
 		client: bond.GetHTTPClient(),
