@@ -942,19 +942,12 @@ func (s *jasperService) SendMessages(ctx context.Context, lp *LoggingPayload) (*
 	}
 
 	payload := lp.Export()
-	if err := payload.Validate(); err != nil {
-		return &OperationOutcome{
-			Success:  false,
-			Text:     err.Error(),
-			ExitCode: -3,
-		}, nil
-	}
 
 	if err := logger.Send(payload); err != nil {
 		return &OperationOutcome{
 			Success:  false,
 			Text:     err.Error(),
-			ExitCode: -4,
+			ExitCode: -3,
 		}, nil
 	}
 

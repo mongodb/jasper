@@ -833,15 +833,7 @@ func (s *Service) loggingSendMessages(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := payload.Validate(); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "invalid logging payload").Error(),
-		})
-	}
-
-	err := logger.Send(payload)
-	if err != nil {
+	if err := logger.Send(payload); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
