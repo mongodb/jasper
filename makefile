@@ -3,7 +3,7 @@ buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*" -not -path "./vendor/*")
 testFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -path "*\#*")
 testPackages := $(name) cli remote options mock metabuild-generator metabuild-model
-allPackages := $(testPackages) internal-executor remote-internal testutil benchmarks
+allPackages := $(testPackages) internal-executor remote-internal testutil benchmarks util
 lintPackages := $(allPackages)
 projectPath := github.com/mongodb/jasper
 
