@@ -91,7 +91,7 @@ func main() {
 			grip.Error(errors.Wrapf(err, "splitting lint args '%s'", lintArgs))
 			os.Exit(1)
 		}
-		args := []string{filepath.Base(lintBin), "run"}
+		args := []string{lintBin, "run"}
 		args = append(args, splitLintArgs...)
 		args = append(args, pkgDir)
 
