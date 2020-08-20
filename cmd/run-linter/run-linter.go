@@ -97,7 +97,6 @@ func main() {
 
 		startAt := time.Now()
 		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Env = os.Environ()
 		cmd.Dir = dirname
 		out, err := cmd.CombinedOutput()
 		r := &result{
@@ -111,7 +110,6 @@ func main() {
 		for _, linter := range customLinters {
 			customLinterStart := time.Now()
 			cmd := exec.Command(linter, pkgDir)
-			cmd.Env = os.Environ()
 			cmd.Dir = dirname
 			out, err := cmd.CombinedOutput()
 			r.passed = r.passed && err == nil

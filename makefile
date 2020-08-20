@@ -145,7 +145,7 @@ phony += compile lint test coverage coverage-html docker-setup docker-cleanup
 .FORCE:
 
 clean:
-	rm -rf $(buildDir)/$(name) $(lintDeps) $(buildDir)/run-benchmarks $(buildDir)/run-linter *.pb.go 
+	rm -rf $(buildDir)/$(name) $(lintDeps) $(buildDir)/run-benchmarks $(buildDir)/run-linter *.pb.go
 
 clean-results:
 	rm -rf $(buildDir)/output.*
