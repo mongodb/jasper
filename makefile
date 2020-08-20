@@ -101,7 +101,7 @@ $(buildDir)/output.%.coverage.html: $(buildDir)/output.%.coverage .FORCE
 	$(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
 $(buildDir)/output.%.lint: $(buildDir)/run-linter .FORCE
-	# We have to handle the PATH specially for CI, because if the PATH has a different version of Go in it, it'll break.
+	@# We have to handle the PATH specially for CI, because if the PATH has a different version of Go in it, it'll break.
 	@$(if $(GO_BIN_PATH), PATH="$(shell dirname $(GO_BIN_PATH)):$(PATH)") ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
