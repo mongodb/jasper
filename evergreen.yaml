@@ -126,6 +126,10 @@ tasks:
     tags: ["report"]
     name: lint-testutil
 
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-util
+
 task_groups:
   - name: lintGroup
     tasks: [ ".report"]
