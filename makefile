@@ -70,7 +70,7 @@ $(buildDir)/run-benchmarks: cmd/run-benchmarks/run_benchmarks.go
 
 # start cli targets
 $(name) cli: $(buildDir)/$(name)
-$(buildDir)/$(name): cmd/$(name)/$(name).go
+$(buildDir)/$(name): cmd/$(name)/$(name).go $(srcFiles)
 	$(gobin) build -o $@ $<
 # end cli targets
 
