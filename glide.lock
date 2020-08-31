@@ -73,6 +73,12 @@ imports:
     version: d751682dd1038b2274391fec637b1a9c366d9a0a
     subpackages:
       - googleapis/rpc
+    # google.golang.org/protobuf and
+    # github.com/golang/protobuf refer to the exact
+    # same repo, but because
+    # google.golang.org/genproto/googleapis/rpc does
+    # not alias github.com/golang/protobuf, we're
+    # forced to vendor both of them.
   - name: google.golang.org/protobuf
     version: d04d7b157bb510b1e0c10132224b616ac0e26b17
   - name: github.com/golang/protobuf
