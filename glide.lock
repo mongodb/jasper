@@ -50,7 +50,7 @@ imports:
   - name: github.com/docker/go-units
     version: 2fb04c6466a548a03cb009c5569ee1ab1e35398e
   - name: github.com/docker/docker
-    version: aa6a9891b09cce3d9004121294301a30d45d998d
+    version: 9dc6525e6118a25fab2be322d1914740ea842495
   - name: github.com/coreos/go-systemd
     version: 95778dfbb74eb7e4dbaf43bf7d71809650ef8076
   - name: github.com/godbus/dbus
