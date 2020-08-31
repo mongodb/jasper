@@ -15,20 +15,20 @@ type clientFunc func(ctx context.Context, subcommand []string, input interface{}
 // sshProcess uses SSH to access a remote machine's Jasper CLI, which has access
 // to methods in the Process interface.
 type sshProcess struct {
-	runClientCommand clientFunc
-	info             jasper.ProcessInfo
+	client *sshRunner
+	info   jasper.ProcessInfo
 }
 
 // newSSHProcess creates a new process that runs using a Jasper CLI over SSH.
 // The caller should pass in the function that will run CLI client commands over
 // SSH.
-func newSSHProcess(runClientCommand clientFunc, info jasper.ProcessInfo) (jasper.Process, error) {
-	if runClientCommand == nil {
+func newSSHProcess(client *sshRunner, info jasper.ProcessInfo) (jasper.Process, error) {
+	if client == nil {
 		return nil, errors.New("SSH process needs a function to run the client command over SSH")
 	}
 	return &sshProcess{
-		runClientCommand: runClientCommand,
-		info:             info,
+		client: client,
+		info:   info,
 	}, nil
 }
 
@@ -135,7 +135,7 @@ func (p *sshProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return newSSHProcess(p.runClientCommand, resp.Info)
+	return newSSHProcess(p.client, resp.Info)
 }
 
 func (p *sshProcess) RegisterTrigger(ctx context.Context, t jasper.ProcessTrigger) error {
@@ -196,5 +196,5 @@ func (p *sshProcess) ResetTags() {
 }
 
 func (p *sshProcess) runCommand(ctx context.Context, processSubcommand string, subcommandInput interface{}) ([]byte, error) {
-	return p.runClientCommand(ctx, []string{ProcessCommand, processSubcommand}, subcommandInput)
+	return p.client.runClientCommand(ctx, []string{ProcessCommand, processSubcommand}, subcommandInput)
 }
