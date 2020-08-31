@@ -302,7 +302,6 @@ message EventName {
 
 message ScriptingHarnessID {
   string id = 1;
-  bool setup = 2;
 }
 
 message ScriptingOptionsGolang {

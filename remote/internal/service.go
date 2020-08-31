@@ -591,8 +591,7 @@ func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *Script
 		return nil, errors.Wrap(err, "problem generating scripting environment")
 	}
 	return &ScriptingHarnessID{
-		Id:    se.ID(),
-		Setup: true,
+		Id: se.ID(),
 	}, nil
 }
 func (s *jasperService) ScriptingHarnessCheck(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
