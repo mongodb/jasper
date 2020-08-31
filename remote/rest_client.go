@@ -174,10 +174,7 @@ func (c *restClient) CreateScripting(ctx context.Context, opts options.Scripting
 		return nil, errors.Wrap(err, "problem reading response")
 	}
 
-	return &restScriptingHarness{
-		id:     out.ID,
-		client: c,
-	}, nil
+	return newRESTScriptingHarness(c, out.ID), nil
 }
 
 func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
@@ -191,10 +188,7 @@ func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Har
 		return nil, errors.WithStack(err)
 	}
 
-	return &restScriptingHarness{
-		id:     id,
-		client: c,
-	}, nil
+	return newRESTScriptingHarness(c, id), nil
 }
 
 func (c *restClient) Register(ctx context.Context, proc jasper.Process) error {
@@ -677,6 +671,13 @@ func (p *restProcess) ResetTags() {
 type restScriptingHarness struct {
 	id     string
 	client *restClient
+}
+
+func newRESTScriptingHarness(client *restClient, id string) *restScriptingHarness {
+	return &restScriptingHarness{
+		id:     id,
+		client: client,
+	}
 }
 
 func (s *restScriptingHarness) ID() string { return s.id }

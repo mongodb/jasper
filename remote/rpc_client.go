@@ -115,7 +115,7 @@ func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 		return nil, errors.WithStack(err)
 	}
 
-	return &rpcScriptingHarness{client: c.client, id: seid.Id}, nil
+	return newRPCScriptingHarness(c.client, seid.Id), nil
 }
 
 func (c *rpcClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
@@ -127,7 +127,7 @@ func (c *rpcClient) GetScripting(ctx context.Context, id string) (scripting.Harn
 		return nil, errors.New(resp.Text)
 	}
 
-	return &rpcScriptingHarness{client: c.client, id: id}, nil
+	return newRPCScriptingHarness(c.client, id), nil
 }
 
 func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
@@ -547,6 +547,13 @@ func (p *rpcProcess) ResetTags() {
 type rpcScriptingHarness struct {
 	id     string
 	client internal.JasperProcessManagerClient
+}
+
+func newRPCScriptingHarness(client internal.JasperProcessManagerClient, id string) *rpcScriptingHarness {
+	return &rpcScriptingHarness{
+		client: client,
+		id:     id,
+	}
 }
 
 func (s *rpcScriptingHarness) ID() string { return s.id }
