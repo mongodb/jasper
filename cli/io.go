@@ -6,6 +6,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
+	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 )
 
@@ -242,70 +243,10 @@ func ExtractIDResponse(input []byte) (IDResponse, error) {
 	return resp, resp.successOrError()
 }
 
-// IDInput represents CLI-specific input representing a Jasper process ID.
+// IDInput represents CLI-specific input representing a single ID (e.g. a Jasper
+// process ID).
 type IDInput struct {
 	ID string `json:"id"`
-}
-
-// ScriptingOptions is a way to serialize implementations of the
-// options.ScriptingHarness type by wrapping a type name for the
-// implementation name to pass to the factory.
-type ScriptingOptions struct {
-	ImplementationType string          `json:"type"`
-	Payload            json.RawMessage `json:"payload"`
-}
-
-// Validate ensures that the ScriptingOptions instance is
-// validated.
-func (opts *ScriptingOptions) Validate() error {
-	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(opts.ImplementationType == "", "implementation type must be defined")
-	catcher.NewWhen(opts.Payload == nil, "implementation type must be defined")
-
-	return catcher.Resolve()
-}
-
-// BuildScriptingOptions constructs a ScriptingOptions value.
-func BuildScriptingOptions(in options.ScriptingHarness) (*ScriptingOptions, error) {
-	out := &ScriptingOptions{}
-
-	switch opts := in.(type) {
-	case *options.ScriptingPython:
-		if opts.LegacyPython {
-			out.ImplementationType = options.Python2ScriptingType
-		} else {
-			out.ImplementationType = options.Python3ScriptingType
-		}
-	case *options.ScriptingGolang:
-		out.ImplementationType = options.GolangScriptingType
-	case *options.ScriptingRoswell:
-		out.ImplementationType = options.RoswellScriptingType
-	default:
-		return nil, errors.Errorf("unsupported scripting type [%T]", in)
-	}
-
-	var err error
-	out.Payload, err = json.Marshal(in)
-	if err != nil {
-		return nil, errors.Wrap(err, "problem building message payload")
-	}
-
-	return out, nil
-}
-
-// Export builds a native scripting harness container.
-func (opts *ScriptingOptions) Export() (options.ScriptingHarness, error) {
-	harness, err := options.NewScriptingHarness(opts.ImplementationType)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	err = json.Unmarshal(opts.Payload, harness)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return harness, nil
 }
 
 // Validate checks that the Jasper process ID is non-empty.
@@ -422,4 +363,118 @@ func (e *EventInput) Validate() error {
 		return errors.New("event name cannot be empty")
 	}
 	return nil
+}
+
+// ScriptingCreateInput is a way to serialize implementations of the
+// options.ScriptingHarness type by wrapping a type name that can
+// identify the scripting harnes type.
+type ScriptingCreateInput struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+// Validate ensures that the ScriptingCreateInput instance has
+// a scripting type and payload to populate the harness.
+func (in *ScriptingCreateInput) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(in.Type == "", "scripting type must be defined")
+	catcher.NewWhen(in.Payload == nil, "scripting payload must be given")
+
+	return catcher.Resolve()
+}
+
+// kim: TODO: test
+// BuildScriptingCreateInput constructs a ScriptingCreateInput value.
+func BuildScriptingCreateInput(in options.ScriptingHarness) (*ScriptingCreateInput, error) {
+	out := &ScriptingCreateInput{}
+
+	switch opts := in.(type) {
+	case *options.ScriptingPython:
+		if opts.LegacyPython {
+			out.Type = options.Python2ScriptingType
+		} else {
+			out.Type = options.Python3ScriptingType
+		}
+	case *options.ScriptingGolang:
+		out.Type = options.GolangScriptingType
+	case *options.ScriptingRoswell:
+		out.Type = options.RoswellScriptingType
+	default:
+		return nil, errors.Errorf("unsupported scripting type [%T]", in)
+	}
+
+	var err error
+	out.Payload, err = json.Marshal(in)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem building message payload")
+	}
+
+	return out, nil
+}
+
+// kim: TODO: test
+// Export builds a native scripting harness container.
+func (in *ScriptingCreateInput) Export() (options.ScriptingHarness, error) {
+	harness, err := options.NewScriptingHarness(in.Type)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	err = json.Unmarshal(in.Payload, harness)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return harness, nil
+}
+
+type ScriptingRunInput struct {
+	ID   string   `json:"id"`
+	Args []string `json:"args"`
+}
+
+type ScriptingRunScriptInput struct {
+	ID     string `json:"id"`
+	Script string `json:"script"`
+}
+
+func (in *ScriptingRunScriptInput) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(in.ID == "", "must specify scripting harness ID")
+	catcher.NewWhen(in.Script == "", "must specify script to run")
+	return catcher.Resolve()
+}
+
+type ScriptingBuildInput struct {
+	ID        string   `json:"id"`
+	Directory string   `json:"directory"`
+	Args      []string `json:"args"`
+}
+
+func (in *ScriptingBuildInput) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(in.ID == "", "must specify scripting harness ID")
+	return catcher.Resolve()
+}
+
+type ScriptingBuildResponse struct {
+	OutcomeResponse `json:"outcome"`
+	Path            string `json:"path"`
+}
+
+type ScriptingTestInput struct {
+	ID        string                  `json:"id"`
+	Directory string                  `json:"directory"`
+	Options   []scripting.TestOptions `json:"options"`
+}
+
+func (in *ScriptingTestInput) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(in.ID == "", "must specify scripting harness ID")
+	return catcher.Resolve()
+}
+
+type ScriptingTestResponse struct {
+	OutcomeResponse `json:"outcome"`
+	Results         []scripting.TestResult `json:"results"`
 }

@@ -1,5 +1,8 @@
 package cli
 
+// kim: TODO: add usage help text for each CLI command once everything is
+// implemented.
+
 import (
 	"context"
 
@@ -19,6 +22,8 @@ const (
 	GetLogStreamCommand       = "get-log-stream"
 	SignalEventCommand        = "signal-event"
 	SendMessagesCommand       = "send-messages"
+	CreateScriptingCommand    = "create-scripting"
+	GetScriptingCommand       = "get-scripting"
 )
 
 // Remote creates a cli.Command that allows the remote-specific methods in the
@@ -152,15 +157,16 @@ func remoteSendMessages() cli.Command {
 	}
 }
 
+// kim: TODO: test
 func remoteCreateScripting() cli.Command {
 	return cli.Command{
 		Name:   CreateScriptingCommand,
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
-			opts := &ScriptingOptions{}
-			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client remote.Manager) interface{} {
-				harnessOpts, err := opts.Export()
+			in := &ScriptingCreateInput{}
+			return doPassthroughInputOutput(c, in, func(ctx context.Context, client remote.Manager) interface{} {
+				harnessOpts, err := in.Export()
 				if err != nil {
 					return &IDResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating scripting harness"))}
 				}
@@ -175,7 +181,21 @@ func remoteCreateScripting() cli.Command {
 	}
 }
 
-// kim: TODO: implement
+// kim: TODO: test
 func remoteGetScripting() cli.Command {
-	return cli.Command{}
+	return cli.Command{
+		Name:   GetScriptingCommand,
+		Flags:  clientFlags(),
+		Before: clientBefore(),
+		Action: func(c *cli.Context) error {
+			input := &IDInput{}
+			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
+				harness, err := client.GetScripting(ctx, input.ID)
+				if err != nil {
+					return &IDResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness with ID '%s'", input.ID))}
+				}
+				return &IDResponse{ID: harness.ID(), OutcomeResponse: *makeOutcomeResponse(nil)}
+			})
+		},
+	}
 }
