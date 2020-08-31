@@ -6,7 +6,6 @@ package cli
 import (
 	"context"
 
-	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote"
 	"github.com/pkg/errors"
@@ -27,7 +26,7 @@ const (
 	GetScriptingCommand       = "get-scripting"
 )
 
-// Remote creates a cli.Command that allows the remote-specific methods in the
+// Remote creates a cli.Command that supports the remote-specific methods in the
 // remote.Manager interface except for CloseClient, for which there is no CLI
 // equivalent.
 func Remote() cli.Command {
@@ -166,7 +165,6 @@ func remoteCreateScripting() cli.Command {
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
 			in := &ScriptingCreateInput{}
-			pp.Println("remoteCreateScripting")
 			return doPassthroughInputOutput(c, in, func(ctx context.Context, client remote.Manager) interface{} {
 				harnessOpts, err := in.Export()
 				if err != nil {
@@ -192,11 +190,11 @@ func remoteGetScripting() cli.Command {
 		Action: func(c *cli.Context) error {
 			input := &IDInput{}
 			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
-				harness, err := client.GetScripting(ctx, input.ID)
+				_, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return &IDResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness with ID '%s'", input.ID))}
+					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness with ID '%s'", input.ID))
 				}
-				return &IDResponse{ID: harness.ID(), OutcomeResponse: *makeOutcomeResponse(nil)}
+				return makeOutcomeResponse(nil)
 			})
 		},
 	}

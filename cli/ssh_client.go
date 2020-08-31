@@ -321,11 +321,11 @@ func (c *sshClient) SendMessages(ctx context.Context, opts options.LoggingPayloa
 	return nil
 }
 
-func (r *sshRunner) runManagerCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) ([]byte, error) {
+func (r *sshRunner) runManagerCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
 	return r.runClientCommand(ctx, []string{ManagerCommand, managerSubcommand}, subcommandInput)
 }
 
-func (r *sshRunner) runRemoteCommand(ctx context.Context, remoteSubcommand string, subcommandInput interface{}) ([]byte, error) {
+func (r *sshRunner) runRemoteCommand(ctx context.Context, remoteSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
 	return r.runClientCommand(ctx, []string{RemoteCommand, remoteSubcommand}, subcommandInput)
 }
 
@@ -352,7 +352,7 @@ func newSSHRunner(clientOpts ClientOptions, remoteOpts options.Remote) (*sshRunn
 // runClientCommand creates a command that runs the given CLI client subcommand
 // over SSH with the given input to be sent as JSON to standard input. If
 // subcommandInput is nil, it does not use standard input.
-func (r *sshRunner) runClientCommand(ctx context.Context, subcommand []string, subcommandInput interface{}) ([]byte, error) {
+func (r *sshRunner) runClientCommand(ctx context.Context, subcommand []string, subcommandInput interface{}) (json.RawMessage, error) {
 	input, err := clientInput(subcommandInput)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem creating client input")
@@ -369,7 +369,7 @@ func (r *sshRunner) runClientCommand(ctx context.Context, subcommand []string, s
 
 // newCommand creates the command that runs the Jasper CLI client command
 // over SSH.
-func (r *sshRunner) newCommand(ctx context.Context, clientSubcommand []string, input []byte, output io.WriteCloser) *jasper.Command {
+func (r *sshRunner) newCommand(ctx context.Context, clientSubcommand []string, input json.RawMessage, output io.WriteCloser) *jasper.Command {
 	cmd := r.manager.CreateCommand(ctx).SetRemoteOptions(&r.remoteOpts).
 		Add(r.clientOpts.buildCommand(clientSubcommand...))
 
@@ -393,7 +393,7 @@ func clientOutput() *CappedWriter {
 }
 
 // clientInput constructs the JSON input to the CLI from the struct.
-func clientInput(input interface{}) ([]byte, error) {
+func clientInput(input interface{}) (json.RawMessage, error) {
 	if input == nil {
 		return nil, nil
 	}

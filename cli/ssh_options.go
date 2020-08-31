@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mongodb/grip"
-	"github.com/mongodb/jasper/options"
 )
 
 // ClientOptions represents the options to connect the CLI client to the Jasper
@@ -28,13 +27,6 @@ func (opts *ClientOptions) Validate() error {
 		catcher.New("client type must be RPC or REST")
 	}
 	return catcher.Resolve()
-}
-
-// sshRunnerOptions represents the options necessary to run a Jasper CLI
-// command over SSH.
-type sshRunnerOptions struct {
-	remote options.Remote
-	client ClientOptions
 }
 
 // buildCommand returns the Jasper CLI command that will be run over SSH using

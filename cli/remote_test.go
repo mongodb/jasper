@@ -73,10 +73,10 @@ func TestCLIRemote(t *testing.T) {
 					assert.False(t, resp.Successful())
 				},
 				"GetLogStreamSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					inMemLogger, err := jasper.NewInMemoryLogger(10)
+					logger, err := jasper.NewInMemoryLogger(10)
 					require.NoError(t, err)
 					opts := testutil.TrueCreateOpts()
-					opts.Output.Loggers = []*options.LoggerConfig{inMemLogger}
+					opts.Output.Loggers = []*options.LoggerConfig{logger}
 					createInput, err := json.Marshal(opts)
 					require.NoError(t, err)
 					createResp := &InfoResponse{}
@@ -87,6 +87,32 @@ func TestCLIRemote(t *testing.T) {
 					resp := &LogStreamResponse{}
 					require.NoError(t, execCLICommandInputOutput(t, c, remoteGetLogStream(), input, resp))
 
+					assert.True(t, resp.Successful())
+				},
+				"CreateScriptingSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
+					opts := testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory())
+					convertedOpts, err := BuildScriptingCreateInput(opts)
+					require.NoError(t, err)
+					input, err := json.Marshal(convertedOpts)
+					require.NoError(t, err)
+					resp := &IDResponse{}
+					require.NoError(t, execCLICommandInputOutput(t, c, remoteCreateScripting(), input, resp))
+					assert.NotZero(t, resp.ID)
+				},
+				"GetScriptingSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
+					opts := testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory())
+					convertedOpts, err := BuildScriptingCreateInput(opts)
+					require.NoError(t, err)
+					createInput, err := json.Marshal(convertedOpts)
+					require.NoError(t, err)
+					createResp := &IDResponse{}
+					require.NoError(t, execCLICommandInputOutput(t, c, remoteCreateScripting(), createInput, createResp))
+					assert.NotZero(t, createResp.ID)
+
+					input, err := json.Marshal(IDInput{ID: createResp.ID})
+					require.NoError(t, err)
+					resp := &OutcomeResponse{}
+					require.NoError(t, execCLICommandInputOutput(t, c, remoteGetScripting(), input, resp))
 					assert.True(t, resp.Successful())
 				},
 			} {

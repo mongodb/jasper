@@ -91,7 +91,7 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 
 // execCLICommandInputOutput runs the CLI command with the given input to stdin
 // and writes the result from stdout to output.
-func execCLICommandInputOutput(t *testing.T, c *cli.Context, cmd cli.Command, input []byte, output interface{}) error {
+func execCLICommandInputOutput(t *testing.T, c *cli.Context, cmd cli.Command, input json.RawMessage, output interface{}) error {
 	return withMockStdin(t, string(input), func(*os.File) error {
 		return execCLICommandOutput(t, c, cmd, output)
 	})

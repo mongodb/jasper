@@ -13,11 +13,18 @@ const (
 	ScriptingCleanupCommand   = "cleanup"
 )
 
+// Scripting creates a cli.Command that supports running scripting environments
+// in a remote interface.
 func Scripting() cli.Command {
 	return cli.Command{
 		Name: ScriptingCommand,
 		Subcommands: []cli.Command{
 			scriptingSetup(),
+			scriptingRun(),
+			scriptingRunScript(),
+			scriptingBuild(),
+			scriptingTest(),
+			scriptingCleanup(),
 		},
 	}
 }

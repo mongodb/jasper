@@ -2,15 +2,12 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"syscall"
 
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
 )
-
-// clientFunc is a function that runs the given Jasper CLI command with the
-// given input.
-type clientFunc func(ctx context.Context, subcommand []string, input interface{}) ([]byte, error)
 
 // sshProcess uses SSH to access a remote machine's Jasper CLI, which has access
 // to methods in the Process interface.
@@ -195,6 +192,6 @@ func (p *sshProcess) ResetTags() {
 	})
 }
 
-func (p *sshProcess) runCommand(ctx context.Context, processSubcommand string, subcommandInput interface{}) ([]byte, error) {
+func (p *sshProcess) runCommand(ctx context.Context, processSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
 	return p.client.runClientCommand(ctx, []string{ProcessCommand, processSubcommand}, subcommandInput)
 }
