@@ -71,9 +71,12 @@ imports:
     version: 6c92c7dc7f53607809182301b96e4cc1975143f1
   - name: google.golang.org/genproto
     version: d751682dd1038b2274391fec637b1a9c366d9a0a
+    subpackages:
+      - googleapis/rpc
   - name: google.golang.org/protobuf
     version: d04d7b157bb510b1e0c10132224b616ac0e26b17
-
+  - name: github.com/golang/protobuf
+    version: d04d7b157bb510b1e0c10132224b616ac0e26b17
   # vendoring because many dependencies use it
   - name: go.mongodb.org/mongo-driver
     version: 305bc4a5e4131420fe8ba5628e6faa9e6ade4e86
