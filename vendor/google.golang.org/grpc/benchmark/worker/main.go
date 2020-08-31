@@ -16,6 +16,8 @@
  *
  */
 
+// Binary worker implements the benchmark worker that can turn into a benchmark
+// client or server.
 package main
 
 import (
@@ -71,6 +73,7 @@ func (byteBufCodec) String() string {
 // workerServer implements WorkerService rpc handlers.
 // It can create benchmarkServer or benchmarkClient on demand.
 type workerServer struct {
+	testpb.UnimplementedWorkerServiceServer
 	stop       chan<- bool
 	serverPort int
 }

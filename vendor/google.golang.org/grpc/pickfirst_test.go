@@ -39,14 +39,16 @@ func errorDesc(err error) string {
 }
 
 func (s) TestOneBackendPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 1
-	servers, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	servers, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}))
+	cc, err := Dial(r.Scheme()+":///test.server",
+		WithInsecure(),
+		WithResolvers(r),
+		WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -60,7 +62,7 @@ func (s) TestOneBackendPickfirst(t *testing.T) {
 		t.Fatalf("EmptyCall() = _, %v, want _, DeadlineExceeded", err)
 	}
 
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}}})
 	// The second RPC should succeed.
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[0].port {
@@ -72,14 +74,13 @@ func (s) TestOneBackendPickfirst(t *testing.T) {
 }
 
 func (s) TestBackendsPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 2
-	servers, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	servers, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}))
+	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithResolvers(r), WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -93,7 +94,7 @@ func (s) TestBackendsPickfirst(t *testing.T) {
 		t.Fatalf("EmptyCall() = _, %v, want _, DeadlineExceeded", err)
 	}
 
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}}})
 	// The second RPC should succeed with the first server.
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[0].port {
@@ -105,14 +106,13 @@ func (s) TestBackendsPickfirst(t *testing.T) {
 }
 
 func (s) TestNewAddressWhileBlockingPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 1
-	servers, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	servers, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}))
+	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithResolvers(r), WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -136,19 +136,18 @@ func (s) TestNewAddressWhileBlockingPickfirst(t *testing.T) {
 		}()
 	}
 	time.Sleep(50 * time.Millisecond)
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}}})
 	wg.Wait()
 }
 
 func (s) TestCloseWithPendingRPCPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 1
-	_, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	_, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}))
+	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithResolvers(r), WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -177,14 +176,13 @@ func (s) TestCloseWithPendingRPCPickfirst(t *testing.T) {
 }
 
 func (s) TestOneServerDownPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 2
-	servers, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	servers, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}), WithWaitForHandshake())
+	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithResolvers(r), WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -198,7 +196,7 @@ func (s) TestOneServerDownPickfirst(t *testing.T) {
 		t.Fatalf("EmptyCall() = _, %v, want _, DeadlineExceeded", err)
 	}
 
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}}})
 	// The second RPC should succeed with the first server.
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[0].port {
@@ -218,14 +216,13 @@ func (s) TestOneServerDownPickfirst(t *testing.T) {
 }
 
 func (s) TestAllServersDownPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 2
-	servers, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	servers, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}), WithWaitForHandshake())
+	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithResolvers(r), WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -239,7 +236,7 @@ func (s) TestAllServersDownPickfirst(t *testing.T) {
 		t.Fatalf("EmptyCall() = _, %v, want _, DeadlineExceeded", err)
 	}
 
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}}})
 	// The second RPC should succeed with the first server.
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[0].port {
@@ -261,14 +258,13 @@ func (s) TestAllServersDownPickfirst(t *testing.T) {
 }
 
 func (s) TestAddressesRemovedPickfirst(t *testing.T) {
-	r, rcleanup := manual.GenerateAndRegisterManualResolver()
-	defer rcleanup()
+	r := manual.NewBuilderWithScheme("whatever")
 
 	numServers := 3
-	servers, _, scleanup := startServers(t, numServers, math.MaxInt32)
+	servers, scleanup := startServers(t, numServers, math.MaxInt32)
 	defer scleanup()
 
-	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithCodec(testCodec{}))
+	cc, err := Dial(r.Scheme()+":///test.server", WithInsecure(), WithResolvers(r), WithCodec(testCodec{}))
 	if err != nil {
 		t.Fatalf("failed to dial: %v", err)
 	}
@@ -282,7 +278,7 @@ func (s) TestAddressesRemovedPickfirst(t *testing.T) {
 		t.Fatalf("EmptyCall() = _, %v, want _, DeadlineExceeded", err)
 	}
 
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}, {Addr: servers[2].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}, {Addr: servers[1].addr}, {Addr: servers[2].addr}}})
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[0].port {
 			break
@@ -297,7 +293,7 @@ func (s) TestAddressesRemovedPickfirst(t *testing.T) {
 	}
 
 	// Remove server[0].
-	r.NewAddress([]resolver.Address{{Addr: servers[1].addr}, {Addr: servers[2].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[1].addr}, {Addr: servers[2].addr}}})
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[1].port {
 			break
@@ -312,7 +308,7 @@ func (s) TestAddressesRemovedPickfirst(t *testing.T) {
 	}
 
 	// Append server[0], nothing should change.
-	r.NewAddress([]resolver.Address{{Addr: servers[1].addr}, {Addr: servers[2].addr}, {Addr: servers[0].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[1].addr}, {Addr: servers[2].addr}, {Addr: servers[0].addr}}})
 	for i := 0; i < 20; i++ {
 		if err := cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err == nil || errorDesc(err) != servers[1].port {
 			t.Fatalf("Index %d: Invoke(_, _, _, _, _) = %v, want %s", 1, err, servers[1].port)
@@ -321,7 +317,7 @@ func (s) TestAddressesRemovedPickfirst(t *testing.T) {
 	}
 
 	// Remove server[1].
-	r.NewAddress([]resolver.Address{{Addr: servers[2].addr}, {Addr: servers[0].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[2].addr}, {Addr: servers[0].addr}}})
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[2].port {
 			break
@@ -336,7 +332,7 @@ func (s) TestAddressesRemovedPickfirst(t *testing.T) {
 	}
 
 	// Remove server[2].
-	r.NewAddress([]resolver.Address{{Addr: servers[0].addr}})
+	r.UpdateState(resolver.State{Addresses: []resolver.Address{{Addr: servers[0].addr}}})
 	for i := 0; i < 1000; i++ {
 		if err = cc.Invoke(context.Background(), "/foo/bar", &req, &reply); err != nil && errorDesc(err) == servers[0].port {
 			break
