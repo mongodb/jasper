@@ -98,14 +98,31 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 	})
 }
 
-// TODO (EVG-12616): fix this.
 func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	return nil, errors.New("TODO: implement")
+	output, err := c.client.runRemoteCommand(ctx, CreateScriptingCommand, opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	resp, err := ExtractIDResponse(output)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return newSSHClientScriptingHarness(c.client, resp.ID), nil
 }
 
-// TODO (EVG-12616): fix this.
 func (c *sshClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	return nil, errors.New("TODO: implement")
+	output, err := c.client.runRemoteCommand(ctx, GetScriptingCommand, &IDInput{ID: id})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	if _, err := ExtractOutcomeResponse(output); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return newSSHClientScriptingHarness(c.client, id), nil
 }
 
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
@@ -387,10 +404,4 @@ func clientInput(input interface{}) ([]byte, error) {
 	}
 
 	return inputBytes, nil
-}
-
-type sshClientScripting struct {
-	id         string
-	clientOpts ClientOptions
-	remoteOpts options.Remote
 }

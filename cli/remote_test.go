@@ -89,27 +89,6 @@ func TestCLIRemote(t *testing.T) {
 
 					assert.True(t, resp.Successful())
 				},
-				"WriteFileSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), "write_file")
-					require.NoError(t, err)
-					defer func() {
-						assert.NoError(t, tmpFile.Close())
-						assert.NoError(t, os.RemoveAll(tmpFile.Name()))
-					}()
-
-					opts := options.WriteFile{Path: tmpFile.Name(), Content: []byte("foo")}
-					input, err := json.Marshal(opts)
-					require.NoError(t, err)
-					resp := &OutcomeResponse{}
-
-					require.NoError(t, execCLICommandInputOutput(t, c, remoteWriteFile(), input, resp))
-
-					assert.True(t, resp.Successful())
-
-					data, err := ioutil.ReadFile(opts.Path)
-					require.NoError(t, err)
-					assert.Equal(t, opts.Content, data)
-				},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)

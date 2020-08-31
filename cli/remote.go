@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 
+	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote"
 	"github.com/pkg/errors"
@@ -165,6 +166,7 @@ func remoteCreateScripting() cli.Command {
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
 			in := &ScriptingCreateInput{}
+			pp.Println("remoteCreateScripting")
 			return doPassthroughInputOutput(c, in, func(ctx context.Context, client remote.Manager) interface{} {
 				harnessOpts, err := in.Export()
 				if err != nil {
