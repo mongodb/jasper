@@ -70,7 +70,7 @@ imports:
   - name: golang.org/x/text
     version: 6c92c7dc7f53607809182301b96e4cc1975143f1
   - name: google.golang.org/genproto
-    version: 082222b4a5c572e33e82ee9162d1352c7cf38682
+    version: d751682dd1038b2274391fec637b1a9c366d9a0a
   - name: google.golang.org/protobuf
     version: d04d7b157bb510b1e0c10132224b616ac0e26b17
 
