@@ -21,7 +21,7 @@ func newSSHClientScriptingHarness(client *sshRunner, id string) *sshClientScript
 
 func (s *sshClientScriptingHarness) ID() string { return s.id }
 
-// kim: TODO: implement
+// TODO (EVG-12913): implement
 
 func (s *sshClientScriptingHarness) Setup(ctx context.Context) error {
 	return errors.New("not implemented")

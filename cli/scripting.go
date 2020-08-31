@@ -29,7 +29,7 @@ func Scripting() cli.Command {
 	}
 }
 
-// kim: TODO: implement scripting.Harness interface methods.
+// TODO (EVG-12913): implement scripting.Harness interface methods.
 func scriptingSetup() cli.Command {
 	return cli.Command{
 		Name: ScriptingSetupCommand,

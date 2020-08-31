@@ -1,8 +1,5 @@
 package cli
 
-// kim: TODO: add usage help text for each CLI command once everything is
-// implemented.
-
 import (
 	"context"
 
@@ -157,7 +154,6 @@ func remoteSendMessages() cli.Command {
 	}
 }
 
-// kim: TODO: test
 func remoteCreateScripting() cli.Command {
 	return cli.Command{
 		Name:   CreateScriptingCommand,
@@ -181,7 +177,6 @@ func remoteCreateScripting() cli.Command {
 	}
 }
 
-// kim: TODO: test
 func remoteGetScripting() cli.Command {
 	return cli.Command{
 		Name:   GetScriptingCommand,
