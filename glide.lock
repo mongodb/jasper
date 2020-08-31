@@ -60,7 +60,7 @@ imports:
 
   # grpc and dependencies
   - name: google.golang.org/grpc
-    version: 2773c7bbcf81cf358d3f0038b1469b2d44062acb
+    version: 39ef2aaf62df775b9c54a59957d113a0495cae73
   - name: golang.org/x/crypto
     version: 87dc89f01550277dc22b74ffcf4cd89fa2f40f4c
   - name: golang.org/x/net
@@ -72,7 +72,7 @@ imports:
   - name: google.golang.org/genproto
     version: 082222b4a5c572e33e82ee9162d1352c7cf38682
   - name: github.com/golang/protobuf
-    version: c823c79ea1570fb5ff454033735a8e68575d1d0f
+    version: d04d7b157bb510b1e0c10132224b616ac0e26b17
 
   # vendoring because many dependencies use it
   - name: go.mongodb.org/mongo-driver
