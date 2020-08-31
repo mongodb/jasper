@@ -174,7 +174,7 @@ func (c *restClient) CreateScripting(ctx context.Context, opts options.Scripting
 		return nil, errors.Wrap(err, "problem reading response")
 	}
 
-	return &restScripting{
+	return &restScriptingHarness{
 		id:     out.ID,
 		client: c,
 	}, nil
@@ -191,7 +191,7 @@ func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Har
 		return nil, errors.WithStack(err)
 	}
 
-	return &restScripting{
+	return &restScriptingHarness{
 		id:     id,
 		client: c,
 	}, nil
@@ -674,13 +674,13 @@ func (p *restProcess) ResetTags() {
 	defer resp.Body.Close()
 }
 
-type restScripting struct {
+type restScriptingHarness struct {
 	id     string
 	client *restClient
 }
 
-func (s *restScripting) ID() string { return s.id }
-func (s *restScripting) Setup(ctx context.Context) error {
+func (s *restScriptingHarness) ID() string { return s.id }
+func (s *restScriptingHarness) Setup(ctx context.Context) error {
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/setup", s.id), nil)
 	if err != nil {
 		return errors.Wrap(err, "request returned error")
@@ -689,7 +689,7 @@ func (s *restScripting) Setup(ctx context.Context) error {
 	return nil
 }
 
-func (s *restScripting) Run(ctx context.Context, args []string) error {
+func (s *restScriptingHarness) Run(ctx context.Context, args []string) error {
 	body, err := makeBody(struct {
 		Args []string `json:"args"`
 	}{Args: args})
@@ -706,7 +706,7 @@ func (s *restScripting) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func (s *restScripting) RunScript(ctx context.Context, script string) error {
+func (s *restScriptingHarness) RunScript(ctx context.Context, script string) error {
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/script", s.id), bytes.NewBuffer([]byte(script)))
 	if err != nil {
 		return errors.Wrap(err, "request returned error")
@@ -716,7 +716,7 @@ func (s *restScripting) RunScript(ctx context.Context, script string) error {
 	return nil
 }
 
-func (s *restScripting) Build(ctx context.Context, dir string, args []string) (string, error) {
+func (s *restScriptingHarness) Build(ctx context.Context, dir string, args []string) (string, error) {
 	body, err := makeBody(struct {
 		Directory string   `json:"directory"`
 		Args      []string `json:"args"`
@@ -742,7 +742,7 @@ func (s *restScripting) Build(ctx context.Context, dir string, args []string) (s
 	return out.Path, nil
 }
 
-func (s *restScripting) Test(ctx context.Context, dir string, args ...scripting.TestOptions) ([]scripting.TestResult, error) {
+func (s *restScriptingHarness) Test(ctx context.Context, dir string, args ...scripting.TestOptions) ([]scripting.TestResult, error) {
 	body, err := makeBody(struct {
 		Directory string                  `json:"directory"`
 		Options   []scripting.TestOptions `json:"options"`
@@ -777,7 +777,7 @@ func (s *restScripting) Test(ctx context.Context, dir string, args ...scripting.
 	return out.Results, err
 }
 
-func (s *restScripting) Cleanup(ctx context.Context) error {
+func (s *restScriptingHarness) Cleanup(ctx context.Context) error {
 	resp, err := s.client.doRequest(ctx, http.MethodDelete, s.client.getURL("/scripting/%s", s.id), nil)
 	if err != nil {
 		return errors.Wrap(err, "request returned error")
