@@ -25,34 +25,7 @@ import (
 	"time"
 )
 
-func TestTimeoutEncode(t *testing.T) {
-	for _, test := range []struct {
-		in  string
-		out string
-	}{
-		{"12345678ns", "12345678n"},
-		{"123456789ns", "123457u"},
-		{"12345678us", "12345678u"},
-		{"123456789us", "123457m"},
-		{"12345678ms", "12345678m"},
-		{"123456789ms", "123457S"},
-		{"12345678s", "12345678S"},
-		{"123456789s", "2057614M"},
-		{"12345678m", "12345678M"},
-		{"123456789m", "2057614H"},
-	} {
-		d, err := time.ParseDuration(test.in)
-		if err != nil {
-			t.Fatalf("failed to parse duration string %s: %v", test.in, err)
-		}
-		out := encodeTimeout(d)
-		if out != test.out {
-			t.Fatalf("timeoutEncode(%s) = %s, want %s", test.in, out, test.out)
-		}
-	}
-}
-
-func TestTimeoutDecode(t *testing.T) {
+func (s) TestTimeoutDecode(t *testing.T) {
 	for _, test := range []struct {
 		// input
 		s string
@@ -72,30 +45,7 @@ func TestTimeoutDecode(t *testing.T) {
 	}
 }
 
-func TestContentSubtype(t *testing.T) {
-	tests := []struct {
-		contentType string
-		want        string
-		wantValid   bool
-	}{
-		{"application/grpc", "", true},
-		{"application/grpc+", "", true},
-		{"application/grpc+blah", "blah", true},
-		{"application/grpc;", "", true},
-		{"application/grpc;blah", "blah", true},
-		{"application/grpcd", "", false},
-		{"application/grpd", "", false},
-		{"application/grp", "", false},
-	}
-	for _, tt := range tests {
-		got, gotValid := contentSubtype(tt.contentType)
-		if got != tt.want || gotValid != tt.wantValid {
-			t.Errorf("contentSubtype(%q) = (%v, %v); want (%v, %v)", tt.contentType, got, gotValid, tt.want, tt.wantValid)
-		}
-	}
-}
-
-func TestEncodeGrpcMessage(t *testing.T) {
+func (s) TestEncodeGrpcMessage(t *testing.T) {
 	for _, tt := range []struct {
 		input    string
 		expected string
@@ -131,7 +81,7 @@ func TestEncodeGrpcMessage(t *testing.T) {
 	}
 }
 
-func TestDecodeGrpcMessage(t *testing.T) {
+func (s) TestDecodeGrpcMessage(t *testing.T) {
 	for _, tt := range []struct {
 		input    string
 		expected string
@@ -169,7 +119,7 @@ func TestDecodeGrpcMessage(t *testing.T) {
 
 // Decode an encoded string should get the same thing back, except for invalid
 // utf8 chars.
-func TestDecodeEncodeGrpcMessage(t *testing.T) {
+func (s) TestDecodeEncodeGrpcMessage(t *testing.T) {
 	testCases := []struct {
 		orig string
 		want string
@@ -194,7 +144,7 @@ func TestDecodeEncodeGrpcMessage(t *testing.T) {
 
 const binaryValue = string(128)
 
-func TestEncodeMetadataHeader(t *testing.T) {
+func (s) TestEncodeMetadataHeader(t *testing.T) {
 	for _, test := range []struct {
 		// input
 		kin string
@@ -214,7 +164,7 @@ func TestEncodeMetadataHeader(t *testing.T) {
 	}
 }
 
-func TestDecodeMetadataHeader(t *testing.T) {
+func (s) TestDecodeMetadataHeader(t *testing.T) {
 	for _, test := range []struct {
 		// input
 		kin string

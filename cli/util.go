@@ -155,10 +155,10 @@ func writeOutput(output io.Writer, input interface{}) error {
 	return nil
 }
 
-// newRemoteClient returns a remote client that connects to the service at the
+// newRemoteManager returns a remote.Manager that connects to the service at the
 // given host and port, with the optional TLS credentials file for RPC
 // communication.
-func newRemoteClient(ctx context.Context, service, host string, port int, credsFilePath string) (remote.Manager, error) {
+func newRemoteManager(ctx context.Context, service, host string, port int, credsFilePath string) (remote.Manager, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to resolve address")
@@ -172,9 +172,9 @@ func newRemoteClient(ctx context.Context, service, host string, port int, credsF
 	return nil, errors.Errorf("unrecognized service type '%s'", service)
 }
 
-// doPassthroughInputOutput passes input from standard input to the input validator,
-// validates the input, runs the request, and writes the response of the request
-// to standard output.
+// doPassthroughInputOutput passes input from standard input to the input
+// validator, validates the input, runs the request, and writes the response of
+// the request to standard output.
 func doPassthroughInputOutput(c *cli.Context, input Validator, request func(context.Context, remote.Manager) (response interface{})) error {
 	ctx, cancel := context.WithTimeout(context.Background(), clientConnectionTimeout)
 	defer cancel()
@@ -210,7 +210,7 @@ func withConnection(ctx context.Context, c *cli.Context, operation func(remote.M
 	service := c.String(serviceFlagName)
 	credsFilePath := c.String(credsFilePathFlagName)
 
-	client, err := newRemoteClient(ctx, service, host, port, credsFilePath)
+	client, err := newRemoteManager(ctx, service, host, port, credsFilePath)
 	if err != nil {
 		return errors.Wrap(err, "error setting up remote client")
 	}

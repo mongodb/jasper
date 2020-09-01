@@ -586,13 +586,16 @@ func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *Script
 		return nil, errors.Wrap(err, "problem converting options")
 	}
 
+	if err = xopts.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid scripting options")
+	}
+
 	se, err := s.scripting.Create(s.manager, xopts)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem generating scripting environment")
 	}
 	return &ScriptingHarnessID{
-		Id:    se.ID(),
-		Setup: true,
+		Id: se.ID(),
 	}, nil
 }
 func (s *jasperService) ScriptingHarnessCheck(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {

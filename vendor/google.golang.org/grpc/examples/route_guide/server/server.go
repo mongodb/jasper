@@ -16,8 +16,6 @@
  *
  */
 
-//go:generate protoc -I ../routeguide --go_out=plugins=grpc:../routeguide ../routeguide/route_guide.proto
-
 // Package main implements a simple gRPC server that demonstrates how to use gRPC-Go libraries
 // to perform unary, client streaming, server streaming and full duplex RPCs.
 //
@@ -56,6 +54,7 @@ var (
 )
 
 type routeGuideServer struct {
+	pb.UnimplementedRouteGuideServer
 	savedFeatures []*pb.Feature // read-only after initialized
 
 	mu         sync.Mutex // protects routeNotes

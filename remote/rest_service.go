@@ -918,7 +918,15 @@ func (s *Service) scriptingCreate(rw http.ResponseWriter, r *http.Request) {
 
 	if err = gimlet.GetJSON(r.Body, seopt); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
+			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	if err = seopt.Validate(); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
 			Message:    err.Error(),
 		})
 		return

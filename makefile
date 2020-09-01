@@ -7,10 +7,6 @@ allPackages := $(testPackages) internal-executor remote-internal testutil benchm
 lintPackages := $(allPackages)
 projectPath := github.com/mongodb/jasper
 
-_compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(lintPackages),./$(target))))
-coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
-coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
-
 # start environment setup
 gobin := $(GO_BIN_PATH)
 ifeq ($(gobin),)
@@ -30,8 +26,17 @@ export GOCACHE := $(gocache)
 export GOROOT := $(goroot)
 # end environment setup
 
+
 # Ensure the build directory exists, since most targets require it.
 $(shell mkdir -p $(buildDir))
+
+
+_compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(allPackages),./$(target))))
+testOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
+lintOutput := $(foreach target,$(lintPackages),$(buildDir)/output.$(target).lint)
+coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
+coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
+
 
 compile $(buildDir): $(srcFiles)
 	$(gobin) build $(_compilePackages)
@@ -65,7 +70,7 @@ $(buildDir)/run-benchmarks: cmd/run-benchmarks/run_benchmarks.go
 
 # start cli targets
 $(name) cli: $(buildDir)/$(name)
-$(buildDir)/$(name): cmd/$(name)/$(name).go
+$(buildDir)/$(name): cmd/$(name)/$(name).go $(srcFiles)
 	$(gobin) build -o $@ $<
 # end cli targets
 
@@ -100,12 +105,27 @@ $(buildDir)/output.%.coverage: .FORCE
 $(buildDir)/output.%.coverage.html: $(buildDir)/output.%.coverage .FORCE
 	$(gobin) tool cover -html=$< -o $@
 #  targets to generate gotest output from the linter.
+# We have to handle the PATH specially for CI, because if the PATH has a different version of Go in it, it'll break.
 $(buildDir)/output.%.lint: $(buildDir)/run-linter .FORCE
-	@# We have to handle the PATH specially for CI, because if the PATH has a different version of Go in it, it'll break.
 	@$(if $(GO_BIN_PATH), PATH="$(shell dirname $(GO_BIN_PATH)):$(PATH)") ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --packages='$*'
 #  targets to process and generate coverage reports
 # end test and coverage artifacts
 
+# user-facing targets for basic build and development operations
+proto:
+	@mkdir -p remote/internal
+	protoc --go_out=plugins=grpc:remote/internal *.proto
+lint:$(lintOutput)
+test:$(testOutput)
+benchmarks: $(buildDir)/run-benchmarks .FORCE
+	./$(buildDir)/run-benchmarks $(run-benchmark)
+coverage: $(coverageOutput)
+coverage-html: $(coverageHtmlOutput)
+phony += compile lint test coverage coverage-html docker-setup docker-cleanup
+.PHONY: $(phony) .FORCE
+.PRECIOUS: $(coverageOutput) $(coverageHtmlOutput) $(lintOutput) $(testOutput)
+# end front-ends
+#
 # Docker-related
 docker_image := $(DOCKER_IMAGE)
 ifeq ($(docker_image),)
@@ -122,25 +142,7 @@ ifeq (,$(SKIP_DOCKER_TESTS))
 	docker rm -f $(docker ps -a -q)
 	docker rmi -f $(docker_image)
 endif
-
 # end Docker
-
-# user-facing targets for basic build and development operations
-proto:
-	@mkdir -p remote/internal
-	protoc --go_out=plugins=grpc:remote/internal *.proto
-lint: $(foreach target,$(lintPackages),$(buildDir)/output.$(target).lint)
-test: $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
-benchmarks: $(buildDir)/run-benchmarks .FORCE
-	./$(buildDir)/run-benchmarks $(run-benchmark)
-coverage: $(coverageOutput)
-coverage-html: $(coverageHtmlOutput)
-phony += compile lint test coverage coverage-html docker-setup docker-cleanup
-.PHONY: $(phony) .FORCE
-.PRECIOUS: $(coverageOutput) $(coverageHtmlOutput)
-.PRECIOUS: $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
-.PRECIOUS: $(foreach target,$(lintPackages),$(buildDir)/output.$(target).lint)
-# end front-ends
 
 .FORCE:
 
@@ -236,6 +238,41 @@ vendor-clean:
 	rm -rf vendor/github.com/docker/docker/vendor/golang.org/x/text/
 	rm -rf vendor/github.com/docker/docker/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/docker/docker/vendor/google.golang.org/grpc/
+	rm -rf vendor/google.golang.org/genproto/googleapis/ads/
+	rm -rf vendor/google.golang.org/genproto/googleapis/analytics/
+	rm -rf vendor/google.golang.org/genproto/googleapis/api/
+	rm -rf vendor/google.golang.org/genproto/googleapis/appengine/
+	rm -rf vendor/google.golang.org/genproto/googleapis/area120/
+	rm -rf vendor/google.golang.org/genproto/googleapis/assistant/
+	rm -rf vendor/google.golang.org/genproto/googleapis/bigtable/
+	rm -rf vendor/google.golang.org/genproto/googleapis/bytestream/
+	rm -rf vendor/google.golang.org/genproto/googleapis/chromeos/
+	rm -rf vendor/google.golang.org/genproto/googleapis/cloud/
+	rm -rf vendor/google.golang.org/genproto/googleapis/container/
+	rm -rf vendor/google.golang.org/genproto/googleapis/datastore/
+	rm -rf vendor/google.golang.org/genproto/googleapis/devtools/
+	rm -rf vendor/google.golang.org/genproto/googleapis/example/
+	rm -rf vendor/google.golang.org/genproto/googleapis/firebase/
+	rm -rf vendor/google.golang.org/genproto/googleapis/firestore/
+	rm -rf vendor/google.golang.org/genproto/googleapis/genomics/
+	rm -rf vendor/google.golang.org/genproto/googleapis/geo/
+	rm -rf vendor/google.golang.org/genproto/googleapis/grafeas/
+	rm -rf vendor/google.golang.org/genproto/googleapis/home/
+	rm -rf vendor/google.golang.org/genproto/googleapis/iam/
+	rm -rf vendor/google.golang.org/genproto/googleapis/identity/
+	rm -rf vendor/google.golang.org/genproto/googleapis/logging/
+	rm -rf vendor/google.golang.org/genproto/googleapis/longrunning/
+	rm -rf vendor/google.golang.org/genproto/googleapis/maps/
+	rm -rf vendor/google.golang.org/genproto/googleapis/monitoring/
+	rm -rf vendor/google.golang.org/genproto/googleapis/privacy/
+	rm -rf vendor/google.golang.org/genproto/googleapis/pubsub/
+	rm -rf vendor/google.golang.org/genproto/googleapis/search
+	rm -rf vendor/google.golang.org/genproto/googleapis/spanner/
+	rm -rf vendor/google.golang.org/genproto/googleapis/storage/
+	rm -rf vendor/google.golang.org/genproto/googleapis/storagetransfer/
+	rm -rf vendor/google.golang.org/genproto/googleapis/streetview/
+	rm -rf vendor/google.golang.org/genproto/googleapis/type/
+	rm -rf vendor/google.golang.org/genproto/googleapis/watcher/
 	find vendor/ -name "*.gif" -o -name "*.gz" -o -name "*.png" -o -name "*.ico" -o -name "*testdata*" | xargs rm -rf
 	find vendor/ -type d -empty | xargs rm -rf
 	find vendor/ -type d -name '.git' | xargs rm -rf

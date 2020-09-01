@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net"
-	"syscall"
 	"time"
 
 	"github.com/evergreen-ci/certdepot"
@@ -115,7 +114,7 @@ func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 		return nil, errors.WithStack(err)
 	}
 
-	return &rpcScripting{client: c.client, id: seid.Id}, nil
+	return newRPCScriptingHarness(c.client, seid.Id), nil
 }
 
 func (c *rpcClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
@@ -127,7 +126,7 @@ func (c *rpcClient) GetScripting(ctx context.Context, id string) (scripting.Harn
 		return nil, errors.New(resp.Text)
 	}
 
-	return &rpcScripting{client: c.client, id: id}, nil
+	return newRPCScriptingHarness(c.client, id), nil
 }
 
 func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
@@ -400,231 +399,4 @@ func (lc *rpcLoggingCache) Len() int {
 	}
 
 	return int(resp.Size)
-}
-
-type rpcProcess struct {
-	client internal.JasperProcessManagerClient
-	info   *internal.ProcessInfo
-}
-
-func (p *rpcProcess) ID() string { return p.info.Id }
-
-func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
-	if p.info.Complete {
-		exportedInfo, err := p.info.Export()
-		grip.Warning(message.WrapError(err, message.Fields{
-			"message": "could not convert info for process",
-			"process": p.ID(),
-		}))
-		return exportedInfo
-	}
-
-	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
-	if err != nil {
-		return jasper.ProcessInfo{}
-	}
-	p.info = info
-
-	exportedInfo, err := p.info.Export()
-	grip.Warning(message.WrapError(err, message.Fields{
-		"message": "could not convert info for process",
-		"process": p.ID(),
-	}))
-
-	return exportedInfo
-}
-func (p *rpcProcess) Running(ctx context.Context) bool {
-	if p.info.Complete {
-		return false
-	}
-
-	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
-	if err != nil {
-		return false
-	}
-	p.info = info
-
-	return info.Running
-}
-
-func (p *rpcProcess) Complete(ctx context.Context) bool {
-	if p.info.Complete {
-		return true
-	}
-
-	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
-	if err != nil {
-		return false
-	}
-	p.info = info
-
-	return info.Complete
-}
-
-func (p *rpcProcess) Signal(ctx context.Context, sig syscall.Signal) error {
-	resp, err := p.client.Signal(ctx, &internal.SignalProcess{
-		ProcessID: &internal.JasperProcessID{Value: p.info.Id},
-		Signal:    internal.ConvertSignal(sig),
-	})
-
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Text)
-	}
-
-	return nil
-}
-
-func (p *rpcProcess) Wait(ctx context.Context) (int, error) {
-	resp, err := p.client.Wait(ctx, &internal.JasperProcessID{Value: p.info.Id})
-	if err != nil {
-		return -1, errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return int(resp.ExitCode), errors.Wrapf(errors.New(resp.Text), "process exited with error")
-	}
-
-	return int(resp.ExitCode), nil
-}
-
-func (p *rpcProcess) Respawn(ctx context.Context) (jasper.Process, error) {
-	newProc, err := p.client.Respawn(ctx, &internal.JasperProcessID{Value: p.info.Id})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return &rpcProcess{client: p.client, info: newProc}, nil
-}
-
-func (p *rpcProcess) RegisterTrigger(ctx context.Context, _ jasper.ProcessTrigger) error {
-	return errors.New("cannot register triggers on remote processes")
-}
-
-func (p *rpcProcess) RegisterSignalTrigger(ctx context.Context, _ jasper.SignalTrigger) error {
-	return errors.New("cannot register signal triggers on remote processes")
-}
-
-func (p *rpcProcess) RegisterSignalTriggerID(ctx context.Context, sigID jasper.SignalTriggerID) error {
-	resp, err := p.client.RegisterSignalTriggerID(ctx, &internal.SignalTriggerParams{
-		ProcessID:       &internal.JasperProcessID{Value: p.info.Id},
-		SignalTriggerID: internal.ConvertSignalTriggerID(sigID),
-	})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Text)
-	}
-
-	return nil
-}
-
-func (p *rpcProcess) Tag(tag string) {
-	_, _ = p.client.TagProcess(context.Background(), &internal.ProcessTags{
-		ProcessID: p.info.Id,
-		Tags:      []string{tag},
-	})
-}
-
-func (p *rpcProcess) GetTags() []string {
-	tags, err := p.client.GetTags(context.Background(), &internal.JasperProcessID{Value: p.info.Id})
-	if err != nil {
-		return nil
-	}
-
-	return tags.Tags
-}
-
-func (p *rpcProcess) ResetTags() {
-	_, _ = p.client.ResetTags(context.Background(), &internal.JasperProcessID{Value: p.info.Id})
-}
-
-type rpcScripting struct {
-	id     string
-	client internal.JasperProcessManagerClient
-}
-
-func (s *rpcScripting) ID() string { return s.id }
-
-func (s *rpcScripting) Run(ctx context.Context, args []string) error {
-	resp, err := s.client.ScriptingHarnessRun(ctx, &internal.ScriptingHarnessRunArgs{Id: s.id, Args: args})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Text)
-	}
-
-	return nil
-}
-
-func (s *rpcScripting) Setup(ctx context.Context) error {
-	resp, err := s.client.ScriptingHarnessSetup(ctx, &internal.ScriptingHarnessID{Id: s.id})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Text)
-	}
-
-	return nil
-}
-
-func (s *rpcScripting) RunScript(ctx context.Context, script string) error {
-	resp, err := s.client.ScriptingHarnessRunScript(ctx, &internal.ScriptingHarnessRunScriptArgs{Id: s.id, Script: script})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Text)
-	}
-
-	return nil
-}
-
-func (s *rpcScripting) Build(ctx context.Context, dir string, args []string) (string, error) {
-	resp, err := s.client.ScriptingHarnessBuild(ctx, &internal.ScriptingHarnessBuildArgs{Id: s.id, Directory: dir, Args: args})
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-
-	if !resp.Outcome.Success {
-		return "", errors.New(resp.Outcome.Text)
-	}
-
-	return resp.Path, nil
-}
-
-func (s *rpcScripting) Test(ctx context.Context, dir string, args ...scripting.TestOptions) ([]scripting.TestResult, error) {
-	resp, err := s.client.ScriptingHarnessTest(ctx, &internal.ScriptingHarnessTestArgs{Id: s.id, Directory: dir, Options: internal.ConvertScriptingTestOptions(args)})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if !resp.Outcome.Success {
-		return nil, errors.New(resp.Outcome.Text)
-	}
-
-	return resp.Export()
-}
-
-func (s *rpcScripting) Cleanup(ctx context.Context) error {
-	resp, err := s.client.ScriptingHarnessCleanup(ctx, &internal.ScriptingHarnessID{Id: s.id})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Text)
-	}
-
-	return nil
 }

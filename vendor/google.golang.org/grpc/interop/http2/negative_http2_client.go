@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- *
- * Client used to test http2 error edge cases like GOAWAYs and RST_STREAMs
- *
- * Documentation:
- *	 https://github.com/grpc/grpc/blob/master/doc/negative-http2-interop-test-descriptions.md
  */
 
+// Binary http2 is used to test http2 error edge cases like GOAWAYs and
+// RST_STREAMs
+//
+// Documentation:
+// https://github.com/grpc/grpc/blob/master/doc/negative-http2-interop-test-descriptions.md
 package main
 
 import (
@@ -40,7 +40,7 @@ import (
 )
 
 var (
-	serverHost = flag.String("server_host", "127.0.0.1", "The server host name")
+	serverHost = flag.String("server_host", "localhost", "The server host name")
 	serverPort = flag.Int("server_port", 8080, "The server port number")
 	testCase   = flag.String("test_case", "goaway",
 		`Configure different test cases. Valid options are:

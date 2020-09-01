@@ -16,6 +16,7 @@
  *
  */
 
+// Binary metrics_client is a client to retrieve metrics from the server.
 package main
 
 import (
@@ -30,14 +31,14 @@ import (
 )
 
 var (
-	metricsServerAddress = flag.String("metrics_server_address", "", "The metrics server addresses in the fomrat <hostname>:<port>")
+	metricsServerAddress = flag.String("metrics_server_address", "", "The metrics server addresses in the format <hostname>:<port>")
 	totalOnly            = flag.Bool("total_only", false, "If true, this prints only the total value of all gauges")
 )
 
 func printMetrics(client metricspb.MetricsServiceClient, totalOnly bool) {
 	stream, err := client.GetAllGauges(context.Background(), &metricspb.EmptyMessage{})
 	if err != nil {
-		grpclog.Fatalf("failed to call GetAllGuages: %v", err)
+		grpclog.Fatalf("failed to call GetAllGauges: %v", err)
 	}
 
 	var (

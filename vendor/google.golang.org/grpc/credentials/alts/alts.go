@@ -42,7 +42,7 @@ import (
 const (
 	// hypervisorHandshakerServiceAddress represents the default ALTS gRPC
 	// handshaker service address in the hypervisor.
-	hypervisorHandshakerServiceAddress = "metadata.google.internal:8080"
+	hypervisorHandshakerServiceAddress = "metadata.google.internal.:8080"
 	// defaultTimeout specifies the server handshake timeout.
 	defaultTimeout = 30.0 * time.Second
 	// The following constants specify the minimum and maximum acceptable
@@ -67,6 +67,7 @@ var (
 	// ServerHandshake is running on a platform where the trustworthiness of
 	// the handshaker service is not guaranteed.
 	ErrUntrustedPlatform = errors.New("ALTS: untrusted platform. ALTS is only supported on GCP")
+	logger               = grpclog.Component("alts")
 )
 
 // AuthInfo exposes security information from the ALTS handshake to the
@@ -197,14 +198,14 @@ func (g *altsTC) ClientHandshake(ctx context.Context, addr string, rawConn net.C
 		MinRpcVersion: minRPCVersion,
 	}
 	chs, err := handshaker.NewClientHandshaker(ctx, hsConn, rawConn, opts)
+	if err != nil {
+		return nil, nil, err
+	}
 	defer func() {
 		if err != nil {
 			chs.Close()
 		}
 	}()
-	if err != nil {
-		return nil, nil, err
-	}
 	secConn, authInfo, err := chs.ClientHandshake(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -240,14 +241,14 @@ func (g *altsTC) ServerHandshake(rawConn net.Conn) (_ net.Conn, _ credentials.Au
 		MinRpcVersion: minRPCVersion,
 	}
 	shs, err := handshaker.NewServerHandshaker(ctx, hsConn, rawConn, opts)
+	if err != nil {
+		return nil, nil, err
+	}
 	defer func() {
 		if err != nil {
 			shs.Close()
 		}
 	}()
-	if err != nil {
-		return nil, nil, err
-	}
 	secConn, authInfo, err := shs.ServerHandshake(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -307,7 +308,7 @@ func compareRPCVersions(v1, v2 *altspb.RpcProtocolVersions_Version) int {
 // agreed on.
 func checkRPCVersions(local, peer *altspb.RpcProtocolVersions) (bool, *altspb.RpcProtocolVersions_Version) {
 	if local == nil || peer == nil {
-		grpclog.Error("invalid checkRPCVersions argument, either local or peer is nil.")
+		logger.Error("invalid checkRPCVersions argument, either local or peer is nil.")
 		return false, nil
 	}
 

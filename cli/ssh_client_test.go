@@ -12,7 +12,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,16 +21,16 @@ func TestNewSSHClient(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions){
 		"NewSSHClientFailsWithEmptyRemoteOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
 			remoteOpts = options.Remote{}
-			_, err := NewSSHClient(remoteOpts, clientOpts, false)
+			_, err := NewSSHClient(clientOpts, remoteOpts)
 			assert.Error(t, err)
 		},
 		"NewSSHClientFailsWithEmptyClientOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
 			clientOpts = ClientOptions{}
-			_, err := NewSSHClient(remoteOpts, clientOpts, false)
+			_, err := NewSSHClient(clientOpts, remoteOpts)
 			assert.Error(t, err)
 		},
 		"NewSSHClientSucceedsWithPopulatedOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
-			client, err := NewSSHClient(remoteOpts, clientOpts, false)
+			client, err := NewSSHClient(clientOpts, remoteOpts)
 			require.NoError(t, err)
 			assert.NotNil(t, client)
 		},
@@ -302,6 +301,33 @@ func TestSSHClient(t *testing.T) {
 			)
 			assert.Error(t, client.Close(ctx))
 		},
+		"WriteFileSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			inputChecker := options.WriteFile{}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{ManagerCommand, WriteFileCommand},
+				&inputChecker,
+				makeOutcomeResponse(nil),
+			)
+
+			opts := options.WriteFile{Path: filepath.Join(testutil.BuildDirectory(), "write_file"), Content: []byte("foo")}
+			require.NoError(t, client.WriteFile(ctx, opts))
+		},
+		"WriteFileFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{ManagerCommand, WriteFileCommand},
+				nil,
+				invalidResponse(),
+			)
+			opts := options.WriteFile{Path: filepath.Join(testutil.BuildDirectory(), "write_file"), Content: []byte("foo")}
+			assert.Error(t, client.WriteFile(ctx, opts))
+		},
+		"WriteFileFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.FailCreate = true
+			opts := options.WriteFile{Path: filepath.Join(testutil.BuildDirectory(), "write_file"), Content: []byte("foo")}
+			assert.Error(t, client.WriteFile(ctx, opts))
+		},
 		"CloseConnectionPasses": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			assert.NoError(t, client.CloseConnection())
 		},
@@ -484,57 +510,76 @@ func TestSSHClient(t *testing.T) {
 			baseManager.FailCreate = true
 			assert.Error(t, client.SignalEvent(ctx, "foo"))
 		},
-		"WriteFileSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			inputChecker := options.WriteFile{}
+		"CreateScriptingPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			inputChecker := &ScriptingCreateInput{}
+			resp := &IDResponse{ID: "id", OutcomeResponse: *makeOutcomeResponse(nil)}
 			baseManager.Create = makeCreateFunc(
 				t, client,
-				[]string{RemoteCommand, WriteFileCommand},
+				[]string{RemoteCommand, CreateScriptingCommand},
 				&inputChecker,
-				makeOutcomeResponse(nil),
+				resp,
 			)
-
-			opts := options.WriteFile{Path: filepath.Join(testutil.BuildDirectory(), "write_file"), Content: []byte("foo")}
-			require.NoError(t, client.WriteFile(ctx, opts))
+			sh, err := client.CreateScripting(ctx, testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory()))
+			require.NoError(t, err)
+			assert.Equal(t, resp.ID, sh.ID())
 		},
-		"WriteFileFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+		"CreateScriptingFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.FailCreate = true
+			sh, err := client.CreateScripting(ctx, testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory()))
+			assert.Error(t, err)
+			assert.Zero(t, sh)
+		},
+		"CreateScriptingFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.Create = makeCreateFunc(
 				t, client,
-				[]string{RemoteCommand, WriteFileCommand},
+				[]string{RemoteCommand, CreateScriptingCommand},
 				nil,
 				invalidResponse(),
 			)
-			opts := options.WriteFile{Path: filepath.Join(testutil.BuildDirectory(), "write_file"), Content: []byte("foo")}
-			assert.Error(t, client.WriteFile(ctx, opts))
+			sh, err := client.CreateScripting(ctx, testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory()))
+			assert.Error(t, err)
+			assert.Zero(t, sh)
 		},
-		"WriteFileFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+		"GetScriptingPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			inputChecker := &IDInput{}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{RemoteCommand, GetScriptingCommand},
+				&inputChecker,
+				makeOutcomeResponse(nil),
+			)
+			id := "id"
+			sh, err := client.GetScripting(ctx, id)
+			require.NoError(t, err)
+			assert.Equal(t, id, sh.ID())
+		},
+		"GetScriptingFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.FailCreate = true
-			opts := options.WriteFile{Path: filepath.Join(testutil.BuildDirectory(), "write_file"), Content: []byte("foo")}
-			assert.Error(t, client.WriteFile(ctx, opts))
+			sh, err := client.GetScripting(ctx, "id")
+			assert.Error(t, err)
+			assert.Zero(t, sh)
 		},
-		"ScriptingReturnsFromCache": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			opts := &options.ScriptingPython{
-				VirtualEnvPath: testutil.BuildDirectory(),
-				Packages:       []string{"pymongo"},
-			}
-			env, err := scripting.NewHarness(baseManager, opts)
-			require.NoError(t, err)
-			require.NoError(t, client.shCache.Add(env.ID(), env))
-
-			sh, err := client.CreateScripting(ctx, opts)
-			require.NoError(t, err)
-			require.NotNil(t, sh)
-			assert.Equal(t, env.ID(), sh.ID())
+		"GetScriptingFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{RemoteCommand, GetScriptingCommand},
+				nil,
+				invalidResponse(),
+			)
+			sh, err := client.GetScripting(ctx, "id")
+			assert.Error(t, err)
+			assert.Zero(t, sh)
 		},
 		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			client, err := NewSSHClient(mockRemoteOptions(), mockClientOptions(), false)
+			client, err := NewSSHClient(mockClientOptions(), mockRemoteOptions())
 			require.NoError(t, err)
 			sshClient, ok := client.(*sshClient)
 			require.True(t, ok)
 
 			mockManager := &mock.Manager{}
-			sshClient.manager = jasper.Manager(mockManager)
+			sshClient.client.manager = jasper.Manager(mockManager)
 
 			tctx, cancel := context.WithTimeout(ctx, testutil.TestTimeout)
 			defer cancel()
@@ -558,7 +603,7 @@ func makeCreateFunc(t *testing.T, client *sshClient, expectedClientSubcommand []
 			require.NoError(t, json.Unmarshal(input, inputChecker))
 		}
 
-		cliCommand := strings.Join(client.opts.buildCommand(expectedClientSubcommand...), " ")
+		cliCommand := strings.Join(client.client.clientOpts.buildCommand(expectedClientSubcommand...), " ")
 		assert.Equal(t, cliCommand, strings.Join(opts.Args, " "))
 		require.NotNil(t, expectedResponse)
 		require.NoError(t, writeOutput(opts.Output.Output, expectedResponse))
