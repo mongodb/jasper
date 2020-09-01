@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// restScriptingHarness is the client-side representation of a
+// scripting.Harness for making requests to the remote REST service.
 type restScriptingHarness struct {
 	id     string
 	client *restClient

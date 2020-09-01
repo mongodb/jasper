@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// mdbScriptingHarness is the client-side representation of a scripting.Harness
+// for making requests to the remote MDB wire protocol service.
 type mdbScriptingHarness struct {
 	client *mdbClient
 	id     string

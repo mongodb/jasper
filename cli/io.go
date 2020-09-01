@@ -366,7 +366,7 @@ func (e *EventInput) Validate() error {
 }
 
 // ScriptingCreateInput represents CLI-specific input to create a scripting
-// harness. The Type signifies the kind of harness that will be created  and the
+// harness. The Type signifies the kind of harness that will be created and the
 // Payload is the JSON-serialized options to construct the harness.
 type ScriptingCreateInput struct {
 	Type    string          `json:"type"`
@@ -386,21 +386,7 @@ func (in *ScriptingCreateInput) Validate() error {
 // BuildScriptingCreateInput constructs a ScriptingCreateInput value.
 func BuildScriptingCreateInput(in options.ScriptingHarness) (*ScriptingCreateInput, error) {
 	out := &ScriptingCreateInput{}
-
-	switch opts := in.(type) {
-	case *options.ScriptingPython:
-		if opts.LegacyPython {
-			out.Type = options.Python2ScriptingType
-		} else {
-			out.Type = options.Python3ScriptingType
-		}
-	case *options.ScriptingGolang:
-		out.Type = options.GolangScriptingType
-	case *options.ScriptingRoswell:
-		out.Type = options.RoswellScriptingType
-	default:
-		return nil, errors.Errorf("unsupported scripting type [%T]", in)
-	}
+	out.Type = in.Type()
 
 	var err error
 	out.Payload, err = json.Marshal(in)
@@ -415,12 +401,12 @@ func BuildScriptingCreateInput(in options.ScriptingHarness) (*ScriptingCreateInp
 func (in *ScriptingCreateInput) Export() (options.ScriptingHarness, error) {
 	harness, err := options.NewScriptingHarness(in.Type)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "creating scripting harness")
 	}
 
 	err = json.Unmarshal(in.Payload, harness)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "unmarshalling scripting harness payload")
 	}
 
 	return harness, nil

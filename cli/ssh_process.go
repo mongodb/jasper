@@ -21,7 +21,7 @@ type sshProcess struct {
 // SSH.
 func newSSHProcess(client *sshRunner, info jasper.ProcessInfo) (jasper.Process, error) {
 	if client == nil {
-		return nil, errors.New("SSH process needs a function to run the client command over SSH")
+		return nil, errors.New("SSH process needs an SSH client to run CLI commands")
 	}
 	return &sshProcess{
 		client: client,

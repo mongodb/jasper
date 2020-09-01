@@ -12,6 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// restProcess is the client-side representation of a jasper.Process for making
+// requests to the remote REST service.
 type restProcess struct {
 	id     string
 	client *restClient

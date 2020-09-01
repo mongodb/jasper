@@ -11,6 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// rpcProcess is the client-side representation of a jasper.Process for making
+// requests to the remote gRPC service.
 type rpcProcess struct {
 	client internal.JasperProcessManagerClient
 	info   *internal.ProcessInfo

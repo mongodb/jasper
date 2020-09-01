@@ -7,6 +7,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// sshClientScriptingHarness is the client-side representation of a
+// scripting.Harness for making requests to remote services via the CLI over
+// SSH.
 type sshClientScriptingHarness struct {
 	id     string
 	client *sshRunner

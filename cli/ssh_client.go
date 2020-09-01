@@ -321,14 +321,6 @@ func (c *sshClient) SendMessages(ctx context.Context, opts options.LoggingPayloa
 	return nil
 }
 
-func (r *sshRunner) runManagerCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
-	return r.runClientCommand(ctx, []string{ManagerCommand, managerSubcommand}, subcommandInput)
-}
-
-func (r *sshRunner) runRemoteCommand(ctx context.Context, remoteSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
-	return r.runClientCommand(ctx, []string{RemoteCommand, remoteSubcommand}, subcommandInput)
-}
-
 // sshRunner is a client to help run Jasper CLI commands over SSH.
 type sshRunner struct {
 	manager    jasper.Manager
@@ -347,6 +339,14 @@ func newSSHRunner(clientOpts ClientOptions, remoteOpts options.Remote) (*sshRunn
 		remoteOpts: remoteOpts,
 		manager:    manager,
 	}, nil
+}
+
+func (r *sshRunner) runManagerCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
+	return r.runClientCommand(ctx, []string{ManagerCommand, managerSubcommand}, subcommandInput)
+}
+
+func (r *sshRunner) runRemoteCommand(ctx context.Context, remoteSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
+	return r.runClientCommand(ctx, []string{RemoteCommand, remoteSubcommand}, subcommandInput)
 }
 
 // runClientCommand creates a command that runs the given CLI client subcommand

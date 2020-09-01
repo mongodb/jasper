@@ -155,7 +155,7 @@ func writeOutput(output io.Writer, input interface{}) error {
 	return nil
 }
 
-// newRemoteManager returns a remote manager that connects to the service at the
+// newRemoteManager returns a remote.Manager that connects to the service at the
 // given host and port, with the optional TLS credentials file for RPC
 // communication.
 func newRemoteManager(ctx context.Context, service, host string, port int, credsFilePath string) (remote.Manager, error) {
@@ -172,9 +172,9 @@ func newRemoteManager(ctx context.Context, service, host string, port int, creds
 	return nil, errors.Errorf("unrecognized service type '%s'", service)
 }
 
-// doPassthroughInputOutput passes input from standard input to the input validator,
-// validates the input, runs the request, and writes the response of the request
-// to standard output.
+// doPassthroughInputOutput passes input from standard input to the input
+// validator, validates the input, runs the request, and writes the response of
+// the request to standard output.
 func doPassthroughInputOutput(c *cli.Context, input Validator, request func(context.Context, remote.Manager) (response interface{})) error {
 	ctx, cancel := context.WithTimeout(context.Background(), clientConnectionTimeout)
 	defer cancel()

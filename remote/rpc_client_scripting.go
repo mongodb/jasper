@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// rpcScriptingHarness is the client-side representation of a scripting.Harness
+// for making requests to the remote gRPC service.
 type rpcScriptingHarness struct {
 	id     string
 	client internal.JasperProcessManagerClient
