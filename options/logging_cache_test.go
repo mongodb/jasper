@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLogging(t *testing.T) {
+func TestLoggingCache(t *testing.T) {
 	t.Run("LoggingSendErrors", func(t *testing.T) {
 		lp := &LoggingPayload{}
 		cl := &CachedLogger{}

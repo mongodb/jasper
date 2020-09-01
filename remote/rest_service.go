@@ -92,7 +92,7 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/logging/{id}").Version(1).Post().Handler(s.loggingCacheCreate)
 	app.AddRoute("/logging/{id}").Version(1).Delete().Handler(s.loggingCacheDelete)
 	app.AddRoute("/logging/{id}").Version(1).Get().Handler(s.loggingCacheGet)
-	app.AddRoute("/logging/{id}/send").Version(1).Post().Handler(s.loggingSendMessages)
+	app.AddRoute("/logging/{id}/send").Version(1).Post().Handler(s.sendMessages)
 	app.AddRoute("/file/write").Version(1).Put().Handler(s.writeFile)
 	app.AddRoute("/clear").Version(1).Post().Handler(s.clearManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
@@ -777,12 +777,20 @@ func (s *Service) loggingCacheLen(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
-	args := &options.Output{}
+	opts := &options.Output{}
 	id := gimlet.GetVars(r)["id"]
-	if err := gimlet.GetJSON(r.Body, args); err != nil {
+	if err := gimlet.GetJSON(r.Body, opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
 			Message:    errors.Wrap(err, "problem parsing options").Error(),
+		})
+		return
+	}
+
+	if err := opts.Validate(); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    errors.Wrap(err, "invalid options").Error(),
 		})
 		return
 	}
@@ -793,9 +801,10 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusInternalServerError,
 			Message:    "logging cache is not supported",
 		})
+		return
 	}
 
-	logger, err := lc.Create(id, args)
+	logger, err := lc.Create(id, opts)
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
@@ -827,7 +836,7 @@ func (s *Service) loggingCacheGet(rw http.ResponseWriter, r *http.Request) {
 	gimlet.WriteJSON(rw, logger)
 }
 
-func (s *Service) loggingSendMessages(rw http.ResponseWriter, r *http.Request) {
+func (s *Service) sendMessages(rw http.ResponseWriter, r *http.Request) {
 	id := gimlet.GetVars(r)["id"]
 	lc := s.manager.LoggingCache(r.Context())
 	if lc == nil {

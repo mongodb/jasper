@@ -20,9 +20,9 @@ import (
 // information about the cached item, as well as interfaces for sending log
 // messages.
 type CachedLogger struct {
-	ID       string    `bson:"id" json:"id" yaml:"id"`
-	Manager  string    `bson:"manager_id" json:"manager_id" yaml:"manager_id"`
-	Accessed time.Time `bson:"accessed" json:"accessed" yaml:"accessed"`
+	ID        string    `bson:"id" json:"id" yaml:"id"`
+	ManagerID string    `bson:"manager_id" json:"manager_id" yaml:"manager_id"`
+	Accessed  time.Time `bson:"accessed" json:"accessed" yaml:"accessed"`
 
 	Error  send.Sender `bson:"-" json:"-" yaml:"-"`
 	Output send.Sender `bson:"-" json:"-" yaml:"-"`

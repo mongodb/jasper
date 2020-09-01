@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/evergreen-ci/bond"
 	"github.com/evergreen-ci/gimlet"
@@ -432,101 +431,4 @@ func (c *restClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
 		client: c,
 		ctx:    ctx,
 	}
-}
-
-type restLoggingCache struct {
-	client *restClient
-	ctx    context.Context
-}
-
-func (lc *restLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
-	body, err := makeBody(opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "building request")
-	}
-
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodPost, lc.client.getURL("/logging/%s", id), body)
-	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
-	}
-	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	out := &options.CachedLogger{}
-	if err = gimlet.GetJSON(resp.Body, out); err != nil {
-		return nil, errors.Wrap(err, "getting cached logger info from response")
-	}
-
-	return out, nil
-}
-
-func (lc *restLoggingCache) Put(id string, cl *options.CachedLogger) error {
-	return errors.New("operation not supported for remote managers")
-}
-
-func (lc *restLoggingCache) Get(id string) *options.CachedLogger {
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/%s", id), nil)
-	if err != nil {
-		grip.Debug(errors.Wrap(err, "request returned error"))
-		return nil
-	}
-	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		grip.Debug(errors.WithStack(err))
-		return nil
-	}
-
-	out := &options.CachedLogger{}
-	if err = gimlet.GetJSON(resp.Body, out); err != nil {
-		return nil
-	}
-	return out
-}
-
-func (lc *restLoggingCache) Remove(id string) {
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/%s", id), nil)
-	if err != nil {
-		grip.Debug(errors.Wrap(err, "request returned error"))
-		return
-	}
-	defer resp.Body.Close()
-
-	grip.Debug(errors.WithStack(handleError(resp)))
-}
-
-func (lc *restLoggingCache) Prune(ts time.Time) {
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/prune/%s", ts.Format(time.RFC3339)), nil)
-	if err != nil {
-		grip.Debug(errors.Wrap(err, "request returned error"))
-		return
-	}
-	defer resp.Body.Close()
-
-	grip.Debug(errors.WithStack(handleError(resp)))
-}
-
-func (lc *restLoggingCache) Len() int {
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/len"), nil)
-	if err != nil {
-		grip.Debug(errors.Wrap(err, "request returned error"))
-		return 0
-	}
-	defer resp.Body.Close()
-
-	if err := handleError(resp); err != nil {
-		grip.Debug(errors.WithStack(err))
-		return 0
-	}
-
-	out := restLoggingCacheLen{}
-	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		grip.Debug(errors.Wrap(err, "getting logging cache length from response"))
-		return 0
-	}
-
-	return out.Len
 }

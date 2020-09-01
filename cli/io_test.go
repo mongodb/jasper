@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/scripting"
@@ -351,6 +352,37 @@ func TestExtractResponse(t *testing.T) {
 							}
 						}
 					},
+				}
+				"CachedLoggerResponse": {
+					input: fmt.Sprintf(`{
+					"outcome": {
+						"success": %t,
+						"message": "%s"
+					},
+					"logger": {
+						"id": "%s",
+						"manager_id": "%s",
+						"accessed: "%s"
+					}
+					}`, outcome.Success, outcome.Message, "id", "manager_id", time.Time{}),
+					extractAndCheck: func(t *testing.T, input json.RawMessage) {
+						resp, err := ExtractCachedLoggerResponse(input)
+						if outcome.Success {
+							require.NoError(t, err)
+							assert.Equal(t, "id", resp.Logger.ID)
+							assert.Equal(t, "manager_id", resp.Logger.ManagerID)
+							assert.Zero(t, resp.Logger.Accessed)
+						} else {
+							require.Error(t, err)
+							assert.False(t, resp.Successful())
+
+							if outcome.Message != "" {
+								assert.Contains(t, resp.ErrorMessage(), outcome.Message)
+							} else {
+								assert.Contains(t, resp.ErrorMessage(), unspecifiedRequestFailure)
+							}
+						}
+					},
 				},
 				"ScriptingTestResponse": {
 					input: fmt.Sprintf(`{
@@ -368,6 +400,32 @@ func TestExtractResponse(t *testing.T) {
 							require.Len(t, resp.Results, 1)
 							assert.Equal(t, "foo", resp.Results[0].Name)
 							assert.Equal(t, scripting.TestOutcomeSuccess, resp.Results[0].Outcome)
+						} else {
+							require.Error(t, err)
+							assert.False(t, resp.Successful())
+
+							if outcome.Message != "" {
+								assert.Contains(t, resp.ErrorMessage(), outcome.Message)
+							} else {
+								assert.Contains(t, resp.ErrorMessage(), unspecifiedRequestFailure)
+							}
+						}
+					},
+				},
+				"LoggingCacheLenResponse": {
+					input: fmt.Sprintf(`{
+					"outcome": {
+						"success": %t,
+						"message": "%s"
+					},
+					"length": %d
+					}`, outcome.Success, outcome.Message, 50),
+					extractAndCheck: func(t *testing.T, input json.RawMessage) {
+						resp, err := ExtractLoggingCacheLenResponse(input)
+						if outcome.Success {
+							require.NoError(t, err)
+							assert.True(t, resp.Successful())
+							assert.Equal(t, 50, resp.Length)
 						} else {
 							require.Error(t, err)
 							assert.False(t, resp.Successful())

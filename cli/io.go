@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
@@ -47,7 +48,7 @@ func (resp OutcomeResponse) ErrorMessage() string {
 // ExtractOutcomeResponse unmarshals the input bytes into an OutcomeResponse and
 // checks if the request was successful.
 func ExtractOutcomeResponse(input json.RawMessage) (OutcomeResponse, error) {
-	resp := OutcomeResponse{}
+	var resp OutcomeResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -78,7 +79,7 @@ type InfoResponse struct {
 // ExtractInfoResponse unmarshals the input bytes into an InfoResponse and
 // checks if the request was successful.
 func ExtractInfoResponse(input json.RawMessage) (InfoResponse, error) {
-	resp := InfoResponse{}
+	var resp InfoResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -95,7 +96,7 @@ type InfosResponse struct {
 // ExtractInfosResponse unmarshals the input bytes into a TagsResponse and
 // checks if the request was successful.
 func ExtractInfosResponse(input json.RawMessage) (InfosResponse, error) {
-	resp := InfosResponse{}
+	var resp InfosResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -112,7 +113,7 @@ type TagsResponse struct {
 // ExtractTagsResponse unmarshals the input bytes into a TagsResponse and checks
 // if the request was successful.
 func ExtractTagsResponse(input json.RawMessage) (TagsResponse, error) {
-	resp := TagsResponse{}
+	var resp TagsResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -129,7 +130,7 @@ type RunningResponse struct {
 // ExtractRunningResponse unmarshals the input bytes into a RunningResponse and
 // checks if the request was successful.
 func ExtractRunningResponse(input json.RawMessage) (RunningResponse, error) {
-	resp := RunningResponse{}
+	var resp RunningResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -146,7 +147,7 @@ type CompleteResponse struct {
 // ExtractCompleteResponse unmarshals the input bytes into a CompleteResponse and
 // checks if the request was successful.
 func ExtractCompleteResponse(input json.RawMessage) (CompleteResponse, error) {
-	resp := CompleteResponse{}
+	var resp CompleteResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -164,7 +165,7 @@ type WaitResponse struct {
 // ExtractWaitResponse unmarshals the input bytes into a WaitResponse and checks if the
 // request was successful.
 func ExtractWaitResponse(input json.RawMessage) (WaitResponse, error) {
-	resp := WaitResponse{}
+	var resp WaitResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -185,7 +186,7 @@ type ServiceStatusResponse struct {
 // ExtractServiceStatusResponse unmarshals the input bytes into a
 // ServiceStatusResponse and checks if the request was successful.
 func ExtractServiceStatusResponse(input json.RawMessage) (ServiceStatusResponse, error) {
-	resp := ServiceStatusResponse{}
+	var resp ServiceStatusResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -202,7 +203,7 @@ type LogStreamResponse struct {
 // ExtractLogStreamResponse unmarshals the input bytes into a LogStreamResponse
 // and checks if the request was successful.
 func ExtractLogStreamResponse(input json.RawMessage) (LogStreamResponse, error) {
-	resp := LogStreamResponse{}
+	var resp LogStreamResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -219,7 +220,7 @@ type BuildloggerURLsResponse struct {
 // ExtractBuildloggerURLsResponse unmarshals the input bytes into a
 // BuildloggerURLsResponse and checks if the request was successful.
 func ExtractBuildloggerURLsResponse(input json.RawMessage) (BuildloggerURLsResponse, error) {
-	resp := BuildloggerURLsResponse{}
+	var resp BuildloggerURLsResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -236,7 +237,7 @@ type IDResponse struct {
 // ExtractIDResponse unmarshals the input bytes into an IDResponse and checks if
 // the request was successful.
 func ExtractIDResponse(input json.RawMessage) (IDResponse, error) {
-	resp := IDResponse{}
+	var resp IDResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -459,7 +460,7 @@ type ScriptingBuildResponse struct {
 // ExtractScriptingBuildResponse unmarshals the input bytes into a
 // ScriptingBuildResponse and checks if the request was successful.
 func ExtractScriptingBuildResponse(input json.RawMessage) (ScriptingBuildResponse, error) {
-	resp := ScriptingBuildResponse{}
+	var resp ScriptingBuildResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
@@ -491,7 +492,53 @@ type ScriptingTestResponse struct {
 // ExtractScriptingTestResponse unmarshals the input bytes into a
 // ScriptingTestResponse and checks if the request was successful.
 func ExtractScriptingTestResponse(input json.RawMessage) (ScriptingTestResponse, error) {
-	resp := ScriptingTestResponse{}
+	var resp ScriptingTestResponse
+	if err := json.Unmarshal(input, &resp); err != nil {
+		return resp, errors.Wrap(err, unmarshalFailed)
+	}
+	return resp, resp.successOrError()
+}
+
+type LoggingCacheCreateInput struct {
+	ID     string         `json:"id"`
+	Output options.Output `json:"options"`
+}
+
+func (in *LoggingCacheCreateInput) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(in.ID == "", "ID must not be empty")
+	catcher.Wrap(in.Output.Validate(), "invalid output options")
+	return catcher.Resolve()
+}
+
+type CachedLoggerResponse struct {
+	OutcomeResponse `json:"outcome"`
+	Logger          options.CachedLogger `json:"logger"`
+}
+
+func ExtractCachedLoggerResponse(input json.RawMessage) (CachedLoggerResponse, error) {
+	var resp CachedLoggerResponse
+	if err := json.Unmarshal(input, &resp); err != nil {
+		return resp, errors.Wrap(err, unmarshalFailed)
+	}
+	return resp, resp.successOrError()
+}
+
+type LoggingCachePruneInput struct {
+	LastAccessed time.Time `json:"last_accessed"`
+}
+
+func (in *LoggingCachePruneInput) Validate() error {
+	return nil
+}
+
+type LoggingCacheLenResponse struct {
+	OutcomeResponse `json:"outcome"`
+	Length          int `json:"length"`
+}
+
+func ExtractLoggingCacheLenResponse(input json.RawMessage) (LoggingCacheLenResponse, error) {
+	var resp LoggingCacheLenResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
 		return resp, errors.Wrap(err, unmarshalFailed)
 	}
