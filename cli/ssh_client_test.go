@@ -545,7 +545,7 @@ func TestSSHClient(t *testing.T) {
 			baseManager.Create = makeCreateFunc(
 				t, client,
 				[]string{RemoteCommand, GetScriptingCommand},
-				&inputChecker,
+				inputChecker,
 				makeOutcomeResponse(nil),
 			)
 			id := "id"
@@ -570,13 +570,31 @@ func TestSSHClient(t *testing.T) {
 			assert.Error(t, err)
 			assert.Zero(t, sh)
 		},
-		// kim: TODO: write logging cache tests
 		"LoggingCacheCreateSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
 
-			logger := createCachedLogger(t, lc)
-			assert.Equal(t, logger, resp.Logger)
+			inputChecker := &LoggingCacheCreateInput{}
+			resp := &CachedLoggerResponse{
+				OutcomeResponse: *makeOutcomeResponse(nil),
+				Logger: options.CachedLogger{
+					ID:        "id",
+					ManagerID: "manager_id",
+					Accessed:  time.Now(),
+				},
+			}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{LoggingCacheCommand, LoggingCacheCreateCommand},
+				inputChecker,
+				resp,
+			)
+
+			opts := loggingCacheOutputOptions(t)
+			logger, err := lc.Create(resp.Logger.ID, &opts)
+			require.NoError(t, err)
+			assert.Equal(t, resp.Logger.ID, logger.ID)
+			assert.Equal(t, resp.Logger.ManagerID, logger.ManagerID)
 		},
 		"LoggingCacheCreateFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.Create = makeCreateFunc(
@@ -594,7 +612,7 @@ func TestSSHClient(t *testing.T) {
 			assert.Error(t, err)
 			assert.Zero(t, logger)
 		},
-		"LoggingCacheCreateFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager)) {
+		"LoggingCacheCreateFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.FailCreate = true
 
 			lc := client.LoggingCache(ctx)
@@ -606,19 +624,29 @@ func TestSSHClient(t *testing.T) {
 			assert.Zero(t, logger)
 		},
 		"LoggingCacheGetSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			resp := &CachedLoggerResponse{
+				OutcomeResponse: *makeOutcomeResponse(nil),
+				Logger: options.CachedLogger{
+					ID:        "id",
+					ManagerID: "manager_id",
+				},
+			}
+			inputChecker := &IDInput{}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{LoggingCacheCommand, LoggingCacheGetCommand},
+				inputChecker,
+				resp,
+			)
+
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
-			logger := createCachedLogger(t, lc)
 
-			foundLogger := lc.Get(logger.ID)
-			assert.Equal(t, logger.ID, foundLogger.ID )
-			assert.Equal(t, logger.ManagerID, foundLogger.ManagerID) 
+			logger := lc.Get(resp.Logger.ID)
+			assert.Equal(t, resp.Logger.ID, logger.ID)
+			assert.Equal(t, resp.Logger.ManagerID, logger.ManagerID)
 		},
 		"LoggingCacheGetFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			lc := client.LoggingCache(ctx)
-			require.NotNil(t, lc)
-			logger := createCachedLogger(t, lc)
-
 			baseManager.Create = makeCreateFunc(
 				t, client,
 				[]string{LoggingCacheCommand, LoggingCacheGetCommand},
@@ -626,28 +654,87 @@ func TestSSHClient(t *testing.T) {
 				invalidResponse(),
 			)
 
-			foundLogger := lc.Get(logger.ID)
-			assert.Nil(t, foundLogger)
-		},
-		"LoggingCacheGetFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
-			logger := createCachedLogger(t, lc)
 
+			logger := lc.Get("foo")
+			assert.Zero(t, logger)
+		},
+		"LoggingCacheGetFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.FailCreate = true
 
-			foundLogger := lc.Get(logger.ID)
-			assert.Zero(t, foundLogger)
+			lc := client.LoggingCache(ctx)
+			require.NotNil(t, lc)
+
+			logger := lc.Get("foo")
+			assert.Zero(t, logger)
 		},
-		// "LoggingCacheRemoveSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCacheRemoveFailsIfBaseManagerCreate": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCacheRemoveFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCachePruneSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCachePruneFailsIfBaseManagerCreate": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCachePruneFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCacheLenSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCacheLenFailsIfBaseManagerCreate": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
-		// "LoggingCacheLenFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
+		"LoggingCacheRemoveSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			inputChecker := &IDInput{}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{LoggingCacheCommand, LoggingCacheRemoveCommand},
+				inputChecker,
+				makeOutcomeResponse(nil),
+			)
+
+			lc := client.LoggingCache(ctx)
+			require.NotNil(t, lc)
+
+			lc.Remove("foo")
+		},
+		"LoggingCachePruneSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			inputChecker := &LoggingCachePruneInput{}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{LoggingCacheCommand, LoggingCachePruneCommand},
+				inputChecker,
+				makeOutcomeResponse(nil),
+			)
+
+			lc := client.LoggingCache(ctx)
+			require.NotNil(t, ctx)
+
+			lc.Prune(time.Now())
+		},
+		"LoggingCacheLenSucceeds": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			resp := &LoggingCacheLenResponse{
+				OutcomeResponse: *makeOutcomeResponse(nil),
+				Length:          50,
+			}
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{LoggingCacheCommand, LoggingCacheLenCommand},
+				nil,
+				resp,
+			)
+
+			lc := client.LoggingCache(ctx)
+			require.NotNil(t, lc)
+
+			assert.Equal(t, resp.Length, lc.Len())
+		},
+		"LoggingCacheLenFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.Create = makeCreateFunc(
+				t, client,
+				[]string{LoggingCacheCommand, LoggingCacheLenCommand},
+				nil,
+				invalidResponse(),
+			)
+
+			lc := client.LoggingCache(ctx)
+			require.NotNil(t, lc)
+
+			assert.Equal(t, -1, lc.Len())
+		},
+		"LoggingCacheLenFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
+			baseManager.FailCreate = true
+
+			lc := client.LoggingCache(ctx)
+			require.NotNil(t, lc)
+
+			assert.Equal(t, -1, lc.Len())
+		},
 		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
@@ -707,34 +794,4 @@ func mockClientOptions() ClientOptions {
 		BinaryPath: "binary",
 		Type:       RPCService,
 	}
-}
-
-// createCachedLogger creates a cached logger in the remote service using
-// the jasper.LoggingCache.
-func createCachedLogger(t *testing.T, lc jasper.LoggingCache) *options.CachedLogger {
-	var inputChecker LoggingCacheCreateInput
-	resp := &CachedLoggerResponse{
-		OutcomeResponse: *makeOutcomeResponse(nil),
-		Logger: options.CachedLogger{
-			ID:        "id",
-			ManagerID: "manager_id",
-			Accessed:  time.Now(),
-		},
-	}
-	baseManager.Create = makeCreateFunc(
-		t, client,
-		[]string{LoggingCacheCommand, LoggingCacheCreateCommand},
-		&inputChecker,
-		resp,
-	)
-
-
-	opts := loggingCacheOutputOptions(t)
-	logger, err := lc.Create(resp.Logger.ID, &opts)
-	require.NoError(t, err)
-	require.NotZero(t, logger)
-	require.Equal(t, logger.ID, resp.Logger.ID)
-	require.Equal(t, logger.ManagerID, resp.Logger.ManagerID)
-
-	return logger
 }

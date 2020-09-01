@@ -134,9 +134,6 @@ func TestCLIProcess(t *testing.T) {
 				"TagNonexistentIDFails": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
 					require.False(t, tagProcess(t, c, nonexistentID, "foo").Successful())
 				},
-				"TagEmptyIDFails": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					require.False(t, tagProcess(t, c, nonexistentID, "foo").Successful())
-				},
 				"TagEmptyTagFails": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
 					input, err := json.Marshal(TagIDInput{ID: jasperProcID})
 					require.NoError(t, err)

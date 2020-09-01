@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/scripting"
@@ -19,6 +18,7 @@ func TestExtractResponse(t *testing.T) {
 		s2     = "bar"
 		n1     = 1
 	)
+
 	for outcomeName, outcome := range map[string]OutcomeResponse{
 		"Success": {
 			Success: true,
@@ -352,7 +352,7 @@ func TestExtractResponse(t *testing.T) {
 							}
 						}
 					},
-				}
+				},
 				"CachedLoggerResponse": {
 					input: fmt.Sprintf(`{
 					"outcome": {
@@ -361,17 +361,15 @@ func TestExtractResponse(t *testing.T) {
 					},
 					"logger": {
 						"id": "%s",
-						"manager_id": "%s",
-						"accessed: "%s"
+						"manager_id": "%s"
 					}
-					}`, outcome.Success, outcome.Message, "id", "manager_id", time.Time{}),
+					}`, outcome.Success, outcome.Message, "id", "manager_id"),
 					extractAndCheck: func(t *testing.T, input json.RawMessage) {
 						resp, err := ExtractCachedLoggerResponse(input)
 						if outcome.Success {
 							require.NoError(t, err)
 							assert.Equal(t, "id", resp.Logger.ID)
 							assert.Equal(t, "manager_id", resp.Logger.ManagerID)
-							assert.Zero(t, resp.Logger.Accessed)
 						} else {
 							require.Error(t, err)
 							assert.False(t, resp.Successful())

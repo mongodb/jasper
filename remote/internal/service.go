@@ -828,6 +828,7 @@ func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCac
 			},
 		}, nil
 	}
+	out.ManagerID = s.manager.ID()
 
 	logger, err := ConvertCachedLogger(out)
 	if err != nil {

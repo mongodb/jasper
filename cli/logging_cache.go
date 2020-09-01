@@ -91,7 +91,6 @@ func loggingCacheRemove() cli.Command {
 				lc.Remove(input.ID)
 				return makeOutcomeResponse(nil)
 			})
-			return nil
 		},
 	}
 }

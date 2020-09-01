@@ -87,12 +87,12 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/scripting/{id}/script").Version(1).Post().Handler(s.scriptingRunScript)
 	app.AddRoute("/scripting/{id}/build").Version(1).Post().Handler(s.scriptingBuild)
 	app.AddRoute("/scripting/{id}/test").Version(1).Post().Handler(s.scriptingTest)
-	app.AddRoute("/logging/len").Version(1).Get().Handler(s.loggingCacheLen)
+	app.AddRoute("/logging/id/{id}").Version(1).Post().Handler(s.loggingCacheCreate)
+	app.AddRoute("/logging/id/{id}").Version(1).Get().Handler(s.loggingCacheGet)
+	app.AddRoute("/logging/id/{id}").Version(1).Delete().Handler(s.loggingCacheRemove)
 	app.AddRoute("/logging/prune/{time}").Version(1).Delete().Handler(s.loggingCachePrune)
-	app.AddRoute("/logging/{id}").Version(1).Post().Handler(s.loggingCacheCreate)
-	app.AddRoute("/logging/{id}").Version(1).Delete().Handler(s.loggingCacheDelete)
-	app.AddRoute("/logging/{id}").Version(1).Get().Handler(s.loggingCacheGet)
-	app.AddRoute("/logging/{id}/send").Version(1).Post().Handler(s.sendMessages)
+	app.AddRoute("/logging/len").Version(1).Get().Handler(s.loggingCacheLen)
+	app.AddRoute("/logging/id/{id}/send").Version(1).Post().Handler(s.sendMessages)
 	app.AddRoute("/file/write").Version(1).Put().Handler(s.writeFile)
 	app.AddRoute("/clear").Version(1).Post().Handler(s.clearManager)
 	app.AddRoute("/close").Version(1).Delete().Handler(s.closeManager)
@@ -760,6 +760,45 @@ func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Reques
 	gimlet.WriteJSON(rw, struct{}{})
 }
 
+func (s *Service) sendMessages(rw http.ResponseWriter, r *http.Request) {
+	id := gimlet.GetVars(r)["id"]
+	lc := s.manager.LoggingCache(r.Context())
+	if lc == nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusInternalServerError,
+			Message:    "logging cache is not supported",
+		})
+		return
+	}
+	logger := lc.Get(id)
+	if logger == nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    fmt.Sprintf("logger '%s' does not exist", id),
+		})
+		return
+	}
+
+	payload := &options.LoggingPayload{}
+	if err := gimlet.GetJSON(r.Body, payload); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusNotFound,
+			Message:    errors.Wrapf(err, "problem parsing payload for %s", id).Error(),
+		})
+		return
+	}
+
+	if err := logger.Send(payload); err != nil {
+		writeError(rw, gimlet.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			Message:    err.Error(),
+		})
+		return
+	}
+
+	gimlet.WriteJSON(rw, struct{}{})
+}
+
 type restLoggingCacheLen struct {
 	Len int `json:"len"`
 }
@@ -812,6 +851,7 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	logger.ManagerID = s.manager.ID()
 
 	gimlet.WriteJSON(rw, logger)
 }
@@ -832,50 +872,12 @@ func (s *Service) loggingCacheGet(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusNotFound,
 			Message:    fmt.Sprintf("logger '%s' does not exist", id),
 		})
+		return
 	}
 	gimlet.WriteJSON(rw, logger)
 }
 
-func (s *Service) sendMessages(rw http.ResponseWriter, r *http.Request) {
-	id := gimlet.GetVars(r)["id"]
-	lc := s.manager.LoggingCache(r.Context())
-	if lc == nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
-			Message:    "logging cache is not supported",
-		})
-		return
-	}
-	logger := lc.Get(id)
-	if logger == nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    fmt.Sprintf("logger '%s' does not exist", id),
-		})
-		return
-	}
-
-	payload := &options.LoggingPayload{}
-	if err := gimlet.GetJSON(r.Body, payload); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
-			Message:    errors.Wrapf(err, "problem parsing payload for %s", id).Error(),
-		})
-		return
-	}
-
-	if err := logger.Send(payload); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
-	gimlet.WriteJSON(rw, struct{}{})
-}
-
-func (s *Service) loggingCacheDelete(rw http.ResponseWriter, r *http.Request) {
+func (s *Service) loggingCacheRemove(rw http.ResponseWriter, r *http.Request) {
 	id := gimlet.GetVars(r)["id"]
 	lc := s.manager.LoggingCache(r.Context())
 	if lc == nil {

@@ -253,7 +253,7 @@ type IDInput struct {
 // Validate checks that the Jasper process ID is non-empty.
 func (in *IDInput) Validate() error {
 	if len(in.ID) == 0 {
-		return errors.New("Jasper process ID must not be empty")
+		return errors.New("ID must not be empty")
 	}
 	return nil
 }
@@ -482,8 +482,8 @@ func (in *ScriptingTestInput) Validate() error {
 	return catcher.Resolve()
 }
 
-// ScriptingTestResponse represnts CLI-specific output describing the results of
-// a test run.
+// ScriptingTestResponse represents CLI-specific output describing the results
+// of a test run.
 type ScriptingTestResponse struct {
 	OutcomeResponse `json:"outcome"`
 	Results         []scripting.TestResult `json:"results"`
@@ -499,11 +499,15 @@ func ExtractScriptingTestResponse(input json.RawMessage) (ScriptingTestResponse,
 	return resp, resp.successOrError()
 }
 
+// LoggingCacheCreateInput represents CLI-specific input to create a cached
+// logger.
 type LoggingCacheCreateInput struct {
 	ID     string         `json:"id"`
 	Output options.Output `json:"options"`
 }
 
+// Validate checks that a cached logger ID has been given and the logger options
+// are valid.
 func (in *LoggingCacheCreateInput) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(in.ID == "", "ID must not be empty")
@@ -511,11 +515,15 @@ func (in *LoggingCacheCreateInput) Validate() error {
 	return catcher.Resolve()
 }
 
+// CachedLoggerResponse represents CLI-specific output describing the logger
+// that has been cached in the remote service.
 type CachedLoggerResponse struct {
 	OutcomeResponse `json:"outcome"`
 	Logger          options.CachedLogger `json:"logger"`
 }
 
+// ExtractCachedLoggerResponse unmarshals the input bytes into a
+// CachedLoggerResponse and checks if the request was successful.
 func ExtractCachedLoggerResponse(input json.RawMessage) (CachedLoggerResponse, error) {
 	var resp CachedLoggerResponse
 	if err := json.Unmarshal(input, &resp); err != nil {
@@ -524,19 +532,26 @@ func ExtractCachedLoggerResponse(input json.RawMessage) (CachedLoggerResponse, e
 	return resp, resp.successOrError()
 }
 
+// LoggingCachePruneInput represents CLI-specific input to prune the loggers
+// that were accessed before the given time.
 type LoggingCachePruneInput struct {
 	LastAccessed time.Time `json:"last_accessed"`
 }
 
+// Validate is a no-op.
 func (in *LoggingCachePruneInput) Validate() error {
 	return nil
 }
 
+// LoggingCacheLenResponse represents CLI-specific output describing the
+// number of cached loggers.
 type LoggingCacheLenResponse struct {
 	OutcomeResponse `json:"outcome"`
 	Length          int `json:"length"`
 }
 
+// ExtractLoggingCacheLenResponse unmarshals the input bytes into a
+// LoggingCacheLenResponse and checks if the request was successful.
 func ExtractLoggingCacheLenResponse(input json.RawMessage) (LoggingCacheLenResponse, error) {
 	var resp LoggingCacheLenResponse
 	if err := json.Unmarshal(input, &resp); err != nil {

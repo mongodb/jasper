@@ -34,12 +34,12 @@ func (lc *sshLoggingCache) Create(id string, opts *options.Output) (*options.Cac
 		return nil, errors.WithStack(err)
 	}
 
-	logger, err := ExtractCachedLoggerResponse(output)
+	resp, err := ExtractCachedLoggerResponse(output)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &logger, nil
+	return &resp.Logger, nil
 }
 
 func (lc *sshLoggingCache) Put(id string, cl *options.CachedLogger) error {

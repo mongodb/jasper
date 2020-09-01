@@ -24,7 +24,7 @@ func (lc *restLoggingCache) Create(id string, opts *options.Output) (*options.Ca
 		return nil, errors.Wrap(err, "building request")
 	}
 
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodPost, lc.client.getURL("/logging/%s", id), body)
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodPost, lc.client.getURL("/logging/id/%s", id), body)
 	if err != nil {
 		return nil, errors.Wrap(err, "request returned error")
 	}
@@ -47,7 +47,7 @@ func (lc *restLoggingCache) Put(id string, cl *options.CachedLogger) error {
 }
 
 func (lc *restLoggingCache) Get(id string) *options.CachedLogger {
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/%s", id), nil)
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/id/%s", id), nil)
 	if err != nil {
 		grip.Debug(errors.Wrap(err, "request returned error"))
 		return nil
@@ -67,7 +67,7 @@ func (lc *restLoggingCache) Get(id string) *options.CachedLogger {
 }
 
 func (lc *restLoggingCache) Remove(id string) {
-	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/%s", id), nil)
+	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/id/%s", id), nil)
 	if err != nil {
 		grip.Debug(errors.Wrap(err, "request returned error"))
 		return
