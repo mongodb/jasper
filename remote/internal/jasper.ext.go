@@ -1163,9 +1163,9 @@ func (l *LoggingCacheInstance) Export() (*options.CachedLogger, error) {
 	}
 
 	return &options.CachedLogger{
-		Accessed: accessed,
-		ID:       l.Id,
-		Manager:  l.Manager,
+		Accessed:  accessed,
+		ID:        l.Id,
+		ManagerID: l.ManagerID,
 	}, nil
 }
 
@@ -1181,9 +1181,9 @@ func ConvertCachedLogger(opts *options.CachedLogger) (*LoggingCacheInstance, err
 		Outcome: &OperationOutcome{
 			Success: true,
 		},
-		Id:       opts.ID,
-		Manager:  opts.Manager,
-		Accessed: accessed,
+		Id:        opts.ID,
+		ManagerID: opts.ManagerID,
+		Accessed:  accessed,
 	}, nil
 }
 

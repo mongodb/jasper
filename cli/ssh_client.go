@@ -54,7 +54,7 @@ func NewSSHClient(clientOpts ClientOptions, remoteOpts options.Remote) (remote.M
 }
 
 func (c *sshClient) ID() string {
-	output, err := c.client.runManagerCommand(context.Background(), IDCommand, nil)
+	output, err := c.runManagerCommand(context.Background(), IDCommand, nil)
 	if err != nil {
 		return ""
 	}
@@ -68,7 +68,7 @@ func (c *sshClient) ID() string {
 }
 
 func (c *sshClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-	output, err := c.client.runManagerCommand(ctx, CreateProcessCommand, opts)
+	output, err := c.runManagerCommand(ctx, CreateProcessCommand, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -85,7 +85,7 @@ func (c *sshClient) CreateProcess(ctx context.Context, opts *options.Create) (ja
 // CLI. Users should not use (*jasper.Command).SetRunFunc().
 func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return c.client.manager.CreateCommand(ctx).SetRunFunc(func(opts options.Command) error {
-		output, err := c.client.runManagerCommand(ctx, CreateCommand, &opts)
+		output, err := c.runManagerCommand(ctx, CreateCommand, &opts)
 		if err != nil {
 			return errors.Wrap(err, "could not run command from given input")
 		}
@@ -99,7 +99,7 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 }
 
 func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	output, err := c.client.runRemoteCommand(ctx, CreateScriptingCommand, opts)
+	output, err := c.runRemoteCommand(ctx, CreateScriptingCommand, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -113,7 +113,7 @@ func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 }
 
 func (c *sshClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	output, err := c.client.runRemoteCommand(ctx, GetScriptingCommand, &IDInput{ID: id})
+	output, err := c.runRemoteCommand(ctx, GetScriptingCommand, &IDInput{ID: id})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -130,7 +130,7 @@ func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
 }
 
 func (c *sshClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
-	output, err := c.client.runManagerCommand(ctx, ListCommand, &FilterInput{Filter: f})
+	output, err := c.runManagerCommand(ctx, ListCommand, &FilterInput{Filter: f})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -151,7 +151,7 @@ func (c *sshClient) List(ctx context.Context, f options.Filter) ([]jasper.Proces
 }
 
 func (c *sshClient) Group(ctx context.Context, tag string) ([]jasper.Process, error) {
-	output, err := c.client.runManagerCommand(ctx, GroupCommand, &TagInput{Tag: tag})
+	output, err := c.runManagerCommand(ctx, GroupCommand, &TagInput{Tag: tag})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -172,7 +172,7 @@ func (c *sshClient) Group(ctx context.Context, tag string) ([]jasper.Process, er
 }
 
 func (c *sshClient) Get(ctx context.Context, id string) (jasper.Process, error) {
-	output, err := c.client.runManagerCommand(ctx, GetCommand, &IDInput{ID: id})
+	output, err := c.runManagerCommand(ctx, GetCommand, &IDInput{ID: id})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -186,13 +186,13 @@ func (c *sshClient) Get(ctx context.Context, id string) (jasper.Process, error) 
 }
 
 func (c *sshClient) Clear(ctx context.Context) {
-	if _, err := c.client.runManagerCommand(ctx, ClearCommand, nil); err != nil {
+	if _, err := c.runManagerCommand(ctx, ClearCommand, nil); err != nil {
 		grip.Debug(errors.Wrap(err, "clearing manager"))
 	}
 }
 
 func (c *sshClient) Close(ctx context.Context) error {
-	output, err := c.client.runManagerCommand(ctx, CloseCommand, nil)
+	output, err := c.runManagerCommand(ctx, CloseCommand, nil)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -204,39 +204,9 @@ func (c *sshClient) Close(ctx context.Context) error {
 	return nil
 }
 
-func (c *sshClient) CloseConnection() error {
-	return nil
-}
-
-func (c *sshClient) ConfigureCache(ctx context.Context, opts options.Cache) error {
-	output, err := c.client.runRemoteCommand(ctx, ConfigureCacheCommand, &opts)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if _, err := ExtractOutcomeResponse(output); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
-}
-
-func (c *sshClient) DownloadFile(ctx context.Context, opts options.Download) error {
-	output, err := c.client.runRemoteCommand(ctx, DownloadFileCommand, &opts)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if _, err := ExtractOutcomeResponse(output); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
-}
-
 func (c *sshClient) WriteFile(ctx context.Context, opts options.WriteFile) error {
 	return opts.WriteBufferedContent(func(opts options.WriteFile) error {
-		output, err := c.client.runManagerCommand(ctx, WriteFileCommand, &opts)
+		output, err := c.runManagerCommand(ctx, WriteFileCommand, &opts)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -249,8 +219,38 @@ func (c *sshClient) WriteFile(ctx context.Context, opts options.WriteFile) error
 	})
 }
 
+func (c *sshClient) CloseConnection() error {
+	return nil
+}
+
+func (c *sshClient) ConfigureCache(ctx context.Context, opts options.Cache) error {
+	output, err := c.runRemoteCommand(ctx, ConfigureCacheCommand, &opts)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if _, err := ExtractOutcomeResponse(output); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (c *sshClient) DownloadFile(ctx context.Context, opts options.Download) error {
+	output, err := c.runRemoteCommand(ctx, DownloadFileCommand, &opts)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if _, err := ExtractOutcomeResponse(output); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func (c *sshClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {
-	output, err := c.client.runRemoteCommand(ctx, DownloadMongoDBCommand, &opts)
+	output, err := c.runRemoteCommand(ctx, DownloadMongoDBCommand, &opts)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -263,7 +263,7 @@ func (c *sshClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDow
 }
 
 func (c *sshClient) GetLogStream(ctx context.Context, id string, count int) (jasper.LogStream, error) {
-	output, err := c.client.runRemoteCommand(ctx, GetLogStreamCommand, &LogStreamInput{ID: id, Count: count})
+	output, err := c.runRemoteCommand(ctx, GetLogStreamCommand, &LogStreamInput{ID: id, Count: count})
 	if err != nil {
 		return jasper.LogStream{}, errors.WithStack(err)
 	}
@@ -277,7 +277,7 @@ func (c *sshClient) GetLogStream(ctx context.Context, id string, count int) (jas
 }
 
 func (c *sshClient) GetBuildloggerURLs(ctx context.Context, id string) ([]string, error) {
-	output, err := c.client.runRemoteCommand(ctx, GetBuildloggerURLsCommand, &IDInput{ID: id})
+	output, err := c.runRemoteCommand(ctx, GetBuildloggerURLsCommand, &IDInput{ID: id})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -291,7 +291,7 @@ func (c *sshClient) GetBuildloggerURLs(ctx context.Context, id string) ([]string
 }
 
 func (c *sshClient) SignalEvent(ctx context.Context, name string) error {
-	output, err := c.client.runRemoteCommand(ctx, SignalEventCommand, &EventInput{Name: name})
+	output, err := c.runRemoteCommand(ctx, SignalEventCommand, &EventInput{Name: name})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -303,13 +303,12 @@ func (c *sshClient) SignalEvent(ctx context.Context, name string) error {
 	return nil
 }
 
-// TODO (EVG-12626): fix this.
 func (c *sshClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
-	return nil
+	return newSSHLoggingCache(ctx, c.client)
 }
 
 func (c *sshClient) SendMessages(ctx context.Context, opts options.LoggingPayload) error {
-	output, err := c.client.runRemoteCommand(ctx, SendMessagesCommand, opts)
+	output, err := c.runRemoteCommand(ctx, SendMessagesCommand, opts)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -319,6 +318,14 @@ func (c *sshClient) SendMessages(ctx context.Context, opts options.LoggingPayloa
 	}
 
 	return nil
+}
+
+func (c *sshClient) runManagerCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
+	return c.client.runClientCommand(ctx, []string{ManagerCommand, managerSubcommand}, subcommandInput)
+}
+
+func (c *sshClient) runRemoteCommand(ctx context.Context, remoteSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
+	return c.client.runClientCommand(ctx, []string{RemoteCommand, remoteSubcommand}, subcommandInput)
 }
 
 // sshRunner is a client to help run Jasper CLI commands over SSH.
@@ -339,14 +346,6 @@ func newSSHRunner(clientOpts ClientOptions, remoteOpts options.Remote) (*sshRunn
 		remoteOpts: remoteOpts,
 		manager:    manager,
 	}, nil
-}
-
-func (r *sshRunner) runManagerCommand(ctx context.Context, managerSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
-	return r.runClientCommand(ctx, []string{ManagerCommand, managerSubcommand}, subcommandInput)
-}
-
-func (r *sshRunner) runRemoteCommand(ctx context.Context, remoteSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
-	return r.runClientCommand(ctx, []string{RemoteCommand, remoteSubcommand}, subcommandInput)
 }
 
 // runClientCommand creates a command that runs the given CLI client subcommand

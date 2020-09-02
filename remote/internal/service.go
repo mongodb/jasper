@@ -598,7 +598,7 @@ func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *Script
 		Id: se.ID(),
 	}, nil
 }
-func (s *jasperService) ScriptingHarnessCheck(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
+func (s *jasperService) ScriptingHarnessGet(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
 	se, err := s.scripting.Get(id.Id)
 	if err != nil {
 		return &OperationOutcome{
@@ -810,12 +810,15 @@ func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCac
 	if lc == nil {
 		return nil, errors.New("logging cache not supported")
 	}
-	opt, err := args.Options.Export()
+	opts, err := args.Options.Export()
 	if err != nil {
 		return nil, errors.Wrap(err, "problem exporting output options")
 	}
+	if err := opts.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid options")
+	}
 
-	out, err := lc.Create(args.Name, &opt)
+	out, err := lc.Create(args.Name, &opts)
 	if err != nil {
 		return &LoggingCacheInstance{
 			Outcome: &OperationOutcome{
@@ -825,6 +828,7 @@ func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCac
 			},
 		}, nil
 	}
+	out.ManagerID = s.manager.ID()
 
 	logger, err := ConvertCachedLogger(out)
 	if err != nil {
