@@ -413,7 +413,7 @@ func (c *restClient) SendMessages(ctx context.Context, lp options.LoggingPayload
 		return errors.Wrap(err, "building request")
 	}
 
-	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/logging/%s/send", lp.LoggerID), body)
+	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/logging/id/%s/send", lp.LoggerID), body)
 	if err != nil {
 		return errors.Wrap(err, "request returned error")
 	}
