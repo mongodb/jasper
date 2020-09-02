@@ -60,7 +60,7 @@ func requireStringFlag(name string) cli.BeforeFunc {
 	}
 }
 
-func requireOneFlag(names ...string) cli.BeforeFunc {
+func requireOneFlag(names ...string) cli.BeforeFunc { //nolint: deadcode
 	return func(c *cli.Context) error {
 		var count int
 		for _, name := range names {
@@ -70,18 +70,6 @@ func requireOneFlag(names ...string) cli.BeforeFunc {
 		}
 		if count != 1 {
 			return errors.Errorf("must specify exactly one flag from the following: %s", names)
-		}
-		return nil
-	}
-}
-
-// cleanupFilePathSeparators fixes the file path separators to ensure they are
-// forward slashes (i.e. to clean up Windows file paths).
-func cleanupFilePathSeparators(names ...string) cli.BeforeFunc {
-	return func(c *cli.Context) error {
-		for _, name := range names {
-			cleanPath := util.ConsistentFilepath(c.String(name))
-			return errors.Wrapf(c.Set(name, cleanPath), "cleaning up flag '%s'", name)
 		}
 		return nil
 	}
