@@ -24,6 +24,8 @@ type CachedLogger struct {
 	ManagerID string    `bson:"manager_id" json:"manager_id" yaml:"manager_id"`
 	Accessed  time.Time `bson:"accessed" json:"accessed" yaml:"accessed"`
 
+	// These are not set if the CachedLogger is returned from a remote
+	// manager.
 	Error  send.Sender `bson:"-" json:"-" yaml:"-"`
 	Output send.Sender `bson:"-" json:"-" yaml:"-"`
 }

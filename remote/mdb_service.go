@@ -86,7 +86,7 @@ func (s *mdbService) registerHandlers() error {
 		CloseCommand:         s.managerClose,
 		WriteFileCommand:     s.managerWriteFile,
 
-		// Process commands
+		// jasper.Process commands
 		InfoCommand:                    s.processInfo,
 		RunningCommand:                 s.processRunning,
 		CompleteCommand:                s.processComplete,
@@ -106,10 +106,10 @@ func (s *mdbService) registerHandlers() error {
 		GetBuildloggerURLsCommand: s.getBuildloggerURLs,
 		SignalEventCommand:        s.signalEvent,
 		SendMessagesCommand:       s.sendMessages,
-
-		// Scripting commands
-		ScriptingGetCommand:       s.scriptingGet,
 		ScriptingCreateCommand:    s.scriptingCreate,
+		ScriptingGetCommand:       s.scriptingGet,
+
+		// scripting.Harness commands
 		ScriptingSetupCommand:     s.scriptingSetup,
 		ScriptingCleanupCommand:   s.scriptingCleanup,
 		ScriptingRunCommand:       s.scriptingRun,
@@ -117,7 +117,7 @@ func (s *mdbService) registerHandlers() error {
 		ScriptingBuildCommand:     s.scriptingBuild,
 		ScriptingTestCommand:      s.scriptingTest,
 
-		// Logging Commands
+		// jasper.LoggingCache commands
 		LoggingCacheCreateCommand: s.loggingCreate,
 		LoggingCacheGetCommand:    s.loggingGet,
 		LoggingCacheRemoveCommand: s.loggingRemove,

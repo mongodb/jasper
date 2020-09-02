@@ -11,7 +11,7 @@ import (
 )
 
 // sshLoggingCache is the client-side representation of a
-// jasper.LoggingCache for makign requests to the remote service via the CLI
+// jasper.LoggingCache for making requests to the remote service via the CLI
 // over SSH.
 type sshLoggingCache struct {
 	ctx    context.Context

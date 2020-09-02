@@ -55,6 +55,7 @@ func loggingCacheCreate() cli.Command {
 		},
 	}
 }
+
 func loggingCacheGet() cli.Command {
 	return cli.Command{
 		Name:   LoggingCacheGetCommand,
@@ -76,6 +77,7 @@ func loggingCacheGet() cli.Command {
 		},
 	}
 }
+
 func loggingCacheRemove() cli.Command {
 	return cli.Command{
 		Name:   LoggingCacheRemoveCommand,
@@ -94,6 +96,7 @@ func loggingCacheRemove() cli.Command {
 		},
 	}
 }
+
 func loggingCachePrune() cli.Command {
 	return cli.Command{
 		Name:   LoggingCachePruneCommand,
@@ -112,6 +115,7 @@ func loggingCachePrune() cli.Command {
 		},
 	}
 }
+
 func loggingCacheLen() cli.Command {
 	return cli.Command{
 		Name:   LoggingCacheLenCommand,

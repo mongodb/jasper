@@ -10,11 +10,11 @@ import (
 
 // LoggingCache provides an interface to a cache of loggers.
 type LoggingCache interface {
-	// Create creates
+	// Create creates and caches a new logger based on the given output options.
 	Create(id string, opts *options.Output) (*options.CachedLogger, error)
 	// Put adds an existing logger to the cache.
 	Put(id string, logger *options.CachedLogger) error
-	// Get gets an existing logging cache. Implementations should return nil if
+	// Get gets an existing cached logger. Implementations should return nil if
 	// the logger cannot be found.
 	Get(id string) *options.CachedLogger
 	// Remove removes an existing logging cache.

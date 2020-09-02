@@ -539,9 +539,7 @@ type LoggingCachePruneInput struct {
 }
 
 // Validate is a no-op.
-func (in *LoggingCachePruneInput) Validate() error {
-	return nil
-}
+func (in *LoggingCachePruneInput) Validate() error { return nil }
 
 // LoggingCacheLenResponse represents CLI-specific output describing the
 // number of cached loggers.
