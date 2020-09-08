@@ -43,7 +43,7 @@ func (lc *rpcLoggingCache) Put(id string, opts *options.CachedLogger) error {
 }
 
 func (lc *rpcLoggingCache) Get(id string) *options.CachedLogger {
-	resp, err := lc.client.LoggingCacheGet(lc.ctx, &internal.LoggingCacheArgs{Name: id})
+	resp, err := lc.client.LoggingCacheGet(lc.ctx, &internal.LoggingCacheArgs{Id: id})
 	if err != nil {
 		return nil
 	}
@@ -60,7 +60,7 @@ func (lc *rpcLoggingCache) Get(id string) *options.CachedLogger {
 }
 
 func (lc *rpcLoggingCache) Remove(id string) {
-	_, _ = lc.client.LoggingCacheRemove(lc.ctx, &internal.LoggingCacheArgs{Name: id})
+	_, _ = lc.client.LoggingCacheRemove(lc.ctx, &internal.LoggingCacheArgs{Id: id})
 }
 
 func (lc *rpcLoggingCache) Prune(ts time.Time) {

@@ -1195,7 +1195,7 @@ func ConvertLoggingCreateArgs(id string, opts *options.Output) (*LoggingCacheCre
 		return nil, errors.Wrap(err, "problem converting output options")
 	}
 	return &LoggingCacheCreateArgs{
-		Name:    id,
+		Id:      id,
 		Options: &o,
 	}, nil
 }
