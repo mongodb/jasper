@@ -4,11 +4,15 @@
 package internal
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	duration "github.com/golang/protobuf/ptypes/duration"
-	_ "github.com/golang/protobuf/ptypes/empty"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -4063,4 +4067,1443 @@ var fileDescriptor_d30110796082ce8e = []byte{
 	0x43, 0xf5, 0x5f, 0xc3, 0x22, 0xef, 0x29, 0x0e, 0x49, 0x10, 0x88, 0x39, 0xe9, 0x5a, 0x76, 0x8f,
 	0x30, 0x5d, 0xc2, 0x36, 0xfc, 0x58, 0x11, 0xa3, 0x58, 0x17, 0x3b, 0xa7, 0x25, 0x71, 0xff, 0x5b,
 	0xff, 0x17, 0x00, 0x00, 0xff, 0xff, 0xb8, 0x28, 0x07, 0x69, 0x6a, 0x2d, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConnInterface
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion6
+
+// JasperProcessManagerClient is the client API for JasperProcessManager service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type JasperProcessManagerClient interface {
+	// Manager functions
+	ID(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*IDResponse, error)
+	Create(ctx context.Context, in *CreateOptions, opts ...grpc.CallOption) (*ProcessInfo, error)
+	List(ctx context.Context, in *Filter, opts ...grpc.CallOption) (JasperProcessManager_ListClient, error)
+	Group(ctx context.Context, in *TagName, opts ...grpc.CallOption) (JasperProcessManager_GroupClient, error)
+	Get(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessInfo, error)
+	Signal(ctx context.Context, in *SignalProcess, opts ...grpc.CallOption) (*OperationOutcome, error)
+	Clear(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*OperationOutcome, error)
+	Close(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*OperationOutcome, error)
+	WriteFile(ctx context.Context, opts ...grpc.CallOption) (JasperProcessManager_WriteFileClient, error)
+	// Process functions
+	TagProcess(ctx context.Context, in *ProcessTags, opts ...grpc.CallOption) (*OperationOutcome, error)
+	ResetTags(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*OperationOutcome, error)
+	GetTags(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessTags, error)
+	RegisterSignalTriggerID(ctx context.Context, in *SignalTriggerParams, opts ...grpc.CallOption) (*OperationOutcome, error)
+	Wait(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*OperationOutcome, error)
+	Respawn(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessInfo, error)
+	// scripting.Harness functions
+	ScriptingHarnessSetup(ctx context.Context, in *ScriptingHarnessID, opts ...grpc.CallOption) (*OperationOutcome, error)
+	ScriptingHarnessCleanup(ctx context.Context, in *ScriptingHarnessID, opts ...grpc.CallOption) (*OperationOutcome, error)
+	ScriptingHarnessRun(ctx context.Context, in *ScriptingHarnessRunArgs, opts ...grpc.CallOption) (*OperationOutcome, error)
+	ScriptingHarnessBuild(ctx context.Context, in *ScriptingHarnessBuildArgs, opts ...grpc.CallOption) (*ScriptingHarnessBuildResponse, error)
+	ScriptingHarnessRunScript(ctx context.Context, in *ScriptingHarnessRunScriptArgs, opts ...grpc.CallOption) (*OperationOutcome, error)
+	ScriptingHarnessTest(ctx context.Context, in *ScriptingHarnessTestArgs, opts ...grpc.CallOption) (*ScriptingHarnessTestResponse, error)
+	// LoggingCache functions
+	LoggingCacheCreate(ctx context.Context, in *LoggingCacheCreateArgs, opts ...grpc.CallOption) (*LoggingCacheInstance, error)
+	LoggingCacheGet(ctx context.Context, in *LoggingCacheArgs, opts ...grpc.CallOption) (*LoggingCacheInstance, error)
+	LoggingCacheRemove(ctx context.Context, in *LoggingCacheArgs, opts ...grpc.CallOption) (*OperationOutcome, error)
+	LoggingCacheLen(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LoggingCacheSize, error)
+	LoggingCachePrune(ctx context.Context, in *timestamp.Timestamp, opts ...grpc.CallOption) (*OperationOutcome, error)
+	// Remote specific functions
+	ScriptingHarnessCreate(ctx context.Context, in *ScriptingOptions, opts ...grpc.CallOption) (*ScriptingHarnessID, error)
+	ScriptingHarnessGet(ctx context.Context, in *ScriptingHarnessID, opts ...grpc.CallOption) (*OperationOutcome, error)
+	Status(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*StatusResponse, error)
+	ConfigureCache(ctx context.Context, in *CacheOptions, opts ...grpc.CallOption) (*OperationOutcome, error)
+	DownloadFile(ctx context.Context, in *DownloadInfo, opts ...grpc.CallOption) (*OperationOutcome, error)
+	DownloadMongoDB(ctx context.Context, in *MongoDBDownloadOptions, opts ...grpc.CallOption) (*OperationOutcome, error)
+	GetLogStream(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*LogStream, error)
+	GetBuildloggerURLs(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*BuildloggerURLs, error)
+	SignalEvent(ctx context.Context, in *EventName, opts ...grpc.CallOption) (*OperationOutcome, error)
+	SendMessages(ctx context.Context, in *LoggingPayload, opts ...grpc.CallOption) (*OperationOutcome, error)
+}
+
+type jasperProcessManagerClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewJasperProcessManagerClient(cc grpc.ClientConnInterface) JasperProcessManagerClient {
+	return &jasperProcessManagerClient{cc}
+}
+
+func (c *jasperProcessManagerClient) ID(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*IDResponse, error) {
+	out := new(IDResponse)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Create(ctx context.Context, in *CreateOptions, opts ...grpc.CallOption) (*ProcessInfo, error) {
+	out := new(ProcessInfo)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) List(ctx context.Context, in *Filter, opts ...grpc.CallOption) (JasperProcessManager_ListClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_JasperProcessManager_serviceDesc.Streams[0], "/jasper.JasperProcessManager/List", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &jasperProcessManagerListClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type JasperProcessManager_ListClient interface {
+	Recv() (*ProcessInfo, error)
+	grpc.ClientStream
+}
+
+type jasperProcessManagerListClient struct {
+	grpc.ClientStream
+}
+
+func (x *jasperProcessManagerListClient) Recv() (*ProcessInfo, error) {
+	m := new(ProcessInfo)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *jasperProcessManagerClient) Group(ctx context.Context, in *TagName, opts ...grpc.CallOption) (JasperProcessManager_GroupClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_JasperProcessManager_serviceDesc.Streams[1], "/jasper.JasperProcessManager/Group", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &jasperProcessManagerGroupClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type JasperProcessManager_GroupClient interface {
+	Recv() (*ProcessInfo, error)
+	grpc.ClientStream
+}
+
+type jasperProcessManagerGroupClient struct {
+	grpc.ClientStream
+}
+
+func (x *jasperProcessManagerGroupClient) Recv() (*ProcessInfo, error) {
+	m := new(ProcessInfo)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *jasperProcessManagerClient) Get(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessInfo, error) {
+	out := new(ProcessInfo)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Signal(ctx context.Context, in *SignalProcess, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Signal", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Clear(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Clear", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Close(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Close", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) WriteFile(ctx context.Context, opts ...grpc.CallOption) (JasperProcessManager_WriteFileClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_JasperProcessManager_serviceDesc.Streams[2], "/jasper.JasperProcessManager/WriteFile", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &jasperProcessManagerWriteFileClient{stream}
+	return x, nil
+}
+
+type JasperProcessManager_WriteFileClient interface {
+	Send(*WriteFileInfo) error
+	CloseAndRecv() (*OperationOutcome, error)
+	grpc.ClientStream
+}
+
+type jasperProcessManagerWriteFileClient struct {
+	grpc.ClientStream
+}
+
+func (x *jasperProcessManagerWriteFileClient) Send(m *WriteFileInfo) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *jasperProcessManagerWriteFileClient) CloseAndRecv() (*OperationOutcome, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(OperationOutcome)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *jasperProcessManagerClient) TagProcess(ctx context.Context, in *ProcessTags, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/TagProcess", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ResetTags(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ResetTags", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) GetTags(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessTags, error) {
+	out := new(ProcessTags)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/GetTags", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) RegisterSignalTriggerID(ctx context.Context, in *SignalTriggerParams, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/RegisterSignalTriggerID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Wait(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Wait", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Respawn(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*ProcessInfo, error) {
+	out := new(ProcessInfo)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Respawn", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessSetup(ctx context.Context, in *ScriptingHarnessID, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessSetup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessCleanup(ctx context.Context, in *ScriptingHarnessID, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessCleanup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessRun(ctx context.Context, in *ScriptingHarnessRunArgs, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessRun", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessBuild(ctx context.Context, in *ScriptingHarnessBuildArgs, opts ...grpc.CallOption) (*ScriptingHarnessBuildResponse, error) {
+	out := new(ScriptingHarnessBuildResponse)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessBuild", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessRunScript(ctx context.Context, in *ScriptingHarnessRunScriptArgs, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessRunScript", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessTest(ctx context.Context, in *ScriptingHarnessTestArgs, opts ...grpc.CallOption) (*ScriptingHarnessTestResponse, error) {
+	out := new(ScriptingHarnessTestResponse)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessTest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) LoggingCacheCreate(ctx context.Context, in *LoggingCacheCreateArgs, opts ...grpc.CallOption) (*LoggingCacheInstance, error) {
+	out := new(LoggingCacheInstance)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/LoggingCacheCreate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) LoggingCacheGet(ctx context.Context, in *LoggingCacheArgs, opts ...grpc.CallOption) (*LoggingCacheInstance, error) {
+	out := new(LoggingCacheInstance)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/LoggingCacheGet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) LoggingCacheRemove(ctx context.Context, in *LoggingCacheArgs, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/LoggingCacheRemove", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) LoggingCacheLen(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LoggingCacheSize, error) {
+	out := new(LoggingCacheSize)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/LoggingCacheLen", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) LoggingCachePrune(ctx context.Context, in *timestamp.Timestamp, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/LoggingCachePrune", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessCreate(ctx context.Context, in *ScriptingOptions, opts ...grpc.CallOption) (*ScriptingHarnessID, error) {
+	out := new(ScriptingHarnessID)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessCreate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ScriptingHarnessGet(ctx context.Context, in *ScriptingHarnessID, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ScriptingHarnessGet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) Status(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/Status", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) ConfigureCache(ctx context.Context, in *CacheOptions, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/ConfigureCache", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) DownloadFile(ctx context.Context, in *DownloadInfo, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/DownloadFile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) DownloadMongoDB(ctx context.Context, in *MongoDBDownloadOptions, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/DownloadMongoDB", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) GetLogStream(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*LogStream, error) {
+	out := new(LogStream)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/GetLogStream", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) GetBuildloggerURLs(ctx context.Context, in *JasperProcessID, opts ...grpc.CallOption) (*BuildloggerURLs, error) {
+	out := new(BuildloggerURLs)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/GetBuildloggerURLs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) SignalEvent(ctx context.Context, in *EventName, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/SignalEvent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *jasperProcessManagerClient) SendMessages(ctx context.Context, in *LoggingPayload, opts ...grpc.CallOption) (*OperationOutcome, error) {
+	out := new(OperationOutcome)
+	err := c.cc.Invoke(ctx, "/jasper.JasperProcessManager/SendMessages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// JasperProcessManagerServer is the server API for JasperProcessManager service.
+type JasperProcessManagerServer interface {
+	// Manager functions
+	ID(context.Context, *empty.Empty) (*IDResponse, error)
+	Create(context.Context, *CreateOptions) (*ProcessInfo, error)
+	List(*Filter, JasperProcessManager_ListServer) error
+	Group(*TagName, JasperProcessManager_GroupServer) error
+	Get(context.Context, *JasperProcessID) (*ProcessInfo, error)
+	Signal(context.Context, *SignalProcess) (*OperationOutcome, error)
+	Clear(context.Context, *empty.Empty) (*OperationOutcome, error)
+	Close(context.Context, *empty.Empty) (*OperationOutcome, error)
+	WriteFile(JasperProcessManager_WriteFileServer) error
+	// Process functions
+	TagProcess(context.Context, *ProcessTags) (*OperationOutcome, error)
+	ResetTags(context.Context, *JasperProcessID) (*OperationOutcome, error)
+	GetTags(context.Context, *JasperProcessID) (*ProcessTags, error)
+	RegisterSignalTriggerID(context.Context, *SignalTriggerParams) (*OperationOutcome, error)
+	Wait(context.Context, *JasperProcessID) (*OperationOutcome, error)
+	Respawn(context.Context, *JasperProcessID) (*ProcessInfo, error)
+	// scripting.Harness functions
+	ScriptingHarnessSetup(context.Context, *ScriptingHarnessID) (*OperationOutcome, error)
+	ScriptingHarnessCleanup(context.Context, *ScriptingHarnessID) (*OperationOutcome, error)
+	ScriptingHarnessRun(context.Context, *ScriptingHarnessRunArgs) (*OperationOutcome, error)
+	ScriptingHarnessBuild(context.Context, *ScriptingHarnessBuildArgs) (*ScriptingHarnessBuildResponse, error)
+	ScriptingHarnessRunScript(context.Context, *ScriptingHarnessRunScriptArgs) (*OperationOutcome, error)
+	ScriptingHarnessTest(context.Context, *ScriptingHarnessTestArgs) (*ScriptingHarnessTestResponse, error)
+	// LoggingCache functions
+	LoggingCacheCreate(context.Context, *LoggingCacheCreateArgs) (*LoggingCacheInstance, error)
+	LoggingCacheGet(context.Context, *LoggingCacheArgs) (*LoggingCacheInstance, error)
+	LoggingCacheRemove(context.Context, *LoggingCacheArgs) (*OperationOutcome, error)
+	LoggingCacheLen(context.Context, *empty.Empty) (*LoggingCacheSize, error)
+	LoggingCachePrune(context.Context, *timestamp.Timestamp) (*OperationOutcome, error)
+	// Remote specific functions
+	ScriptingHarnessCreate(context.Context, *ScriptingOptions) (*ScriptingHarnessID, error)
+	ScriptingHarnessGet(context.Context, *ScriptingHarnessID) (*OperationOutcome, error)
+	Status(context.Context, *empty.Empty) (*StatusResponse, error)
+	ConfigureCache(context.Context, *CacheOptions) (*OperationOutcome, error)
+	DownloadFile(context.Context, *DownloadInfo) (*OperationOutcome, error)
+	DownloadMongoDB(context.Context, *MongoDBDownloadOptions) (*OperationOutcome, error)
+	GetLogStream(context.Context, *LogRequest) (*LogStream, error)
+	GetBuildloggerURLs(context.Context, *JasperProcessID) (*BuildloggerURLs, error)
+	SignalEvent(context.Context, *EventName) (*OperationOutcome, error)
+	SendMessages(context.Context, *LoggingPayload) (*OperationOutcome, error)
+}
+
+// UnimplementedJasperProcessManagerServer can be embedded to have forward compatible implementations.
+type UnimplementedJasperProcessManagerServer struct {
+}
+
+func (*UnimplementedJasperProcessManagerServer) ID(ctx context.Context, req *empty.Empty) (*IDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ID not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Create(ctx context.Context, req *CreateOptions) (*ProcessInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) List(req *Filter, srv JasperProcessManager_ListServer) error {
+	return status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Group(req *TagName, srv JasperProcessManager_GroupServer) error {
+	return status.Errorf(codes.Unimplemented, "method Group not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Get(ctx context.Context, req *JasperProcessID) (*ProcessInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Signal(ctx context.Context, req *SignalProcess) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Signal not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Clear(ctx context.Context, req *empty.Empty) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Clear not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Close(ctx context.Context, req *empty.Empty) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) WriteFile(srv JasperProcessManager_WriteFileServer) error {
+	return status.Errorf(codes.Unimplemented, "method WriteFile not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) TagProcess(ctx context.Context, req *ProcessTags) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TagProcess not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ResetTags(ctx context.Context, req *JasperProcessID) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetTags not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) GetTags(ctx context.Context, req *JasperProcessID) (*ProcessTags, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTags not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) RegisterSignalTriggerID(ctx context.Context, req *SignalTriggerParams) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterSignalTriggerID not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Wait(ctx context.Context, req *JasperProcessID) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Wait not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Respawn(ctx context.Context, req *JasperProcessID) (*ProcessInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Respawn not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessSetup(ctx context.Context, req *ScriptingHarnessID) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessSetup not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessCleanup(ctx context.Context, req *ScriptingHarnessID) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessCleanup not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessRun(ctx context.Context, req *ScriptingHarnessRunArgs) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessRun not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessBuild(ctx context.Context, req *ScriptingHarnessBuildArgs) (*ScriptingHarnessBuildResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessBuild not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessRunScript(ctx context.Context, req *ScriptingHarnessRunScriptArgs) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessRunScript not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessTest(ctx context.Context, req *ScriptingHarnessTestArgs) (*ScriptingHarnessTestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessTest not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) LoggingCacheCreate(ctx context.Context, req *LoggingCacheCreateArgs) (*LoggingCacheInstance, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoggingCacheCreate not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) LoggingCacheGet(ctx context.Context, req *LoggingCacheArgs) (*LoggingCacheInstance, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoggingCacheGet not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) LoggingCacheRemove(ctx context.Context, req *LoggingCacheArgs) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoggingCacheRemove not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) LoggingCacheLen(ctx context.Context, req *empty.Empty) (*LoggingCacheSize, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoggingCacheLen not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) LoggingCachePrune(ctx context.Context, req *timestamp.Timestamp) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoggingCachePrune not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessCreate(ctx context.Context, req *ScriptingOptions) (*ScriptingHarnessID, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessCreate not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ScriptingHarnessGet(ctx context.Context, req *ScriptingHarnessID) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScriptingHarnessGet not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) Status(ctx context.Context, req *empty.Empty) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) ConfigureCache(ctx context.Context, req *CacheOptions) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfigureCache not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) DownloadFile(ctx context.Context, req *DownloadInfo) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadFile not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) DownloadMongoDB(ctx context.Context, req *MongoDBDownloadOptions) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadMongoDB not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) GetLogStream(ctx context.Context, req *LogRequest) (*LogStream, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLogStream not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) GetBuildloggerURLs(ctx context.Context, req *JasperProcessID) (*BuildloggerURLs, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBuildloggerURLs not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) SignalEvent(ctx context.Context, req *EventName) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SignalEvent not implemented")
+}
+func (*UnimplementedJasperProcessManagerServer) SendMessages(ctx context.Context, req *LoggingPayload) (*OperationOutcome, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessages not implemented")
+}
+
+func RegisterJasperProcessManagerServer(s *grpc.Server, srv JasperProcessManagerServer) {
+	s.RegisterService(&_JasperProcessManager_serviceDesc, srv)
+}
+
+func _JasperProcessManager_ID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ID(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOptions)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Create(ctx, req.(*CreateOptions))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_List_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Filter)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(JasperProcessManagerServer).List(m, &jasperProcessManagerListServer{stream})
+}
+
+type JasperProcessManager_ListServer interface {
+	Send(*ProcessInfo) error
+	grpc.ServerStream
+}
+
+type jasperProcessManagerListServer struct {
+	grpc.ServerStream
+}
+
+func (x *jasperProcessManagerListServer) Send(m *ProcessInfo) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _JasperProcessManager_Group_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(TagName)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(JasperProcessManagerServer).Group(m, &jasperProcessManagerGroupServer{stream})
+}
+
+type JasperProcessManager_GroupServer interface {
+	Send(*ProcessInfo) error
+	grpc.ServerStream
+}
+
+type jasperProcessManagerGroupServer struct {
+	grpc.ServerStream
+}
+
+func (x *jasperProcessManagerGroupServer) Send(m *ProcessInfo) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _JasperProcessManager_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JasperProcessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Get(ctx, req.(*JasperProcessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Signal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignalProcess)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Signal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Signal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Signal(ctx, req.(*SignalProcess))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Clear_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Clear(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Clear",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Clear(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Close_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Close(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Close",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Close(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_WriteFile_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(JasperProcessManagerServer).WriteFile(&jasperProcessManagerWriteFileServer{stream})
+}
+
+type JasperProcessManager_WriteFileServer interface {
+	SendAndClose(*OperationOutcome) error
+	Recv() (*WriteFileInfo, error)
+	grpc.ServerStream
+}
+
+type jasperProcessManagerWriteFileServer struct {
+	grpc.ServerStream
+}
+
+func (x *jasperProcessManagerWriteFileServer) SendAndClose(m *OperationOutcome) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *jasperProcessManagerWriteFileServer) Recv() (*WriteFileInfo, error) {
+	m := new(WriteFileInfo)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _JasperProcessManager_TagProcess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessTags)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).TagProcess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/TagProcess",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).TagProcess(ctx, req.(*ProcessTags))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ResetTags_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JasperProcessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ResetTags(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ResetTags",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ResetTags(ctx, req.(*JasperProcessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_GetTags_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JasperProcessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).GetTags(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/GetTags",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).GetTags(ctx, req.(*JasperProcessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_RegisterSignalTriggerID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignalTriggerParams)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).RegisterSignalTriggerID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/RegisterSignalTriggerID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).RegisterSignalTriggerID(ctx, req.(*SignalTriggerParams))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Wait_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JasperProcessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Wait(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Wait",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Wait(ctx, req.(*JasperProcessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Respawn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JasperProcessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Respawn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Respawn",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Respawn(ctx, req.(*JasperProcessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessSetup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessSetup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessSetup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessSetup(ctx, req.(*ScriptingHarnessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessCleanup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessCleanup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessCleanup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessCleanup(ctx, req.(*ScriptingHarnessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessRunArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessRun(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessRun",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessRun(ctx, req.(*ScriptingHarnessRunArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessBuild_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessBuildArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessBuild(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessBuild",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessBuild(ctx, req.(*ScriptingHarnessBuildArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessRunScript_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessRunScriptArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessRunScript(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessRunScript",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessRunScript(ctx, req.(*ScriptingHarnessRunScriptArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessTestArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessTest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessTest(ctx, req.(*ScriptingHarnessTestArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_LoggingCacheCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoggingCacheCreateArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).LoggingCacheCreate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/LoggingCacheCreate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).LoggingCacheCreate(ctx, req.(*LoggingCacheCreateArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_LoggingCacheGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoggingCacheArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).LoggingCacheGet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/LoggingCacheGet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).LoggingCacheGet(ctx, req.(*LoggingCacheArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_LoggingCacheRemove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoggingCacheArgs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).LoggingCacheRemove(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/LoggingCacheRemove",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).LoggingCacheRemove(ctx, req.(*LoggingCacheArgs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_LoggingCacheLen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).LoggingCacheLen(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/LoggingCacheLen",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).LoggingCacheLen(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_LoggingCachePrune_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(timestamp.Timestamp)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).LoggingCachePrune(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/LoggingCachePrune",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).LoggingCachePrune(ctx, req.(*timestamp.Timestamp))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingOptions)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessCreate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessCreate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessCreate(ctx, req.(*ScriptingOptions))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ScriptingHarnessGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ScriptingHarnessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessGet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ScriptingHarnessGet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ScriptingHarnessGet(ctx, req.(*ScriptingHarnessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/Status",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).Status(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_ConfigureCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheOptions)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).ConfigureCache(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/ConfigureCache",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).ConfigureCache(ctx, req.(*CacheOptions))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_DownloadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadInfo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).DownloadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/DownloadFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).DownloadFile(ctx, req.(*DownloadInfo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_DownloadMongoDB_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MongoDBDownloadOptions)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).DownloadMongoDB(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/DownloadMongoDB",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).DownloadMongoDB(ctx, req.(*MongoDBDownloadOptions))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_GetLogStream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).GetLogStream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/GetLogStream",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).GetLogStream(ctx, req.(*LogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_GetBuildloggerURLs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JasperProcessID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).GetBuildloggerURLs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/GetBuildloggerURLs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).GetBuildloggerURLs(ctx, req.(*JasperProcessID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_SignalEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EventName)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).SignalEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/SignalEvent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).SignalEvent(ctx, req.(*EventName))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JasperProcessManager_SendMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoggingPayload)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JasperProcessManagerServer).SendMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/jasper.JasperProcessManager/SendMessages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JasperProcessManagerServer).SendMessages(ctx, req.(*LoggingPayload))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _JasperProcessManager_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "jasper.JasperProcessManager",
+	HandlerType: (*JasperProcessManagerServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ID",
+			Handler:    _JasperProcessManager_ID_Handler,
+		},
+		{
+			MethodName: "Create",
+			Handler:    _JasperProcessManager_Create_Handler,
+		},
+		{
+			MethodName: "Get",
+			Handler:    _JasperProcessManager_Get_Handler,
+		},
+		{
+			MethodName: "Signal",
+			Handler:    _JasperProcessManager_Signal_Handler,
+		},
+		{
+			MethodName: "Clear",
+			Handler:    _JasperProcessManager_Clear_Handler,
+		},
+		{
+			MethodName: "Close",
+			Handler:    _JasperProcessManager_Close_Handler,
+		},
+		{
+			MethodName: "TagProcess",
+			Handler:    _JasperProcessManager_TagProcess_Handler,
+		},
+		{
+			MethodName: "ResetTags",
+			Handler:    _JasperProcessManager_ResetTags_Handler,
+		},
+		{
+			MethodName: "GetTags",
+			Handler:    _JasperProcessManager_GetTags_Handler,
+		},
+		{
+			MethodName: "RegisterSignalTriggerID",
+			Handler:    _JasperProcessManager_RegisterSignalTriggerID_Handler,
+		},
+		{
+			MethodName: "Wait",
+			Handler:    _JasperProcessManager_Wait_Handler,
+		},
+		{
+			MethodName: "Respawn",
+			Handler:    _JasperProcessManager_Respawn_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessSetup",
+			Handler:    _JasperProcessManager_ScriptingHarnessSetup_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessCleanup",
+			Handler:    _JasperProcessManager_ScriptingHarnessCleanup_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessRun",
+			Handler:    _JasperProcessManager_ScriptingHarnessRun_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessBuild",
+			Handler:    _JasperProcessManager_ScriptingHarnessBuild_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessRunScript",
+			Handler:    _JasperProcessManager_ScriptingHarnessRunScript_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessTest",
+			Handler:    _JasperProcessManager_ScriptingHarnessTest_Handler,
+		},
+		{
+			MethodName: "LoggingCacheCreate",
+			Handler:    _JasperProcessManager_LoggingCacheCreate_Handler,
+		},
+		{
+			MethodName: "LoggingCacheGet",
+			Handler:    _JasperProcessManager_LoggingCacheGet_Handler,
+		},
+		{
+			MethodName: "LoggingCacheRemove",
+			Handler:    _JasperProcessManager_LoggingCacheRemove_Handler,
+		},
+		{
+			MethodName: "LoggingCacheLen",
+			Handler:    _JasperProcessManager_LoggingCacheLen_Handler,
+		},
+		{
+			MethodName: "LoggingCachePrune",
+			Handler:    _JasperProcessManager_LoggingCachePrune_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessCreate",
+			Handler:    _JasperProcessManager_ScriptingHarnessCreate_Handler,
+		},
+		{
+			MethodName: "ScriptingHarnessGet",
+			Handler:    _JasperProcessManager_ScriptingHarnessGet_Handler,
+		},
+		{
+			MethodName: "Status",
+			Handler:    _JasperProcessManager_Status_Handler,
+		},
+		{
+			MethodName: "ConfigureCache",
+			Handler:    _JasperProcessManager_ConfigureCache_Handler,
+		},
+		{
+			MethodName: "DownloadFile",
+			Handler:    _JasperProcessManager_DownloadFile_Handler,
+		},
+		{
+			MethodName: "DownloadMongoDB",
+			Handler:    _JasperProcessManager_DownloadMongoDB_Handler,
+		},
+		{
+			MethodName: "GetLogStream",
+			Handler:    _JasperProcessManager_GetLogStream_Handler,
+		},
+		{
+			MethodName: "GetBuildloggerURLs",
+			Handler:    _JasperProcessManager_GetBuildloggerURLs_Handler,
+		},
+		{
+			MethodName: "SignalEvent",
+			Handler:    _JasperProcessManager_SignalEvent_Handler,
+		},
+		{
+			MethodName: "SendMessages",
+			Handler:    _JasperProcessManager_SendMessages_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "List",
+			Handler:       _JasperProcessManager_List_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Group",
+			Handler:       _JasperProcessManager_Group_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WriteFile",
+			Handler:       _JasperProcessManager_WriteFile_Handler,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "jasper.proto",
 }
