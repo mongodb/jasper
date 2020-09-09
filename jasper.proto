@@ -386,12 +386,12 @@ message ScriptingHarnessTestResponse {
 }
 
 message LoggingCacheCreateArgs {
-  string name = 1;
+  string id = 1;
   OutputOptions options = 2;
 }
 
 message LoggingCacheArgs {
-  string name = 1;
+  string id = 1;
 }
 
 message LoggingCacheInstance {
