@@ -56,7 +56,7 @@ imports:
   - name: github.com/godbus/dbus
     version: f93dedc6ceb4596891d18bae4a2adf9258f0acfb
   - name: github.com/gogo/protobuf
-    version: 5628607bb4c51c3157aacc3a50f0ab707582b805
+    version: 382325bbbb4d1c850eec1f3ec92a1a16f502d68b
 
   # grpc and dependencies
   - name: google.golang.org/grpc
@@ -70,9 +70,9 @@ imports:
   - name: golang.org/x/text
     version: 6c92c7dc7f53607809182301b96e4cc1975143f1
   - name: google.golang.org/genproto
-    version: 2dc5924e38981f069b4982c6eb2b72365efd00a7
+    version: 082222b4a5c572e33e82ee9162d1352c7cf38682
   - name: github.com/golang/protobuf
-    version: d23c5127dc24889085f8ccea5c9d560a57a879d8
+    version: c823c79ea1570fb5ff454033735a8e68575d1d0f
   # vendoring because many dependencies use it
   - name: go.mongodb.org/mongo-driver
     version: 305bc4a5e4131420fe8ba5628e6faa9e6ade4e86
