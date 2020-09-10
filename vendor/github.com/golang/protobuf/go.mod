@@ -1,8 +1,7 @@
 module github.com/golang/protobuf
 
-go 1.9
-
 require (
-	github.com/google/go-cmp v0.4.0
-	google.golang.org/protobuf v1.23.0
+	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd // indirect
+	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
+	google.golang.org/genproto v0.0.0-20180831171423-11092d34479b
 )
