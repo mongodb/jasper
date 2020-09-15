@@ -124,8 +124,6 @@ func (s *mdbService) scriptingTest(ctx context.Context, w io.Writer, msg mongowi
 		return
 	}
 	results, err := harness.Test(ctx, req.Params.Dir, req.Params.Options...)
-	// Test can return both test results and a non-nil error, particularly for
-	// failed test cases.
 	s.serviceScriptingResponse(ctx, w, makeScriptingTestResponse(results, err), ScriptingTestCommand)
 }
 

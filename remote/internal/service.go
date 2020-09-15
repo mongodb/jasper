@@ -648,9 +648,7 @@ func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *Scriptin
 	}
 
 	res, err := se.Test(ctx, args.Directory, exportedArgs...)
-	// Test can return both test results and a non-nil error, particularly for
-	// failed test cases.
-	var testErr error
+t	var testErr error
 	if err != nil {
 		testErr = err
 	}
