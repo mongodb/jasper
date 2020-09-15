@@ -8,26 +8,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-// sshClientScriptingHarness is the client-side representation of a
+// sshScriptingHarness is the client-side representation of a
 // scripting.Harness for making requests to remote services via the CLI over
 // SSH.
-type sshClientScriptingHarness struct {
+type sshScriptingHarness struct {
 	ctx    context.Context
 	id     string
 	client *sshRunner
 }
 
-func newSSHClientScriptingHarness(ctx context.Context, client *sshRunner, id string) *sshClientScriptingHarness {
-	return &sshClientScriptingHarness{
+func newSSHScriptingHarness(ctx context.Context, client *sshRunner, id string) *sshScriptingHarness {
+	return &sshScriptingHarness{
 		ctx:    ctx,
 		id:     id,
 		client: client,
 	}
 }
 
-func (s *sshClientScriptingHarness) ID() string { return s.id }
+func (s *sshScriptingHarness) ID() string { return s.id }
 
-func (s *sshClientScriptingHarness) Setup(ctx context.Context) error {
+func (s *sshScriptingHarness) Setup(ctx context.Context) error {
 	output, err := s.runCommand(s.ctx, ScriptingSetupCommand, IDInput{ID: s.id})
 	if err != nil {
 		return errors.Wrap(err, "running command")
@@ -40,7 +40,7 @@ func (s *sshClientScriptingHarness) Setup(ctx context.Context) error {
 	return nil
 }
 
-func (s *sshClientScriptingHarness) Run(ctx context.Context, args []string) error {
+func (s *sshScriptingHarness) Run(ctx context.Context, args []string) error {
 	output, err := s.runCommand(s.ctx, ScriptingRunCommand, ScriptingRunInput{ID: s.id, Args: args})
 	if err != nil {
 		return errors.Wrap(err, "running command")
@@ -53,7 +53,7 @@ func (s *sshClientScriptingHarness) Run(ctx context.Context, args []string) erro
 	return nil
 }
 
-func (s *sshClientScriptingHarness) RunScript(ctx context.Context, script string) error {
+func (s *sshScriptingHarness) RunScript(ctx context.Context, script string) error {
 	output, err := s.runCommand(s.ctx, ScriptingRunScriptCommand, ScriptingRunScriptInput{ID: s.id, Script: script})
 	if err != nil {
 		return errors.Wrap(err, "running command")
@@ -66,7 +66,7 @@ func (s *sshClientScriptingHarness) RunScript(ctx context.Context, script string
 	return nil
 }
 
-func (s *sshClientScriptingHarness) Build(ctx context.Context, dir string, args []string) (string, error) {
+func (s *sshScriptingHarness) Build(ctx context.Context, dir string, args []string) (string, error) {
 	output, err := s.runCommand(s.ctx, ScriptingBuildCommand, ScriptingBuildInput{
 		ID:        s.id,
 		Directory: dir,
@@ -84,8 +84,8 @@ func (s *sshClientScriptingHarness) Build(ctx context.Context, dir string, args 
 	return resp.Path, nil
 }
 
-func (s *sshClientScriptingHarness) Test(ctx context.Context, dir string, opts ...scripting.TestOptions) ([]scripting.TestResult, error) {
-	output, err := s.runCommand(s.ctx, ScriptingCleanupCommand, ScriptingTestInput{
+func (s *sshScriptingHarness) Test(ctx context.Context, dir string, opts ...scripting.TestOptions) ([]scripting.TestResult, error) {
+	output, err := s.runCommand(s.ctx, ScriptingTestCommand, ScriptingTestInput{
 		ID:        s.id,
 		Directory: dir,
 		Options:   opts,
@@ -101,7 +101,7 @@ func (s *sshClientScriptingHarness) Test(ctx context.Context, dir string, opts .
 	return resp.Results, nil
 }
 
-func (s *sshClientScriptingHarness) Cleanup(ctx context.Context) error {
+func (s *sshScriptingHarness) Cleanup(ctx context.Context) error {
 	output, err := s.runCommand(s.ctx, ScriptingCleanupCommand, IDInput{ID: s.id})
 	if err != nil {
 		return errors.Wrap(err, "running command")
@@ -113,6 +113,6 @@ func (s *sshClientScriptingHarness) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-func (s *sshClientScriptingHarness) runCommand(ctx context.Context, scriptingSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
+func (s *sshScriptingHarness) runCommand(ctx context.Context, scriptingSubcommand string, subcommandInput interface{}) (json.RawMessage, error) {
 	return s.client.runClientCommand(ctx, []string{ScriptingCommand, scriptingSubcommand}, subcommandInput)
 }
