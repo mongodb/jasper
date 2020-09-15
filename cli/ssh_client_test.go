@@ -590,7 +590,8 @@ func TestSSHClient(t *testing.T) {
 				resp,
 			)
 
-			opts := loggingCacheOutputOptions(t)
+			opts, err := testutil.ValidLoggingCacheOutputOptions()
+			require.NoError(t, err)
 			logger, err := lc.Create(resp.Logger.ID, &opts)
 			require.NoError(t, err)
 			assert.Equal(t, resp.Logger.ID, logger.ID)
@@ -607,7 +608,8 @@ func TestSSHClient(t *testing.T) {
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
 
-			opts := loggingCacheOutputOptions(t)
+			opts, err := testutil.ValidLoggingCacheOutputOptions()
+			require.NoError(t, err)
 			logger, err := lc.Create("id", &opts)
 			assert.Error(t, err)
 			assert.Zero(t, logger)
@@ -618,7 +620,8 @@ func TestSSHClient(t *testing.T) {
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
 
-			opts := loggingCacheOutputOptions(t)
+			opts, err := testutil.ValidLoggingCacheOutputOptions()
+			require.NoError(t, err)
 			logger, err := lc.Create("id", &opts)
 			assert.Error(t, err)
 			assert.Zero(t, logger)
