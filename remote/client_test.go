@@ -1345,6 +1345,7 @@ func TestManagerImplementations(t *testing.T) {
 								results, err := harness.Test(ctx, tmpDir, scripting.TestOptions{Name: "dummy"})
 								require.NoError(t, err)
 								require.Len(t, results, 1)
+								assert.Equal(t, scripting.TestOutcomeSuccess, results[0].Outcome)
 							},
 						},
 						clientTestCase{
@@ -1361,7 +1362,8 @@ func TestManagerImplementations(t *testing.T) {
 								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangTestFail()), 0755))
 								results, err := harness.Test(ctx, tmpDir, scripting.TestOptions{Name: "dummy"})
 								assert.Error(t, err)
-								assert.Empty(t, results)
+								require.Len(t, results, 1)
+								assert.Equal(t, scripting.TestOutcomeFailure, results[0].Outcome)
 							},
 						},
 					) {
