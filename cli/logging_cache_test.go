@@ -60,7 +60,7 @@ func TestCLILoggingCache(t *testing.T) {
 					input, err := json.Marshal(IDInput{})
 					require.NoError(t, err)
 					resp := &CachedLoggerResponse{}
-					require.NoError(t, execCLICommandInputOutput(t, c, loggingCacheGet(), input, resp))
+					assert.Error(t, execCLICommandInputOutput(t, c, loggingCacheGet(), input, resp))
 					assert.False(t, resp.Successful())
 				},
 				"GetWithNonexistentIDFails": func(ctx context.Context, t *testing.T, c *cli.Context) {
@@ -150,14 +150,21 @@ func TestCLILoggingCache(t *testing.T) {
 	}
 }
 
+// validLoggingCacheOptions returns valid options for creating a cached logger.
+func validLoggingCacheOptions(t *testing.T) options.Output {
+	logger, err := jasper.NewInMemoryLogger(100)
+	require.NoError(t, err)
+	return options.Output{
+		Loggers: []*options.LoggerConfig{logger},
+	}
+}
+
 // createCachedLoggerFromCLI creates a cached logger on a remote service using
 // the CLI.
 func createCachedLoggerFromCLI(t *testing.T, c *cli.Context, id string) options.CachedLogger {
-	opts, err := testutil.ValidLoggingCacheOutputOptions()
-	require.NoError(t, err)
 	input, err := json.Marshal(LoggingCacheCreateInput{
 		ID:     id,
-		Output: opts,
+		Output: validLoggingCacheOptions(t),
 	})
 	require.NoError(t, err)
 	resp := &CachedLoggerResponse{}

@@ -1240,7 +1240,7 @@ func TestManagerImplementations(t *testing.T) {
 
 								require.NoError(t, err)
 								tmpFile := filepath.Join(tmpDir, "fake_script.go")
-								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess()), 0755))
 								assert.NoError(t, harness.Run(ctx, []string{tmpFile}))
 							},
 						},
@@ -1255,7 +1255,7 @@ func TestManagerImplementations(t *testing.T) {
 								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 								tmpFile := filepath.Join(tmpDir, "fake_script.go")
-								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(42) }`), 0755))
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainFail()), 0755))
 								assert.Error(t, harness.Run(ctx, []string{tmpFile}))
 							},
 						},
@@ -1268,7 +1268,7 @@ func TestManagerImplementations(t *testing.T) {
 									assert.NoError(t, os.RemoveAll(tmpDir))
 								}()
 								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
-								assert.NoError(t, harness.RunScript(ctx, `package main; import "fmt"; func main() { fmt.Println("Hello World") }`))
+								assert.NoError(t, harness.RunScript(ctx, testutil.GolangMainSuccess()))
 							},
 						},
 						clientTestCase{
@@ -1281,7 +1281,7 @@ func TestManagerImplementations(t *testing.T) {
 								}()
 
 								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
-								require.Error(t, harness.RunScript(ctx, `package main; import "os"; func main() { os.Exit(42) }`))
+								require.Error(t, harness.RunScript(ctx, testutil.GolangMainFail()))
 							},
 						},
 						clientTestCase{
@@ -1295,15 +1295,39 @@ func TestManagerImplementations(t *testing.T) {
 								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 								tmpFile := filepath.Join(tmpDir, "fake_script.go")
-								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess()), 0755))
+								buildFile := filepath.Join(tmpDir, "fake_script")
 								_, err = harness.Build(ctx, tmpDir, []string{
 									"-o",
-									filepath.Join(tmpDir, "fake_script"),
+									buildFile,
 									tmpFile,
 								})
 								require.NoError(t, err)
-								_, err = os.Stat(filepath.Join(tmpFile))
+								_, err = os.Stat(buildFile)
 								require.NoError(t, err)
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingBuildErrors",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpDir))
+								}()
+								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
+
+								tmpFile := filepath.Join(tmpDir, "fake_script.go")
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; func main() { "bad syntax" }`), 0755))
+								buildFile := filepath.Join(tmpDir, "fake_script")
+								_, err = harness.Build(ctx, tmpDir, []string{
+									"-o",
+									buildFile,
+									tmpFile,
+								})
+								require.Error(t, err)
+								_, err = os.Stat(buildFile)
+								assert.Error(t, err)
 							},
 						},
 						clientTestCase{
@@ -1317,10 +1341,27 @@ func TestManagerImplementations(t *testing.T) {
 								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 								tmpFile := filepath.Join(tmpDir, "fake_script_test.go")
-								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "testing"; func TestMain(t *testing.T) { return }`), 0755))
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangTestSuccess()), 0755))
 								results, err := harness.Test(ctx, tmpDir, scripting.TestOptions{Name: "dummy"})
 								require.NoError(t, err)
 								require.Len(t, results, 1)
+							},
+						},
+						clientTestCase{
+							Name: "ScriptingTestErrors",
+							Case: func(ctx context.Context, t *testing.T, client Manager) {
+								tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+								require.NoError(t, err)
+								defer func() {
+									assert.NoError(t, os.RemoveAll(tmpDir))
+								}()
+								harness := createTestScriptingHarness(ctx, t, client, tmpDir)
+
+								tmpFile := filepath.Join(tmpDir, "fake_script_test.go")
+								require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangTestFail()), 0755))
+								results, err := harness.Test(ctx, tmpDir, scripting.TestOptions{Name: "dummy"})
+								assert.Error(t, err)
+								assert.Empty(t, results)
 							},
 						},
 					) {

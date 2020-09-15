@@ -519,13 +519,13 @@ func TestSSHClient(t *testing.T) {
 				&inputChecker,
 				resp,
 			)
-			sh, err := client.CreateScripting(ctx, testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory()))
+			sh, err := client.CreateScripting(ctx, testutil.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory()))
 			require.NoError(t, err)
 			assert.Equal(t, resp.ID, sh.ID())
 		},
 		"CreateScriptingFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
 			baseManager.FailCreate = true
-			sh, err := client.CreateScripting(ctx, testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory()))
+			sh, err := client.CreateScripting(ctx, testutil.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory()))
 			assert.Error(t, err)
 			assert.Zero(t, sh)
 		},
@@ -536,7 +536,7 @@ func TestSSHClient(t *testing.T) {
 				nil,
 				invalidResponse(),
 			)
-			sh, err := client.CreateScripting(ctx, testutil.ValidScriptingHarnessOptions(testutil.BuildDirectory()))
+			sh, err := client.CreateScripting(ctx, testutil.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory()))
 			assert.Error(t, err)
 			assert.Zero(t, sh)
 		},
@@ -590,8 +590,7 @@ func TestSSHClient(t *testing.T) {
 				resp,
 			)
 
-			opts, err := testutil.ValidLoggingCacheOutputOptions()
-			require.NoError(t, err)
+			opts := validLoggingCacheOptions(t)
 			logger, err := lc.Create(resp.Logger.ID, &opts)
 			require.NoError(t, err)
 			assert.Equal(t, resp.Logger.ID, logger.ID)
@@ -608,8 +607,7 @@ func TestSSHClient(t *testing.T) {
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
 
-			opts, err := testutil.ValidLoggingCacheOutputOptions()
-			require.NoError(t, err)
+			opts := validLoggingCacheOptions(t)
 			logger, err := lc.Create("id", &opts)
 			assert.Error(t, err)
 			assert.Zero(t, logger)
@@ -620,8 +618,7 @@ func TestSSHClient(t *testing.T) {
 			lc := client.LoggingCache(ctx)
 			require.NotNil(t, lc)
 
-			opts, err := testutil.ValidLoggingCacheOutputOptions()
-			require.NoError(t, err)
+			opts := validLoggingCacheOptions(t)
 			logger, err := lc.Create("id", &opts)
 			assert.Error(t, err)
 			assert.Zero(t, logger)

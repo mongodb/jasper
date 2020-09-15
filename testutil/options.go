@@ -2,13 +2,12 @@ package testutil
 
 import (
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/evergreen-ci/bond"
-	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/pkg/errors"
 )
 
 // YesCreateOpts creates the options to run the "yes" command for the given
@@ -63,25 +62,25 @@ func ValidMongoDBDownloadOptions() options.MongoDBDownload {
 	}
 }
 
-// ValidScriptingHarnessOptions returns valid options for creating a Python
-// scripting environment.
-func ValidScriptingHarnessOptions(dir string) options.ScriptingHarness {
+// ValidPythonScriptingHarnessOptions returns valid options for creating a
+// Python scripting environment.
+func ValidPythonScriptingHarnessOptions(dir string) options.ScriptingHarness {
 	return &options.ScriptingPython{
 		VirtualEnvPath: dir,
 		Packages:       []string{"requests"},
 	}
 }
 
-// ValidLoggingCacheOutputOptions returns valid options for creating a cached
-// logger.
-func ValidLoggingCacheOutputOptions() (options.Output, error) {
-	var opts options.Output
-	logger, err := jasper.NewInMemoryLogger(100)
-	if err != nil {
-		return opts, errors.WithStack(err)
+// ValidGolangScriptingHarnessOptions returns valid options for creating a
+// Golang scripting environment.
+func ValidGolangScriptingHarnessOptions(dir string) options.ScriptingHarness {
+	return &options.ScriptingGolang{
+		Gopath: filepath.Join(dir, "gopath"),
+		Goroot: runtime.GOROOT(),
+		Packages: []string{
+			"github.com/pkg/errors",
+		},
 	}
-	opts.Loggers = []*options.LoggerConfig{logger}
-	return opts, nil
 }
 
 // OptsModify functions mutate creation options for tests.
