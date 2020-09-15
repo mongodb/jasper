@@ -647,8 +647,8 @@ func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *Scriptin
 		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "exporting arguments"))
 	}
 
+	var testErr error
 	res, err := se.Test(ctx, args.Directory, exportedArgs...)
-t	var testErr error
 	if err != nil {
 		testErr = err
 	}
