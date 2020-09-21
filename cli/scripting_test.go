@@ -106,7 +106,7 @@ func TestCLIScripting(t *testing.T) {
 					id := createScriptingFromCLI(t, c, testutil.ValidGolangScriptingHarnessOptions(tmpDir))
 					setupScriptingFromCLI(t, c, id)
 					tmpFile := filepath.Join(tmpDir, "main.go")
-					require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+					require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess())))
 					input, err := json.Marshal(ScriptingBuildInput{
 						ID:        id,
 						Directory: tmpDir,
