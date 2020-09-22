@@ -363,9 +363,9 @@ type scriptingTestResponse struct {
 	Results             []scripting.TestResult
 }
 
-func makeScriptingTestResponse(results []scripting.TestResult) *scriptingTestResponse {
+func makeScriptingTestResponse(results []scripting.TestResult, err error) *scriptingTestResponse {
 	return &scriptingTestResponse{
-		ErrorResponse: shell.MakeSuccessResponse(),
 		Results:       results,
+		ErrorResponse: shell.MakeErrorResponse(true, err),
 	}
 }
