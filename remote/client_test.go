@@ -1171,7 +1171,7 @@ func TestManagerImplementations(t *testing.T) {
 						clientTestCase{
 							Name: "SendMessagesSucceeds",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
-								if runtime.GOOS == "window" {
+								if runtime.GOOS == "windows" {
 									// TODO (EVG-13101): do not skip this test
 									t.Skip("Windows will fail because of the leaked file handle from not closing the sender in the remote service")
 								}
