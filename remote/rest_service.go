@@ -847,7 +847,7 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem creating loggers").Error(),
+			Message:    errors.Wrap(err, "problem creating logger").Error(),
 		})
 		return
 	}
