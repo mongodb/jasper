@@ -252,8 +252,8 @@ type loggingCacheSizeResponse struct {
 
 type loggingCacheCreateRequest struct {
 	Params struct {
-		ID      string          `bson:"id"`
-		Options *options.Output `bson:"options"`
+		ID      string         `bson:"id"`
+		Options options.Output `bson:"options"`
 	} `bson:"logging_cache_create"`
 }
 
@@ -267,11 +267,11 @@ type loggingCacheRemoveRequest struct {
 
 type loggingCacheCreateAndGetResponse struct {
 	shell.ErrorResponse `bson:"error_response,inline"`
-	CachedLogger        *options.CachedLogger `bson:"cached_logger"`
+	CachedLogger        options.CachedLogger `bson:"cached_logger"`
 }
 
-func makeLoggingCacheCreateAndGetResponse(l *options.CachedLogger) *loggingCacheCreateAndGetResponse {
-	return &loggingCacheCreateAndGetResponse{
+func makeLoggingCacheCreateAndGetResponse(l options.CachedLogger) loggingCacheCreateAndGetResponse {
+	return loggingCacheCreateAndGetResponse{
 		ErrorResponse: shell.MakeSuccessResponse(),
 		CachedLogger:  l,
 	}
