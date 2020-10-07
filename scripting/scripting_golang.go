@@ -45,11 +45,9 @@ func (e *golangEnvironment) Setup(ctx context.Context) error {
 		}
 	}
 
-	cmd.PostHook(func(res error) error {
-		if res == nil {
-			e.isConfigured = true
-		}
-		return nil
+	cmd.PostHook(func(err error) error {
+		e.isConfigured = err == nil
+		return err
 	})
 
 	return cmd.SetOutputOptions(e.opts.Output).Run(ctx)

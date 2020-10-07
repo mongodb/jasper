@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ func TestScripting(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for _, test := range []clientTestCase{
 				{
-					Name: "ScriptingSetupSucceeds",
+					Name: "SetupSucceeds",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -36,7 +37,22 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingCleanupSucceeds",
+					Name: "SetupFails",
+					Case: func(ctx context.Context, t *testing.T, client Manager) {
+						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+						require.NoError(t, err)
+						defer func() {
+							assert.NoError(t, os.RemoveAll(tmpDir))
+						}()
+						pp.Println(tmpDir)
+						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
+						require.NoError(t, os.Chmod(tmpDir, 0111))
+						assert.Error(t, harness.Setup(ctx))
+						require.NoError(t, os.Chmod(tmpDir, 0777))
+					},
+				},
+				{
+					Name: "CleanupSucceeds",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -48,7 +64,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingRunSucceeds",
+					Name: "RunSucceeds",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -64,7 +80,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingRunErrors",
+					Name: "RunFails",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -79,7 +95,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingRunScriptSucceeds",
+					Name: "RunScriptSucceeds",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -91,7 +107,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingRunScriptErrors",
+					Name: "RunScriptFails",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -104,7 +120,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingBuildSucceeds",
+					Name: "BuildSucceeds",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -127,7 +143,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingBuildErrors",
+					Name: "BuildFails",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -150,7 +166,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingTestSucceeds",
+					Name: "TestSucceeds",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
@@ -168,7 +184,7 @@ func TestScripting(t *testing.T) {
 					},
 				},
 				{
-					Name: "ScriptingTestErrors",
+					Name: "TestFails",
 					Case: func(ctx context.Context, t *testing.T, client Manager) {
 						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 						require.NoError(t, err)
