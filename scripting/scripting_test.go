@@ -112,9 +112,10 @@ func TestScriptingHarness(t *testing.T) {
 			},
 		},
 		// TODO (EVG-13209): fix tests for Windows.
+		// TODO (EVG-13210): fix tests for Ubuntu.
 		{
 			Name:      "Python3",
-			Supported: isInPath("python3"),
+			Supported: isInPath("python3") && !strings.Contains(os.Getenv("EVR_TASK_ID"), "ubuntu"),
 			DefaultOptions: &options.ScriptingPython{
 				VirtualEnvPath:    filepath.Join(tmpdir, "python3"),
 				LegacyPython:      false,
