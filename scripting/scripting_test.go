@@ -154,9 +154,10 @@ func TestScriptingHarness(t *testing.T) {
 			},
 		},
 		// TODO (EVG-13209): fix tests for Windows.
+		// TODO (EVG-13212): fix tests for Arch (race detector).
 		{
 			Name:      "Python2",
-			Supported: isInPath("python2") && runtime.GOOS != "windows",
+			Supported: isInPath("python2") && runtime.GOOS != "windows" && !strings.Contains(os.Getenv("EVR_TASK_ID"), "race"),
 			DefaultOptions: &options.ScriptingPython{
 				VirtualEnvPath:    filepath.Join(tmpdir, "python2"),
 				LegacyPython:      true,
@@ -168,7 +169,7 @@ func TestScriptingHarness(t *testing.T) {
 				{
 					Name: "Options",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						require.True(t, strings.HasSuffix(opts.Interpreter(), "python"))
+						require.True(t, strings.HasSuffix(opts.Interpreter(), "python2"))
 						require.NotZero(t, opts.ID())
 					},
 				},

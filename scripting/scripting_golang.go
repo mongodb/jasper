@@ -48,6 +48,7 @@ func (e *golangEnvironment) Setup(ctx context.Context) error {
 	if err := cmd.SetOutputOptions(e.opts.Output).Run(ctx); err != nil {
 		return errors.Wrap(err, "setup")
 	}
+	e.isConfigured = true
 
 	return nil
 }
