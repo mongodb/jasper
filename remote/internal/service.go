@@ -533,7 +533,7 @@ func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *Script
 
 	sh, err := s.scripting.Create(s.manager, xopts)
 	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "generating scripting environment"))
+		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "generating scripting harness"))
 	}
 
 	return &ScriptingHarnessID{Id: sh.ID()}, nil
