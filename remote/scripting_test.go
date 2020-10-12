@@ -9,6 +9,7 @@ import (
 
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,6 +17,15 @@ import (
 type scriptingTestCase struct {
 	Name string
 	Case func(ctx context.Context, t *testing.T, client Manager, tmpDir string)
+}
+
+func recursiveChmod(path string, perm os.FileMode) error {
+	return filepath.Walk(path, func(file string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.Wrap(err, file)
+		}
+		return os.Chmod(file, perm)
+	})
 }
 
 func TestScripting(t *testing.T) {
@@ -39,9 +49,9 @@ func TestScripting(t *testing.T) {
 					Name: "SetupFails",
 					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
-						require.NoError(t, os.Chmod(tmpDir, 0111))
+						require.NoError(t, recursiveChmod(tmpDir, 0555))
 						assert.Error(t, harness.Setup(ctx))
-						require.NoError(t, os.Chmod(tmpDir, 0777))
+						require.NoError(t, recursiveChmod(tmpDir, 0777))
 					},
 				},
 				{
@@ -56,9 +66,9 @@ func TestScripting(t *testing.T) {
 					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						require.NoError(t, harness.Setup(ctx))
-						require.NoError(t, os.Chmod(tmpDir, 0111))
+						require.NoError(t, recursiveChmod(tmpDir, 0555))
 						assert.Error(t, harness.Cleanup(ctx))
-						require.NoError(t, os.Chmod(tmpDir, 0777))
+						require.NoError(t, recursiveChmod(tmpDir, 0777))
 					},
 				},
 				{
