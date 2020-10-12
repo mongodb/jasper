@@ -40,7 +40,7 @@ func TestScripting(t *testing.T) {
 					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						require.NoError(t, os.Chmod(tmpDir, 0111))
-						require.Error(t, harness.Setup(ctx))
+						assert.Error(t, harness.Setup(ctx))
 						require.NoError(t, os.Chmod(tmpDir, 0777))
 					},
 				},
@@ -57,7 +57,7 @@ func TestScripting(t *testing.T) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						require.NoError(t, harness.Setup(ctx))
 						require.NoError(t, os.Chmod(tmpDir, 0111))
-						require.Error(t, harness.Cleanup(ctx))
+						assert.Error(t, harness.Cleanup(ctx))
 						require.NoError(t, os.Chmod(tmpDir, 0777))
 					},
 				},
