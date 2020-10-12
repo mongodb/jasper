@@ -169,7 +169,7 @@ func TestScriptingHarness(t *testing.T) {
 				{
 					Name: "Options",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						require.True(t, strings.HasSuffix(opts.Interpreter(), "python2"))
+						require.True(t, strings.HasSuffix(opts.Interpreter(), "python"))
 						require.NotZero(t, opts.ID())
 					},
 				},

@@ -50,6 +50,12 @@ func TestScripting(t *testing.T) {
 					assert.NoError(t, harness.Cleanup(ctx))
 				},
 				"CleanupFails": func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
+					if os.Geteuid() == 0 {
+						t.Skip("running as root will prevent setup from failing")
+					}
+					if runtime.GOOS == "windows" {
+						t.Skip("chmod does not work on Windows")
+					}
 					harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 					require.NoError(t, harness.Setup(ctx))
 					require.NoError(t, os.Chmod(tmpDir, 0555))
