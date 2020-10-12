@@ -7,12 +7,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/k0kubun/pp"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type scriptingTestCase struct {
+	Name string
+	Case func(ctx context.Context, t *testing.T, client Manager, tmpDir string)
+}
 
 func TestScripting(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -23,57 +27,44 @@ func TestScripting(t *testing.T) {
 
 	for managerName, makeManager := range remoteManagerTestCases(httpClient) {
 		t.Run(managerName, func(t *testing.T) {
-			for _, test := range []clientTestCase{
+			for _, test := range []scriptingTestCase{
 				{
 					Name: "SetupSucceeds",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						assert.NoError(t, harness.Setup(ctx))
 					},
 				},
 				{
 					Name: "SetupFails",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
-						pp.Println(tmpDir)
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						require.NoError(t, os.Chmod(tmpDir, 0111))
-						assert.Error(t, harness.Setup(ctx))
+						require.Error(t, harness.Setup(ctx))
 						require.NoError(t, os.Chmod(tmpDir, 0777))
 					},
 				},
 				{
 					Name: "CleanupSucceeds",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						assert.NoError(t, harness.Cleanup(ctx))
 					},
 				},
 				{
-					Name: "RunSucceeds",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Name: "CleanupFails",
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
-
-						require.NoError(t, err)
+						require.NoError(t, harness.Setup(ctx))
+						require.NoError(t, os.Chmod(tmpDir, 0111))
+						require.Error(t, harness.Cleanup(ctx))
+						require.NoError(t, os.Chmod(tmpDir, 0777))
+					},
+				},
+				{
+					Name: "RunSucceeds",
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
+						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						tmpFile := filepath.Join(tmpDir, "fake_script.go")
 						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess()), 0755))
 						assert.NoError(t, harness.Run(ctx, []string{tmpFile}))
@@ -81,12 +72,7 @@ func TestScripting(t *testing.T) {
 				},
 				{
 					Name: "RunFails",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 						tmpFile := filepath.Join(tmpDir, "fake_script.go")
@@ -96,24 +82,14 @@ func TestScripting(t *testing.T) {
 				},
 				{
 					Name: "RunScriptSucceeds",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						assert.NoError(t, harness.RunScript(ctx, testutil.GolangMainSuccess()))
 					},
 				},
 				{
 					Name: "RunScriptFails",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 						require.Error(t, harness.RunScript(ctx, testutil.GolangMainFail()))
@@ -121,18 +97,13 @@ func TestScripting(t *testing.T) {
 				},
 				{
 					Name: "BuildSucceeds",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 						tmpFile := filepath.Join(tmpDir, "fake_script.go")
 						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess()), 0755))
 						buildFile := filepath.Join(tmpDir, "fake_script")
-						_, err = harness.Build(ctx, tmpDir, []string{
+						_, err := harness.Build(ctx, tmpDir, []string{
 							"-o",
 							buildFile,
 							tmpFile,
@@ -144,18 +115,13 @@ func TestScripting(t *testing.T) {
 				},
 				{
 					Name: "BuildFails",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 						tmpFile := filepath.Join(tmpDir, "fake_script.go")
 						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; func main() { "bad syntax" }`), 0755))
 						buildFile := filepath.Join(tmpDir, "fake_script")
-						_, err = harness.Build(ctx, tmpDir, []string{
+						_, err := harness.Build(ctx, tmpDir, []string{
 							"-o",
 							buildFile,
 							tmpFile,
@@ -167,12 +133,7 @@ func TestScripting(t *testing.T) {
 				},
 				{
 					Name: "TestSucceeds",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 						tmpFile := filepath.Join(tmpDir, "fake_script_test.go")
@@ -185,12 +146,7 @@ func TestScripting(t *testing.T) {
 				},
 				{
 					Name: "TestFails",
-					Case: func(ctx context.Context, t *testing.T, client Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
+					Case: func(ctx context.Context, t *testing.T, client Manager, tmpDir string) {
 						harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 
 						tmpFile := filepath.Join(tmpDir, "fake_script_test.go")
@@ -209,7 +165,12 @@ func TestScripting(t *testing.T) {
 					defer func() {
 						assert.NoError(t, client.CloseConnection())
 					}()
-					test.Case(tctx, t, client)
+					tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
+					require.NoError(t, err)
+					defer func() {
+						assert.NoError(t, os.RemoveAll(tmpDir))
+					}()
+					test.Case(tctx, t, client, tmpDir)
 				})
 
 			}
