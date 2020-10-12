@@ -14,11 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type scriptingTestCase struct {
-	Name string
-	Case func(ctx context.Context, t *testing.T, client Manager, tmpDir string)
-}
-
 func TestScripting(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
