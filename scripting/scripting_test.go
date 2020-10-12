@@ -25,10 +25,6 @@ func isInPath(binary string) bool {
 	return err == nil
 }
 
-func evgTaskContains(subs string) bool {
-	return strings.Contains(os.Getenv("EVR_TASK_ID"), subs)
-}
-
 func makeScriptingEnv(ctx context.Context, t *testing.T, mgr jasper.Manager, opts options.ScriptingHarness) Harness {
 	se, err := NewHarness(mgr, opts)
 	require.NoError(t, err)
@@ -65,7 +61,7 @@ func TestScriptingHarness(t *testing.T) {
 		Loggers:           []*options.LoggerConfig{logger},
 	}
 
-	type seTest struct {
+	type shTest struct {
 		Name string
 		Case func(*testing.T, options.ScriptingHarness)
 	}
@@ -74,7 +70,7 @@ func TestScriptingHarness(t *testing.T) {
 		Name           string
 		Supported      bool
 		DefaultOptions options.ScriptingHarness
-		Tests          []seTest
+		Tests          []shTest
 	}{
 		{
 			Name:      "Roswell",
@@ -84,7 +80,7 @@ func TestScriptingHarness(t *testing.T) {
 				Lisp:   "sbcl-bin",
 				Output: output,
 			},
-			Tests: []seTest{
+			Tests: []shTest{
 				{
 					Name: "Options",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
@@ -95,36 +91,37 @@ func TestScriptingHarness(t *testing.T) {
 				{
 					Name: "HelloWorldScript",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.RunScript(ctx, `(defun main () (print "hello world"))`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.RunScript(ctx, `(defun main () (print "hello world"))`))
 					},
 				},
 				{
 					Name: "RunHelloWorld",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.Run(ctx, []string{`(print "hello world")`}))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.Run(ctx, []string{`(print "hello world")`}))
 					},
 				},
 				{
 					Name: "ScriptExitError",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.Error(t, se.RunScript(ctx, `(sb-ext:exit :code 42)`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.Error(t, sh.RunScript(ctx, `(sb-ext:exit :code 42)`))
 					},
 				},
 			},
 		},
+		// TODO (EVG-13209): fix tests for Windows.
 		{
 			Name:      "Python3",
-			Supported: isInPath("python3") && !evgTaskContains("ubuntu"),
+			Supported: isInPath("python3"),
 			DefaultOptions: &options.ScriptingPython{
 				VirtualEnvPath:    filepath.Join(tmpdir, "python3"),
 				LegacyPython:      false,
 				InterpreterBinary: "python3",
 				Output:            output,
 			},
-			Tests: []seTest{
+			Tests: []shTest{
 				{
 					Name: "Options",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
@@ -135,37 +132,38 @@ func TestScriptingHarness(t *testing.T) {
 				{
 					Name: "HelloWorldScript",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.RunScript(ctx, `print("hello world")`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.RunScript(ctx, `print("hello world")`))
 					},
 				},
 				{
 					Name: "RunHelloWorld",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.Run(ctx, []string{"-c", `print("hello world")`}))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.Run(ctx, []string{"-c", `print("hello world")`}))
 					},
 				},
 				{
 					Name: "ScriptExitError",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.Error(t, se.RunScript(ctx, `exit(42)`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.Error(t, sh.RunScript(ctx, `exit(42)`))
 					},
 				},
 			},
 		},
+		// TODO (EVG-13209): fix tests for Windows.
 		{
 			Name:      "Python2",
-			Supported: isInPath("python") && !evgTaskContains("windows"),
+			Supported: isInPath("python2") && runtime.GOOS != "windows",
 			DefaultOptions: &options.ScriptingPython{
 				VirtualEnvPath:    filepath.Join(tmpdir, "python2"),
 				LegacyPython:      true,
-				InterpreterBinary: "python",
+				InterpreterBinary: "python2",
 				Packages:          []string{"wheel"},
 				Output:            output,
 			},
-			Tests: []seTest{
+			Tests: []shTest{
 				{
 					Name: "Options",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
@@ -176,22 +174,22 @@ func TestScriptingHarness(t *testing.T) {
 				{
 					Name: "HelloWorldScript",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.RunScript(ctx, `print("hello world")`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.RunScript(ctx, `print("hello world")`))
 					},
 				},
 				{
 					Name: "RunHelloWorld",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.Run(ctx, []string{"-c", `print("hello world")`}))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.Run(ctx, []string{"-c", `print("hello world")`}))
 					},
 				},
 				{
 					Name: "ScriptExitError",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.Error(t, se.RunScript(ctx, `exit(42)`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.Error(t, sh.RunScript(ctx, `exit(42)`))
 					},
 				},
 			},
@@ -207,7 +205,7 @@ func TestScriptingHarness(t *testing.T) {
 				},
 				Output: output,
 			},
-			Tests: []seTest{
+			Tests: []shTest{
 				{
 					Name: "Options",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
@@ -218,59 +216,53 @@ func TestScriptingHarness(t *testing.T) {
 				{
 					Name: "HelloWorldScript",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.NoError(t, se.RunScript(ctx, `package main; import "fmt"; func main() { fmt.Println("Hello World")}`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.NoError(t, sh.RunScript(ctx, testutil.GolangMainSuccess()))
 					},
 				},
 				{
 					Name: "ScriptExitError",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
-						require.Error(t, se.RunScript(ctx, `package main; import "os"; func main() { os.Exit(42) }`))
+						sh := makeScriptingEnv(ctx, t, manager, opts)
+						require.Error(t, sh.RunScript(ctx, testutil.GolangMainFail()))
 					},
 				},
 				{
 					Name: "Dependencies",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						se := makeScriptingEnv(ctx, t, manager, opts)
+						sh := makeScriptingEnv(ctx, t, manager, opts)
 						tmpFile := filepath.Join(tmpdir, "fake_script.go")
 						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import ("fmt"; "github.com/pkg/errors"); func main() { fmt.Println(errors.New("error")) }`), 0755))
 						defer func() {
 							assert.NoError(t, os.Remove(tmpFile))
 						}()
-						err = se.Run(ctx, []string{tmpFile})
+						err = sh.Run(ctx, []string{tmpFile})
 						require.NoError(t, err)
 					},
 				},
 				{
 					Name: "RunFile",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						if runtime.GOOS == "windows" {
-							t.Skip("windows paths")
-						}
-						se := makeScriptingEnv(ctx, t, manager, opts)
+						sh := makeScriptingEnv(ctx, t, manager, opts)
 						tmpFile := filepath.Join(tmpdir, "fake_script.go")
-						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess()), 0755))
 						defer func() {
 							assert.NoError(t, os.Remove(tmpFile))
 						}()
-						err = se.Run(ctx, []string{tmpFile})
+						err = sh.Run(ctx, []string{tmpFile})
 						require.NoError(t, err)
 					},
 				},
 				{
 					Name: "Build",
 					Case: func(t *testing.T, opts options.ScriptingHarness) {
-						if runtime.GOOS == "windows" {
-							t.Skip("windows paths")
-						}
-						se := makeScriptingEnv(ctx, t, manager, opts)
+						sh := makeScriptingEnv(ctx, t, manager, opts)
 						tmpFile := filepath.Join(tmpdir, "fake_script.go")
-						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(`package main; import "os"; func main() { os.Exit(0) }`), 0755))
+						require.NoError(t, ioutil.WriteFile(tmpFile, []byte(testutil.GolangMainSuccess()), 0755))
 						defer func() {
 							assert.NoError(t, os.Remove(tmpFile))
 						}()
-						_, err := se.Build(ctx, testutil.BuildDirectory(), []string{
+						_, err := sh.Build(ctx, testutil.BuildDirectory(), []string{
 							"-o", filepath.Join(tmpdir, "fake_script"),
 							tmpFile,
 						})
@@ -290,19 +282,21 @@ func TestScriptingHarness(t *testing.T) {
 			require.NoError(t, env.DefaultOptions.Validate())
 			t.Run("Config", func(t *testing.T) {
 				start := time.Now()
-				se := makeScriptingEnv(ctx, t, manager, env.DefaultOptions)
-				require.NoError(t, se.Setup(ctx))
+				sh := makeScriptingEnv(ctx, t, manager, env.DefaultOptions)
+				require.NoError(t, sh.Setup(ctx))
 				dur := time.Since(start)
-				require.NotNil(t, se)
+				require.NotNil(t, sh)
 
 				t.Run("ID", func(t *testing.T) {
-					require.Equal(t, env.DefaultOptions.ID(), se.ID())
-					assert.Len(t, se.ID(), 40)
+					require.Equal(t, env.DefaultOptions.ID(), sh.ID())
+					assert.Len(t, sh.ID(), 40)
 				})
 				t.Run("Caching", func(t *testing.T) {
 					start := time.Now()
-					require.NoError(t, se.Setup(ctx))
+					require.NoError(t, sh.Setup(ctx))
 
+					// Since Setup() was previously called, it should already be
+					// cached.
 					assert.True(t, time.Since(start) < dur, "%s < %s",
 						time.Since(start), dur)
 				})
@@ -313,14 +307,14 @@ func TestScriptingHarness(t *testing.T) {
 				})
 			}
 			t.Run("Testing", func(t *testing.T) {
-				se := makeScriptingEnv(ctx, t, manager, env.DefaultOptions)
-				res, err := se.Test(ctx, tmpdir)
+				sh := makeScriptingEnv(ctx, t, manager, env.DefaultOptions)
+				res, err := sh.Test(ctx, tmpdir)
 				require.NoError(t, err)
 				require.Len(t, res, 0)
 			})
 			t.Run("Cleanup", func(t *testing.T) {
-				se := makeScriptingEnv(ctx, t, manager, env.DefaultOptions)
-				require.NoError(t, se.Cleanup(ctx))
+				sh := makeScriptingEnv(ctx, t, manager, env.DefaultOptions)
+				require.NoError(t, sh.Cleanup(ctx))
 			})
 
 		})
