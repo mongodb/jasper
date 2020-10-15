@@ -189,10 +189,10 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 		return p.getInfo()
 	}
 
-	out := make(chan ProcessInfo)
+	out := make(chan ProcessInfo, 1)
 	operation := func(exec executor.Executor) {
+		defer close(out)
 		out <- p.getInfo()
-		close(out)
 	}
 
 	select {
@@ -217,7 +217,7 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 		return false
 	}
 
-	out := make(chan bool)
+	out := make(chan bool, 1)
 	operation := func(exec executor.Executor) {
 		defer close(out)
 
@@ -260,7 +260,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		return errors.New("cannot signal a process that has terminated")
 	}
 
-	out := make(chan error)
+	out := make(chan error, 1)
 	operation := func(exec executor.Executor) {
 		defer close(out)
 
@@ -342,7 +342,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 		return p.getInfo().ExitCode, p.getErr()
 	}
 
-	out := make(chan error)
+	out := make(chan error, 1)
 	waiter := func(exec executor.Executor) {
 		if !p.hasCompleteInfo() {
 			return
