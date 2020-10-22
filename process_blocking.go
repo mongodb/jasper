@@ -81,17 +81,17 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 	return p, nil
 }
 
-func (p *blockingProcess) setInfo(info ProcessInfo) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.info = info
-}
-
 func (p *blockingProcess) hasCompleteInfo() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	return p.info.Complete
+}
+
+func (p *blockingProcess) setInfo(info ProcessInfo) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.info = info
 }
 
 func (p *blockingProcess) getInfo() ProcessInfo {
@@ -156,9 +156,17 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 
 			p.mu.RLock()
 			p.triggers.Run(info)
+			info.Options = p.info.Options
 			p.mu.RUnlock()
 			p.setErr(err)
-			p.setInfo(info)
+			p.mu.Lock()
+			// Set the options now because our view of the process info may be
+			// stale. The options could have been modified in between the above
+			// info assignment and setting the information here (e.g. by calling
+			// ResetTags()).
+			info.Options = p.info.Options
+			p.info = info
+			p.mu.Unlock()
 			return
 		case <-ctx.Done():
 			// note, the process might take a moment to
@@ -172,7 +180,15 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 			p.mu.RLock()
 			p.triggers.Run(info)
 			p.mu.RUnlock()
-			p.setInfo(info)
+			p.setErr(ctx.Err())
+			p.mu.Lock()
+			// Set the options now because our view of the process info may be
+			// stale. The options could have been modified in between the above
+			// info assignment and setting the information here (e.g. by calling
+			// ResetTags()).
+			info.Options = p.info.Options
+			p.info = info
+			p.mu.Unlock()
 
 			return
 		case op := <-p.ops:
@@ -189,10 +205,10 @@ func (p *blockingProcess) Info(ctx context.Context) ProcessInfo {
 		return p.getInfo()
 	}
 
-	out := make(chan ProcessInfo)
+	out := make(chan ProcessInfo, 1)
 	operation := func(exec executor.Executor) {
+		defer close(out)
 		out <- p.getInfo()
-		close(out)
 	}
 
 	select {
@@ -217,7 +233,7 @@ func (p *blockingProcess) Running(ctx context.Context) bool {
 		return false
 	}
 
-	out := make(chan bool)
+	out := make(chan bool, 1)
 	operation := func(exec executor.Executor) {
 		defer close(out)
 
@@ -260,7 +276,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		return errors.New("cannot signal a process that has terminated")
 	}
 
-	out := make(chan error)
+	out := make(chan error, 1)
 	operation := func(exec executor.Executor) {
 		defer close(out)
 
@@ -342,7 +358,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 		return p.getInfo().ExitCode, p.getErr()
 	}
 
-	out := make(chan error)
+	out := make(chan error, 1)
 	waiter := func(exec executor.Executor) {
 		if !p.hasCompleteInfo() {
 			return
