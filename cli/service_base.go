@@ -55,7 +55,7 @@ func (d *baseDaemon) setup(ctx context.Context, cancel context.CancelFunc) error
 		return errors.Wrap(err, "precondition(s) failed")
 	}
 
-	go handleDaemonSignals(ctx, cancel, d.exit)
+	go d.handleSignals(ctx, cancel, d.exit)
 
 	return nil
 }
@@ -87,10 +87,10 @@ func (d *baseDaemon) checkPrecondition(ctx context.Context, cmd string) error {
 	return nil
 }
 
-// handleDaemonSignals shuts down the daemon by cancelling the context, either
+// handleSignals shuts down the daemon by cancelling the context, either
 // when the context is done, it receives a terminate signal, or when it
 // receives a signal to exit the daemon.
-func (d *baseDaemon) handleDaemonSignals(ctx context.Context, cancel context.CancelFunc, exit chan struct{}) {
+func (d *baseDaemon) handleSignals(ctx context.Context, cancel context.CancelFunc, exit chan struct{}) {
 	defer recovery.LogStackTraceAndContinue("graceful shutdown")
 	defer cancel()
 	sig := make(chan os.Signal, 2)
