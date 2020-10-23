@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -256,7 +257,11 @@ func setupLogger(opts *options.LoggerConfig) error {
 // the flags set in the cli.Context.
 func buildRunCommand(c *cli.Context, serviceType string) []string {
 	args := unparseFlagSet(c, serviceType)
-	subCmd := []string{JasperCommand, ServiceCommand, RunCommand, serviceType}
+	var subCmd []string
+	if filepath.Base(os.Args[0]) != JasperCommand {
+		subCmd = append(subCmd, JasperCommand)
+	}
+	subCmd = append(subCmd, ServiceCommand, RunCommand, serviceType)
 	return append(subCmd, args...)
 }
 
@@ -272,7 +277,7 @@ func serviceOptions(c *cli.Context) service.KeyValue {
 		"Password": c.String(passwordFlagName),
 	}
 
-	// Linux-specific resource limit options
+	// Linux/launchd-specific resource limit options
 	if limit := resourceLimit(c.Int(limitNumFilesFlagName)); limit != "" {
 		opts["LimitNumFiles"] = limit
 	}
@@ -302,7 +307,7 @@ func resourceLimit(limit int) string {
 		if limit == -1 {
 			return "infinity"
 		}
-	case "linux-upstart", "unix-systemv":
+	case "linux-upstart", "unix-systemv", "darwin-launchd":
 		if limit == -1 {
 			return "unlimited"
 		}
@@ -408,12 +413,12 @@ func forceReinstall(daemon service.Interface, config *service.Config) error {
 		stopErr := message.WrapError(svc.Stop(), message.Fields{
 			"msg":    "error stopping service",
 			"cmd":    "force-reinstall",
-			"config": *config,
+			"config": fmt.Sprintf("%#v", *config),
 		})
 		uninstallErr := message.WrapError(svc.Uninstall(), message.Fields{
 			"msg":    "error uninstalling service",
 			"cmd":    "force-reinstall",
-			"config": *config,
+			"config": fmt.Sprintf("%#v", *config),
 		})
 
 		catcher := grip.NewBasicCatcher()
