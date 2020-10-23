@@ -2,6 +2,7 @@ package jasper
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"os"
 	"runtime"
@@ -167,6 +168,7 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 			info.Options = p.info.Options
 			p.info = info
 			p.mu.Unlock()
+
 			return
 		case <-ctx.Done():
 			// note, the process might take a moment to
@@ -285,6 +287,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 			return
 		}
 
+		fmt.Println("processed signal for process", p.ID())
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
 			sig = makeCompatible(sig)
 			out <- errors.Wrapf(exec.Signal(sig), "problem sending signal '%s' to '%s'",
@@ -302,6 +305,11 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		case <-ctx.Done():
 			return errors.New("context canceled")
 		case <-p.complete:
+			// If the process is complete because the operations channel
+			// signaled the process, the signal was successful.
+			if p.Info(ctx).ExitCode == int(sig) {
+				return nil
+			}
 			return errors.New("cannot signal after process is complete")
 		}
 	case <-ctx.Done():
