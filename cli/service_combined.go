@@ -70,7 +70,7 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 				newRPCDaemon(c.String(rpcHostFlagName), c.Int(rpcPortFlagName), manager, c.String(rpcCredsFilePathFlagName), makeLogger(c)),
 			)
 
-			config := serviceConfig(CombinedService, c, buildRunCommand(c, CombinedService))
+			config := serviceConfig(CombinedService, c, buildServiceRunCommand(c, CombinedService))
 
 			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err

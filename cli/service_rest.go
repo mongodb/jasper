@@ -52,7 +52,7 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 
 			daemon := newRESTDaemon(c.String(hostFlagName), c.Int(portFlagName), manager, makeLogger(c))
 
-			config := serviceConfig(RESTService, c, buildRunCommand(c, RESTService))
+			config := serviceConfig(RESTService, c, buildServiceRunCommand(c, RESTService))
 
 			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err

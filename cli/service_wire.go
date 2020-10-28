@@ -52,7 +52,7 @@ func serviceCommandWire(cmd string, operation serviceOperation) cli.Command {
 
 			daemon := newWireDaemon(c.String(hostFlagName), c.Int(portFlagName), manager, makeLogger(c))
 
-			config := serviceConfig(WireService, c, buildRunCommand(c, WireService))
+			config := serviceConfig(WireService, c, buildServiceRunCommand(c, WireService))
 
 			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err

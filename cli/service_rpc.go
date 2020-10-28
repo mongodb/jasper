@@ -57,7 +57,7 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 
 			daemon := newRPCDaemon(c.String(hostFlagName), c.Int(portFlagName), manager, c.String(credsFilePathFlagName), makeLogger(c))
 
-			config := serviceConfig(RPCService, c, buildRunCommand(c, RPCService))
+			config := serviceConfig(RPCService, c, buildServiceRunCommand(c, RPCService))
 
 			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err
