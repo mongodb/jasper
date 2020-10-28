@@ -1,21 +1,17 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/evergreen-ci/service"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/message"
-	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
@@ -48,8 +44,9 @@ const (
 	quietFlagName            = "quiet"
 	userFlagName             = "user"
 	passwordFlagName         = "password"
-	forceInteractiveFlagName = "interactive"
+	interactiveFlagName      = "interactive"
 	envFlagName              = "env"
+	preconditionCmdsFlagName = "precondition"
 
 	logNameFlagName  = "log_name"
 	defaultLogName   = "jasper"
@@ -87,25 +84,6 @@ func serviceCmd() cli.Command {
 	}
 }
 
-// handleDaemonSignals shuts down the daemon by cancelling the context, either
-// when the context is done, it receives a terminate signal, or when it
-// receives a signal to exit the daemon.
-func handleDaemonSignals(ctx context.Context, cancel context.CancelFunc, exit chan struct{}) {
-	defer recovery.LogStackTraceAndContinue("graceful shutdown")
-	defer cancel()
-	sig := make(chan os.Signal, 2)
-	signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
-
-	select {
-	case <-sig:
-		grip.Debug("received signal")
-	case <-ctx.Done():
-		grip.Debug("context canceled")
-	case <-exit:
-		grip.Debug("received daemon exit signal")
-	}
-}
-
 func serviceFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.BoolFlag{
@@ -121,13 +99,17 @@ func serviceFlags() []cli.Flag {
 			Usage:  "The password for the user running the service.",
 			EnvVar: "JASPER_USER_PASSWORD",
 		},
+		cli.BoolFlag{
+			Name:  interactiveFlagName,
+			Usage: "Force the service to run in an interactive session.",
+		},
 		cli.StringSliceFlag{
 			Name:  envFlagName,
 			Usage: "The service environment variables (format: key=value).",
 		},
-		cli.BoolFlag{
-			Name:  forceInteractiveFlagName,
-			Usage: "Force the service to run in an interactive session.",
+		cli.StringSliceFlag{
+			Name:  preconditionCmdsFlagName,
+			Usage: "Execute command(s) that must be run and must succeed before the Jasper service can start.",
 		},
 		cli.StringFlag{
 			Name:  logNameFlagName,
@@ -244,17 +226,8 @@ func makeLogger(c *cli.Context) *options.LoggerConfig {
 	return logger
 }
 
-// setupLogger creates a logger and sets it as the global logging back end.
-func setupLogger(opts *options.LoggerConfig) error {
-	sender, err := opts.Resolve()
-	if err != nil {
-		return errors.Wrap(err, "could not configure logging")
-	}
-	return errors.Wrap(grip.SetSender(sender), "could not set grip logger")
-}
-
-// buildServiceRunCommand builds the command arguments to run the Jasper service with
-// the flags set in the cli.Context.
+// buildServiceRunCommand builds the command arguments to run the Jasper service
+// with the flags set in the cli.Context.
 func buildServiceRunCommand(c *cli.Context, serviceType string) []string {
 	args := unparseFlagSet(c, serviceType)
 	var subCmd []string
@@ -328,7 +301,7 @@ func serviceConfig(serviceType string, c *cli.Context, args []string) *service.C
 		Arguments:        args,
 		Environment:      makeUserEnvironment(c.String(userFlagName), c.StringSlice(envFlagName)),
 		UserName:         c.String(userFlagName),
-		ForceInteractive: c.Bool(forceInteractiveFlagName),
+		ForceInteractive: c.Bool(interactiveFlagName),
 		Option:           serviceOptions(c),
 	}
 }

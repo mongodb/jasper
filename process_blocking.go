@@ -295,8 +295,8 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		} else {
 			out <- nil
 		}
-
 	}
+
 	select {
 	case p.ops <- operation:
 		select {
