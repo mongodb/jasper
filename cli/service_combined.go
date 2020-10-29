@@ -84,7 +84,7 @@ func serviceCommandCombined(cmd string, operation serviceOperation) cli.Command 
 				newRPCDaemon(rpcOpts, c.String(rpcCredsFilePathFlagName)),
 			)
 
-			config := serviceConfig(CombinedService, c, buildRunCommand(c, CombinedService))
+			config := serviceConfig(CombinedService, c, buildServiceRunCommand(c, CombinedService))
 
 			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err

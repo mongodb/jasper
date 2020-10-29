@@ -59,7 +59,7 @@ func serviceCommandWire(cmd string, operation serviceOperation) cli.Command {
 			}
 			daemon := newWireDaemon(opts)
 
-			config := serviceConfig(WireService, c, buildRunCommand(c, WireService))
+			config := serviceConfig(WireService, c, buildServiceRunCommand(c, WireService))
 
 			if err := operation(daemon, config); !c.Bool(quietFlagName) {
 				return err
