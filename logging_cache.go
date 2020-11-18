@@ -14,22 +14,22 @@ import (
 // TODO (EVG-13100): most of these methods should return errors.
 type LoggingCache interface {
 	// Create creates and caches a new logger based on the given output options.
-	Create(string, *options.Output) (*options.CachedLogger, error)
+	Create(id string, opts *options.Output) (*options.CachedLogger, error)
 	// Put adds an existing logger to the cache.
-	Put(string, *options.CachedLogger) error
+	Put(id string, logger *options.CachedLogger) error
 	// Get gets an existing cached logger. Implementations should return nil if
 	// the logger cannot be found.
-	Get(string) *options.CachedLogger
+	Get(id string) *options.CachedLogger
 	// Remove removes an existing logger from the logging cache.
-	Remove(string)
+	Remove(id string)
 	// CloseAndRemove closes and removes an existing logger from the
 	// logging cache.
-	CloseAndRemove(context.Context, string) error
+	CloseAndRemove(ctx context.Context, id string) error
 	// Clear closes and removes any remaining loggers in the logging cache.
-	Clear(context.Context) error
+	Clear(ctx context.Context) error
 	// Prune removes all loggers that were last accessed before the given
 	// timestamp.
-	Prune(time.Time)
+	Prune(lastAccessed time.Time)
 	// Len returns the number of loggers. Implementations should return
 	// -1 if the length cannot be retrieved successfully.
 	Len() int
