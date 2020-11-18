@@ -126,7 +126,7 @@ func loggingCacheClear() cli.Command {
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
-			return doPassthroughInputOutput(c, nil, func(ctx context.Context, client remote.Manager) interface{} {
+			return doPassthroughOutput(c, func(ctx context.Context, client remote.Manager) interface{} {
 				lc := client.LoggingCache(ctx)
 				if lc == nil {
 					return makeOutcomeResponse(errors.New("logging cache not supported"))
