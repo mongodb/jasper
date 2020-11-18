@@ -68,10 +68,10 @@ func (c *LoggingCache) Remove(id string) { delete(c.Cache, id) }
 // logging cache.
 func (c *LoggingCache) CloseAndRemove(_ context.Context, id string) error {
 	var err error
-	logger, ok := c.cache[id]
+	logger, ok := c.Cache[id]
 	if ok {
 		err = logger.Close()
-		delete(c.cache, id)
+		delete(c.Cache, id)
 	}
 
 	return errors.Wrapf(err, "problem closing logger with id %s", id)
@@ -85,7 +85,7 @@ func (c *LoggingCache) Clear(_ context.Context) error {
 	}
 	c.Cache = map[string]*options.CachedLogger{}
 
-	return catcher.Resove()
+	return catcher.Resolve()
 }
 
 // Prune removes all items from the cache whose most recent access time is older
