@@ -8,6 +8,7 @@ import (
 	"github.com/mongodb/grip/send"
 )
 
+// TODO: Remove this mock sender with EVG-13443.
 // MockSender is a simple mock implementation of the grip/send.Sender
 // interface.
 type MockSender struct {

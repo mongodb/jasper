@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -13,22 +14,22 @@ import (
 // TODO (EVG-13100): most of these methods should return errors.
 type LoggingCache interface {
 	// Create creates and caches a new logger based on the given output options.
-	Create(id string, opts *options.Output) (*options.CachedLogger, error)
+	Create(string, *options.Output) (*options.CachedLogger, error)
 	// Put adds an existing logger to the cache.
-	Put(id string, logger *options.CachedLogger) error
+	Put(string, *options.CachedLogger) error
 	// Get gets an existing cached logger. Implementations should return nil if
 	// the logger cannot be found.
-	Get(id string) *options.CachedLogger
+	Get(string) *options.CachedLogger
 	// Remove removes an existing logger from the logging cache.
-	Remove(id string)
+	Remove(string)
 	// CloseAndRemove closes and removes an existing logger from the
 	// logging cache.
-	CloseAndRemove(id string) error
+	CloseAndRemove(context.Context, string) error
 	// Clear closes and removes any remaining loggers in the logging cache.
-	Clear() error
+	Clear(context.Context) error
 	// Prune removes all loggers that were last accessed before the given
 	// timestamp.
-	Prune(lastAccessed time.Time)
+	Prune(time.Time)
 	// Len returns the number of loggers. Implementations should return
 	// -1 if the length cannot be retrieved successfully.
 	Len() int
@@ -120,7 +121,7 @@ func (c *loggingCacheImpl) Remove(id string) {
 	delete(c.cache, id)
 }
 
-func (c *loggingCacheImpl) CloseAndRemove(id string) error {
+func (c *loggingCacheImpl) CloseAndRemove(_ context.Context, id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -131,10 +132,10 @@ func (c *loggingCacheImpl) CloseAndRemove(id string) error {
 		delete(c.cache, id)
 	}
 
-	return errors.Wrap(err, "problem closing logger")
+	return errors.Wrapf(err, "problem closing logger with id %s", id)
 }
 
-func (c *loggingCacheImpl) Clear() error {
+func (c *loggingCacheImpl) Clear(_ context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

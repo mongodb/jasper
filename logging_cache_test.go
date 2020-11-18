@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -83,6 +84,7 @@ func TestLoggingCacheImplementation(t *testing.T) {
 		{
 			Name: "CloseAndRemove",
 			Case: func(t *testing.T, cache LoggingCache) {
+				ctx := context.TODO()
 				sender := options.NewMockSender("output")
 
 				require.NoError(t, cache.Put("id0", &options.CachedLogger{
@@ -90,7 +92,7 @@ func TestLoggingCacheImplementation(t *testing.T) {
 				}))
 				require.NoError(t, cache.Put("id1", &options.CachedLogger{}))
 				require.NotNil(t, cache.Get("id0"))
-				require.NoError(t, cache.CloseAndRemove("id0"))
+				require.NoError(t, cache.CloseAndRemove(ctx, "id0"))
 				require.Nil(t, cache.Get("id0"))
 				assert.NotNil(t, cache.Get("id1"))
 				require.True(t, sender.Closed)
@@ -99,13 +101,14 @@ func TestLoggingCacheImplementation(t *testing.T) {
 					Output: sender,
 				}))
 				require.NotNil(t, cache.Get("id0"))
-				assert.Error(t, cache.CloseAndRemove("id0"))
+				assert.Error(t, cache.CloseAndRemove(ctx, "id0"))
 				require.Nil(t, cache.Get("id0"))
 			},
 		},
 		{
 			Name: "Clear",
 			Case: func(t *testing.T, cache LoggingCache) {
+				ctx := context.TODO()
 				sender0 := options.NewMockSender("output")
 				sender1 := options.NewMockSender("output")
 
@@ -117,7 +120,7 @@ func TestLoggingCacheImplementation(t *testing.T) {
 				}))
 				require.NotNil(t, cache.Get("id0"))
 				require.NotNil(t, cache.Get("id1"))
-				require.NoError(t, cache.Clear())
+				require.NoError(t, cache.Clear(ctx))
 				require.Nil(t, cache.Get("id0"))
 				require.Nil(t, cache.Get("id1"))
 				require.True(t, sender0.Closed)
@@ -131,7 +134,7 @@ func TestLoggingCacheImplementation(t *testing.T) {
 				}))
 				require.NotNil(t, cache.Get("id0"))
 				require.NotNil(t, cache.Get("id1"))
-				assert.Error(t, cache.Clear())
+				assert.Error(t, cache.Clear(ctx))
 				assert.Nil(t, cache.Get("id0"))
 				assert.Nil(t, cache.Get("id1"))
 			},
