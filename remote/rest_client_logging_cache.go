@@ -78,7 +78,7 @@ func (lc *restLoggingCache) Remove(id string) {
 }
 
 func (lc *restLoggingCache) CloseAndRemove(ctx context.Context, id string) error {
-	resp, err := lc.client.doRequest(ctx, http.MethodDelete, lc.client.getURL("/logging/id/close/%s", id), nil)
+	resp, err := lc.client.doRequest(ctx, http.MethodDelete, lc.client.getURL("/logging/id/%s/close", id), nil)
 	if err != nil {
 		return errors.Wrap(err, "request returned error")
 	}

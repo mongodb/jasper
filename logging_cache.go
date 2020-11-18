@@ -33,7 +33,6 @@ type LoggingCache interface {
 	// Len returns the number of loggers. Implementations should return
 	// -1 if the length cannot be retrieved successfully.
 	Len() int
-	// TODO (EVG-13101): support closing of senders within cache.
 }
 
 // NewLoggingCache produces a thread-safe implementation of a local logging
