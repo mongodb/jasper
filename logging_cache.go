@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
@@ -18,8 +19,13 @@ type LoggingCache interface {
 	// Get gets an existing cached logger. Implementations should return nil if
 	// the logger cannot be found.
 	Get(id string) *options.CachedLogger
-	// Remove removes an existing logging cache.
+	// Remove removes an existing logger from the logging cache.
 	Remove(id string)
+	// CloseAndRemove closes and removes an existing logger from the
+	// logging cache.
+	CloseAndRemove(id string) error
+	// Clear closes and removes any remaining loggers in the logging cache.
+	Clear() error
 	// Prune removes all loggers that were last accessed before the given
 	// timestamp.
 	Prune(lastAccessed time.Time)
@@ -112,4 +118,31 @@ func (c *loggingCacheImpl) Remove(id string) {
 	defer c.mu.Unlock()
 
 	delete(c.cache, id)
+}
+
+func (c *loggingCacheImpl) CloseAndRemove(id string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var err error
+	logger, ok := c.cache[id]
+	if ok {
+		err = logger.Close()
+		delete(c.cache, id)
+	}
+
+	return errors.Wrap(err, "problem closing logger")
+}
+
+func (c *loggingCacheImpl) Clear() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	catcher := grip.NewBasicCatcher()
+	for _, logger := range c.cache {
+		catcher.Add(logger.Close())
+	}
+	c.cache = map[string]*options.CachedLogger{}
+
+	return errors.Wrap(catcher.Resolve(), "problem clearing logger cache")
 }

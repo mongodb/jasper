@@ -80,6 +80,62 @@ func TestLoggingCacheImplementation(t *testing.T) {
 				assert.True(t, time.Since(cl.Accessed) <= time.Millisecond)
 			},
 		},
+		{
+			Name: "CloseAndRemove",
+			Case: func(t *testing.T, cache LoggingCache) {
+				sender := options.NewMockSender("output")
+
+				require.NoError(t, cache.Put("id0", &options.CachedLogger{
+					Output: sender,
+				}))
+				require.NoError(t, cache.Put("id1", &options.CachedLogger{}))
+				require.NotNil(t, cache.Get("id0"))
+				require.NoError(t, cache.CloseAndRemove("id0"))
+				require.Nil(t, cache.Get("id0"))
+				assert.NotNil(t, cache.Get("id1"))
+				require.True(t, sender.Closed)
+
+				require.NoError(t, cache.Put("id0", &options.CachedLogger{
+					Output: sender,
+				}))
+				require.NotNil(t, cache.Get("id0"))
+				assert.Error(t, cache.CloseAndRemove("id0"))
+				require.Nil(t, cache.Get("id0"))
+			},
+		},
+		{
+			Name: "Clear",
+			Case: func(t *testing.T, cache LoggingCache) {
+				sender0 := options.NewMockSender("output")
+				sender1 := options.NewMockSender("output")
+
+				require.NoError(t, cache.Put("id0", &options.CachedLogger{
+					Output: sender0,
+				}))
+				require.NoError(t, cache.Put("id1", &options.CachedLogger{
+					Output: sender1,
+				}))
+				require.NotNil(t, cache.Get("id0"))
+				require.NotNil(t, cache.Get("id1"))
+				require.NoError(t, cache.Clear())
+				require.Nil(t, cache.Get("id0"))
+				require.Nil(t, cache.Get("id1"))
+				require.True(t, sender0.Closed)
+				require.True(t, sender1.Closed)
+
+				require.NoError(t, cache.Put("id0", &options.CachedLogger{
+					Output: sender0,
+				}))
+				require.NoError(t, cache.Put("id1", &options.CachedLogger{
+					Output: sender1,
+				}))
+				require.NotNil(t, cache.Get("id0"))
+				require.NotNil(t, cache.Get("id1"))
+				assert.Error(t, cache.Clear())
+				assert.Nil(t, cache.Get("id0"))
+				assert.Nil(t, cache.Get("id1"))
+			},
+		},
 	} {
 		t.Run(test.Name, func(t *testing.T) {
 			require.NotPanics(t, func() {
