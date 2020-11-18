@@ -122,7 +122,7 @@ func loggingCacheCloseAndRemove() cli.Command {
 
 func loggingCacheClear() cli.Command {
 	return cli.Command{
-		Name:   LoggingCacheCloseAndRemoveCommand,
+		Name:   LoggingCacheClear,
 		Flags:  clientFlags(),
 		Before: clientBefore(),
 		Action: func(c *cli.Context) error {
