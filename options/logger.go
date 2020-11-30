@@ -136,6 +136,7 @@ type LoggerConfig struct {
 
 type loggerConfigInfo struct {
 	Type   string                `json:"type" bson:"type"`
+	Prefix string                `json:"prefix" bson:"prefix"`
 	Format RawLoggerConfigFormat `json:"format" bson:"format"`
 	Config RawLoggerConfig       `json:"config" bson:"config"`
 }
