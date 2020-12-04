@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func TestLoggingCacheImplementation(t *testing.T) {
 			Name: "CloseAndRemove",
 			Case: func(t *testing.T, cache LoggingCache) {
 				ctx := context.TODO()
-				sender := options.NewMockSender("output")
+				sender := send.NewMockSender("output")
 
 				require.NoError(t, cache.Put("id0", &options.CachedLogger{
 					Output: sender,
@@ -109,8 +110,8 @@ func TestLoggingCacheImplementation(t *testing.T) {
 			Name: "Clear",
 			Case: func(t *testing.T, cache LoggingCache) {
 				ctx := context.TODO()
-				sender0 := options.NewMockSender("output")
-				sender1 := options.NewMockSender("output")
+				sender0 := send.NewMockSender("output")
+				sender1 := send.NewMockSender("output")
 
 				require.NoError(t, cache.Put("id0", &options.CachedLogger{
 					Output: sender0,
