@@ -142,7 +142,7 @@ func (t *linuxProcessTracker) doCleanupByEnvironmentVariable() error {
 func cleanupProcess(pid int) error {
 	// A process returns syscall.ESRCH if it already terminated.
 	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil && err != syscall.ESRCH {
-		return errors.Wrapf(err, "sending sigkill to process with PID '%d'")
+		return errors.Wrapf(err, "sending sigkill to process with PID '%d'", pid)
 	}
 	return nil
 }
