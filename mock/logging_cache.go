@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mongodb/grip"
+	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
@@ -63,7 +64,7 @@ func (c *LoggingCache) Put(id string, logger *options.CachedLogger) error {
 func (c *LoggingCache) Get(id string) (*options.CachedLogger, error) {
 	logger, ok := c.Cache[id]
 	if !ok {
-		return nil, errors.Errorf("logger not found")
+		return nil, jasper.ErrCachedLoggerNotFound
 	}
 	return logger, nil
 }
@@ -72,7 +73,7 @@ func (c *LoggingCache) Get(id string) (*options.CachedLogger, error) {
 // error if it does not exist in the cache.
 func (c *LoggingCache) Remove(id string) error {
 	if _, ok := c.Cache[id]; !ok {
-		return errors.Errorf("logger not found")
+		return jasper.ErrCachedLoggerNotFound
 	}
 
 	delete(c.Cache, id)
@@ -85,10 +86,10 @@ func (c *LoggingCache) Remove(id string) error {
 func (c *LoggingCache) CloseAndRemove(_ context.Context, id string) error {
 	logger, ok := c.Cache[id]
 	if !ok {
-		return errors.Errorf("logger not found")
+		return jasper.ErrCachedLoggerNotFound
 	}
 	if err := logger.Close(); err != nil {
-		return errors.Wrapf(err, "closing logger with id %s", id)
+		return errors.Wrapf(err, "closing logger")
 	}
 
 	delete(c.Cache, id)
@@ -99,10 +100,17 @@ func (c *LoggingCache) CloseAndRemove(_ context.Context, id string) error {
 // Clear closes and removes all objects in the in-memory logging cache.
 func (c *LoggingCache) Clear(_ context.Context) error {
 	catcher := grip.NewBasicCatcher()
-	for _, logger := range c.Cache {
-		catcher.Add(logger.Close())
+	var closed []string
+	for id, logger := range c.Cache {
+		if err := logger.Close(); err != nil {
+			catcher.Wrapf(err, "closing logger with id '%s'", id)
+			continue
+		}
+		closed = append(closed, id)
 	}
-	c.Cache = map[string]*options.CachedLogger{}
+	for _, id := range closed {
+		delete(c.Cache, id)
+	}
 
 	return catcher.Resolve()
 }
@@ -110,12 +118,13 @@ func (c *LoggingCache) Clear(_ context.Context) error {
 // Prune removes all items from the cache whose most recent access time is older
 // than lastAccessed.
 func (c *LoggingCache) Prune(lastAccessed time.Time) error {
-	for k, v := range c.Cache {
-		if v.Accessed.Before(lastAccessed) {
-			delete(c.Cache, k)
+	catcher := grip.NewBasicCatcher()
+	for id, logger := range c.Cache {
+		if logger.Accessed.Before(lastAccessed) {
+			catcher.Wrapf(c.CloseAndRemove(context.Background(), id), "pruning logger with id '%s'", id)
 		}
 	}
-	return nil
+	return catcher.Resolve()
 }
 
 // Len returns the size of the in-memory logging cache.
