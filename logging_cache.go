@@ -83,8 +83,7 @@ func (c *loggingCacheImpl) Prune(ts time.Time) error {
 	catcher := grip.NewBasicCatcher()
 	for id, logger := range c.cache {
 		if logger.Accessed.Before(ts) {
-			// TODO: this should probably handle the context better.
-			catcher.Wrapf(c.CloseAndRemove(context.TODO(), id), "pruning logger with id '%s'", id)
+			catcher.Wrapf(c.closeAndRemove(id), "pruning logger with id '%s'", id)
 		}
 	}
 
@@ -141,6 +140,10 @@ func (c *loggingCacheImpl) CloseAndRemove(_ context.Context, id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	return c.closeAndRemove(id)
+}
+
+func (c *loggingCacheImpl) closeAndRemove(id string) error {
 	logger, ok := c.cache[id]
 	if !ok {
 		return ErrCachedLoggerNotFound
