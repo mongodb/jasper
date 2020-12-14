@@ -164,6 +164,7 @@ func (s *Service) loggingCacheLen(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),
 		})
+		return
 	}
 	gimlet.WriteJSON(rw, &restLoggingCacheLen{Len: length})
 }
@@ -192,6 +193,7 @@ func (s *Service) loggingCachePrune(rw http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusInternalServerError,
 			Message:    err.Error(),
 		})
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})

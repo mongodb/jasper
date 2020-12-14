@@ -21,8 +21,8 @@ type LoggingCache interface {
 	// Get gets an existing cached logger. Implementations should return an
 	// error if the logger cannot be found.
 	Get(id string) (*options.CachedLogger, error)
-	// Remove removes an existing logger from the logging cache. Implementations
-	// should return an error if no such logger exists.
+	// Remove removes an existing logger from the logging cache without closing
+	// it. Implementations should return an error if no such logger exists.
 	Remove(id string) error
 	// CloseAndRemove closes and removes an existing logger from the logging
 	// cache. If it fails to close the logger, implementations should not remove
@@ -31,8 +31,8 @@ type LoggingCache interface {
 	// Clear attempts to close and remove all loggers in the logging cache. It
 	// will only remove loggers that are successfully closed.
 	Clear(ctx context.Context) error
-	// Prune removes all loggers that were last accessed before the given
-	// timestamp.
+	// Prune closes and removes all loggers that were last accessed before the
+	// given timestamp.
 	Prune(lastAccessed time.Time) error
 	// Len returns the number of loggers. Implementations should return
 	// -1 if the length cannot be retrieved successfully.
@@ -80,13 +80,15 @@ func (c *loggingCacheImpl) Prune(ts time.Time) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for k, v := range c.cache {
-		if v.Accessed.Before(ts) {
-			delete(c.cache, k)
+	catcher := grip.NewBasicCatcher()
+	for id, logger := range c.cache {
+		if logger.Accessed.Before(ts) {
+			// TODO: this should probably handle the context better.
+			catcher.Wrapf(c.CloseAndRemove(context.TODO(), id), "pruning logger with id '%s'", id)
 		}
 	}
 
-	return nil
+	return catcher.Resolve()
 }
 
 func (c *loggingCacheImpl) Get(id string) (*options.CachedLogger, error) {
