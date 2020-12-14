@@ -58,23 +58,42 @@ func (c *LoggingCache) Put(id string, logger *options.CachedLogger) error {
 	return nil
 }
 
-// Get returns an object from the in-memory logging cache.
-func (c *LoggingCache) Get(id string) *options.CachedLogger { return c.Cache[id] }
+// Get returns an object from the in-memory logging cache. It returns an error
+// if it does not exist in the cache.
+func (c *LoggingCache) Get(id string) (*options.CachedLogger, error) {
+	logger, ok := c.Cache[id]
+	if !ok {
+		return nil, errors.Errorf("logger not found")
+	}
+	return logger, nil
+}
 
-// Remove removes an object from the in-memory logging cache.
-func (c *LoggingCache) Remove(id string) { delete(c.Cache, id) }
+// Remove removes an object from the in-memory logging cache. It returns an
+// error if it does not exist in the cache.
+func (c *LoggingCache) Remove(id string) error {
+	if _, ok := c.Cache[id]; !ok {
+		return errors.Errorf("logger not found")
+	}
+
+	delete(c.Cache, id)
+
+	return nil
+}
 
 // CloseAndRemove closes the cached logger and removes it from the in-memory
 // logging cache.
 func (c *LoggingCache) CloseAndRemove(_ context.Context, id string) error {
-	var err error
 	logger, ok := c.Cache[id]
-	if ok {
-		err = logger.Close()
-		delete(c.Cache, id)
+	if !ok {
+		return errors.Errorf("logger not found")
+	}
+	if err := logger.Close(); err != nil {
+		return errors.Wrapf(err, "closing logger with id %s", id)
 	}
 
-	return errors.Wrapf(err, "problem closing logger with id %s", id)
+	delete(c.Cache, id)
+
+	return nil
 }
 
 // Clear closes and removes all objects in the in-memory logging cache.
@@ -90,13 +109,16 @@ func (c *LoggingCache) Clear(_ context.Context) error {
 
 // Prune removes all items from the cache whose most recent access time is older
 // than lastAccessed.
-func (c *LoggingCache) Prune(lastAccessed time.Time) {
+func (c *LoggingCache) Prune(lastAccessed time.Time) error {
 	for k, v := range c.Cache {
 		if v.Accessed.Before(lastAccessed) {
 			delete(c.Cache, k)
 		}
 	}
+	return nil
 }
 
 // Len returns the size of the in-memory logging cache.
-func (c *LoggingCache) Len() int { return len(c.Cache) }
+func (c *LoggingCache) Len() (int, error) {
+	return len(c.Cache), nil
+}
