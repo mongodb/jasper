@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/gimlet"
+	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
@@ -87,10 +88,15 @@ func (s *Service) loggingCacheRemove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := lc.Remove(id); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Cause(err) == jasper.ErrCachedLoggerNotFound {
+			code = http.StatusNotFound
+		}
 		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusInternalServerError,
+			StatusCode: code,
 			Message:    err.Error(),
 		})
+		return
 	}
 
 	gimlet.WriteJSON(rw, struct{}{})

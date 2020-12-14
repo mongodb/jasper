@@ -13,6 +13,8 @@ import (
 // LoggingCache provides an interface to a cache of loggers.
 type LoggingCache interface {
 	// Create creates and caches a new logger based on the given output options.
+	// If a logger with the given ID already exists, implementations should
+	// return an error.
 	Create(id string, opts *options.Output) (*options.CachedLogger, error)
 	// Put adds an existing logger to the cache.
 	Put(id string, logger *options.CachedLogger) error
@@ -22,10 +24,12 @@ type LoggingCache interface {
 	// Remove removes an existing logger from the logging cache. Implementations
 	// should return an error if no such logger exists.
 	Remove(id string) error
-	// CloseAndRemove closes and removes an existing logger from the
-	// logging cache.
+	// CloseAndRemove closes and removes an existing logger from the logging
+	// cache. If it fails to close the logger, implementations should not remove
+	// it from the cache.
 	CloseAndRemove(ctx context.Context, id string) error
-	// Clear closes and removes any remaining loggers in the logging cache.
+	// Clear attempts to close and remove all loggers in the logging cache. It
+	// will only remove loggers that are successfully closed.
 	Clear(ctx context.Context) error
 	// Prune removes all loggers that were last accessed before the given
 	// timestamp.
@@ -34,6 +38,9 @@ type LoggingCache interface {
 	// -1 if the length cannot be retrieved successfully.
 	Len() (int, error)
 }
+
+// ErrCachedLoggerNotFound indicates that a logger was not found in the cache.
+var ErrCachedLoggerNotFound = errors.New("logger not found")
 
 // NewLoggingCache produces a thread-safe implementation of a local logging
 // cache.
@@ -53,7 +60,7 @@ func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*options.Cac
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; ok {
-		return nil, errors.Errorf("logger named %s exists", id)
+		return nil, errors.Errorf("logger with id  '%s' exists", id)
 	}
 	logger := opts.CachedLogger(id)
 
@@ -87,7 +94,7 @@ func (c *loggingCacheImpl) Get(id string) (*options.CachedLogger, error) {
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; !ok {
-		return nil, errors.New("logger not found")
+		return nil, ErrCachedLoggerNotFound
 	}
 
 	item := c.cache[id]
@@ -120,7 +127,7 @@ func (c *loggingCacheImpl) Remove(id string) error {
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; !ok {
-		return errors.New("logger not found")
+		return ErrCachedLoggerNotFound
 	}
 
 	delete(c.cache, id)
@@ -134,7 +141,7 @@ func (c *loggingCacheImpl) CloseAndRemove(_ context.Context, id string) error {
 
 	logger, ok := c.cache[id]
 	if !ok {
-		return errors.New("logger not found")
+		return ErrCachedLoggerNotFound
 	}
 
 	if err := logger.Close(); err != nil {
@@ -151,10 +158,17 @@ func (c *loggingCacheImpl) Clear(_ context.Context) error {
 	defer c.mu.Unlock()
 
 	catcher := grip.NewBasicCatcher()
-	for _, logger := range c.cache {
-		catcher.Add(logger.Close())
+	var successfullyClosed []string
+	for id, logger := range c.cache {
+		if err := logger.Close(); err != nil {
+			catcher.Wrapf(logger.Close(), "closing logger with id '%s'", logger.ID)
+			continue
+		}
+		successfullyClosed = append(successfullyClosed, id)
 	}
-	c.cache = map[string]*options.CachedLogger{}
+	for _, id := range successfullyClosed {
+		delete(c.cache, id)
+	}
 
-	return errors.Wrap(catcher.Resolve(), "clearing logging cache")
+	return catcher.Resolve()
 }

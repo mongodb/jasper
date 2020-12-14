@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-func TestCLILoggingCache(t *testing.T) {
+func TestLoggingCache(t *testing.T) {
 	for remoteType, makeService := range map[string]func(ctx context.Context, t *testing.T, port int, manager jasper.Manager) util.CloseFunc{
 		RESTService: makeTestRESTService,
 		RPCService:  makeTestRPCService,
