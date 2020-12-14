@@ -652,10 +652,12 @@ func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *Scriptin
 	}, nil
 }
 
+var errLoggingCacheNotSupported = errors.New("logging cache is not supported")
+
 func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCacheCreateArgs) (*LoggingCacheInstance, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 	opts, err := args.Options.Export()
 	if err != nil {
@@ -682,11 +684,11 @@ func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCac
 func (s *jasperService) LoggingCacheGet(ctx context.Context, args *LoggingCacheArgs) (*LoggingCacheInstance, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
-	out := lc.Get(args.Id)
-	if out == nil {
+	out, err := lc.Get(args.Id)
+	if err != nil {
 		return nil, newGRPCError(codes.NotFound, errors.Errorf("getting logger with id '%s'", args.Id))
 	}
 
@@ -701,10 +703,12 @@ func (s *jasperService) LoggingCacheGet(ctx context.Context, args *LoggingCacheA
 func (s *jasperService) LoggingCacheRemove(ctx context.Context, args *LoggingCacheArgs) (*OperationOutcome, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
-	lc.Remove(args.Id)
+	if err := lc.Remove(args.Id); err != nil {
+		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "removing logger with id '%s'", args.Id))
+	}
 
 	return &OperationOutcome{Success: true}, nil
 }
@@ -712,11 +716,11 @@ func (s *jasperService) LoggingCacheRemove(ctx context.Context, args *LoggingCac
 func (s *jasperService) LoggingCacheCloseAndRemove(ctx context.Context, args *LoggingCacheArgs) (*OperationOutcome, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
 	if err := lc.CloseAndRemove(ctx, args.Id); err != nil {
-		return nil, newGRPCError(codes.Internal, err)
+		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "closing and removing logger with id '%s'", args.Id))
 	}
 
 	return &OperationOutcome{Success: true}, nil
@@ -725,11 +729,11 @@ func (s *jasperService) LoggingCacheCloseAndRemove(ctx context.Context, args *Lo
 func (s *jasperService) LoggingCacheClear(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
 	if err := lc.Clear(ctx); err != nil {
-		return nil, newGRPCError(codes.Internal, err)
+		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "clearing logging cache"))
 	}
 
 	return &OperationOutcome{Success: true}, nil
@@ -738,29 +742,35 @@ func (s *jasperService) LoggingCacheClear(ctx context.Context, _ *empty.Empty) (
 func (s *jasperService) LoggingCachePrune(ctx context.Context, arg *timestamp.Timestamp) (*OperationOutcome, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
 	ts, err := ptypes.Timestamp(arg)
 	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "converting timestamp"))
+		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "converting input timestamp"))
 	}
 
-	lc.Prune(ts)
+	if err := lc.Prune(ts); err != nil {
+		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "pruning logging cache"))
+	}
 
 	return &OperationOutcome{Success: true}, nil
 }
 
-func (s *jasperService) LoggingCacheLen(ctx context.Context, _ *empty.Empty) (*LoggingCacheSize, error) {
+func (s *jasperService) LoggingCacheLen(ctx context.Context, _ *empty.Empty) (*LoggingCacheLenResponse, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
-		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
+		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
-	return &LoggingCacheSize{
+	length, err := lc.Len()
+	if err != nil {
+		return nil, errors.Wrap(err, "getting logging cache length")
+	}
+
+	return &LoggingCacheLenResponse{
 		Outcome: &OperationOutcome{Success: true},
-		Id:      s.manager.ID(),
-		Size:    int64(lc.Len()),
+		Len:     int64(length),
 	}, nil
 }
 
@@ -770,9 +780,9 @@ func (s *jasperService) SendMessages(ctx context.Context, lp *LoggingPayload) (*
 		return nil, newGRPCError(codes.FailedPrecondition, errors.New("logging cache not supported"))
 	}
 
-	logger := lc.Get(lp.LoggerID)
-	if logger == nil {
-		return nil, newGRPCError(codes.NotFound, errors.Errorf("getting logger with id '%s'", lp.LoggerID))
+	logger, err := lc.Get(lp.LoggerID)
+	if err != nil {
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting logger with id '%s'", lp.LoggerID))
 	}
 
 	payload := lp.Export()

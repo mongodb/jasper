@@ -11,17 +11,17 @@ import (
 )
 
 // LoggingCache provides an interface to a cache of loggers.
-// TODO (EVG-13100): most of these methods should return errors.
 type LoggingCache interface {
 	// Create creates and caches a new logger based on the given output options.
 	Create(id string, opts *options.Output) (*options.CachedLogger, error)
 	// Put adds an existing logger to the cache.
 	Put(id string, logger *options.CachedLogger) error
-	// Get gets an existing cached logger. Implementations should return nil if
-	// the logger cannot be found.
-	Get(id string) *options.CachedLogger
-	// Remove removes an existing logger from the logging cache.
-	Remove(id string)
+	// Get gets an existing cached logger. Implementations should return an
+	// error if the logger cannot be found.
+	Get(id string) (*options.CachedLogger, error)
+	// Remove removes an existing logger from the logging cache. Implementations
+	// should return an error if no such logger exists.
+	Remove(id string) error
 	// CloseAndRemove closes and removes an existing logger from the
 	// logging cache.
 	CloseAndRemove(ctx context.Context, id string) error
@@ -29,14 +29,14 @@ type LoggingCache interface {
 	Clear(ctx context.Context) error
 	// Prune removes all loggers that were last accessed before the given
 	// timestamp.
-	Prune(lastAccessed time.Time)
+	Prune(lastAccessed time.Time) error
 	// Len returns the number of loggers. Implementations should return
 	// -1 if the length cannot be retrieved successfully.
-	Len() int
+	Len() (int, error)
 }
 
 // NewLoggingCache produces a thread-safe implementation of a local logging
-// cache for use in manager implementations.
+// cache.
 func NewLoggingCache() LoggingCache {
 	return &loggingCacheImpl{
 		cache: map[string]*options.CachedLogger{},
@@ -62,14 +62,14 @@ func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*options.Cac
 	return logger, nil
 }
 
-func (c *loggingCacheImpl) Len() int {
+func (c *loggingCacheImpl) Len() (int, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return len(c.cache)
+	return len(c.cache), nil
 }
 
-func (c *loggingCacheImpl) Prune(ts time.Time) {
+func (c *loggingCacheImpl) Prune(ts time.Time) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -78,20 +78,22 @@ func (c *loggingCacheImpl) Prune(ts time.Time) {
 			delete(c.cache, k)
 		}
 	}
+
+	return nil
 }
 
-func (c *loggingCacheImpl) Get(id string) *options.CachedLogger {
+func (c *loggingCacheImpl) Get(id string) (*options.CachedLogger, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; !ok {
-		return nil
+		return nil, errors.New("logger not found")
 	}
 
 	item := c.cache[id]
 	item.Accessed = time.Now()
 	c.cache[id] = item
-	return item
+	return item, nil
 }
 
 func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
@@ -103,7 +105,7 @@ func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; ok {
-		return errors.Errorf("cannot cache with existing logger '%s'", id)
+		return errors.Errorf("cannot cache an existing logger with id '%s'", id)
 	}
 
 	logger.Accessed = time.Now()
@@ -113,25 +115,35 @@ func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
 	return nil
 }
 
-func (c *loggingCacheImpl) Remove(id string) {
+func (c *loggingCacheImpl) Remove(id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if _, ok := c.cache[id]; !ok {
+		return errors.New("logger not found")
+	}
+
 	delete(c.cache, id)
+
+	return nil
 }
 
 func (c *loggingCacheImpl) CloseAndRemove(_ context.Context, id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var err error
 	logger, ok := c.cache[id]
-	if ok {
-		err = logger.Close()
-		delete(c.cache, id)
+	if !ok {
+		return errors.New("logger not found")
 	}
 
-	return errors.Wrapf(err, "problem closing logger with id %s", id)
+	if err := logger.Close(); err != nil {
+		return errors.Wrapf(err, "closing logger")
+	}
+
+	delete(c.cache, id)
+
+	return nil
 }
 
 func (c *loggingCacheImpl) Clear(_ context.Context) error {
@@ -144,5 +156,5 @@ func (c *loggingCacheImpl) Clear(_ context.Context) error {
 	}
 	c.cache = map[string]*options.CachedLogger{}
 
-	return errors.Wrap(catcher.Resolve(), "problem clearing logger cache")
+	return errors.Wrap(catcher.Resolve(), "clearing logging cache")
 }
