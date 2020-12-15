@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"os"
 	"runtime"
@@ -287,7 +286,6 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 			return
 		}
 
-		fmt.Println("processed signal for process", p.ID())
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
 			sig = makeCompatible(sig)
 			out <- errors.Wrapf(exec.Signal(sig), "problem sending signal '%s' to '%s'",
