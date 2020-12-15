@@ -120,7 +120,10 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 	signal := make(chan error)
 	go func() {
 		defer close(signal)
-		signal <- exec.Wait()
+		select {
+		case signal <- exec.Wait():
+		case <-ctx.Done():
+		}
 	}()
 	defer close(p.complete)
 
