@@ -501,29 +501,18 @@ func TestManagerImplementations(t *testing.T) {
 
 	for managerName, makeManager := range remoteManagerTestCases(httpClient) {
 		t.Run(managerName, func(t *testing.T) {
-			for _, modify := range []struct {
-				Name    string
-				Options testutil.OptsModify
-			}{
-				{
-					Name: "Blocking",
-					Options: func(opts *options.Create) {
-						opts.Implementation = options.ProcessImplementationBlocking
-					},
+			for optsTestCase, modifyOpts := range map[string]testutil.OptsModify{
+				"Blocking": func(opts *options.Create) *options.Create {
+					opts.Implementation = options.ProcessImplementationBlocking
+					return opts
 				},
-				{
-					Name: "Basic",
-					Options: func(opts *options.Create) {
-						opts.Implementation = options.ProcessImplementationBasic
-					},
-				},
-				{
-					Name:    "Default",
-					Options: func(opts *options.Create) {},
+				"Basic": func(opts *options.Create) *options.Create {
+					opts.Implementation = options.ProcessImplementationBasic
+					return opts
 				},
 			} {
-				t.Run(modify.Name, func(t *testing.T) {
-					for _, test := range addBasicClientTests(modify.Options,
+				t.Run(optsTestCase, func(t *testing.T) {
+					for _, test := range addBasicClientTests(modifyOpts,
 						clientTestCase{
 							Name: "StandardInput",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
@@ -594,7 +583,7 @@ func TestManagerImplementations(t *testing.T) {
 												Loggers: []*options.LoggerConfig{inMemLogger},
 											},
 										}
-										modify.Options(opts)
+										modifyOpts(opts)
 
 										expectedOutput := "foobar"
 										stdin := []byte("echo " + expectedOutput)
@@ -720,7 +709,7 @@ func TestManagerImplementations(t *testing.T) {
 							Name: "GetLogStreamFailsWithoutInMemoryLogger",
 							Case: func(ctx context.Context, t *testing.T, client Manager) {
 								opts := &options.Create{Args: []string{"echo", "foo"}}
-								modify.Options(opts)
+								opts = modifyOpts(opts)
 								proc, err := client.CreateProcess(ctx, opts)
 								require.NoError(t, err)
 								require.NotNil(t, proc)
@@ -745,7 +734,7 @@ func TestManagerImplementations(t *testing.T) {
 										Loggers: []*options.LoggerConfig{inMemLogger},
 									},
 								}
-								modify.Options(opts)
+								modifyOpts(opts)
 
 								for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, proc jasper.Process){
 									"GetLogStreamFailsForInvalidCount": func(ctx context.Context, t *testing.T, proc jasper.Process) {

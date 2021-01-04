@@ -32,7 +32,7 @@ func TestProcessImplementations(t *testing.T) {
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 	} {
 		t.Run(pname, func(t *testing.T) {
-			for optsTestName, modifyOpts := range map[string]func(*options.Create) *options.Create{
+			for optsTestName, modifyOpts := range map[string]testutil.OptsModify{
 				"Local": func(opts *options.Create) *options.Create { return opts },
 				"Docker": func(opts *options.Create) *options.Create {
 					image := os.Getenv("DOCKER_IMAGE")
@@ -82,19 +82,19 @@ func TestProcessImplementations(t *testing.T) {
 					//     assert.Error(t, err)
 					//     assert.Nil(t, proc)
 					// },
-					// "CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
-					//     pctx, pcancel := context.WithTimeout(ctx, 5*time.Second)
-					//     defer pcancel()
-					//     startAt := time.Now()
-					//     opts := testutil.SleepCreateOpts(20)
-					//     proc, err := makep(pctx, opts)
-					//     require.NoError(t, err)
-					//     require.NotNil(t, proc)
-					//
-					//     time.Sleep(5 * time.Millisecond) // let time pass...
-					//     assert.False(t, proc.Info(ctx).Successful)
-					//     assert.True(t, time.Since(startAt) < 20*time.Second)
-					// },
+					"CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
+						pctx, pcancel := context.WithTimeout(ctx, 5*time.Second)
+						defer pcancel()
+						startAt := time.Now()
+						opts := testutil.SleepCreateOpts(20)
+						proc, err := makep(pctx, opts)
+						require.NoError(t, err)
+						require.NotNil(t, proc)
+
+						time.Sleep(5 * time.Millisecond) // let time pass...
+						assert.False(t, proc.Info(ctx).Successful)
+						assert.True(t, time.Since(startAt) < 20*time.Second)
+					},
 					// "ProcessLacksTagsByDefault": func(ctx context.Context, t *testing.T, opts *options.Create, makep ProcessConstructor) {
 					//     proc, err := makep(ctx, opts)
 					//     require.NoError(t, err)
@@ -472,6 +472,25 @@ func TestProcessImplementations(t *testing.T) {
 					//     _, err = newProc.Wait(ctx)
 					//     require.NoError(t, err)
 					//     assert.True(t, newProc.Info(ctx).Successful)
+					// },
+					// kim: NOTE: this can only be done on local tests, not
+					// remote tests.
+					// "CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
+					//     // kim: NOTE: cancelling this context also cancels the remote
+					//     // request, so it can only run locally.
+					//     pctx, pcancel := context.WithTimeout(ctx, time.Millisecond)
+					//     defer pcancel()
+					//     startAt := time.Now()
+					//     opts.Args = testutil.SleepCreateOpts(20).Args
+					//     proc, err := makeProc(pctx, opts)
+					//     require.NoError(t, err)
+					//     require.NotNil(t, proc)
+					//
+					//     time.Sleep(15 * time.Second) // let time pass...
+					//     assert.True(t, proc.Info(ctx).Complete)
+					//     // kim: NOTE: I updated this test to verify process completion.
+					//     assert.False(t, proc.Info(ctx).Successful)
+					//     assert.True(t, time.Since(startAt) < 20*time.Second)
 					// },
 					// kim: NOTE: this can only be done on local tests, not
 					// remote tests.

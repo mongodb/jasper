@@ -37,21 +37,6 @@ func ProcessTests() map[string]ProcessTestCase {
 			assert.Error(t, err)
 			assert.Nil(t, proc)
 		},
-		"CanceledContextTimesOutEarly": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
-			pctx, pcancel := context.WithTimeout(ctx, 5*time.Millisecond)
-			defer pcancel()
-			startAt := time.Now()
-			opts.Args = testutil.SleepCreateOpts(20).Args
-			proc, err := makeProc(pctx, opts)
-			require.NoError(t, err)
-			require.NotNil(t, proc)
-
-			time.Sleep(time.Second) // let time pass...
-			assert.True(t, proc.Info(ctx).Complete)
-			// kim: NOTE: I updated this test to verify process completion.
-			assert.False(t, proc.Info(ctx).Successful)
-			assert.True(t, time.Since(startAt) < 20*time.Second)
-		},
 		"ProcessLacksTagsByDefault": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
 			proc, err := makeProc(ctx, opts)
 			require.NoError(t, err)
@@ -247,7 +232,7 @@ func ProcessTests() map[string]ProcessTestCase {
 			assert.Error(t, err)
 			assert.Equal(t, 1, exitCode)
 		},
-		"WaitGivesProperExitCodeOnSignalDeath": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
+		"WaitGivesProperExitCodeOnSignalTerminate": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
 			proc, err := makeProc(ctx, testutil.SleepCreateOpts(100))
 			require.NoError(t, err)
 			require.NotNil(t, proc)
@@ -261,13 +246,11 @@ func ProcessTests() map[string]ProcessTestCase {
 				assert.Equal(t, int(sig), exitCode)
 			}
 		},
-		// kim: NOTE: not sure if this test works on remote interfaces since
-		// it's not included.
-		"WaitGivesProperExitCodeOnSignalAbort": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
+		"WaitGivesProperExitCodeOnSignalInterrupt": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
 			proc, err := makeProc(ctx, testutil.SleepCreateOpts(100))
 			require.NoError(t, err)
 			require.NotNil(t, proc)
-			sig := syscall.SIGABRT
+			sig := syscall.SIGINT
 			assert.NoError(t, proc.Signal(ctx, sig))
 			exitCode, err := proc.Wait(ctx)
 			assert.Error(t, err)

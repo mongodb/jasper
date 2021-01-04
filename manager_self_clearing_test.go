@@ -27,8 +27,8 @@ func pureCreate(ctx context.Context, m *selfClearingProcessManager, t *testing.T
 	return m.CreateProcess(ctx, opts)
 }
 
-func fillUp(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, numProcs int) {
-	procs, err := createProcs(ctx, testutil.SleepCreateOpts(5), manager, numProcs)
+func fillUp(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, numProcs int, opts *options.Create) {
+	procs, err := createProcs(ctx, opts, manager, numProcs)
 	require.NoError(t, err)
 	require.Len(t, procs, numProcs)
 }
@@ -37,27 +37,27 @@ func TestSelfClearingManager(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for mname, createFunc := range map[string]func(context.Context, *selfClearingProcessManager, *testing.T, *options.Create) (Process, error){
+	for createTestName, createFunc := range map[string]func(context.Context, *selfClearingProcessManager, *testing.T, *options.Create) (Process, error){
 		"Create":   pureCreate,
 		"Register": registerBasedCreate,
 	} {
-		t.Run(mname, func(t *testing.T) {
-
-			for name, test := range map[string]func(context.Context, *testing.T, *selfClearingProcessManager, testutil.OptsModify){
-				"SucceedsWhenFree": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
-					proc, err := createFunc(ctx, manager, t, testutil.TrueCreateOpts())
+		t.Run(createTestName, func(t *testing.T) {
+			for testName, testCase := range map[string]func(context.Context, *testing.T, *selfClearingProcessManager, *options.Create){
+				"SucceedsWhenFree": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
+					opts.Args = testutil.TrueCreateOpts().Args
+					proc, err := createFunc(ctx, manager, t, opts)
 					assert.NoError(t, err)
 					assert.NotNil(t, proc)
 				},
-				"ErrorsWhenFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
-					fillUp(ctx, t, manager, manager.maxProcs)
+				"ErrorsWhenFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
+					fillUp(ctx, t, manager, manager.maxProcs, opts)
 
 					sleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
 					assert.Error(t, err)
 					assert.Nil(t, sleep)
 				},
-				"PartiallySucceedsWhenAlmostFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
-					fillUp(ctx, t, manager, manager.maxProcs-1)
+				"PartiallySucceedsWhenAlmostFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
+					fillUp(ctx, t, manager, manager.maxProcs-1, opts)
 					firstSleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
 					assert.NoError(t, err)
 					assert.NotNil(t, firstSleep)
@@ -65,8 +65,8 @@ func TestSelfClearingManager(t *testing.T) {
 					assert.Error(t, err)
 					assert.Nil(t, secondSleep)
 				},
-				"InitialFailureIsResolvedByWaiting": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, mod testutil.OptsModify) {
-					fillUp(ctx, t, manager, manager.maxProcs)
+				"InitialFailureIsResolvedByWaiting": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
+					fillUp(ctx, t, manager, manager.maxProcs, opts)
 					sleepOpts := testutil.SleepCreateOpts(100)
 					sleepProc, err := createFunc(ctx, manager, t, sleepOpts)
 					assert.Error(t, err)
@@ -81,37 +81,34 @@ func TestSelfClearingManager(t *testing.T) {
 					assert.NoError(t, err)
 					assert.NotNil(t, sleepProc)
 				},
-				//"": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager) {},
 			} {
 
-				t.Run("Blocking", func(t *testing.T) {
-					t.Run(name, func(t *testing.T) {
-						tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-						defer cancel()
+				t.Run(testName, func(t *testing.T) {
+					for procName, modifyOpts := range map[string]testutil.OptsModify{
+						"BlockingProcess": func(opts *options.Create) *options.Create {
+							opts.Implementation = options.ProcessImplementationBlocking
+							return opts
+						},
+						"BasicProcess": func(opts *options.Create) *options.Create {
+							opts.Implementation = options.ProcessImplementationBasic
+							return opts
+						},
+					} {
+						t.Run(procName, func(t *testing.T) {
+							tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
+							defer cancel()
 
-						selfClearingManager, err := NewSelfClearingProcessManager(5, false)
-
-						require.NoError(t, err)
-						test(tctx, t, selfClearingManager.(*selfClearingProcessManager), func(o *options.Create) {
-							o.Implementation = options.ProcessImplementationBlocking
+							mngr, err := NewSelfClearingProcessManager(5, false)
+							require.NoError(t, err)
+							selfClearingMngr, ok := mngr.(*selfClearingProcessManager)
+							require.True(t, ok)
+							opts := testutil.SleepCreateOpts(5)
+							opts = modifyOpts(opts)
+							testCase(tctx, t, selfClearingMngr, opts)
+							assert.NoError(t, mngr.Close(ctx))
 						})
-						assert.NoError(t, selfClearingManager.Close(tctx))
-					})
+					}
 				})
-				t.Run("Basic", func(t *testing.T) {
-					t.Run(name, func(t *testing.T) {
-						tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-						defer cancel()
-
-						selfClearingManager, err := NewSelfClearingProcessManager(5, false)
-						require.NoError(t, err)
-						test(tctx, t, selfClearingManager.(*selfClearingProcessManager), func(o *options.Create) {
-							o.Implementation = options.ProcessImplementationBasic
-						})
-						assert.NoError(t, selfClearingManager.Close(tctx))
-					})
-				})
-
 			}
 		})
 	}

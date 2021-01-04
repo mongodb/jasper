@@ -84,4 +84,4 @@ func ValidGolangScriptingHarnessOptions(dir string) options.ScriptingHarness {
 }
 
 // OptsModify functions mutate creation options for tests.
-type OptsModify func(*options.Create)
+type OptsModify func(*options.Create) *options.Create

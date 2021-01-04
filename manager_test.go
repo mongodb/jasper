@@ -20,7 +20,7 @@ func TestManagerImplementations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for mname, makeMngr := range map[string]func(context.Context, *testing.T) Manager{
+	for mngrName, makeMngr := range map[string]func(context.Context, *testing.T) Manager{
 		"Basic/NoLock": func(_ context.Context, _ *testing.T) Manager {
 			return &basicProcessManager{
 				id:      "id",
@@ -55,12 +55,12 @@ func TestManagerImplementations(t *testing.T) {
 			})
 		},
 	} {
-		if testutil.IsDockerCase(mname) {
+		if testutil.IsDockerCase(mngrName) {
 			testutil.SkipDockerIfUnsupported(t)
 		}
 
-		t.Run(mname, func(t *testing.T) {
-			for name, test := range map[string]func(context.Context, *testing.T, Manager, testutil.OptsModify){
+		t.Run(mngrName, func(t *testing.T) {
+			for testName, testCase := range map[string]func(context.Context, *testing.T, Manager, testutil.OptsModify){
 				"ValidateFixture": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					assert.NotNil(t, ctx)
 					assert.NotNil(t, manager)
@@ -468,19 +468,23 @@ func TestManagerImplementations(t *testing.T) {
 					}
 				},
 			} {
-				t.Run(name+"/BasicProcess", func(t *testing.T) {
-					tctx, tcancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-					defer tcancel()
-					test(tctx, t, makeMngr(tctx, t), func(opts *options.Create) {
-						opts.Implementation = options.ProcessImplementationBlocking
-					})
-				})
-				t.Run(name+"/BlockingProcess", func(t *testing.T) {
-					tctx, tcancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-					defer tcancel()
-					test(tctx, t, makeMngr(tctx, t), func(opts *options.Create) {
-						opts.Implementation = options.ProcessImplementationBlocking
-					})
+				t.Run(testName, func(t *testing.T) {
+					for procName, modifyOpts := range map[string]testutil.OptsModify{
+						"BasicProcess": func(opts *options.Create) *options.Create {
+							opts.Implementation = options.ProcessImplementationBasic
+							return opts
+						},
+						"BlockingProcess": func(opts *options.Create) *options.Create {
+							opts.Implementation = options.ProcessImplementationBlocking
+							return opts
+						},
+					} {
+						t.Run(procName, func(t *testing.T) {
+							tctx, tcancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
+							defer tcancel()
+							testCase(tctx, t, makeMngr(tctx, t), modifyOpts)
+						})
+					}
 				})
 			}
 		})
@@ -503,7 +507,7 @@ func TestTrackedManager(t *testing.T) {
 		},
 	} {
 		t.Run(managerName, func(t *testing.T) {
-			for name, test := range map[string]func(context.Context, *testing.T, *basicProcessManager, *options.Create){
+			for testName, testCase := range map[string]func(context.Context, *testing.T, *basicProcessManager, *options.Create){
 				"ValidateFixtureSetup": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
 					assert.NotNil(t, manager.tracker)
 					assert.Len(t, manager.procs, 0)
@@ -594,17 +598,25 @@ func TestTrackedManager(t *testing.T) {
 				},
 				// "": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {},
 			} {
-				tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
-				defer cancel()
-				t.Run(name+"Manager/BlockingProcess", func(t *testing.T) {
-					opts := testutil.SleepCreateOpts(1)
-					opts.Implementation = options.ProcessImplementationBlocking
-					test(tctx, t, makeManager(), opts)
-				})
-				t.Run(name+"Manager/BasicProcess", func(t *testing.T) {
-					opts := testutil.SleepCreateOpts(1)
-					opts.Implementation = options.ProcessImplementationBasic
-					test(tctx, t, makeManager(), opts)
+				t.Run(testName, func(t *testing.T) {
+					for procName, modifyOpts := range map[string]testutil.OptsModify{
+						"BasicProcess": func(opts *options.Create) *options.Create {
+							opts.Implementation = options.ProcessImplementationBasic
+							return opts
+						},
+						"BlockingProcess": func(opts *options.Create) *options.Create {
+							opts.Implementation = options.ProcessImplementationBlocking
+							return opts
+						},
+					} {
+						t.Run(procName, func(t *testing.T) {
+							tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
+							defer cancel()
+							opts := testutil.SleepCreateOpts(1)
+							opts = modifyOpts(opts)
+							testCase(tctx, t, makeManager(), opts)
+						})
+					}
 				})
 			}
 		})
