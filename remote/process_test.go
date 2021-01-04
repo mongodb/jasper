@@ -18,9 +18,8 @@ import (
 )
 
 type processTestCase struct {
-	Name       string
-	Case       func(context.Context, *testing.T, *options.Create, jasper.ProcessConstructor)
-	ShouldSkip bool
+	Name string
+	Case func(context.Context, *testing.T, *options.Create, jasper.ProcessConstructor)
 }
 
 // addBasicProcessTests contains all the process tests found in the root package
@@ -380,6 +379,7 @@ func addBasicProcessTests(tests ...processTestCase) []processTestCase {
 				assert.True(t, proc.Complete(ctx))
 			},
 		},
+		// kim: NOTE: this is only relevant to remote tests.
 		{
 			Name: "RegisterSignalTriggerFails",
 			Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep jasper.ProcessConstructor) {
@@ -480,9 +480,6 @@ func TestProcessImplementations(t *testing.T) {
 			} {
 				t.Run(modify.Name, func(t *testing.T) {
 					for _, test := range addBasicProcessTests() {
-						if test.ShouldSkip {
-							continue
-						}
 						t.Run(test.Name, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 							defer cancel()
