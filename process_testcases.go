@@ -93,8 +93,6 @@ func ProcessTests() map[string]ProcessTestCase {
 		"CompleteIsTrueAfterWait": func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
 			proc, err := makeProc(ctx, opts)
 			require.NoError(t, err)
-			// kim: TODO: can this sleep be removed?
-			time.Sleep(10 * time.Millisecond) // give the process time to start background machinery
 			_, err = proc.Wait(ctx)
 			assert.NoError(t, err)
 			assert.True(t, proc.Complete(ctx))
