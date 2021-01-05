@@ -1,7 +1,11 @@
 package jasper
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -340,7 +344,6 @@ type ManagerTestCase struct {
 // ManagerTests returns the common test suite for the Manager interface. This
 // should be used for testing purposes only.
 func ManagerTests() []ManagerTestCase {
-	// kim: TODO: add test cases
 	return []ManagerTestCase{
 		{
 			Name: "ValidateFixture",
@@ -709,6 +712,111 @@ func ManagerTests() []ManagerTestCase {
 				for _, procID := range cmd.GetProcIDs() {
 					assert.True(t, procsContainID(allProcs, procID))
 				}
+			},
+		},
+		{
+			Name: "WriteFileSucceeds",
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+				}()
+				require.NoError(t, tmpFile.Close())
+
+				opts := options.WriteFile{Path: tmpFile.Name(), Content: []byte("foo")}
+				require.NoError(t, mngr.WriteFile(ctx, opts))
+
+				content, err := ioutil.ReadFile(tmpFile.Name())
+				require.NoError(t, err)
+
+				assert.Equal(t, opts.Content, content)
+			},
+		},
+		{
+			Name: "WriteFileAcceptsContentFromReader",
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+				}()
+				require.NoError(t, tmpFile.Close())
+
+				buf := []byte("foo")
+				opts := options.WriteFile{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
+				require.NoError(t, mngr.WriteFile(ctx, opts))
+
+				content, err := ioutil.ReadFile(tmpFile.Name())
+				require.NoError(t, err)
+
+				assert.Equal(t, buf, content)
+			},
+		},
+		{
+			Name: "WriteFileSucceedsWithLargeContent",
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+				}()
+				require.NoError(t, tmpFile.Close())
+
+				const mb = 1024 * 1024
+				opts := options.WriteFile{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
+				require.NoError(t, mngr.WriteFile(ctx, opts))
+
+				content, err := ioutil.ReadFile(tmpFile.Name())
+				require.NoError(t, err)
+
+				assert.Equal(t, opts.Content, content)
+			},
+		},
+		{
+			Name: "WriteFileSucceedsWithLargeContentFromReader",
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, tmpFile.Close())
+					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
+				}()
+
+				const mb = 1024 * 1024
+				buf := bytes.Repeat([]byte("foo"), 2*mb)
+				opts := options.WriteFile{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
+				require.NoError(t, mngr.WriteFile(ctx, opts))
+
+				content, err := ioutil.ReadFile(tmpFile.Name())
+				require.NoError(t, err)
+
+				assert.Equal(t, buf, content)
+			},
+		},
+		{
+			Name: "WriteFileSucceedsWithNoContent",
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+				path := filepath.Join(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				require.NoError(t, os.RemoveAll(path))
+				defer func() {
+					assert.NoError(t, os.RemoveAll(path))
+				}()
+
+				opts := options.WriteFile{Path: path}
+				require.NoError(t, mngr.WriteFile(ctx, opts))
+
+				stat, err := os.Stat(path)
+				require.NoError(t, err)
+
+				assert.Zero(t, stat.Size())
+			},
+		},
+		{
+			Name: "WriteFileFailsWithInvalidPath",
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+				opts := options.WriteFile{Content: []byte("foo")}
+				assert.Error(t, mngr.WriteFile(ctx, opts))
 			},
 		},
 	}

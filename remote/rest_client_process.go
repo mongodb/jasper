@@ -23,19 +23,28 @@ func (p *restProcess) ID() string { return p.id }
 
 func (p *restProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	info, err := p.client.getProcessInfo(ctx, p.id)
-	grip.Debug(message.WrapError(err, message.Fields{"process": p.id}))
+	grip.Warning(message.WrapError(err, message.Fields{
+		"message": "failed to get process info",
+		"process": p.id,
+	}))
 	return info
 }
 
 func (p *restProcess) Running(ctx context.Context) bool {
 	info, err := p.client.getProcessInfo(ctx, p.id)
-	grip.Debug(message.WrapError(err, message.Fields{"process": p.id}))
+	grip.Warning(message.WrapError(err, message.Fields{
+		"message": "failed to get process running status",
+		"process": p.id,
+	}))
 	return info.IsRunning
 }
 
 func (p *restProcess) Complete(ctx context.Context) bool {
 	info, err := p.client.getProcessInfo(ctx, p.id)
-	grip.Debug(message.WrapError(err, message.Fields{"process": p.id}))
+	grip.Warning(message.WrapError(err, message.Fields{
+		"message": "failed to get process completion status",
+		"process": p.id,
+	}))
 	return info.Complete
 }
 
@@ -52,13 +61,15 @@ func (p *restProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 func (p *restProcess) Wait(ctx context.Context) (int, error) {
 	resp, err := p.client.doRequest(ctx, http.MethodGet, p.client.getURL("/process/%s/wait", p.id), nil)
 	if err != nil {
-		return -1, err
+		return -1, errors.Wrap(err, "request returned error")
 	}
 	defer resp.Body.Close()
 
+	// TODO (EVG-13672): REST service should return both exit code and error
+	// text.
 	var exitCode int
 	if err = gimlet.GetJSON(resp.Body, &exitCode); err != nil {
-		return -1, errors.Wrap(err, "request returned error")
+		return -1, errors.Wrap(err, "failed to read exit code from response")
 	}
 	if exitCode != 0 {
 		return exitCode, errors.New("operation failed")
@@ -102,12 +113,13 @@ func (p *restProcess) RegisterSignalTriggerID(ctx context.Context, triggerID jas
 	return nil
 }
 
-func (p *restProcess) Tag(t string) {
-	resp, err := p.client.doRequest(context.Background(), http.MethodPost, p.client.getURL("/process/%s/tags?add=%s", p.id, t), nil)
+func (p *restProcess) Tag(tag string) {
+	resp, err := p.client.doRequest(context.Background(), http.MethodPost, p.client.getURL("/process/%s/tags?add=%s", p.id, tag), nil)
 	if err != nil {
-		grip.Debug(message.WrapError(err, message.Fields{
-			"message": "request returned error",
-			"process": p.id,
+		grip.Warning(message.WrapError(err, message.Fields{
+			"message": "failed to tag process",
+			"process": p.ID(),
+			"tag":     tag,
 		}))
 		return
 	}
@@ -117,9 +129,9 @@ func (p *restProcess) Tag(t string) {
 func (p *restProcess) GetTags() []string {
 	resp, err := p.client.doRequest(context.Background(), http.MethodGet, p.client.getURL("/process/%s/tags", p.id), nil)
 	if err != nil {
-		grip.Debug(message.WrapError(err, message.Fields{
-			"message": "request returned error",
-			"process": p.id,
+		grip.Warning(message.WrapError(err, message.Fields{
+			"message": "failed to get tags",
+			"process": p.ID(),
 		}))
 		return nil
 	}
@@ -127,9 +139,9 @@ func (p *restProcess) GetTags() []string {
 
 	out := []string{}
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		grip.Debug(message.WrapError(err, message.Fields{
-			"message": "problem reading tags from response",
-			"process": p.id,
+		grip.Warning(message.WrapError(err, message.Fields{
+			"message": "failed to read tags from response",
+			"process": p.ID(),
 		}))
 
 		return nil
@@ -140,7 +152,7 @@ func (p *restProcess) GetTags() []string {
 func (p *restProcess) ResetTags() {
 	resp, err := p.client.doRequest(context.Background(), http.MethodDelete, p.client.getURL("/process/%s/tags", p.id), nil)
 	if err != nil {
-		grip.Debug(message.WrapError(err, message.Fields{
+		grip.Warning(message.WrapError(err, message.Fields{
 			"message": "request returned error",
 			"process": p.id,
 		}))
