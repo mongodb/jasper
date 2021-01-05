@@ -52,10 +52,10 @@ func TestCommandImplementation(t *testing.T) {
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 	for procType, makep := range map[string]ProcessConstructor{
-		"BlockingNoLock": newBasicProcess,
-		"BlockingLock":   makeLockingProcess(newBasicProcess),
-		"BasicNoLock":    newBasicProcess,
-		"BasicLock":      makeLockingProcess(newBasicProcess),
+		"BlockingNoLock":   newBasicProcess,
+		"BlockingWithLock": makeLockingProcess(newBasicProcess),
+		"BasicNoLock":      newBasicProcess,
+		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 	} {
 		t.Run(procType, func(t *testing.T) {
 			for runFuncType, runFunc := range map[string]cmdRunFunc{

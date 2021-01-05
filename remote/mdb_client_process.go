@@ -234,7 +234,7 @@ func (p *mdbProcess) Tag(tag string) {
 		}))
 		return
 	}
-	if resp.SuccessOrError(); err != nil {
+	if err := resp.SuccessOrError(); err != nil {
 		grip.Warning(message.WrapError(err, message.Fields{
 			"message": "failed to tag process",
 			"process": p.ID(),
