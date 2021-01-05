@@ -269,6 +269,15 @@ func (e *docker) Wait() error {
 	case err := <-errs:
 		return errors.Wrap(err, "error waiting for container to finish running")
 	case <-e.ctx.Done():
+		if e.ctx.Err() == context.DeadlineExceeded {
+			// If the Docker container is killed by exceeding the process
+			// timeout, treat it the same as a timed-out process that was
+			// killed by a signal.
+			e.exitErr = e.ctx.Err()
+			e.signal = syscall.SIGKILL
+			e.setStatus(Exited)
+			return e.exitErr
+		}
 		return e.ctx.Err()
 	case <-waitDone:
 		state, err := e.getProcessState()

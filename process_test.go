@@ -104,6 +104,23 @@ func TestProcessImplementations(t *testing.T) {
 						},
 					},
 					{
+						Name: "WaitGivesProperExitCodeOnSignalAbort",
+						Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
+							proc, err := makeProc(ctx, testutil.SleepCreateOpts(5))
+							require.NoError(t, err)
+							require.NotNil(t, proc)
+							sig := syscall.SIGABRT
+							assert.NoError(t, proc.Signal(ctx, sig))
+							exitCode, err := proc.Wait(ctx)
+							assert.Error(t, err)
+							if runtime.GOOS == "windows" {
+								assert.Equal(t, 1, exitCode)
+							} else {
+								assert.Equal(t, int(sig), exitCode)
+							}
+						},
+					},
+					{
 						Name: "SignalTriggerRunsBeforeSignal",
 						Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
 							proc, err := makep(ctx, testutil.SleepCreateOpts(1))

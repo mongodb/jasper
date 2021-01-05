@@ -90,7 +90,7 @@ func ProcessTests() []ProcessTestCase {
 		{
 			Name: "InfoHasTimeoutWhenProcessTimesOut",
 			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
-				opts.Args = testutil.SleepCreateOpts(100).Args
+				opts.Args = testutil.SleepCreateOpts(5).Args
 				opts.Timeout = time.Second
 				opts.TimeoutSecs = 1
 				proc, err := makeProc(ctx, opts)
@@ -336,7 +336,7 @@ func ProcessTests() []ProcessTestCase {
 		{
 			Name: "WaitGivesProperExitCodeOnSignalTerminate",
 			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
-				proc, err := makeProc(ctx, testutil.SleepCreateOpts(100))
+				proc, err := makeProc(ctx, testutil.SleepCreateOpts(5))
 				require.NoError(t, err)
 				require.NotNil(t, proc)
 				sig := syscall.SIGTERM
@@ -351,26 +351,9 @@ func ProcessTests() []ProcessTestCase {
 			},
 		},
 		{
-			Name: "WaitGivesProperExitCodeOnSignalInterrupt",
-			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
-				proc, err := makeProc(ctx, testutil.SleepCreateOpts(100))
-				require.NoError(t, err)
-				require.NotNil(t, proc)
-				sig := syscall.SIGINT
-				assert.NoError(t, proc.Signal(ctx, sig))
-				exitCode, err := proc.Wait(ctx)
-				assert.Error(t, err)
-				if runtime.GOOS == "windows" {
-					assert.Equal(t, 1, exitCode)
-				} else {
-					assert.Equal(t, int(sig), exitCode)
-				}
-			},
-		},
-		{
 			Name: "WaitGivesNegativeOneOnAlternativeError",
 			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
-				proc, err := makeProc(ctx, testutil.SleepCreateOpts(100))
+				proc, err := makeProc(ctx, testutil.SleepCreateOpts(5))
 				require.NoError(t, err)
 				require.NotNil(t, proc)
 
