@@ -409,43 +409,6 @@ func addBasicClientTests(modify testutil.OptsModify, tests ...clientTestCase) []
 				assert.Error(t, client.Register(ctx, proc))
 			},
 		},
-		{
-			Name: "CreateProcessReturnsCorrectExample",
-			Case: func(ctx context.Context, t *testing.T, client Manager) {
-				opts := testutil.TrueCreateOpts()
-				modify(opts)
-				proc, err := client.CreateProcess(ctx, opts)
-				require.NoError(t, err)
-				assert.NotNil(t, proc)
-				assert.NotZero(t, proc.ID())
-
-				fetched, err := client.Get(ctx, proc.ID())
-				assert.NoError(t, err)
-				assert.NotNil(t, fetched)
-				assert.Equal(t, proc.ID(), fetched.ID())
-			},
-		},
-		{
-			Name: "WaitOnSigKilledProcessReturnsProperExitCode",
-			Case: func(ctx context.Context, t *testing.T, client Manager) {
-				opts := testutil.SleepCreateOpts(100)
-				modify(opts)
-				proc, err := client.CreateProcess(ctx, opts)
-				require.NoError(t, err)
-				require.NotNil(t, proc)
-				require.NotZero(t, proc.ID())
-
-				require.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
-
-				exitCode, err := proc.Wait(ctx)
-				require.Error(t, err)
-				if runtime.GOOS == "windows" {
-					assert.Equal(t, 1, exitCode)
-				} else {
-					assert.Equal(t, 9, exitCode)
-				}
-			},
-		},
 	}, tests...)
 }
 

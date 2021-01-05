@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// kim; TODO: remove
 var echoSubCmd = []string{"echo", "foo"}
 
 func TestManagerImplementations(t *testing.T) {
@@ -270,6 +271,7 @@ func TestManagerImplementations(t *testing.T) {
 					require.NoError(t, err)
 					assert.NoError(t, manager.Close(ctx))
 				},
+				// kim: NOTE: this can only be run locally
 				"CloseExecutesClosersForProcesses": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					if runtime.GOOS == "windows" {
 						t.Skip("manager close tests will error due to process termination on Windows")
@@ -298,11 +300,13 @@ func TestManagerImplementations(t *testing.T) {
 						assert.Equal(t, 1, count)
 					}
 				},
+				// kim: NOTE: this can only be run locally
 				"RegisterProcessErrorsForNilProcess": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					err := manager.Register(ctx, nil)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "not defined")
 				},
+				// kim: NOTE: this can only be run locally
 				"RegisterProcessErrorsForCanceledContext": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
@@ -316,6 +320,7 @@ func TestManagerImplementations(t *testing.T) {
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
+				// kim: NOTE: this can only be run locally
 				"RegisterProcessErrorsWhenMissingID": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
@@ -323,6 +328,7 @@ func TestManagerImplementations(t *testing.T) {
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "malformed")
 				},
+				// kim: NOTE: this can only be run locally
 				"RegisterProcessModifiesManagerState": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					opts := testutil.TrueCreateOpts()
 					modify(opts)
@@ -338,6 +344,7 @@ func TestManagerImplementations(t *testing.T) {
 
 					assert.Equal(t, procs[0].ID(), proc.ID())
 				},
+				// kim: NOTE: this can only be run locally
 				"RegisterProcessErrorsForDuplicateProcess": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					opts := testutil.TrueCreateOpts()
 					modify(opts)
@@ -350,6 +357,7 @@ func TestManagerImplementations(t *testing.T) {
 					err = manager.Register(ctx, proc)
 					assert.Error(t, err)
 				},
+				// kim: NOTE: this can only be run locally
 				"ManagerCallsOptionsCloseByDefault": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
 					opts := &options.Create{}
 					modify(opts)
