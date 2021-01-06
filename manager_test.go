@@ -60,12 +60,11 @@ func TestManagerImplementations(t *testing.T) {
 		testCases := append(ManagerTests(), []ManagerTestCase{
 			{
 				Name: "CloseExecutesClosersForProcesses",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 					if runtime.GOOS == "windows" {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
-					opts := testutil.SleepCreateOpts(5)
-					modify(opts)
+					opts := modifyOpts(testutil.SleepCreateOpts(5))
 
 					count := 0
 					countIncremented := make(chan bool, 1)
@@ -91,7 +90,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForNilProcess",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 					err := mngr.Register(ctx, nil)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "not defined")
@@ -99,12 +98,11 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForCanceledContext",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 
-					opts := testutil.TrueCreateOpts()
-					modify(opts)
+					opts := modifyOpts(testutil.TrueCreateOpts())
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
@@ -115,7 +113,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsWhenMissingID",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
 					err := mngr.Register(ctx, proc)
@@ -125,9 +123,8 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessModifiesManagerState",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
-					opts := testutil.TrueCreateOpts()
-					modify(opts)
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+					opts := modifyOpts(testutil.TrueCreateOpts())
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
@@ -143,9 +140,8 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForDuplicateProcess",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
-					opts := testutil.TrueCreateOpts()
-					modify(opts)
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+					opts := modifyOpts(testutil.TrueCreateOpts())
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
@@ -158,16 +154,17 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "ManagerCallsOptionsCloseByDefault",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
-					opts := &options.Create{}
-					modify(opts)
-					opts.Args = []string{"echo", "foobar"}
-					count := 0
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+					opts := modifyOpts(&options.Create{Args: []string{"echo", "foobar"}})
+					var count int
 					countIncremented := make(chan bool, 1)
 					opts.RegisterCloser(func() (_ error) {
+						defer close(countIncremented)
 						count++
-						countIncremented <- true
-						close(countIncremented)
+						select {
+						case <-ctx.Done():
+						case countIncremented <- true:
+						}
 						return
 					})
 
@@ -215,7 +212,7 @@ func TestTrackedManager(t *testing.T) {
 	defer cancel()
 
 	for managerName, makeManager := range map[string]func() *basicProcessManager{
-		"Basic": func() *basicProcessManager {
+		"BasicManager": func() *basicProcessManager {
 			return &basicProcessManager{
 				procs:   map[string]Process{},
 				loggers: NewLoggingCache(),
