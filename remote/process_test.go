@@ -99,7 +99,7 @@ func TestProcessImplementations(t *testing.T) {
 		},
 	} {
 		t.Run(procName, func(t *testing.T) {
-			for optsTestName, modifyOpts := range map[string]testutil.OptsModify{
+			for optsTestName, modifyOpts := range map[string]testutil.ModifyOpts{
 				"BlockingProcess": func(opts *options.Create) *options.Create {
 					opts.Implementation = options.ProcessImplementationBlocking
 					return opts

@@ -394,11 +394,11 @@ func ProcessTests() []ProcessTestCase {
 	}
 }
 
-// ManagerTestCase represents a test case including a manager to modify process
-// creation options.
+// ManagerTestCase represents a test case including a manager and
+// testutil.ModifyOpts to modify process creation options.
 type ManagerTestCase struct {
 	Name string
-	Case func(context.Context, *testing.T, Manager, testutil.OptsModify)
+	Case func(context.Context, *testing.T, Manager, testutil.ModifyOpts)
 }
 
 // ManagerTests returns the common test suite for the Manager interface. This
@@ -407,7 +407,7 @@ func ManagerTests() []ManagerTestCase {
 	return []ManagerTestCase{
 		{
 			Name: "ValidateFixture",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				assert.NotNil(t, ctx)
 				assert.NotNil(t, mngr)
 				assert.NotNil(t, mngr.LoggingCache(ctx))
@@ -415,13 +415,13 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "IDReturnsNonempty",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				assert.NotEmpty(t, mngr.ID())
 			},
 		},
 		{
 			Name: "ProcEnvVarMatchesManagerID",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -432,7 +432,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CreateProcessFailsWithEmptyOptions",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(&options.Create{})
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.Error(t, err)
@@ -441,7 +441,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CreateSimpleProcess",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -452,7 +452,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CreateProcessFails",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(&options.Create{})
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.Error(t, err)
@@ -461,7 +461,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ListWithoutResultsDoesNotError",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				procs, err := mngr.List(ctx, options.All)
 				require.NoError(t, err)
 				assert.Len(t, procs, 0)
@@ -469,7 +469,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ListAllProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				created, err := createProcs(ctx, opts, mngr, 10)
 				require.NoError(t, err)
@@ -481,7 +481,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ListAllErrorsWithCanceledContext",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				created, err := createProcs(ctx, opts, mngr, 10)
 				require.NoError(t, err)
@@ -496,7 +496,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "LongRunningProcessesAreListedAsRunning",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.SleepCreateOpts(20))
 				procs, err := createProcs(ctx, opts, mngr, 10)
 				require.NoError(t, err)
@@ -517,7 +517,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ListReturnsOneSuccessfulProcess",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 
 				proc, err := mngr.CreateProcess(ctx, opts)
@@ -535,7 +535,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ListReturnsOneFailedProcess",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.FalseCreateOpts())
 
 				proc, err := mngr.CreateProcess(ctx, opts)
@@ -552,7 +552,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ListErrorsWithInvalidFilter",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				procs, err := mngr.List(ctx, options.Filter("foo"))
 				assert.Error(t, err)
 				assert.Empty(t, procs)
@@ -560,7 +560,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "GetProcessErrorsWithNonexistentProcess",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				proc, err := mngr.Get(ctx, "foo")
 				require.Error(t, err)
 				assert.Nil(t, proc)
@@ -568,7 +568,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "GetProcessReturnsMatchingProcess",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -580,7 +580,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "GroupWithoutResultsDoesNotError",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				procs, err := mngr.Group(ctx, "foo")
 				require.NoError(t, err)
 				assert.Len(t, procs, 0)
@@ -588,7 +588,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "GroupErrorsWithCanceledContext",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				_, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -602,7 +602,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "GroupReturnsMatchingProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -616,13 +616,13 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CloseEmptyManagerNoops",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, moidfyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, moidfyOpts testutil.ModifyOpts) {
 				assert.NoError(t, mngr.Close(ctx))
 			},
 		},
 		{
 			Name: "CloseErrorsWithCanceledContext",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.SleepCreateOpts(5))
 				_, err := createProcs(ctx, opts, mngr, 10)
 				require.NoError(t, err)
@@ -635,7 +635,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CloseSucceedsWithTerminatedProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				procs, err := createProcs(ctx, opts, mngr, 10)
 				for _, proc := range procs {
@@ -649,7 +649,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CloserWithoutTriggersTerminatesProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				if runtime.GOOS == "windows" {
 					t.Skip("manager close tests will error due to process termination on Windows")
 				}
@@ -662,7 +662,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ClearCausesDeletionOfCompletedProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -682,7 +682,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ClearIsANoopForRunningProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.SleepCreateOpts(5))
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -695,7 +695,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "ClearSelectivelyDeletesOnlyCompletedProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				trueOpts := modifyOpts(testutil.TrueCreateOpts())
 				trueProc, err := mngr.CreateProcess(ctx, trueOpts)
 				require.NoError(t, err)
@@ -722,7 +722,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CreateCommandPasses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 				cmd := mngr.CreateCommand(ctx)
 				cmd.Add(testutil.TrueCreateOpts().Args)
 				assert.NoError(t, cmd.Run(ctx))
@@ -730,7 +730,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "RunningCommandCreatesNewProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 				cmd := mngr.CreateCommand(ctx)
 				trueCmd := testutil.TrueCreateOpts().Args
 				subCmds := [][]string{trueCmd, trueCmd, trueCmd}
@@ -746,7 +746,7 @@ func ManagerTests() []ManagerTestCase {
 		{
 
 			Name: "CommandProcessIDsMatchManagedProcessIDs",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				cmd := mngr.CreateCommand(ctx)
 				trueCmd := testutil.TrueCreateOpts().Args
 				cmd.Extend([][]string{trueCmd, trueCmd, trueCmd})
@@ -771,7 +771,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "WriteFileSucceeds",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
@@ -790,7 +790,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "WriteFileAcceptsContentFromReader",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
@@ -810,7 +810,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "WriteFileSucceedsWithLargeContent",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
@@ -830,7 +830,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "WriteFileSucceedsWithLargeContentFromReader",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
@@ -851,7 +851,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "WriteFileSucceedsWithNoContent",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				path := filepath.Join(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, os.RemoveAll(path))
 				defer func() {
@@ -869,7 +869,7 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "WriteFileFailsWithInvalidPath",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				opts := options.WriteFile{Content: []byte("foo")}
 				assert.Error(t, mngr.WriteFile(ctx, opts))
 			},

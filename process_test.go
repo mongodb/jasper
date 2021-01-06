@@ -32,7 +32,7 @@ func TestProcessImplementations(t *testing.T) {
 		"BasicWithLock":    makeLockingProcess(newBasicProcess),
 	} {
 		t.Run(pname, func(t *testing.T) {
-			for optsTestName, modifyOpts := range map[string]testutil.OptsModify{
+			for optsTestName, modifyOpts := range map[string]testutil.ModifyOpts{
 				"Local": func(opts *options.Create) *options.Create { return opts },
 				"Docker": func(opts *options.Create) *options.Create {
 					image := os.Getenv("DOCKER_IMAGE")

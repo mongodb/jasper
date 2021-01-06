@@ -84,7 +84,7 @@ func TestSelfClearingManager(t *testing.T) {
 			} {
 
 				t.Run(testName, func(t *testing.T) {
-					for procName, modifyOpts := range map[string]testutil.OptsModify{
+					for procName, modifyOpts := range map[string]testutil.ModifyOpts{
 						"BlockingProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBlocking
 							return opts

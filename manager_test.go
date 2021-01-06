@@ -60,7 +60,7 @@ func TestManagerImplementations(t *testing.T) {
 		testCases := append(ManagerTests(), []ManagerTestCase{
 			{
 				Name: "CloseExecutesClosersForProcesses",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					if runtime.GOOS == "windows" {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
@@ -91,7 +91,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForNilProcess",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					err := manager.Register(ctx, nil)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "not defined")
@@ -99,7 +99,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForCanceledContext",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 
@@ -115,7 +115,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsWhenMissingID",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
 					err := manager.Register(ctx, proc)
@@ -125,7 +125,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessModifiesManagerState",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					opts := testutil.TrueCreateOpts()
 					modify(opts)
 
@@ -143,7 +143,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForDuplicateProcess",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					opts := testutil.TrueCreateOpts()
 					modify(opts)
 
@@ -158,7 +158,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "ManagerCallsOptionsCloseByDefault",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {
+				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
 					opts := &options.Create{}
 					modify(opts)
 					opts.Args = []string{"echo", "foobar"}
@@ -188,7 +188,7 @@ func TestManagerImplementations(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for _, testCase := range testCases {
 				t.Run(testCase.Name, func(t *testing.T) {
-					for procName, modifyOpts := range map[string]testutil.OptsModify{
+					for procName, modifyOpts := range map[string]testutil.ModifyOpts{
 						"BasicProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBasic
 							return opts
@@ -310,10 +310,10 @@ func TestTrackedManager(t *testing.T) {
 					require.NoError(t, manager.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				// "": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.OptsModify) {},
+				// "": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					for procName, modifyOpts := range map[string]testutil.OptsModify{
+					for procName, modifyOpts := range map[string]testutil.ModifyOpts{
 						"BasicProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBasic
 							return opts

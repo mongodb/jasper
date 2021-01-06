@@ -83,7 +83,7 @@ func TestManagerImplementations(t *testing.T) {
 	testCases := append(jasper.ManagerTests(), []jasper.ManagerTestCase{
 		{
 			Name: "WaitingOnNonexistentProcessErrors",
-			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testutil.ModifyOpts) {
 				opts := modifyOpts(testutil.TrueCreateOpts())
 
 				proc, err := mngr.CreateProcess(ctx, opts)
@@ -103,7 +103,7 @@ func TestManagerImplementations(t *testing.T) {
 		},
 		{
 			Name: "RegisterProcessAlwaysErrors",
-			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testutil.OptsModify) {
+			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testutil.ModifyOpts) {
 				proc, err := mngr.CreateProcess(ctx, &options.Create{Args: []string{"ls"}})
 				assert.NotNil(t, proc)
 				require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestManagerImplementations(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for _, testCase := range testCases {
 				t.Run(testCase.Name, func(t *testing.T) {
-					for optsTestCase, modifyOpts := range map[string]testutil.OptsModify{
+					for optsTestCase, modifyOpts := range map[string]testutil.ModifyOpts{
 						"BlockingProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBlocking
 							return opts
