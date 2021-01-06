@@ -162,8 +162,8 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 
 func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 	for procName, makeProc := range map[string]ProcessConstructor{
-		"Blocking": newBlockingProcess,
-		"Basic":    newBasicProcess,
+		"BlockingProcess": newBlockingProcess,
+		"BasicProcess":    newBasicProcess,
 	} {
 		t.Run(procName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(ctx context.Context, t *testing.T, tracker *linuxProcessTracker, opts *options.Create, envVarName string, envVarValue string){
@@ -236,7 +236,7 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 	defer cancel()
 
 	for managerName, makeManager := range map[string]func() *basicProcessManager{
-		"Basic": func() *basicProcessManager {
+		"BasicManager": func() *basicProcessManager {
 			return &basicProcessManager{
 				procs:   map[string]Process{},
 				loggers: NewLoggingCache(),

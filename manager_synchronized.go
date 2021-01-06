@@ -8,7 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// MakeSynchronizedManager wraps the given manager in a thread-safe Manager.
+// MakeSynchronizedManager wraps the given manager in a thread-safe Manager,
+// which also uses thread-safe processes.
 func MakeSynchronizedManager(mngr Manager) Manager {
 	return &synchronizedProcessManager{manager: mngr}
 }
@@ -65,7 +66,7 @@ func (m *synchronizedProcessManager) Register(ctx context.Context, proc Process)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return errors.WithStack(m.manager.Register(ctx, proc))
+	return errors.WithStack(m.manager.Register(ctx, makeSynchronizedProcess(proc)))
 }
 
 func (m *synchronizedProcessManager) List(ctx context.Context, f options.Filter) ([]Process, error) {
