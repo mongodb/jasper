@@ -31,7 +31,7 @@ func TestManagerImplementations(t *testing.T) {
 			require.NoError(t, err)
 			return synchronizedManager
 		},
-		"SelfClearingManger": func(_ context.Context, t *testing.T) Manager {
+		"SelfClearingManager": func(_ context.Context, t *testing.T) Manager {
 			selfClearingManager, err := NewSelfClearingProcessManager(10, false)
 			require.NoError(t, err)
 			return selfClearingManager
@@ -91,9 +91,7 @@ func TestManagerImplementations(t *testing.T) {
 			{
 				Name: "RegisterProcessErrorsForNilProcess",
 				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
-					err := mngr.Register(ctx, nil)
-					require.Error(t, err)
-					assert.Contains(t, err.Error(), "not defined")
+					assert.Error(t, mngr.Register(ctx, nil))
 				},
 			},
 			{
