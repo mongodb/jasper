@@ -66,6 +66,10 @@ func (m *synchronizedProcessManager) Register(ctx context.Context, proc Process)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if proc == nil {
+		return errors.New("process cannot be nil")
+	}
+
 	return errors.WithStack(m.manager.Register(ctx, makeSynchronizedProcess(proc)))
 }
 
