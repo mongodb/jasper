@@ -104,7 +104,7 @@ func TestProcessImplementations(t *testing.T) {
 					opts.Implementation = options.ProcessImplementationBlocking
 					return opts
 				},
-				"Basic": func(opts *options.Create) *options.Create {
+				"BasicProcess": func(opts *options.Create) *options.Create {
 					opts.Implementation = options.ProcessImplementationBasic
 					return opts
 				},

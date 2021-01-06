@@ -31,7 +31,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(ctx, mngr, opts, parentID)
 			trigger(ProcessInfo{})
 
-			out, err := manager.List(ctx, options.All)
+			out, err := mngr.List(ctx, options.All)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			_, err = out[0].Wait(ctx)
@@ -46,7 +46,7 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger := makeDefaultTrigger(ctx, mngr, opts, parentID)
 			trigger(ProcessInfo{Successful: true})
 
-			out, err := manager.List(ctx, options.All)
+			out, err := mngr.List(ctx, options.All)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			info := out[0].Info(ctx)

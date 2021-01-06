@@ -722,19 +722,20 @@ func ManagerTests() []ManagerTestCase {
 		},
 		{
 			Name: "CreateCommandPasses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				cmd := mngr.CreateCommand(ctx)
-				cmd.Add(testutil.TrueCreateOpts().Args)
+				args := testutil.TrueCreateOpts().Args
+				cmd.ApplyFromOpts(modifyOpts(&options.Create{})).Add(args)
 				assert.NoError(t, cmd.Run(ctx))
 			},
 		},
 		{
 			Name: "RunningCommandCreatesNewProcesses",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				cmd := mngr.CreateCommand(ctx)
 				trueCmd := testutil.TrueCreateOpts().Args
 				subCmds := [][]string{trueCmd, trueCmd, trueCmd}
-				cmd.Extend(subCmds)
+				cmd.ApplyFromOpts(modifyOpts(&options.Create{})).Extend(subCmds)
 				require.NoError(t, cmd.Run(ctx))
 
 				allProcs, err := mngr.List(ctx, options.All)
@@ -749,7 +750,8 @@ func ManagerTests() []ManagerTestCase {
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				cmd := mngr.CreateCommand(ctx)
 				trueCmd := testutil.TrueCreateOpts().Args
-				cmd.Extend([][]string{trueCmd, trueCmd, trueCmd})
+				subCmds := [][]string{trueCmd, trueCmd, trueCmd}
+				cmd.ApplyFromOpts(modifyOpts(&options.Create{})).Extend(subCmds)
 				require.NoError(t, cmd.Run(ctx))
 
 				allProcs, err := mngr.List(ctx, options.All)

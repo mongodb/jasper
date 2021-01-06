@@ -19,8 +19,8 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 		t.Skip("cannot run Linux process tracker tests with cgroups without admin privileges")
 	}
 	for procName, makeProc := range map[string]ProcessConstructor{
-		"Blocking": newBlockingProcess,
-		"Basic":    newBasicProcess,
+		"BlockingProcess": newBlockingProcess,
+		"BasicProcess":    newBasicProcess,
 	} {
 		t.Run(procName, func(t *testing.T) {
 

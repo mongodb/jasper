@@ -51,7 +51,7 @@ func (m *synchronizedProcessManager) CreateProcess(ctx context.Context, opts *op
 		return nil, errors.WithStack(err)
 	}
 
-	return &synchronizedProcess{proc: proc}, nil
+	return makeSynchronizedProcess(proc), nil
 }
 
 func (m *synchronizedProcessManager) CreateCommand(ctx context.Context) *Command {

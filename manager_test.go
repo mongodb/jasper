@@ -19,29 +19,29 @@ func TestManagerImplementations(t *testing.T) {
 	defer cancel()
 
 	for managerName, makeManager := range map[string]func(context.Context, *testing.T) Manager{
-		"Basic/NoLock": func(_ context.Context, _ *testing.T) Manager {
+		"BasicManager": func(_ context.Context, _ *testing.T) Manager {
 			return &basicProcessManager{
 				id:      "id",
 				loggers: NewLoggingCache(),
 				procs:   map[string]Process{},
 			}
 		},
-		"Basic/Lock": func(_ context.Context, t *testing.T) Manager {
+		"BasicSynchronizedManager": func(_ context.Context, t *testing.T) Manager {
 			synchronizedManager, err := NewSynchronizedManager(false)
 			require.NoError(t, err)
 			return synchronizedManager
 		},
-		"SelfClearing/NoLock": func(_ context.Context, t *testing.T) Manager {
+		"SelfClearingManger": func(_ context.Context, t *testing.T) Manager {
 			selfClearingManager, err := NewSelfClearingProcessManager(10, false)
 			require.NoError(t, err)
 			return selfClearingManager
 		},
-		"Remote/NoLock/NilOptions": func(_ context.Context, t *testing.T) Manager {
+		"RemoteManager": func(_ context.Context, t *testing.T) Manager {
 			m, err := newBasicProcessManager(map[string]Process{}, false, false)
 			require.NoError(t, err)
 			return NewRemoteManager(m, nil)
 		},
-		"Docker/NoLock": func(_ context.Context, t *testing.T) Manager {
+		"DockerManager": func(_ context.Context, t *testing.T) Manager {
 			m, err := newBasicProcessManager(map[string]Process{}, false, false)
 			require.NoError(t, err)
 			image := os.Getenv("DOCKER_IMAGE")

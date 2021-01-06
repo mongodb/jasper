@@ -26,10 +26,16 @@ func TestProcessImplementations(t *testing.T) {
 	defer cancel()
 
 	for pname, makeProc := range map[string]ProcessConstructor{
-		"BlockingNoLock":   newBlockingProcess,
-		"BlockingWithLock": makeLockingProcess(newBlockingProcess),
-		"BasicNoLock":      newBasicProcess,
-		"BasicWithLock":    makeLockingProcess(newBasicProcess),
+		"BlockingProcess": newBlockingProcess,
+		"BlockingSynchronizedProcess": func(ctx context.Context, opts *options.Create) (Process, error) {
+			opts.Implementation = options.ProcessImplementationBlocking
+			return newSynchronizedProcess(ctx, opts)
+		},
+		"BasicProcess": newBasicProcess,
+		"BasicSynchronizedProcess": func(ctx context.Context, opts *options.Create) (Process, error) {
+			opts.Implementation = options.ProcessImplementationBasic
+			return newSynchronizedProcess(ctx, opts)
+		},
 	} {
 		t.Run(pname, func(t *testing.T) {
 			for optsTestName, modifyOpts := range map[string]testutil.ModifyOpts{

@@ -53,20 +53,20 @@ type makeProcess func(context.Context, *options.Create) (jasper.Process, error)
 
 func procMap() map[string]func(context.Context, *options.Create) (jasper.Process, error) {
 	return map[string]func(context.Context, *options.Create) (jasper.Process, error){
-		"Basic": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		"BasicProcess": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			opts.Implementation = options.ProcessImplementationBasic
 			return jasper.NewProcess(ctx, opts)
 		},
-		"Blocking": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		"BlockingProcess": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			opts.Implementation = options.ProcessImplementationBlocking
 			return jasper.NewProcess(ctx, opts)
 		},
-		"BasicSynchronized": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		"BasicSynchronizedProcess": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			opts.Implementation = options.ProcessImplementationBasic
 			opts.Synchronized = true
 			return jasper.NewProcess(ctx, opts)
 		},
-		"BlockingSynchronized": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
+		"BlockingSynchronizedProcess": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			opts.Implementation = options.ProcessImplementationBlocking
 			opts.Synchronized = true
 			return jasper.NewProcess(ctx, opts)
