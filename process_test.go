@@ -455,8 +455,7 @@ func TestProcessImplementations(t *testing.T) {
 							tctx, tcancel := context.WithTimeout(ctx, testutil.ProcessTestTimeout)
 							defer tcancel()
 
-							opts := &options.Create{Args: []string{"ls"}}
-							opts = modifyOpts(opts)
+							opts := modifyOpts(&options.Create{Args: []string{"ls"}})
 							testCase.Case(tctx, t, opts, makeProc)
 						})
 					}

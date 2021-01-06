@@ -322,8 +322,7 @@ func TestTrackedManager(t *testing.T) {
 						t.Run(procName, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 							defer cancel()
-							opts := testutil.SleepCreateOpts(1)
-							opts = modifyOpts(opts)
+							opts := modifyOpts(testutil.SleepCreateOpts(1))
 							testCase(tctx, t, makeManager(), opts)
 						})
 					}

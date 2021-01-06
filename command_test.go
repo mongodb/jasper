@@ -56,13 +56,13 @@ func TestCommandImplementation(t *testing.T) {
 		"BlockingSynchronizedProcess": func(ctx context.Context, opts *options.Create) (Process, error) {
 			opts.Implementation = options.ProcessImplementationBlocking
 			opts.Synchronized = true
-			return newBlockingProcess(ctx, opts)
+			return NewProcess(ctx, opts)
 		},
 		"BasicProcess": newBasicProcess,
 		"BasicSynchronizedProcess": func(ctx context.Context, opts *options.Create) (Process, error) {
 			opts.Implementation = options.ProcessImplementationBasic
 			opts.Synchronized = true
-			return newBasicProcess(ctx, opts)
+			return NewProcess(ctx, opts)
 		},
 	} {
 		t.Run(procType, func(t *testing.T) {
