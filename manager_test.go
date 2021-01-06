@@ -60,7 +60,7 @@ func TestManagerImplementations(t *testing.T) {
 		testCases := append(ManagerTests(), []ManagerTestCase{
 			{
 				Name: "CloseExecutesClosersForProcesses",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 					if runtime.GOOS == "windows" {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
@@ -76,11 +76,11 @@ func TestManagerImplementations(t *testing.T) {
 						return
 					})
 
-					_, err := manager.CreateProcess(ctx, opts)
+					_, err := mngr.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
 					assert.Equal(t, count, 0)
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 					select {
 					case <-ctx.Done():
 						assert.Fail(t, "process took too long to run closers")
@@ -91,15 +91,15 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForNilProcess",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
-					err := manager.Register(ctx, nil)
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
+					err := mngr.Register(ctx, nil)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "not defined")
 				},
 			},
 			{
 				Name: "RegisterProcessErrorsForCanceledContext",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 
@@ -108,33 +108,33 @@ func TestManagerImplementations(t *testing.T) {
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
-					err = manager.Register(cctx, proc)
+					err = mngr.Register(cctx, proc)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), context.Canceled.Error())
 				},
 			},
 			{
 				Name: "RegisterProcessErrorsWhenMissingID",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
-					err := manager.Register(ctx, proc)
+					err := mngr.Register(ctx, proc)
 					require.Error(t, err)
 					assert.Contains(t, err.Error(), "malformed")
 				},
 			},
 			{
 				Name: "RegisterProcessModifiesManagerState",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 					opts := testutil.TrueCreateOpts()
 					modify(opts)
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
-					err = manager.Register(ctx, proc)
+					err = mngr.Register(ctx, proc)
 					require.NoError(t, err)
 
-					procs, err := manager.List(ctx, options.All)
+					procs, err := mngr.List(ctx, options.All)
 					require.NoError(t, err)
 					require.True(t, len(procs) >= 1)
 
@@ -143,22 +143,22 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForDuplicateProcess",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 					opts := testutil.TrueCreateOpts()
 					modify(opts)
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
 					assert.NotEmpty(t, proc)
-					err = manager.Register(ctx, proc)
+					err = mngr.Register(ctx, proc)
 					require.NoError(t, err)
-					err = manager.Register(ctx, proc)
+					err = mngr.Register(ctx, proc)
 					assert.Error(t, err)
 				},
 			},
 			{
 				Name: "ManagerCallsOptionsCloseByDefault",
-				Case: func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modify testutil.ModifyOpts) {
 					opts := &options.Create{}
 					modify(opts)
 					opts.Args = []string{"echo", "foobar"}
@@ -171,7 +171,7 @@ func TestManagerImplementations(t *testing.T) {
 						return
 					})
 
-					proc, err := manager.CreateProcess(ctx, opts)
+					proc, err := mngr.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 					_, err = proc.Wait(ctx)
 					require.NoError(t, err)
@@ -227,90 +227,89 @@ func TestTrackedManager(t *testing.T) {
 	} {
 		t.Run(managerName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(context.Context, *testing.T, *basicProcessManager, *options.Create){
-				"CreateProcessTracksProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					proc, err := manager.CreateProcess(ctx, opts)
+				"CreateProcessTracksProcess": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
+					proc, err := mngr.CreateProcess(ctx, opts)
 					require.NoError(t, err)
-					assert.Len(t, manager.procs, 1)
+					assert.Len(t, mngr.procs, 1)
 
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 					require.Len(t, mockTracker.Infos, 1)
 					assert.Equal(t, proc.Info(ctx), mockTracker.Infos[0])
 				},
-				"CreateCommandTracksCommandAfterRun": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					err := manager.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
+				"CreateCommandTracksCommandAfterRun": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
+					err := mngr.CreateCommand(ctx).Add(opts.Args).Background(true).Run(ctx)
 					require.NoError(t, err)
-					assert.Len(t, manager.procs, 1)
+					assert.Len(t, mngr.procs, 1)
 
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 					require.Len(t, mockTracker.Infos, 1)
 					assert.NotZero(t, mockTracker.Infos[0])
 				},
-				"DoNotTrackProcessIfCreateProcessDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
+				"DoNotTrackProcessIfCreateProcessDoesNotMakeProcess": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
 					opts.Args = []string{"foo"}
-					_, err := manager.CreateProcess(ctx, opts)
+					_, err := mngr.CreateProcess(ctx, opts)
 					require.Error(t, err)
-					assert.Len(t, manager.procs, 0)
+					assert.Len(t, mngr.procs, 0)
 
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
+				"DoNotTrackProcessIfCreateCommandDoesNotMakeProcess": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
 					opts.Args = []string{"foo"}
-					cmd := manager.CreateCommand(ctx).Add(opts.Args).Background(true)
+					cmd := mngr.CreateCommand(ctx).Add(opts.Args).Background(true)
 					cmd.opts.Process = *opts
 					err := cmd.Run(ctx)
 					require.Error(t, err)
-					assert.Len(t, manager.procs, 0)
+					assert.Len(t, mngr.procs, 0)
 
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					cmd := manager.CreateCommand(ctx).Background(true).Add(opts.Args)
+				"CloseCleansUpProcesses": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
+					cmd := mngr.CreateCommand(ctx).Background(true).Add(opts.Args)
 					cmd.opts.Process = *opts
 					require.NoError(t, cmd.Run(ctx))
-					assert.Len(t, manager.procs, 1)
+					assert.Len(t, mngr.procs, 1)
 
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 					require.Len(t, mockTracker.Infos, 1)
 					assert.NotZero(t, mockTracker.Infos[0])
 
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 				},
-				"CloseWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+				"CloseWithNoProcessesIsNotError": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, manager *basicProcessManager, opts *options.Create) {
-					cmd := manager.CreateCommand(ctx).Background(true).Add(opts.Args)
+				"DoubleCloseIsNotError": func(ctx context.Context, t *testing.T, mngr *basicProcessManager, opts *options.Create) {
+					cmd := mngr.CreateCommand(ctx).Background(true).Add(opts.Args)
 					cmd.opts.Process = *opts
 
 					require.NoError(t, cmd.Run(ctx))
-					assert.Len(t, manager.procs, 1)
+					assert.Len(t, mngr.procs, 1)
 
-					mockTracker, ok := manager.tracker.(*mockProcessTracker)
+					mockTracker, ok := mngr.tracker.(*mockProcessTracker)
 					require.True(t, ok)
 					require.Len(t, mockTracker.Infos, 1)
 					assert.NotZero(t, mockTracker.Infos[0])
 
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
-					require.NoError(t, manager.Close(ctx))
+					require.NoError(t, mngr.Close(ctx))
 					assert.Len(t, mockTracker.Infos, 0)
 				},
-				// "": func(ctx context.Context, t *testing.T, manager Manager, modify testutil.ModifyOpts) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					for procName, modifyOpts := range map[string]testutil.ModifyOpts{

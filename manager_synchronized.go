@@ -9,8 +9,8 @@ import (
 )
 
 // MakeSynchronizedManager wraps the given manager in a thread-safe Manager.
-func MakeSynchronizedManager(manager Manager) Manager {
-	return &synchronizedProcessManager{manager: manager}
+func MakeSynchronizedManager(mngr Manager) Manager {
+	return &synchronizedProcessManager{manager: mngr}
 }
 
 // NewSynchronizedManager is a constructor for a thread-safe basic Manager.
