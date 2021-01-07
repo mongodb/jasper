@@ -17,14 +17,13 @@ tryStartService:
 	for {
 		select {
 		case <-ctx.Done():
-			grip.Warning("timed out starting test service")
 			return nil, -1, errors.WithStack(ctx.Err())
 		default:
-			synchronizedManager, err := jasper.NewSynchronizedManager(false)
+			mngr, err := jasper.NewSynchronizedManager(false)
 			if err != nil {
 				return nil, -1, errors.WithStack(err)
 			}
-			srv := NewRESTService(synchronizedManager)
+			srv := NewRESTService(mngr)
 			app := srv.App(ctx)
 			app.SetPrefix("jasper")
 
@@ -37,38 +36,45 @@ tryStartService:
 				continue tryStartService
 			}
 
+			srvCtx, srvCancel := context.WithCancel(ctx)
 			go func() {
-				grip.Warning(app.Run(ctx))
+				grip.Warning(app.Run(srvCtx))
 			}()
 
-			timer := time.NewTimer(5 * time.Millisecond)
-			defer timer.Stop()
-			url := fmt.Sprintf("http://localhost:%d/jasper/v1/", port)
-			for trials := 0; trials < 10; trials++ {
-				timer.Reset(5 * time.Millisecond)
+			failedToConnect := make(chan struct{})
+			go func() {
+				defer srvCancel()
 				select {
 				case <-ctx.Done():
-					return nil, -1, errors.WithStack(ctx.Err())
-				case <-timer.C:
-					req, err := http.NewRequest(http.MethodGet, url, nil)
-					if err != nil {
-						continue
-					}
-					rctx, cancel := context.WithTimeout(ctx, time.Second)
-					defer cancel()
-					req = req.WithContext(rctx)
-
-					resp, err := client.Do(req)
-					if err != nil {
-						continue
-					}
-					if resp.StatusCode != http.StatusOK {
-						continue
-					}
-
-					return srv, port, nil
+				case <-failedToConnect:
 				}
+			}()
+
+			url := fmt.Sprintf("http://localhost:%d/jasper/v1/", port)
+			if err := tryConnectToRESTService(ctx, url); err != nil {
+				close(failedToConnect)
+				continue
 			}
+			return srv, port, nil
 		}
 	}
+}
+
+func tryConnectToRESTService(ctx context.Context, url string) error {
+	maxAttempts := 10
+	for attempt := 0; attempt < 10; attempt++ {
+		err := func() error {
+			connCtx, connCancel := context.WithTimeout(ctx, time.Second)
+			defer connCancel()
+			if err := testutil.WaitForHTTPService(connCtx, url); err != nil {
+				return errors.WithStack(err)
+			}
+			return nil
+		}()
+		if err != nil {
+			continue
+		}
+		return nil
+	}
+	return errors.Errorf("failed to connect after %d attempts", maxAttempts)
 }
