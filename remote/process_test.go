@@ -2,10 +2,10 @@ package remote
 
 import (
 	"context"
-	"fmt"
 	"syscall"
 	"testing"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
@@ -18,8 +18,8 @@ func TestProcessImplementations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	httpClient := testutil.GetHTTPClient()
-	defer testutil.PutHTTPClient(httpClient)
+	httpClient := utility.GetHTTPClient()
+	defer utility.PutHTTPClient(httpClient)
 
 	testCases := append(jasper.ProcessTests(), []jasper.ProcessTestCase{
 		{
@@ -46,14 +46,14 @@ func TestProcessImplementations(t *testing.T) {
 
 	for procName, makeProc := range map[string]jasper.ProcessConstructor{
 		"REST": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-			_, port, err := startRESTService(ctx, httpClient)
+			mngr, err := jasper.NewSynchronizedManager(false)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
 
-			client := &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
-				client: httpClient,
+			_, client, err := makeRESTServiceAndClient(ctx, mngr, httpClient)
+			if err != nil {
+				return nil, errors.WithStack(err)
 			}
 
 			return client.CreateProcess(ctx, opts)

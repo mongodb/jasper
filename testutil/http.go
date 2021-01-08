@@ -3,39 +3,14 @@ package testutil
 import (
 	"context"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
-var httpClientPool *sync.Pool
-
-func init() {
-	httpClientPool = &sync.Pool{
-		New: func() interface{} {
-			return &http.Client{}
-		},
-	}
-}
-
-// GetHTTPClient gets an HTTP client from the client pool.
-func GetHTTPClient() *http.Client {
-	return httpClientPool.Get().(*http.Client)
-}
-
-// PutHTTPClient returns the given HTTP client back to the pool.
-func PutHTTPClient(client *http.Client) {
-	httpClientPool.Put(client)
-}
-
 // WaitForHTTPService waits until either the HTTP service becomes available to
 // serve requests to the given URL or the context is done.
-func WaitForHTTPService(ctx context.Context, url string) error {
-	client := GetHTTPClient()
-	defer PutHTTPClient(client)
-
-	// Block until the service comes up
+func WaitForHTTPService(ctx context.Context, url string, httpClient *http.Client) error {
 	backoff := 10 * time.Millisecond
 	timer := time.NewTimer(backoff)
 	for {
@@ -49,11 +24,12 @@ func WaitForHTTPService(ctx context.Context, url string) error {
 				continue
 			}
 			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				timer.Reset(backoff)
 				continue
 			}
+			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				timer.Reset(backoff)
 				continue

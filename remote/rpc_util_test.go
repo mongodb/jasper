@@ -117,7 +117,7 @@ func startTestRPCService(ctx context.Context, mngr jasper.Manager, addr net.Addr
 	return nil
 }
 
-// newTestClient establishes a client for testing purposes that closes when
+// newTestRPCClient establishes a client for testing purposes that closes when
 // the context is done.
 func newTestRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentials) (Manager, error) {
 	client, err := NewRPCClient(ctx, addr, creds)

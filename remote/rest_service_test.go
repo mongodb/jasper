@@ -3,7 +3,6 @@ package remote
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/mock"
 	"github.com/mongodb/jasper/options"
@@ -31,8 +31,8 @@ func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("alway
 func (n *neverJSON) Close() error                  { return errors.New("always error") }
 
 func TestRESTService(t *testing.T) {
-	httpClient := testutil.GetHTTPClient()
-	defer testutil.PutHTTPClient(httpClient)
+	httpClient := utility.GetHTTPClient()
+	defer utility.PutHTTPClient(httpClient)
 
 	tempDir, err := ioutil.TempDir(testutil.BuildDirectory(), filepath.Base(t.Name()))
 	require.NoError(t, err)
@@ -264,6 +264,7 @@ func TestRESTService(t *testing.T) {
 			req = req.WithContext(ctx)
 			res, err := httpClient.Do(req)
 			require.NoError(t, err)
+			defer res.Body.Close()
 
 			assert.Equal(t, http.StatusNotFound, res.StatusCode)
 		},
@@ -300,6 +301,7 @@ func TestRESTService(t *testing.T) {
 			req = req.WithContext(ctx)
 			res, err := httpClient.Do(req)
 			require.NoError(t, err)
+			defer res.Body.Close()
 
 			assert.Equal(t, http.StatusOK, res.StatusCode)
 		},
@@ -316,6 +318,7 @@ func TestRESTService(t *testing.T) {
 			req = req.WithContext(ctx)
 			res, err := httpClient.Do(req)
 			require.NoError(t, err)
+			defer res.Body.Close()
 
 			assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
@@ -545,17 +548,16 @@ func TestRESTService(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTestTimeout)
 			defer cancel()
 
-			srv, port, err := startRESTService(ctx, httpClient)
+			mngr, err := jasper.NewSynchronizedManager(false)
 			require.NoError(t, err)
-			require.NotNil(t, srv)
 
+			srv, client, err := makeRESTServiceAndClient(ctx, mngr, httpClient)
 			require.NoError(t, err)
-			client := &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
-				client: httpClient,
-			}
 
-			test(ctx, t, srv, client)
+			restClient, ok := client.(*restClient)
+			require.True(t, ok)
+
+			test(ctx, t, srv, restClient)
 		})
 	}
 }
