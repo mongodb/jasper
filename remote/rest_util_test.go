@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// kim: TODO: modify this to use tryStartRPCService
 func makeRESTServiceAndClient(ctx context.Context, mngr jasper.Manager, httpClient *http.Client) (*Service, Manager, error) {
 tryStartService:
 	for {
