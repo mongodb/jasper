@@ -51,6 +51,7 @@ func WaitForHTTPService(ctx context.Context, url string) error {
 			req = req.WithContext(ctx)
 			resp, err := client.Do(req)
 			if err != nil {
+				timer.Reset(backoff)
 				continue
 			}
 			if resp.StatusCode != http.StatusOK {
