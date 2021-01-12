@@ -120,7 +120,7 @@ func execCLICommandOutput(t *testing.T, c *cli.Context, cmd cli.Command, output 
 func makeTestRESTService(ctx context.Context, t *testing.T, port int, manager jasper.Manager) util.CloseFunc {
 	closeService, err := newRESTService(ctx, "localhost", port, manager)
 	require.NoError(t, err)
-	require.NoError(t, testutil.WaitForRESTService(ctx, fmt.Sprintf("http://localhost:%d/jasper/v1", port)))
+	require.NoError(t, testutil.WaitForHTTPService(ctx, fmt.Sprintf("http://localhost:%d/jasper/v1", port)))
 	return closeService
 }
 

@@ -376,7 +376,7 @@ func TestClientImplementations(t *testing.T) {
 								}()
 
 								baseURL := fmt.Sprintf("http://%s", fileServerAddr)
-								require.NoError(t, testutil.WaitForRESTService(ctx, baseURL))
+								require.NoError(t, testutil.WaitForHTTPService(ctx, baseURL))
 
 								opts := options.Download{
 									URL:  fmt.Sprintf("%s/%s", baseURL, fileName),
