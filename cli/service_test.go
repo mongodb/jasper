@@ -120,7 +120,7 @@ func TestDaemon(t *testing.T) {
 			svc, err := service.New(daemon, &service.Config{Name: "foo"})
 			require.NoError(t, err)
 			require.NoError(t, daemon.Start(svc))
-			require.NoError(t, testutil.WaitForRESTService(ctx, fmt.Sprintf("http://localhost:%d/jasper/v1", port)))
+			require.NoError(t, testutil.WaitForHTTPService(ctx, fmt.Sprintf("http://localhost:%d/jasper/v1", port)))
 
 			client, err := newRemoteManager(ctx, RESTService, "localhost", port, "")
 			require.NoError(t, err)
@@ -145,7 +145,7 @@ func TestDaemon(t *testing.T) {
 			svc, err := service.New(daemon, &service.Config{Name: "foo"})
 			require.NoError(t, err)
 			require.NoError(t, daemon.Start(svc))
-			require.NoError(t, testutil.WaitForRESTService(ctx, fmt.Sprintf("http://localhost:%d/jasper/v1", restOpts.port)))
+			require.NoError(t, testutil.WaitForHTTPService(ctx, fmt.Sprintf("http://localhost:%d/jasper/v1", restOpts.port)))
 
 			client, err := newRemoteManager(ctx, RESTService, "localhost", restOpts.port, "")
 			require.NoError(t, err)

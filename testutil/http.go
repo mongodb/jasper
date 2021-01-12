@@ -2,12 +2,10 @@ package testutil
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/mongodb/grip"
 	"github.com/pkg/errors"
 )
 
@@ -31,57 +29,35 @@ func PutHTTPClient(client *http.Client) {
 	httpClientPool.Put(client)
 }
 
-// WaitForRESTService waits until either the REST service becomes available to
-// serve requests or the context is done.
-func WaitForRESTService(ctx context.Context, url string) error {
+// WaitForHTTPService waits until either the HTTP service becomes available to
+// serve requests to the given URL or the context is done.
+func WaitForHTTPService(ctx context.Context, url string) error {
 	client := GetHTTPClient()
 	defer PutHTTPClient(client)
 
 	// Block until the service comes up
-	timeoutInterval := 10 * time.Millisecond
-	timer := time.NewTimer(timeoutInterval)
+	backoff := 10 * time.Millisecond
+	timer := time.NewTimer(backoff)
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return errors.Wrap(ctx.Err(), "context done before connection could be established to service")
 		case <-timer.C:
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			if err != nil {
-				timer.Reset(timeoutInterval)
+				timer.Reset(backoff)
 				continue
 			}
 			req = req.WithContext(ctx)
 			resp, err := client.Do(req)
 			if err != nil {
-				timer.Reset(timeoutInterval)
+				timer.Reset(backoff)
 				continue
 			}
 			if resp.StatusCode != http.StatusOK {
-				timer.Reset(timeoutInterval)
+				timer.Reset(backoff)
 				continue
 			}
-			return nil
-		}
-	}
-}
-
-// WaitForWireService waits until either the wire service becomes available to
-// serve requests or the context times out.
-func WaitForWireService(ctx context.Context, addr net.Addr) error {
-	// Block until the service comes up
-	timeoutInterval := 10 * time.Millisecond
-	timer := time.NewTimer(timeoutInterval)
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "context errored before connection could be established to service")
-		case <-timer.C:
-			conn, err := net.Dial("tcp", addr.String())
-			if err != nil {
-				timer.Reset(timeoutInterval)
-				continue
-			}
-			grip.Warning(conn.Close())
 			return nil
 		}
 	}
