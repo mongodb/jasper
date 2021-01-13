@@ -13,6 +13,7 @@ import (
 
 	"github.com/evergreen-ci/bond/recall"
 	"github.com/evergreen-ci/lru"
+	"github.com/evergreen-ci/utility"
 	"github.com/mholt/archiver"
 	"github.com/mongodb/amboy/queue"
 	"github.com/mongodb/grip"
@@ -141,7 +142,9 @@ func TestProcessDownloadJobs(t *testing.T) {
 	}()
 
 	baseURL := fmt.Sprintf("http://%s", fileServerAddr)
-	require.NoError(t, testutil.WaitForHTTPService(ctx, baseURL))
+	httpClient := utility.GetHTTPClient()
+	defer utility.PutHTTPClient(httpClient)
+	require.NoError(t, testutil.WaitForHTTPService(ctx, baseURL, httpClient))
 
 	job, err := recall.NewDownloadJob(fmt.Sprintf("%s/%s", baseURL, fileName), downloadDir, true)
 	require.NoError(t, err)
