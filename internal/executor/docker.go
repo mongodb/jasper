@@ -264,9 +264,7 @@ func (e *docker) Wait() error {
 
 	containerID := e.getContainerID()
 
-	waitCtx, waitCancel := context.WithCancel(context.Background())
-	defer waitCancel()
-	waitDone, errs := e.client.ContainerWait(waitCtx, containerID, container.WaitConditionNotRunning)
+	waitDone, errs := e.client.ContainerWait(e.ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errs:
 		return errors.Wrap(err, "error waiting for container to finish running")

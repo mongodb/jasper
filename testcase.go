@@ -451,15 +451,6 @@ func ManagerTests() []ManagerTestCase {
 			},
 		},
 		{
-			Name: "CreateProcessFails",
-			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
-				opts := modifyOpts(&options.Create{})
-				proc, err := mngr.CreateProcess(ctx, opts)
-				require.Error(t, err)
-				assert.Nil(t, proc)
-			},
-		},
-		{
 			Name: "ListWithoutResultsDoesNotError",
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				procs, err := mngr.List(ctx, options.All)
@@ -648,7 +639,7 @@ func ManagerTests() []ManagerTestCase {
 			},
 		},
 		{
-			Name: "CloserWithoutTriggersTerminatesProcesses",
+			Name: "CloseSucceedsOnRunningProcesses",
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
 				if runtime.GOOS == "windows" {
 					t.Skip("manager close tests will error due to process termination on Windows")
