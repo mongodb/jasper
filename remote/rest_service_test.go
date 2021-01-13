@@ -30,7 +30,7 @@ func (n *neverJSON) UnmarshalJSON(in []byte) error { return errors.New("always e
 func (n *neverJSON) Read(p []byte) (int, error)    { return 0, errors.New("always error") }
 func (n *neverJSON) Close() error                  { return errors.New("always error") }
 
-func TestRestService(t *testing.T) {
+func TestRESTService(t *testing.T) {
 	httpClient := testutil.GetHTTPClient()
 	defer testutil.PutHTTPClient(httpClient)
 
@@ -202,7 +202,7 @@ func TestRestService(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "problem making request")
 		},
-		"CheckSafetyOfTagMethodsForBrokenTasks": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
+		"CheckSafetyOfTagMethods": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			proc := &restProcess{
 				client: client,
 				id:     "foo",

@@ -13,8 +13,8 @@ import (
 
 func TestCleanTerminationSignalTrigger(t *testing.T) {
 	for procName, makeProc := range map[string]ProcessConstructor{
-		"Basic":    newBasicProcess,
-		"Blocking": newBlockingProcess,
+		"BasicProcess":    newBasicProcess,
+		"BlockingProcess": newBlockingProcess,
 	} {
 		t.Run(procName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(context.Context, *options.Create, ProcessConstructor){

@@ -83,5 +83,6 @@ func ValidGolangScriptingHarnessOptions(dir string) options.ScriptingHarness {
 	}
 }
 
-// OptsModify functions mutate creation options for tests.
-type OptsModify func(*options.Create)
+// ModifyOpts is a function that returns arbitrarily-modified process creation
+// options for tests.
+type ModifyOpts func(*options.Create) *options.Create

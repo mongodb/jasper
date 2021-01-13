@@ -269,20 +269,26 @@ func (e *docker) Wait() error {
 	case err := <-errs:
 		return errors.Wrap(err, "error waiting for container to finish running")
 	case <-e.ctx.Done():
+		if e.ctx.Err() == context.DeadlineExceeded {
+			// If the Docker container is killed by exceeding the process
+			// timeout, treat it the same as a timed-out process that was
+			// killed by a signal.
+			e.exitErr = e.ctx.Err()
+			e.exitCode = int(syscall.SIGKILL)
+			e.signal = syscall.SIGKILL
+			e.setStatus(Exited)
+			return e.exitErr
+		}
 		return e.ctx.Err()
-	case <-waitDone:
-		state, err := e.getProcessState()
-		if err != nil {
-			return errors.Wrap(err, "could not get container state after waiting for completion")
+	case waitResult := <-waitDone:
+		if waitResult.Error != nil && waitResult.Error.Message != "" {
+			e.exitErr = errors.New(waitResult.Error.Message)
+		} else if waitResult.StatusCode != 0 {
+			// In order to maintain the same semantics as exec.Command, we have to
+			// return an error for non-zero exit codes.
+			e.exitErr = errors.Errorf("exit status %d", waitResult.StatusCode)
 		}
-		if len(state.Error) != 0 {
-			e.exitErr = errors.New(state.Error)
-		}
-		// In order to maintain the same semantics as exec.Command, we have to
-		// return an error for non-zero exit codes.
-		if (state.ExitCode) != 0 {
-			e.exitErr = errors.Errorf("exit status %d", state.ExitCode)
-		}
+		e.exitCode = int(waitResult.StatusCode)
 	}
 
 	e.setStatus(Exited)
