@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/send"
@@ -61,13 +62,11 @@ func remoteManagerTestCases(httpClient *http.Client) map[string]func(context.Con
 			return client
 		},
 		"REST": func(ctx context.Context, t *testing.T) Manager {
-			_, port, err := startRESTService(ctx, httpClient)
+			mngr, err := jasper.NewSynchronizedManager(false)
 			require.NoError(t, err)
 
-			client := &restClient{
-				prefix: fmt.Sprintf("http://localhost:%d/jasper/v1", port),
-				client: httpClient,
-			}
+			_, client, err := makeRESTServiceAndClient(ctx, mngr, httpClient)
+			require.NoError(t, err)
 			return client
 		},
 	}
@@ -77,8 +76,8 @@ func TestManagerImplementations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	httpClient := testutil.GetHTTPClient()
-	defer testutil.PutHTTPClient(httpClient)
+	httpClient := utility.GetHTTPClient()
+	defer utility.PutHTTPClient(httpClient)
 
 	testCases := append(jasper.ManagerTests(), []jasper.ManagerTestCase{
 		{
@@ -132,9 +131,6 @@ func TestManagerImplementations(t *testing.T) {
 							tctx, tcancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 							defer tcancel()
 							mngr := makeManager(tctx, t)
-							defer func() {
-								assert.NoError(t, mngr.CloseConnection())
-							}()
 							testCase.Case(tctx, t, mngr, modifyOpts)
 						})
 					}
@@ -153,8 +149,8 @@ func TestClientImplementations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	httpClient := testutil.GetHTTPClient()
-	defer testutil.PutHTTPClient(httpClient)
+	httpClient := utility.GetHTTPClient()
+	defer utility.PutHTTPClient(httpClient)
 
 	for managerName, makeManager := range remoteManagerTestCases(httpClient) {
 		t.Run(managerName, func(t *testing.T) {
@@ -376,7 +372,7 @@ func TestClientImplementations(t *testing.T) {
 								}()
 
 								baseURL := fmt.Sprintf("http://%s", fileServerAddr)
-								require.NoError(t, testutil.WaitForHTTPService(ctx, baseURL))
+								require.NoError(t, testutil.WaitForHTTPService(ctx, baseURL, httpClient))
 
 								opts := options.Download{
 									URL:  fmt.Sprintf("%s/%s", baseURL, fileName),
@@ -678,9 +674,6 @@ func TestClientImplementations(t *testing.T) {
 					tctx, tcancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 					defer tcancel()
 					mngr := makeManager(tctx, t)
-					defer func() {
-						assert.NoError(t, mngr.CloseConnection())
-					}()
 					testCase.Case(tctx, t, mngr)
 				})
 			}

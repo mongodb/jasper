@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/stretchr/testify/assert"
@@ -18,8 +19,8 @@ func TestScripting(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	httpClient := testutil.GetHTTPClient()
-	defer testutil.PutHTTPClient(httpClient)
+	httpClient := utility.GetHTTPClient()
+	defer utility.PutHTTPClient(httpClient)
 
 	for managerName, makeManager := range remoteManagerTestCases(httpClient) {
 		t.Run(managerName, func(t *testing.T) {
@@ -134,9 +135,6 @@ func TestScripting(t *testing.T) {
 					tctx, cancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)
 					defer cancel()
 					client := makeManager(tctx, t)
-					defer func() {
-						assert.NoError(t, client.CloseConnection())
-					}()
 					tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
 					require.NoError(t, err)
 					defer func() {
