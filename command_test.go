@@ -14,6 +14,7 @@ import (
 	"github.com/mongodb/grip/send"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/mongodb/jasper/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -527,7 +528,7 @@ func TestCommandImplementation(t *testing.T) {
 }
 
 func TestRunParallelRunsInParallel(t *testing.T) {
-	sleepCmd := testutil.SleepCreateOpts(3).Args
+	sleepCmd := testoptions.SleepCreateOpts(3).Args
 	cmd := NewCommand().Extend([][]string{sleepCmd, sleepCmd, sleepCmd})
 	threePointFiveSeconds := time.Second*3 + time.Millisecond*500
 	maxRunTimeAllowed := threePointFiveSeconds

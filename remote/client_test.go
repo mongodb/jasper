@@ -21,6 +21,7 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -82,8 +83,8 @@ func TestManagerImplementations(t *testing.T) {
 	testCases := append(jasper.ManagerTests(), []jasper.ManagerTestCase{
 		{
 			Name: "WaitingOnNonexistentProcessErrors",
-			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testutil.ModifyOpts) {
-				opts := modifyOpts(testutil.TrueCreateOpts())
+			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testoptions.ModifyOpts) {
+				opts := modifyOpts(testoptions.TrueCreateOpts())
 
 				proc, err := mngr.CreateProcess(ctx, opts)
 				require.NoError(t, err)
@@ -102,7 +103,7 @@ func TestManagerImplementations(t *testing.T) {
 		},
 		{
 			Name: "RegisterProcessAlwaysErrors",
-			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testutil.ModifyOpts) {
+			Case: func(ctx context.Context, t *testing.T, mngr jasper.Manager, modifyOpts testoptions.ModifyOpts) {
 				proc, err := mngr.CreateProcess(ctx, &options.Create{Args: []string{"ls"}})
 				assert.NotNil(t, proc)
 				require.NoError(t, err)
@@ -117,7 +118,7 @@ func TestManagerImplementations(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for _, testCase := range testCases {
 				t.Run(testCase.Name, func(t *testing.T) {
-					for optsTestCase, modifyOpts := range map[string]testutil.ModifyOpts{
+					for optsTestCase, modifyOpts := range map[string]testoptions.ModifyOpts{
 						"BlockingProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBlocking
 							return opts
@@ -551,7 +552,7 @@ func TestClientImplementations(t *testing.T) {
 				{
 					Name: "RegisterSignalTriggerIDChecksForInvalidTriggerID",
 					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						opts := testutil.SleepCreateOpts(1)
+						opts := testoptions.SleepCreateOpts(1)
 						proc, err := mngr.CreateProcess(ctx, opts)
 						require.NoError(t, err)
 						assert.True(t, proc.Running(ctx))
@@ -564,7 +565,7 @@ func TestClientImplementations(t *testing.T) {
 				{
 					Name: "RegisterSignalTriggerIDPassesWithValidArgs",
 					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						opts := testutil.SleepCreateOpts(1)
+						opts := testoptions.SleepCreateOpts(1)
 						proc, err := mngr.CreateProcess(ctx, opts)
 						require.NoError(t, err)
 						assert.True(t, proc.Running(ctx))

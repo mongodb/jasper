@@ -9,6 +9,7 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestProcessImplementations(t *testing.T) {
 		{
 			Name: "RegisterTriggerFails",
 			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc jasper.ProcessConstructor) {
-				opts.Args = testutil.SleepCreateOpts(3).Args
+				opts.Args = testoptions.SleepCreateOpts(3).Args
 				proc, err := makeProc(ctx, opts)
 				require.NoError(t, err)
 				assert.Error(t, proc.RegisterTrigger(ctx, func(jasper.ProcessInfo) {}))
@@ -34,7 +35,7 @@ func TestProcessImplementations(t *testing.T) {
 		{
 			Name: "RegisterSignalTriggerFails",
 			Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc jasper.ProcessConstructor) {
-				opts.Args = testutil.SleepCreateOpts(3).Args
+				opts.Args = testoptions.SleepCreateOpts(3).Args
 				proc, err := makeProc(ctx, opts)
 				require.NoError(t, err)
 				assert.Error(t, proc.RegisterSignalTrigger(ctx, func(jasper.ProcessInfo, syscall.Signal) bool {
@@ -99,7 +100,7 @@ func TestProcessImplementations(t *testing.T) {
 		},
 	} {
 		t.Run(procName, func(t *testing.T) {
-			for optsTestName, modifyOpts := range map[string]testutil.ModifyOpts{
+			for optsTestName, modifyOpts := range map[string]testoptions.ModifyOpts{
 				"BlockingProcess": func(opts *options.Create) *options.Create {
 					opts.Implementation = options.ProcessImplementationBlocking
 					return opts
