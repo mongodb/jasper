@@ -77,7 +77,7 @@ func (e *local) SetStderr(stderr io.Writer) {
 }
 
 func (e *local) Stderr() io.Writer {
-	return e.cmd.Stdout
+	return e.cmd.Stderr
 }
 
 // Start begins running the process.
