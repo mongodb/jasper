@@ -269,6 +269,9 @@ func executorTestCases() []executorTestCase {
 		{
 			Name: "SignallingProcessPopulatesSignalInfo",
 			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
+				if runtime.GOOS == "windows" && execType == "StandardExec" {
+					t.Skip("The standard library implementation of exec does not support signal detection.")
+				}
 				exec, err := makeExec(ctx, []string{"sleep", "1"})
 				require.NoError(t, err)
 				defer func() {
@@ -301,6 +304,9 @@ func executorTestCases() []executorTestCase {
 		{
 			Name: "ProcessThatExitsDueToContextCancellationIsTreatedAsSIGKILLed",
 			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
+				if runtime.GOOS == "windows" && execType == "StandardExec" {
+					t.Skip("The standard library implementation of exec does not support signal detection.")
+				}
 				cctx, ccancel := context.WithCancel(ctx)
 				defer ccancel()
 				exec, err := makeExec(cctx, []string{"sleep", "1"})
@@ -321,6 +327,9 @@ func executorTestCases() []executorTestCase {
 		{
 			Name: "ProcessThatExitsDueToContextTimeoutIsTreatedAsSIGKILLed",
 			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
+				if runtime.GOOS == "windows" && execType == "StandardExec" {
+					t.Skip("The standard library implementation of exec does not support signal detection.")
+				}
 				tctx, tcancel := context.WithTimeout(ctx, 500*time.Millisecond)
 				defer tcancel()
 				exec, err := makeExec(tctx, []string{"sleep", "1"})
