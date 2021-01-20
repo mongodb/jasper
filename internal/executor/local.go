@@ -112,8 +112,7 @@ func (e *local) ExitCode() int {
 	if e.cmd.ProcessState == nil {
 		return -1
 	}
-	status := e.cmd.ProcessState.Sys().(syscall.WaitStatus)
-	return status.ExitStatus()
+	return e.cmd.ProcessState.ExitCode()
 }
 
 // Success returns whether or not the process ran successfully.

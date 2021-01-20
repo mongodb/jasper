@@ -211,37 +211,7 @@ func executorTestCases() []executorTestCase {
 				require.NoError(t, exec.Start())
 				require.Error(t, exec.Wait())
 				assert.False(t, exec.Success())
-				assert.NotZero(t, exec.ExitCode())
-			},
-		},
-		{
-			Name: "ProcessIsUnsignaledByDefault",
-			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
-				exec, err := makeExec(ctx, []string{"true"})
-				require.NoError(t, err)
-				defer func() {
-					assert.NoError(t, exec.Close())
-				}()
-				sig, signaled := exec.SignalInfo()
-				assert.False(t, signaled)
-				assert.EqualValues(t, -1, sig)
-			},
-		},
-		{
-			Name: "SignallingProcessPopulatesSignalInfo",
-			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
-				exec, err := makeExec(ctx, []string{"sleep", "1"})
-				require.NoError(t, err)
-				defer func() {
-					assert.NoError(t, exec.Close())
-				}()
-				expected := syscall.SIGKILL
-				require.NoError(t, exec.Start())
-				require.NoError(t, exec.Signal(expected))
-				assert.Error(t, exec.Wait())
-				sig, signaled := exec.SignalInfo()
-				require.True(t, signaled)
-				assert.Equal(t, expected, sig)
+				assert.True(t, exec.ExitCode() > 0)
 			},
 		},
 		{
@@ -284,6 +254,51 @@ func executorTestCases() []executorTestCase {
 			},
 		},
 		{
+			Name: "ProcessIsUnsignaledByDefault",
+			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
+				exec, err := makeExec(ctx, []string{"true"})
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, exec.Close())
+				}()
+				sig, signaled := exec.SignalInfo()
+				assert.False(t, signaled)
+				assert.EqualValues(t, -1, sig)
+			},
+		},
+		{
+			Name: "SignallingProcessPopulatesSignalInfo",
+			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
+				exec, err := makeExec(ctx, []string{"sleep", "1"})
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, exec.Close())
+				}()
+				expected := syscall.SIGKILL
+				require.NoError(t, exec.Start())
+				require.NoError(t, exec.Signal(expected))
+				assert.Error(t, exec.Wait())
+				sig, signaled := exec.SignalInfo()
+				require.True(t, signaled)
+				assert.Equal(t, expected, sig)
+			},
+		},
+		{
+			Name: "SIGKILLedProcessIsUnsuccessful",
+			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
+				exec, err := makeExec(ctx, []string{"sleep", "1"})
+				require.NoError(t, err)
+				defer func() {
+					assert.NoError(t, exec.Close())
+				}()
+				require.NoError(t, exec.Start())
+				require.NoError(t, exec.Signal(syscall.SIGKILL))
+				require.Error(t, exec.Wait())
+				assert.False(t, exec.Success())
+				assert.NotZero(t, exec.ExitCode())
+			},
+		},
+		{
 			Name: "ProcessThatExitsDueToContextCancellationIsTreatedAsSIGKILLed",
 			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
 				cctx, ccancel := context.WithCancel(ctx)
@@ -299,6 +314,8 @@ func executorTestCases() []executorTestCase {
 				sig, signaled := exec.SignalInfo()
 				assert.True(t, signaled)
 				assert.Equal(t, syscall.SIGKILL, sig)
+				assert.False(t, exec.Success())
+				assert.Equal(t, -1, exec.ExitCode())
 			},
 		},
 		{
@@ -316,10 +333,12 @@ func executorTestCases() []executorTestCase {
 				sig, signaled := exec.SignalInfo()
 				assert.True(t, signaled)
 				assert.Equal(t, syscall.SIGKILL, sig)
+				assert.False(t, exec.Success())
+				assert.Equal(t, -1, exec.ExitCode())
 			},
 		},
 		{
-			Name: "ProcessCannotBeSignalledAfterCompletion",
+			Name: "ProcessCannotBeSignaledAfterCompletion",
 			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
 				exec, err := makeExec(ctx, []string{"true"})
 				require.NoError(t, err)
