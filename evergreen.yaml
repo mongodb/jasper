@@ -141,6 +141,7 @@ task_groups:
     max_hosts: 2
     setup_group:
       - func: get-project
+    setup_task:
       - func: run-make
         vars: { target: "docker-setup" }
         variants:
@@ -149,7 +150,6 @@ task_groups:
       - func: parse-results
       - func: run-make
         vars: { target: "clean-results" }
-    teardown_group:
       - func: run-make
         vars: { target: "docker-cleanup" }
         variants:
