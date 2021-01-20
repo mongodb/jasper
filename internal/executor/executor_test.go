@@ -330,9 +330,9 @@ func executorTestCases() []executorTestCase {
 				if runtime.GOOS == "windows" {
 					t.Skip("The standard library implementation of exec does not support signal detection.")
 				}
-				tctx, tcancel := context.WithTimeout(ctx, 500*time.Millisecond)
+				tctx, tcancel := context.WithTimeout(ctx, 2*time.Second)
 				defer tcancel()
-				exec, err := makeExec(tctx, []string{"sleep", "1"})
+				exec, err := makeExec(tctx, []string{"sleep", "10"})
 				require.NoError(t, err)
 				defer func() {
 					assert.NoError(t, exec.Close())
