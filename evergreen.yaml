@@ -149,7 +149,7 @@ task_groups:
     setup_task:
       - func: run-make
         vars: { target: "clean-results" }
-    teardown_task:
+    teardown_group:
       - func: run-make
         vars: { target: "docker-cleanup" }
         variants:
