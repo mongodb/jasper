@@ -43,10 +43,6 @@ type docker struct {
 	signal   syscall.Signal
 }
 
-type DockerOptions struct {
-	Client *client.Client
-}
-
 // NewDocker returns an Executor that creates a process within a Docker
 // container. Callers are expected to clean up resources by calling Close.
 func NewDocker(ctx context.Context, client *client.Client, platform, image string, args []string) Executor {
