@@ -112,7 +112,10 @@ func (e *local) ExitCode() int {
 	if e.cmd.ProcessState == nil {
 		return -1
 	}
-	return e.cmd.ProcessState.ExitCode()
+	// TODO: this can be just replaced with ProcessState.ExitCode, but requires
+	// go1.12.
+	status := e.cmd.ProcessState.Sys().(syscall.WaitStatus)
+	return status.ExitStatus()
 }
 
 // Success returns whether or not the process ran successfully.
