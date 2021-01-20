@@ -10,6 +10,7 @@ import (
 
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -125,7 +126,7 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					require.NoError(t, tracker.Add(proc.Info(ctx)))
 					require.NoError(t, tracker.Cleanup())
 
-					newProc, err := makeProc(ctx, testutil.SleepCreateOpts(1))
+					newProc, err := makeProc(ctx, testoptions.SleepCreateOpts(1))
 					require.NoError(t, err)
 
 					require.NoError(t, tracker.Add(newProc.Info(ctx)))
@@ -139,7 +140,7 @@ func TestLinuxProcessTrackerWithCgroups(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 					defer cancel()
 
-					opts := testutil.SleepCreateOpts(1)
+					opts := testoptions.SleepCreateOpts(1)
 					proc, err := makeProc(ctx, opts)
 					require.NoError(t, err)
 
@@ -222,7 +223,7 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 					// Override default cgroup behavior.
 					linuxTracker.cgroup = nil
 
-					testCase(ctx, t, linuxTracker, testutil.SleepCreateOpts(1), ManagerEnvironID, envVarValue)
+					testCase(ctx, t, linuxTracker, testoptions.SleepCreateOpts(1), ManagerEnvironID, envVarValue)
 				})
 			}
 		})
@@ -249,7 +250,7 @@ func TestManagerSetsEnvironmentVariables(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(context.Context, *testing.T, *basicProcessManager){
 				"CreateProcessSetsManagerEnvironmentVariables": func(ctx context.Context, t *testing.T, manager *basicProcessManager) {
-					proc, err := manager.CreateProcess(ctx, testutil.SleepCreateOpts(1))
+					proc, err := manager.CreateProcess(ctx, testoptions.SleepCreateOpts(1))
 					require.NoError(t, err)
 
 					env := proc.Info(ctx).Options.Environment
