@@ -279,7 +279,7 @@ func executorTestCases() []executorTestCase {
 				require.NoError(t, exec.Signal(expected))
 				assert.Error(t, exec.Wait())
 				sig, signaled := exec.SignalInfo()
-				require.True(t, signaled)
+				assert.True(t, signaled)
 				assert.Equal(t, expected, sig)
 			},
 		},

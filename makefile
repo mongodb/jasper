@@ -133,12 +133,12 @@ ifeq ($(docker_image),)
 endif
 
 docker-setup:
-ifeq (,$(SKIP_DOCKER_TESTS))
+ifneq (true,$(SKIP_DOCKER_TESTS))
 	docker pull $(docker_image)
 endif
 
 docker-cleanup:
-ifeq (,$(SKIP_DOCKER_TESTS))
+ifneq (true,$(SKIP_DOCKER_TESTS))
 	docker rm -f $(docker ps -a -q)
 	docker rmi -f $(docker_image)
 endif
