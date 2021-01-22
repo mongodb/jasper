@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evergreen-ci/service"
+	service "github.com/evergreen-ci/baobab"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/remote"
 	"github.com/mongodb/jasper/testutil"

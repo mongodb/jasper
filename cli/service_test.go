@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/evergreen-ci/service"
+	service "github.com/evergreen-ci/baobab"
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
