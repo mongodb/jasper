@@ -14,6 +14,7 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/pkg/errors"
 )
 
@@ -87,7 +88,7 @@ func runIteration(ctx context.Context, makeProc makeProcess, opts *options.Creat
 }
 
 func makeCreateOpts(timeout time.Duration, logger options.LoggerConfig) *options.Create {
-	opts := testutil.YesCreateOpts(timeout)
+	opts := testoptions.YesCreateOpts(timeout)
 	opts.Output.Loggers = []*options.LoggerConfig{&logger}
 	return opts
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,9 +39,9 @@ func TestProcessImplementations(t *testing.T) {
 		},
 	} {
 		t.Run(pname, func(t *testing.T) {
-			for optsTestName, modifyOpts := range map[string]testutil.ModifyOpts{
-				"Local": func(opts *options.Create) *options.Create { return opts },
-				"Docker": func(opts *options.Create) *options.Create {
+			for optsTestName, modifyOpts := range map[string]testoptions.ModifyOpts{
+				"LocalExecutor": func(opts *options.Create) *options.Create { return opts },
+				"DockerExecutor": func(opts *options.Create) *options.Create {
 					image := os.Getenv("DOCKER_IMAGE")
 					if image == "" {
 						image = testutil.DefaultDockerImage
@@ -73,7 +74,7 @@ func TestProcessImplementations(t *testing.T) {
 							pctx, pcancel := context.WithTimeout(ctx, 5*time.Second)
 							defer pcancel()
 							startAt := time.Now()
-							opts := testutil.SleepCreateOpts(20)
+							opts := testoptions.SleepCreateOpts(20)
 							proc, err := makep(pctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)
@@ -112,7 +113,7 @@ func TestProcessImplementations(t *testing.T) {
 					{
 						Name: "WaitGivesProperExitCodeOnSignalAbort",
 						Case: func(ctx context.Context, t *testing.T, opts *options.Create, makeProc ProcessConstructor) {
-							proc, err := makeProc(ctx, testutil.SleepCreateOpts(5))
+							proc, err := makeProc(ctx, testoptions.SleepCreateOpts(5))
 							require.NoError(t, err)
 							require.NotNil(t, proc)
 							sig := syscall.SIGABRT
@@ -129,7 +130,7 @@ func TestProcessImplementations(t *testing.T) {
 					{
 						Name: "SignalTriggerRunsBeforeSignal",
 						Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
-							proc, err := makep(ctx, testutil.SleepCreateOpts(1))
+							proc, err := makep(ctx, testoptions.SleepCreateOpts(1))
 							require.NoError(t, err)
 
 							expectedSig := syscall.SIGKILL
@@ -156,7 +157,7 @@ func TestProcessImplementations(t *testing.T) {
 					{
 						Name: "SignalTriggerCanSkipSignal",
 						Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
-							proc, err := makep(ctx, testutil.SleepCreateOpts(1))
+							proc, err := makep(ctx, testoptions.SleepCreateOpts(1))
 							require.NoError(t, err)
 
 							expectedSig := syscall.SIGKILL
@@ -325,7 +326,7 @@ func TestProcessImplementations(t *testing.T) {
 						Name: "TriggersFireOnRespawnedProcessExit",
 						Case: func(ctx context.Context, t *testing.T, _ *options.Create, makep ProcessConstructor) {
 							count := 0
-							opts := testutil.SleepCreateOpts(2)
+							opts := testoptions.SleepCreateOpts(2)
 							proc, err := makep(ctx, opts)
 							require.NoError(t, err)
 							require.NotNil(t, proc)

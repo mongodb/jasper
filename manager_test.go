@@ -8,6 +8,7 @@ import (
 
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,11 +61,11 @@ func TestManagerImplementations(t *testing.T) {
 		testCases := append(ManagerTests(), []ManagerTestCase{
 			{
 				Name: "CloseExecutesClosersForProcesses",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
 					if runtime.GOOS == "windows" {
 						t.Skip("manager close tests will error due to process termination on Windows")
 					}
-					opts := modifyOpts(testutil.SleepCreateOpts(5))
+					opts := modifyOpts(testoptions.SleepCreateOpts(5))
 
 					count := 0
 					countIncremented := make(chan bool, 1)
@@ -90,17 +91,17 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForNilProcess",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
 					assert.Error(t, mngr.Register(ctx, nil))
 				},
 			},
 			{
 				Name: "RegisterProcessErrorsForCanceledContext",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
 					cctx, cancel := context.WithCancel(ctx)
 					cancel()
 
-					opts := modifyOpts(testutil.TrueCreateOpts())
+					opts := modifyOpts(testoptions.TrueCreateOpts())
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
@@ -111,7 +112,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsWhenMissingID",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
 					proc := &blockingProcess{}
 					assert.Equal(t, proc.ID(), "")
 					err := mngr.Register(ctx, proc)
@@ -121,8 +122,8 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessModifiesManagerState",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
-					opts := modifyOpts(testutil.TrueCreateOpts())
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
+					opts := modifyOpts(testoptions.TrueCreateOpts())
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
@@ -138,8 +139,8 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "RegisterProcessErrorsForDuplicateProcess",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
-					opts := modifyOpts(testutil.TrueCreateOpts())
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
+					opts := modifyOpts(testoptions.TrueCreateOpts())
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
@@ -152,7 +153,7 @@ func TestManagerImplementations(t *testing.T) {
 			},
 			{
 				Name: "ManagerCallsOptionsCloseByDefault",
-				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testutil.ModifyOpts) {
+				Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
 					opts := modifyOpts(&options.Create{Args: []string{"echo", "foobar"}})
 					var count int
 					countIncremented := make(chan bool, 1)
@@ -183,7 +184,7 @@ func TestManagerImplementations(t *testing.T) {
 		t.Run(managerName, func(t *testing.T) {
 			for _, testCase := range testCases {
 				t.Run(testCase.Name, func(t *testing.T) {
-					for procName, modifyOpts := range map[string]testutil.ModifyOpts{
+					for procName, modifyOpts := range map[string]testoptions.ModifyOpts{
 						"BasicProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBasic
 							return opts
@@ -307,7 +308,7 @@ func TestTrackedManager(t *testing.T) {
 				},
 			} {
 				t.Run(testName, func(t *testing.T) {
-					for procName, modifyOpts := range map[string]testutil.ModifyOpts{
+					for procName, modifyOpts := range map[string]testoptions.ModifyOpts{
 						"BasicProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBasic
 							return opts
@@ -320,7 +321,7 @@ func TestTrackedManager(t *testing.T) {
 						t.Run(procName, func(t *testing.T) {
 							tctx, cancel := context.WithTimeout(ctx, testutil.ManagerTestTimeout)
 							defer cancel()
-							opts := modifyOpts(testutil.SleepCreateOpts(1))
+							opts := modifyOpts(testoptions.SleepCreateOpts(1))
 							testCase(tctx, t, makeManager(), opts)
 						})
 					}

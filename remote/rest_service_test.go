@@ -18,6 +18,7 @@ import (
 	"github.com/mongodb/jasper/mock"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -253,7 +254,7 @@ func TestRESTService(t *testing.T) {
 			assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
 		},
 		"SignalErrorsWithInvalidSyscall": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			proc, err := client.CreateProcess(ctx, testutil.SleepCreateOpts(10))
+			proc, err := client.CreateProcess(ctx, testoptions.SleepCreateOpts(10))
 			require.NoError(t, err)
 
 			assert.Error(t, proc.Signal(ctx, syscall.Signal(-1)))
@@ -274,7 +275,7 @@ func TestRESTService(t *testing.T) {
 		},
 		"CreateFailPropagatesErrors": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &mock.Manager{FailCreate: true}
-			proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+			proc, err := client.CreateProcess(ctx, testoptions.TrueCreateOpts())
 			assert.Error(t, err)
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem submitting request")
@@ -283,7 +284,7 @@ func TestRESTService(t *testing.T) {
 			srv.manager = &mock.Manager{
 				CreateConfig: mock.Process{FailRegisterTrigger: true},
 			}
-			proc, err := client.CreateProcess(ctx, testutil.TrueCreateOpts())
+			proc, err := client.CreateProcess(ctx, testoptions.TrueCreateOpts())
 			require.Error(t, err)
 			assert.Nil(t, proc)
 			assert.Contains(t, err.Error(), "problem registering trigger")
@@ -438,7 +439,7 @@ func TestRESTService(t *testing.T) {
 			absDir, err := filepath.Abs(dir)
 			require.NoError(t, err)
 
-			opts := testutil.ValidMongoDBDownloadOptions()
+			opts := testoptions.ValidMongoDBDownloadOptions()
 			opts.Path = absDir
 
 			err = client.DownloadMongoDB(ctx, opts)

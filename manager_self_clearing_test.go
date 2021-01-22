@@ -6,12 +6,13 @@ import (
 
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func registerBasedCreate(ctx context.Context, m *selfClearingProcessManager, t *testing.T, opts *options.Create) (Process, error) {
-	sleep, err := newBlockingProcess(ctx, testutil.SleepCreateOpts(10))
+	sleep, err := newBlockingProcess(ctx, testoptions.SleepCreateOpts(10))
 	require.NoError(t, err)
 	require.NotNil(t, sleep)
 	err = m.Register(ctx, sleep)
@@ -44,7 +45,7 @@ func TestSelfClearingManager(t *testing.T) {
 		t.Run(createTestName, func(t *testing.T) {
 			for testName, testCase := range map[string]func(context.Context, *testing.T, *selfClearingProcessManager, *options.Create){
 				"SucceedsWhenFree": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
-					opts.Args = testutil.TrueCreateOpts().Args
+					opts.Args = testoptions.TrueCreateOpts().Args
 					proc, err := createFunc(ctx, manager, t, opts)
 					assert.NoError(t, err)
 					assert.NotNil(t, proc)
@@ -52,22 +53,22 @@ func TestSelfClearingManager(t *testing.T) {
 				"ErrorsWhenFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
 					fillUp(ctx, t, manager, manager.maxProcs, opts)
 
-					sleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
+					sleep, err := createFunc(ctx, manager, t, testoptions.SleepCreateOpts(10))
 					assert.Error(t, err)
 					assert.Nil(t, sleep)
 				},
 				"PartiallySucceedsWhenAlmostFull": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
 					fillUp(ctx, t, manager, manager.maxProcs-1, opts)
-					firstSleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
+					firstSleep, err := createFunc(ctx, manager, t, testoptions.SleepCreateOpts(10))
 					assert.NoError(t, err)
 					assert.NotNil(t, firstSleep)
-					secondSleep, err := createFunc(ctx, manager, t, testutil.SleepCreateOpts(10))
+					secondSleep, err := createFunc(ctx, manager, t, testoptions.SleepCreateOpts(10))
 					assert.Error(t, err)
 					assert.Nil(t, secondSleep)
 				},
 				"InitialFailureIsResolvedByWaiting": func(ctx context.Context, t *testing.T, manager *selfClearingProcessManager, opts *options.Create) {
 					fillUp(ctx, t, manager, manager.maxProcs, opts)
-					sleepOpts := testutil.SleepCreateOpts(100)
+					sleepOpts := testoptions.SleepCreateOpts(100)
 					sleepProc, err := createFunc(ctx, manager, t, sleepOpts)
 					assert.Error(t, err)
 					assert.Nil(t, sleepProc)
@@ -84,7 +85,7 @@ func TestSelfClearingManager(t *testing.T) {
 			} {
 
 				t.Run(testName, func(t *testing.T) {
-					for procName, modifyOpts := range map[string]testutil.ModifyOpts{
+					for procName, modifyOpts := range map[string]testoptions.ModifyOpts{
 						"BlockingProcess": func(opts *options.Create) *options.Create {
 							opts.Implementation = options.ProcessImplementationBlocking
 							return opts
@@ -102,7 +103,7 @@ func TestSelfClearingManager(t *testing.T) {
 							require.NoError(t, err)
 							selfClearingMngr, ok := mngr.(*selfClearingProcessManager)
 							require.True(t, ok)
-							opts := modifyOpts(testutil.SleepCreateOpts(5))
+							opts := modifyOpts(testoptions.SleepCreateOpts(5))
 							testCase(tctx, t, selfClearingMngr, opts)
 							assert.NoError(t, mngr.Close(ctx))
 						})

@@ -119,6 +119,8 @@ func (e *docker) Start() error {
 
 	e.setStatus(Running)
 
+	_ = e.getPID()
+
 	return nil
 }
 
@@ -264,28 +266,40 @@ func (e *docker) Wait() error {
 
 	containerID := e.getContainerID()
 
+	handleContextError := func() (handled bool) {
+		// If the Docker container is killed because the context is done,
+		// treat it the same as the exec implementation that kills it with a
+		// signal.
+		if e.ctx.Err() == nil {
+			return false
+		}
+		e.exitErr = e.ctx.Err()
+		e.signal = syscall.SIGKILL
+		e.setStatus(Exited)
+		return true
+	}
+
 	waitDone, errs := e.client.ContainerWait(e.ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errs:
-		return errors.Wrap(err, "error waiting for container to finish running")
-	case <-e.ctx.Done():
-		if e.ctx.Err() == context.DeadlineExceeded {
-			// If the Docker container is killed by exceeding the process
-			// timeout, treat it the same as a timed-out process that was
-			// killed by a signal.
-			e.exitErr = e.ctx.Err()
-			e.exitCode = int(syscall.SIGKILL)
-			e.signal = syscall.SIGKILL
-			e.setStatus(Exited)
+		if handled := handleContextError(); handled {
 			return e.exitErr
 		}
-		return e.ctx.Err()
+		e.exitErr = err
+		e.setStatus(Exited)
+		return errors.Wrap(err, "error waiting for container to finish running")
+	case <-e.ctx.Done():
+		_ = handleContextError()
+		return e.exitErr
 	case waitResult := <-waitDone:
+		if handled := handleContextError(); handled {
+			return e.exitErr
+		}
 		if waitResult.Error != nil && waitResult.Error.Message != "" {
 			e.exitErr = errors.New(waitResult.Error.Message)
 		} else if waitResult.StatusCode != 0 {
-			// In order to maintain the same semantics as exec.Command, we have to
-			// return an error for non-zero exit codes.
+			// In order to maintain the same semantics as exec.Command, we have
+			// to return an error for non-zero exit codes.
 			e.exitErr = errors.Errorf("exit status %d", waitResult.StatusCode)
 		}
 		e.exitCode = int(waitResult.StatusCode)
@@ -321,6 +335,12 @@ func (e *docker) PID() int {
 		return e.pid
 	}
 
+	return e.getPID()
+}
+
+// getPID makes a request to get the process's runtime PID, which is only
+// available while the container is running.
+func (e *docker) getPID() int {
 	state, err := e.getProcessState()
 	if err != nil {
 		grip.Error(message.WrapError(err, message.Fields{
@@ -329,6 +349,7 @@ func (e *docker) PID() int {
 			"container": e.getContainerID(),
 			"executor":  "docker",
 		}))
+		return -1
 	}
 
 	e.pid = state.Pid
@@ -341,6 +362,9 @@ func (e *docker) PID() int {
 func (e *docker) ExitCode() int {
 	if e.exitCode > -1 || !e.getStatus().BetweenInclusive(Running, Exited) {
 		return e.exitCode
+	}
+	if e.getStatus() == Running {
+		return -1
 	}
 
 	state, err := e.getProcessState()

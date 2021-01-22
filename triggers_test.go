@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,12 +21,12 @@ func TestDefaultTrigger(t *testing.T) {
 			out, err := mngr.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
-			assert.NotNil(t, makeDefaultTrigger(ctx, mngr, testutil.TrueCreateOpts(), parentID))
+			assert.NotNil(t, makeDefaultTrigger(ctx, mngr, testoptions.TrueCreateOpts(), parentID))
 			assert.NotNil(t, makeDefaultTrigger(ctx, mngr, nil, ""))
 		},
 		"OneOnFailure": func(ctx context.Context, t *testing.T, mngr Manager) {
-			opts := testutil.FalseCreateOpts()
-			tcmd := testutil.TrueCreateOpts()
+			opts := testoptions.FalseCreateOpts()
+			tcmd := testoptions.TrueCreateOpts()
 			opts.OnFailure = append(opts.OnFailure, tcmd)
 			trigger := makeDefaultTrigger(ctx, mngr, opts, parentID)
 			trigger(ProcessInfo{})
@@ -40,8 +40,8 @@ func TestDefaultTrigger(t *testing.T) {
 			assert.True(t, info.IsRunning || info.Complete)
 		},
 		"OneOnSuccess": func(ctx context.Context, t *testing.T, mngr Manager) {
-			opts := testutil.TrueCreateOpts()
-			tcmd := testutil.FalseCreateOpts()
+			opts := testoptions.TrueCreateOpts()
+			tcmd := testoptions.FalseCreateOpts()
 			opts.OnSuccess = append(opts.OnSuccess, tcmd)
 			trigger := makeDefaultTrigger(ctx, mngr, opts, parentID)
 			trigger(ProcessInfo{Successful: true})
@@ -55,8 +55,8 @@ func TestDefaultTrigger(t *testing.T) {
 		"FailureTriggerDoesNotWorkWithCanceledContext": func(ctx context.Context, t *testing.T, mngr Manager) {
 			cctx, cancel := context.WithCancel(ctx)
 			cancel()
-			opts := testutil.FalseCreateOpts()
-			tcmd := testutil.TrueCreateOpts()
+			opts := testoptions.FalseCreateOpts()
+			tcmd := testoptions.TrueCreateOpts()
 			opts.OnFailure = append(opts.OnFailure, tcmd)
 			trigger := makeDefaultTrigger(cctx, mngr, opts, parentID)
 			trigger(ProcessInfo{})
@@ -68,8 +68,8 @@ func TestDefaultTrigger(t *testing.T) {
 		"SuccessTriggerDoesNotWorkWithCanceledContext": func(ctx context.Context, t *testing.T, mngr Manager) {
 			cctx, cancel := context.WithCancel(ctx)
 			cancel()
-			opts := testutil.FalseCreateOpts()
-			tcmd := testutil.TrueCreateOpts()
+			opts := testoptions.FalseCreateOpts()
+			tcmd := testoptions.TrueCreateOpts()
 			opts.OnSuccess = append(opts.OnSuccess, tcmd)
 			trigger := makeDefaultTrigger(cctx, mngr, opts, parentID)
 			trigger(ProcessInfo{Successful: true})
@@ -79,22 +79,22 @@ func TestDefaultTrigger(t *testing.T) {
 			assert.Empty(t, out)
 		},
 		"SuccessOutcomeWithNoTriggers": func(ctx context.Context, t *testing.T, mngr Manager) {
-			trigger := makeDefaultTrigger(ctx, mngr, testutil.TrueCreateOpts(), parentID)
+			trigger := makeDefaultTrigger(ctx, mngr, testoptions.TrueCreateOpts(), parentID)
 			trigger(ProcessInfo{})
 			out, err := mngr.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
 		"FailureOutcomeWithNoTriggers": func(ctx context.Context, t *testing.T, mngr Manager) {
-			trigger := makeDefaultTrigger(ctx, mngr, testutil.TrueCreateOpts(), parentID)
+			trigger := makeDefaultTrigger(ctx, mngr, testoptions.TrueCreateOpts(), parentID)
 			trigger(ProcessInfo{Successful: true})
 			out, err := mngr.List(ctx, options.All)
 			require.NoError(t, err)
 			assert.Empty(t, out)
 		},
 		"TimeoutWithTimeout": func(ctx context.Context, t *testing.T, mngr Manager) {
-			opts := testutil.FalseCreateOpts()
-			tcmd := testutil.TrueCreateOpts()
+			opts := testoptions.FalseCreateOpts()
+			tcmd := testoptions.TrueCreateOpts()
 			opts.OnTimeout = append(opts.OnTimeout, tcmd)
 
 			tctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -111,8 +111,8 @@ func TestDefaultTrigger(t *testing.T) {
 			assert.True(t, info.IsRunning || info.Complete)
 		},
 		"TimeoutWithoutTimeout": func(ctx context.Context, t *testing.T, mngr Manager) {
-			opts := testutil.FalseCreateOpts()
-			tcmd := testutil.TrueCreateOpts()
+			opts := testoptions.FalseCreateOpts()
+			tcmd := testoptions.TrueCreateOpts()
 			opts.OnTimeout = append(opts.OnTimeout, tcmd)
 
 			trigger := makeDefaultTrigger(ctx, mngr, opts, parentID)
@@ -130,8 +130,8 @@ func TestDefaultTrigger(t *testing.T) {
 			cctx, cancel := context.WithCancel(ctx)
 			cancel()
 
-			opts := testutil.FalseCreateOpts()
-			tcmd := testutil.TrueCreateOpts()
+			opts := testoptions.FalseCreateOpts()
+			tcmd := testoptions.TrueCreateOpts()
 			opts.OnTimeout = append(opts.OnTimeout, tcmd)
 
 			trigger := makeDefaultTrigger(cctx, mngr, opts, parentID)

@@ -11,6 +11,7 @@ import (
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/testutil"
+	testoptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -149,7 +150,7 @@ func TestScripting(t *testing.T) {
 }
 
 func createTestScriptingHarness(ctx context.Context, t *testing.T, client Manager, dir string) scripting.Harness {
-	opts := testutil.ValidGolangScriptingHarnessOptions(dir)
+	opts := testoptions.ValidGolangScriptingHarnessOptions(dir)
 	sh, err := client.CreateScripting(ctx, opts)
 	require.NoError(t, err)
 	return sh
