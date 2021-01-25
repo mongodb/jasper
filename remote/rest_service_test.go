@@ -176,7 +176,6 @@ func TestRESTService(t *testing.T) {
 			assert.Contains(t, err.Error(), "problem building request")
 		},
 		"ProcessRequestsFailWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-
 			client.prefix = strings.Replace(client.prefix, "http://", "http;//", 1)
 
 			proc := &restProcess{
@@ -338,7 +337,6 @@ func TestRESTService(t *testing.T) {
 
 			err := proc.Signal(ctx, syscall.SIGTERM)
 			assert.NoError(t, err)
-
 		},
 		"SignalFailsToParsePID": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			req, err := http.NewRequest(http.MethodPatch, client.getURL("/process/%s/signal/f", "foo"), nil)
@@ -362,20 +360,6 @@ func TestRESTService(t *testing.T) {
 			rw := httptest.NewRecorder()
 			srv.downloadFile(rw, req)
 			assert.Equal(t, http.StatusBadRequest, rw.Code)
-		},
-		"GetLogStreamFailsWithoutInMemoryLogger": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
-			opts := &options.Create{Args: []string{"echo", "foo"}}
-
-			proc, err := client.CreateProcess(ctx, opts)
-			require.NoError(t, err)
-			require.NotNil(t, proc)
-
-			_, err = proc.Wait(ctx)
-			require.NoError(t, err)
-
-			stream, err := client.GetLogStream(ctx, proc.ID(), 1)
-			assert.Error(t, err)
-			assert.Zero(t, stream)
 		},
 		"InitialCacheOptionsMatchDefault": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			assert.Equal(t, jasper.DefaultMaxCacheSize, srv.cacheOpts.MaxSize)
