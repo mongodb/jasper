@@ -65,16 +65,14 @@ func (p *restProcess) Wait(ctx context.Context) (int, error) {
 	}
 	defer resp.Body.Close()
 
-	// TODO (EVG-13672): REST service should return both exit code and error
-	// text.
-	var exitCode int
-	if err = gimlet.GetJSON(resp.Body, &exitCode); err != nil {
-		return -1, errors.Wrap(err, "failed to read exit code from response")
+	var waitResp restWaitResponse
+	if err = gimlet.GetJSON(resp.Body, &waitResp); err != nil {
+		return -1, errors.Wrap(err, "reading response from wait")
 	}
-	if exitCode != 0 {
-		return exitCode, errors.New("operation failed")
+	if waitResp.Error != "" {
+		return waitResp.ExitCode, errors.New(waitResp.Error)
 	}
-	return exitCode, nil
+	return waitResp.ExitCode, nil
 }
 
 func (p *restProcess) Respawn(ctx context.Context) (jasper.Process, error) {
