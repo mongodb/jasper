@@ -29,7 +29,7 @@ func (o *OOMTracker) Clear(context.Context) error {
 	return nil
 }
 
-// Report returns the value of the WasOOMKilled and PIDs fields.
+// Report returns the value of the Lines and PIDs fields.
 func (o *OOMTracker) Report() ([]string, []int) {
 	return o.Lines, o.PIDs
 }
