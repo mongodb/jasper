@@ -562,7 +562,7 @@ func (s *jasperService) SendMessages(ctx context.Context, lp *LoggingPayload) (*
 	payload := lp.Export()
 
 	if err := logger.Send(payload); err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Errorf("sending message to logger with id '%s'", lp.LoggerID))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "sending message to logger with id '%s'", lp.LoggerID))
 	}
 
 	return &OperationOutcome{Success: true}, nil
