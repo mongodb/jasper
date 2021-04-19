@@ -239,11 +239,11 @@ func executorTestCases() []executorTestCase {
 			},
 		},
 		{
-			Name: "WaitFailsWhenContextIsDone",
+			Name: "WaitFailsWhenContextIsDoneBeforeProcessExits",
 			Case: func(ctx context.Context, t *testing.T, makeExec executorConstructor) {
 				cctx, ccancel := context.WithCancel(ctx)
 				defer ccancel()
-				exec, err := makeExec(cctx, []string{"true"})
+				exec, err := makeExec(cctx, []string{"sleep", "1"})
 				require.NoError(t, err)
 				defer func() {
 					assert.NoError(t, exec.Close())
