@@ -228,6 +228,18 @@ buildvariants:
     tasks:
       - name: test_group
 
+  - name: macos-1100-arm64
+    display_name: macOS 11.00 Arm64
+    expansions:
+      DISABLE_COVERAGE: true
+      GOROOT: /opt/golang/go1.16
+      GO_BIN_PATH: /opt/golang/go1.16/bin/go
+      make_args: -k
+    run_on:
+      - macos-1100-arm64
+    tasks:
+      - name: test_group
+
   - name: windows
     display_name: Windows
     run_on:
