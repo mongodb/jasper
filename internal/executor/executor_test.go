@@ -169,7 +169,7 @@ func executorTestCases() []executorTestCase {
 					assert.NoError(t, exec.Close())
 				}()
 				require.NoError(t, exec.Start())
-				assert.True(t, exec.PID() > 0, "pid is %d, but should be positive", exec.PID())
+				assert.True(t, exec.PID() > 0, "PID '%d' should be positive", exec.PID())
 				assert.False(t, exec.Success())
 				assert.Equal(t, -1, exec.ExitCode())
 			},
@@ -195,7 +195,7 @@ func executorTestCases() []executorTestCase {
 				}()
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				assert.True(t, exec.PID() > 0, "pid '%s' should be positive", exec.PID())
+				assert.True(t, exec.PID() > 0, "PID '%d' should be positive", exec.PID())
 				assert.True(t, exec.Success())
 				assert.Zero(t, exec.ExitCode())
 			},
