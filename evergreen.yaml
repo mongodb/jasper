@@ -171,8 +171,8 @@ buildvariants:
       SKIP_DOCKER_TESTS: true
       make_args: -k
     run_on:
-      - archlinux-test
-      - archlinux-build
+      - archlinux-new-small
+      - archlinux-new-large
     tasks:
       - name: test_group
 
@@ -184,8 +184,8 @@ buildvariants:
       GO_BIN_PATH: /opt/golang/go1.13/bin/go
       make_args: -k
     run_on:
-      - archlinux-test
-      - archlinux-build
+      - archlinux-new-small
+      - archlinux-new-large
     tasks: 
       - name: lint_group
 
