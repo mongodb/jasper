@@ -139,7 +139,7 @@ task_groups:
       - func: run-make
         vars: { target: "docker-setup" }
         variants:
-          - ubuntu1604
+          - ubuntu
     teardown_task:
       - func: parse-results
       - func: run-make
@@ -148,7 +148,7 @@ task_groups:
       - func: run-make
         vars: { target: "docker-cleanup" }
         variants:
-          - ubuntu1604
+          - ubuntu
 
 #######################################
 #           Buildvariants             #
@@ -180,7 +180,7 @@ buildvariants:
     tasks: 
       - name: lint_group
 
-  - name: ubuntu1604
+  - name: ubuntu
     display_name: Ubuntu 18.04
     expansions:
       DISABLE_COVERAGE: true
