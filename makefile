@@ -24,6 +24,7 @@ endif
 export GOPATH := $(gopath)
 export GOCACHE := $(gocache)
 export GOROOT := $(goroot)
+export GO111MODULE := off
 # end environment setup
 
 
@@ -40,8 +41,6 @@ coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(targ
 
 compile $(buildDir): $(srcFiles)
 	$(gobin) build $(_compilePackages)
-compile-base:
-	$(gobin) build ./
 
 # convenience targets for runing tests and coverage tasks on a
 # specific package.
