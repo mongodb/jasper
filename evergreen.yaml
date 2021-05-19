@@ -33,7 +33,7 @@ functions:
       working_dir: gopath/src/github.com/mongodb/jasper
       binary: make
       args: ["${target}"]
-      include_expansions_in_env: ["DISABLE_COVERAGE", "DOCKER_IMAGE", "GO_BIN_PATH", "GOROOT"]
+      include_expansions_in_env: ["DISABLE_COVERAGE", "DOCKER_IMAGE", "GO_BIN_PATH", "GOROOT", "SKIP_DOCKER_TESTS"]
       env:
         GOPATH: ${workdir}/gopath
   parse-results:
