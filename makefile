@@ -153,11 +153,13 @@ clean-results:
 
 vendor-clean:
 	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/google/uuid/
+	rm -rf vendor/github.com/mongodb/amboy/vendor/github.com/aws/aws-sdk-go/
 	rm -rf vendor/github.com/mongodb/amboy/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/mongodb/grip/vendor/github.com/google/uuid/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/mongodb/grip/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/github.com/urfave/cli/
+	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/gimlet/vendor/gopkg.in/yaml.v2/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/evergreen-ci/gimlet/
 	rm -rf vendor/github.com/evergreen-ci/aviation/vendor/github.com/mongodb/grip/
@@ -217,6 +219,7 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/stretchr/testify/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/gopkg.in/mgo.v2/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/mongo-go-driver/mongo/
+	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/github.com/aws/aws-sdk-go/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/evergreen-ci/pail/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/github.com/mongodb/ftdc/vendor/go.mongodb.org/mongo-driver/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/golang.org/x/net/
@@ -225,6 +228,7 @@ vendor-clean:
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/genproto/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/google.golang.org/grpc/
 	rm -rf vendor/github.com/evergreen-ci/poplar/vendor/gopkg.in/yaml.v2/
+	rm -rf vendor/github.com/docker/docker/vendor/github.com/aws/aws-sdk-go
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/containerd/cgroups/
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/coreos/go-systemd/
 	rm -rf vendor/github.com/docker/docker/vendor/github.com/godbus/dbus/
