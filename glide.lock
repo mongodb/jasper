@@ -38,7 +38,7 @@ imports:
   - name: github.com/evergreen-ci/utility
     version: 8a885e291da3d271f58d396ee2b313ab1aec21a8
   - name: github.com/evergreen-ci/baobab
-    version: f927da222fd10dec811ce4f524d8da6d423cec97
+    version: b19a4285a1da932348a69ce63ab1e5be17619148
   - name: github.com/evergreen-ci/shrub
     version: 0efab318592de79316c35c9d40512a2f696abb28
 
