@@ -33,7 +33,7 @@ functions:
       working_dir: gopath/src/github.com/mongodb/jasper
       binary: make
       args: ["${target}"]
-      include_expansions_in_env: ["DISABLE_COVERAGE", "DOCKER_IMAGE", "GO_BIN_PATH", "GOROOT", "RACE_DETECTOR", "SKIP_DOCKER_TESTS"]
+      include_expansions_in_env: ["DISABLE_COVERAGE", "DOCKER_IMAGE", "GOROOT", "RACE_DETECTOR", "SKIP_DOCKER_TESTS"]
       env:
         GOPATH: ${workdir}/gopath
   parse-results:
@@ -159,7 +159,6 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
-      GO_BIN_PATH: /opt/golang/go1.16/bin/go
       RACE_DETECTOR: true
       SKIP_DOCKER_TESTS: true
     run_on:
@@ -173,7 +172,6 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
-      GO_BIN_PATH: /opt/golang/go1.16/bin/go
     run_on:
       - archlinux-new-small
       - archlinux-new-large
@@ -185,7 +183,6 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
-      GO_BIN_PATH: /opt/golang/go1.16/bin/go
       DOCKER_IMAGE: ubuntu
     run_on:
       - ubuntu1804-small
@@ -198,7 +195,6 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
-      GO_BIN_PATH: /opt/golang/go1.16/bin/go
     run_on:
       - macos-1014
     tasks:
@@ -214,6 +210,5 @@ buildvariants:
     expansions:
       DISABLE_COVERAGE: true
       GOROOT: C:/golang/go1.16
-      GO_BIN_PATH: /cygdrive/c/golang/go1.16/bin/go
     tasks:
       - name: test_group
