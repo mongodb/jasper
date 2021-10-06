@@ -167,7 +167,7 @@ buildvariants:
     tasks:
       - name: test_group
 
-  - name: lint
+  - name: lint-linux
     display_name: Lint (Arch Linux)
     expansions:
       DISABLE_COVERAGE: true
@@ -177,6 +177,17 @@ buildvariants:
       - archlinux-new-large
     tasks: 
       - name: lint_group
+
+  - name: lint-windows
+    display_name: Lint (Windows)
+    expansions:
+      DISABLE_COVERAGE: true
+      GOROOT: C:/golang/go1.16
+    run_on:
+      - windows-64-vs2019-small
+      - windows-64-vs2019-large
+    tasks:
+      - lint_group
 
   - name: ubuntu
     display_name: Ubuntu 18.04
