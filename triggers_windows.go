@@ -37,12 +37,14 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 			return false
 		}
 		defer func() {
-			grip.Warning(message.WrapError(NewWindowsError("CloseHandle", CloseHandle(proc)), message.Fields{
-				"message": "failed to close job object handle",
-				"id":      info.ID,
-				"pid":     info.PID,
-				"source":  cleanTerminationSignalTriggerSource,
-			}))
+			if err := NewWindowsError("CloseHandle", CloseHandle(proc)); err != nil {
+				grip.Warning(message.WrapError(err, message.Fields{
+					"message": "failed to close job object handle",
+					"id":      info.ID,
+					"pid":     info.PID,
+					"source":  cleanTerminationSignalTriggerSource,
+				}))
+			}
 		}()
 
 		if err := TerminateProcess(proc, 0); err != nil {

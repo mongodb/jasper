@@ -22,10 +22,10 @@ const (
 	// Documentation: https://doc.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
 
 	standardRightRequired     = 0x000F0000
-	procRightTerminate        = 0x00010000
-	procRightSynchronize      = 0x00100000
-	procRightQueryInformation = 0x04000000
-	procRightAllAccess        = standardRightRequired | procRightSynchronize | 0xFFFF
+	standardRightSynchronize  = 0x00100000
+	procRightTerminate        = 0x0001
+	procRightQueryInformation = 0x0400
+	procRightAllAccess        = standardRightRequired | standardRightSynchronize | 0xFFFF
 
 	// Constants for additional configuration for job object API calls.
 	// Documentation: https://docs.microsoft.com/en-us/windows/win32/procthread/job-objects
@@ -103,11 +103,13 @@ func (j *JobObject) AssignProcess(pid uint) error {
 		return NewWindowsError("OpenProcess", err)
 	}
 	defer func() {
-		grip.Warning(message.WrapError(NewWindowsError("CloseHandle", CloseHandle(hProcess)), message.Fields{
-			"message": "failed to close job object handle",
-			"pid":     pid,
-			"op":      "AssignProcess",
-		}))
+		if err := NewWindowsError("CloseHandle", CloseHandle(hProcess)); err != nil {
+			grip.Warning(message.WrapError(err, message.Fields{
+				"message": "failed to close job object handle",
+				"pid":     pid,
+				"op":      "AssignProcess",
+			}))
+		}
 	}()
 
 	if err := AssignProcessToJobObject(j.handle, hProcess); err != nil {
