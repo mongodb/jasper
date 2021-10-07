@@ -29,7 +29,7 @@ export GO111MODULE := off
 # Ensure the build directory exists, since most targets require it.
 $(shell mkdir -p $(buildDir))
 
-.DEFAULT_GOAL: compile
+.DEFAULT_GOAL := compile
 
 # start lint setup targets
 lintDeps := $(buildDir)/run-linter $(buildDir)/golangci-lint
