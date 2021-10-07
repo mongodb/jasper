@@ -482,7 +482,7 @@ type WindowsError struct {
 }
 
 // NewWindowsError creates a new Windows API error.
-func NewWindowsError(functionName string, err error) *WindowsError {
+func NewWindowsError(functionName string, err error) error {
 	if err == nil {
 		return nil
 	}
