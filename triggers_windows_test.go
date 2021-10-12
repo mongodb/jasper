@@ -43,8 +43,8 @@ func TestCleanTerminationSignalTrigger(t *testing.T) {
 
 					assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
 				},
-				"CleanTerminationFailsForExitedProcess": func(ctx context.Context, opts *options.Create, makep ProcessConstructor) {
-					opts = testoptions.TrueCreateOpts()
+				"CleanTerminationFailsForExitedProcess": func(ctx context.Context, _ *options.Create, makep ProcessConstructor) {
+					opts := testoptions.TrueCreateOpts()
 					proc, err := makep(ctx, opts)
 					require.NoError(t, err)
 

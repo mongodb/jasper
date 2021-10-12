@@ -28,7 +28,9 @@ func TestCLIRemoteWindows(t *testing.T) {
 
 					event, err := jasper.CreateEvent(utf16EventName)
 					require.NoError(t, err)
-					defer jasper.CloseHandle(event)
+					defer func() {
+						assert.NoError(t, jasper.CloseHandle(event))
+					}()
 
 					input, err := json.Marshal(EventInput{Name: eventName})
 					require.NoError(t, err)

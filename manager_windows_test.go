@@ -31,7 +31,7 @@ func TestBasicManagerWithTrackedProcesses(t *testing.T) {
 				"ProcessTrackerCreatedEmpty": func(_ context.Context, t *testing.T, m *basicProcessManager, tracker *windowsProcessTracker, _ *options.Create) {
 					require.NotNil(t, tracker.job)
 
-					info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+					info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 					assert.NoError(t, err)
 					assert.Zero(t, info.NumberOfAssignedProcesses)
 				},
@@ -39,10 +39,10 @@ func TestBasicManagerWithTrackedProcesses(t *testing.T) {
 					proc, err := m.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
-					info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+					info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 					assert.NoError(t, err)
 					assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIdList[0]))
+					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIDList[0]))
 					assert.NoError(t, m.Close(ctx))
 				},
 				"RegisterAddsProcess": func(ctx context.Context, t *testing.T, m *basicProcessManager, tracker *windowsProcessTracker, opts *options.Create) {
@@ -50,20 +50,20 @@ func TestBasicManagerWithTrackedProcesses(t *testing.T) {
 					require.NoError(t, err)
 					assert.NoError(t, m.Register(ctx, proc))
 
-					info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+					info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 					assert.NoError(t, err)
 					assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIdList[0]))
+					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIDList[0]))
 					assert.NoError(t, m.Close(ctx))
 				},
 				"ClosePerformsProcessTrackingCleanup": func(ctx context.Context, t *testing.T, m *basicProcessManager, tracker *windowsProcessTracker, opts *options.Create) {
 					proc, err := m.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
-					info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+					info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 					assert.NoError(t, err)
 					assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIdList[0]))
+					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIDList[0]))
 					assert.NoError(t, m.Close(ctx))
 
 					exitCode, err := proc.Wait(ctx)
@@ -76,10 +76,10 @@ func TestBasicManagerWithTrackedProcesses(t *testing.T) {
 					proc, err := m.CreateProcess(ctx, opts)
 					require.NoError(t, err)
 
-					info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+					info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 					assert.NoError(t, err)
 					assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIdList[0]))
+					assert.Equal(t, proc.Info(ctx).PID, int(info.ProcessIDList[0]))
 
 					assert.NoError(t, proc.Signal(ctx, syscall.SIGKILL))
 					assert.NoError(t, m.Close(ctx))

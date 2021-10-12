@@ -33,7 +33,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 	for testName, testCase := range map[string]func(context.Context, *testing.T, *windowsProcessTracker, *options.Create){
 		"NewWindowsProcessTrackerCreatesJob": func(_ context.Context, t *testing.T, tracker *windowsProcessTracker, opts *options.Create) {
 			require.NotNil(t, tracker.job)
-			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 0, int(info.NumberOfAssignedProcesses))
 		},
@@ -47,11 +47,11 @@ func TestWindowsProcessTracker(t *testing.T) {
 			require.NoError(t, err)
 			assert.NoError(t, tracker.Add(proc2.Info(ctx)))
 
-			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 2, int(info.NumberOfAssignedProcesses))
-			assert.Contains(t, info.ProcessIdList, uint64(proc1.Info(ctx).PID))
-			assert.Contains(t, info.ProcessIdList, uint64(proc2.Info(ctx).PID))
+			assert.Contains(t, info.ProcessIDList, uint64(proc1.Info(ctx).PID))
+			assert.Contains(t, info.ProcessIDList, uint64(proc2.Info(ctx).PID))
 		},
 		"AddedProcessIsTerminatedOnCleanup": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker, opts *options.Create) {
 			proc, err := newBasicProcess(ctx, opts)
@@ -59,10 +59,10 @@ func TestWindowsProcessTracker(t *testing.T) {
 
 			assert.NoError(t, tracker.Add(proc.Info(ctx)))
 
-			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-			assert.Contains(t, info.ProcessIdList, uint64(proc.Info(ctx).PID))
+			assert.Contains(t, info.ProcessIDList, uint64(proc.Info(ctx).PID))
 
 			assert.NoError(t, tracker.Cleanup())
 
@@ -81,10 +81,10 @@ func TestWindowsProcessTracker(t *testing.T) {
 
 			assert.NoError(t, tracker.Add(proc.Info(ctx)))
 
-			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
-			assert.Contains(t, info.ProcessIdList, uint64(proc.Info(ctx).PID))
+			assert.Contains(t, info.ProcessIDList, uint64(proc.Info(ctx).PID))
 
 			assert.NoError(t, tracker.Cleanup())
 			assert.NoError(t, tracker.Cleanup())
@@ -102,7 +102,7 @@ func TestWindowsProcessTracker(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.NoError(t, tracker.Add(proc.Info(ctx)))
-			info, err := QueryInformationJobObjectProcessIdList(tracker.job.handle)
+			info, err := QueryInformationJobObjectProcessIDList(tracker.job.handle)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
 		},
