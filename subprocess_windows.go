@@ -219,7 +219,6 @@ type JobObjectBasicProcessIDList struct {
 
 // JobObjectBasicLimitInformation contains basic information to configure a job
 // object's limits.
-//nolint:maligned
 type JobObjectBasicLimitInformation struct {
 	PerProcessUserTimeLimit uint64
 	PerJobUserTimeLimit     uint64
@@ -234,7 +233,6 @@ type JobObjectBasicLimitInformation struct {
 
 // JobObjectExtendedLimitInformation contains extended information to configure
 // a job object's limits.
-//nolint:maligned
 type JobObjectExtendedLimitInformation struct {
 	BasicLimitInformation JobObjectBasicLimitInformation
 	IOInfo                IOCounters
@@ -245,7 +243,6 @@ type JobObjectExtendedLimitInformation struct {
 }
 
 // SecurityAttributes specifies the security configuration for a job object.
-//nolint:maligned
 type SecurityAttributes struct {
 	Length             uint32
 	SecurityDescriptor uintptr
