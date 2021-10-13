@@ -24,6 +24,12 @@ export GOROOT := $(shell cygpath -m $(GOROOT))
 endif
 
 export GO111MODULE := off
+ifneq (,$(RACE_DETECTOR))
+# cgo is required for using the race detector.
+export CGO_ENABLED=1
+else
+export CGO_ENABLED=0
+endif
 # end environment setup
 
 # Ensure the build directory exists, since most targets require it.
@@ -47,7 +53,7 @@ $(buildDir)/run-benchmarks: cmd/run-benchmarks/run_benchmarks.go
 # start cli targets
 $(name) cli: $(buildDir)/$(name)
 $(buildDir)/$(name): cmd/$(name)/$(name).go $(srcFiles)
-	$(gobin) build -o $@ $<
+	$(gobin) build -trimpath -o $@ $<
 # end cli targets
 
 # start output files
