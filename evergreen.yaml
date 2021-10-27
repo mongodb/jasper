@@ -1,9 +1,9 @@
 command_type: test
 stepback: false
 ignore:
-    - "*.md" # don't schedule tests if a commit only changes markdown files
-    - "*.rst" # don't schedule tests if a commit only changes rst files
-    - ".github/*" # github CODEOWNERS configuration
+    - "*.md"
+    - "*.rst"
+    - ".github/*"
 
 #######################################
 #         YAML Templates              #
@@ -21,27 +21,32 @@ variables:
 #              Functions              #
 #######################################
 functions:
-  get-project:
-    command: git.get_project
-    type: system
-    params:
-      directory: gopath/src/github.com/mongodb/jasper
+  get-project-and-modules:
+    - command: git.get_project
+      type: system
+      params:
+        directory: jasper
+    - command: subprocess.exec
+      type: setup
+      params:
+        working_dir: jasper
+        binary: make
+        args: ["mod-tidy"]
+        include_expansions_in_env: ["GOROOT"]
   run-make:
     command: subprocess.exec
     type: test
     params:
-      working_dir: gopath/src/github.com/mongodb/jasper
+      working_dir: jasper
       binary: make
       args: ["${target}"]
       include_expansions_in_env: ["DISABLE_COVERAGE", "DOCKER_IMAGE", "GOROOT", "RACE_DETECTOR", "SKIP_DOCKER_TESTS"]
-      env:
-        GOPATH: ${workdir}/gopath
   parse-results:
     command: gotest.parse_files
     type: setup
     params:
       files:
-        - "gopath/src/github.com/mongodb/jasper/build/output.*"
+        - "jasper/build/output.*"
 
 #######################################
 #                Tasks                #
@@ -124,8 +129,9 @@ task_groups:
     tasks: [ ".report"]
     max_hosts: 3
     share_processes: true
+    setup_group_can_fail_task: true
     setup_group:
-      - func: get-project
+      - func: get-project-and-modules
     teardown_task:
       - func: parse-results
       - func: run-make
@@ -134,8 +140,9 @@ task_groups:
     tasks: [ ".test"]
     max_hosts: 3
     share_processes: true   # This ensure that the Docker image pulled in the setup_group is shared between tasks.
+    setup_group_can_fail_task: true
     setup_group:
-      - func: get-project
+      - func: get-project-and-modules
       - func: run-make
         vars: { target: "docker-setup" }
         variants:
