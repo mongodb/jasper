@@ -180,7 +180,7 @@ func TestAddMongoDBFilesToCacheWithInvalidPath(t *testing.T) {
 	assert.Contains(t, err.Error(), "problem adding file "+filepath.Join(absPath, fileName)+" to cache")
 }
 
-func TestDoExtract(t *testing.T) {
+func TestDownloadAndExtract(t *testing.T) {
 	for testName, testCase := range map[string]struct {
 		archiveMaker  archiver.Archiver
 		expectSuccess bool
@@ -188,31 +188,31 @@ func TestDoExtract(t *testing.T) {
 		format        options.ArchiveFormat
 	}{
 		"Auto": {
-			archiveMaker:  archiver.TarGz,
+			archiveMaker:  archiver.DefaultTarGz,
 			expectSuccess: true,
 			fileExtension: ".tar.gz",
 			format:        options.ArchiveAuto,
 		},
 		"TarGz": {
-			archiveMaker:  archiver.TarGz,
+			archiveMaker:  archiver.DefaultTarGz,
 			expectSuccess: true,
 			fileExtension: ".tar.gz",
 			format:        options.ArchiveTarGz,
 		},
 		"Zip": {
-			archiveMaker:  archiver.Zip,
+			archiveMaker:  archiver.DefaultZip,
 			expectSuccess: true,
 			fileExtension: ".zip",
 			format:        options.ArchiveZip,
 		},
 		"InvalidArchiveFormat": {
-			archiveMaker:  archiver.TarGz,
+			archiveMaker:  archiver.DefaultTarGz,
 			expectSuccess: false,
-			fileExtension: ".foo",
+			fileExtension: ".tar.gz",
 			format:        options.ArchiveFormat("foo"),
 		},
 		"MismatchedArchiveFileAndFormat": {
-			archiveMaker:  archiver.TarGz,
+			archiveMaker:  archiver.DefaultTarGz,
 			expectSuccess: false,
 			fileExtension: ".tar.gz",
 			format:        options.ArchiveZip,
@@ -222,17 +222,19 @@ func TestDoExtract(t *testing.T) {
 			file, err := ioutil.TempFile(testutil.BuildDirectory(), "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
-			archiveFile, err := ioutil.TempFile(testutil.BuildDirectory(), "out"+testCase.fileExtension)
+
+			archiveFileName := filepath.Join(testutil.BuildDirectory(), fmt.Sprintf("in-%s%s", utility.RandomString(), testCase.fileExtension))
 			require.NoError(t, err)
-			defer os.Remove(archiveFile.Name())
+			defer os.Remove(archiveFileName)
+
 			extractDir, err := ioutil.TempDir(testutil.BuildDirectory(), "out")
 			require.NoError(t, err)
 			defer os.RemoveAll(extractDir)
 
-			require.NoError(t, testCase.archiveMaker.Make(archiveFile.Name(), []string{file.Name()}))
+			require.NoError(t, testCase.archiveMaker.Archive([]string{file.Name()}, archiveFileName))
 
 			opts := options.Download{
-				Path: archiveFile.Name(),
+				Path: archiveFileName,
 				ArchiveOpts: options.Archive{
 					ShouldExtract: true,
 					Format:        testCase.format,
@@ -245,7 +247,7 @@ func TestDoExtract(t *testing.T) {
 			}
 			assert.NoError(t, opts.Extract())
 
-			fileInfo, err := os.Stat(archiveFile.Name())
+			fileInfo, err := os.Stat(archiveFileName)
 			require.NoError(t, err)
 			assert.NotZero(t, fileInfo.Size())
 
@@ -256,7 +258,7 @@ func TestDoExtract(t *testing.T) {
 	}
 }
 
-func TestDoExtractUnarchivedFile(t *testing.T) {
+func TestDownloadAndExtractFailsWithUnarchivedFile(t *testing.T) {
 	file, err := ioutil.TempFile(testutil.BuildDirectory(), "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -272,5 +274,5 @@ func TestDoExtractUnarchivedFile(t *testing.T) {
 	}
 	err = opts.Extract()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "could not detect archive format")
+	assert.Contains(t, err.Error(), "format unrecognized")
 }

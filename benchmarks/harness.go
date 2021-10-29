@@ -102,12 +102,12 @@ func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) pop
 		opts := makeCreateOpts(timeout, *logger)
 
 		startAt := time.Now()
-		r.Begin()
+		r.BeginIteration()
 		err = runIteration(ctx, makeProc, opts)
 		if err != nil {
 			return err
 		}
-		r.IncOps(1)
+		r.IncOperations(1)
 		sender, err := opts.Output.Loggers[0].Resolve()
 		if err != nil {
 			return err
@@ -115,7 +115,7 @@ func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) pop
 		safeSender := sender.(*options.SafeSender)
 		rawSender := safeSender.GetSender().(*send.InMemorySender)
 		r.IncSize(rawSender.TotalBytesSent())
-		r.End(time.Since(startAt))
+		r.EndIteration(time.Since(startAt))
 
 		return nil
 	}
@@ -139,18 +139,18 @@ func getFileLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.
 		opts := makeCreateOpts(timeout, logger)
 
 		startAt := time.Now()
-		r.Begin()
+		r.BeginIteration()
 		err = runIteration(ctx, makeProc, opts)
 		if err != nil {
 			return err
 		}
-		r.IncOps(1)
+		r.IncOperations(1)
 		info, err := file.Stat()
 		if err != nil {
 			return err
 		}
 		r.IncSize(info.Size())
-		r.End(time.Since(startAt))
+		r.EndIteration(time.Since(startAt))
 
 		return nil
 	}
