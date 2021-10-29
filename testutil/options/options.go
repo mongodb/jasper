@@ -73,13 +73,16 @@ func ValidPythonScriptingHarnessOptions(dir string) options.ScriptingHarness {
 
 // ValidGolangScriptingHarnessOptions returns valid options for creating a
 // Golang scripting harness.
-func ValidGolangScriptingHarnessOptions(dir string) options.ScriptingHarness {
+func ValidGolangScriptingHarnessOptions(dir string) *options.ScriptingGolang {
 	return &options.ScriptingGolang{
 		Gopath: filepath.Join(dir, "gopath"),
 		Goroot: runtime.GOROOT(),
 		Packages: []string{
 			"github.com/pkg/errors",
 		},
+		// Note: we have to use GO111MODULE=off because the scripting harness
+		// does not work with Go modules.
+		Environment: map[string]string{"GO111MODULE": "off"},
 	}
 }
 

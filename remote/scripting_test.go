@@ -38,7 +38,7 @@ func TestScripting(t *testing.T) {
 						t.Skip("chmod does not work on Windows")
 					}
 					harness := createTestScriptingHarness(ctx, t, client, tmpDir)
-					require.NoError(t, os.Chmod(tmpDir, 0555))
+					require.NoError(t, os.Chmod(tmpDir, 0000))
 					assert.Error(t, harness.Setup(ctx))
 					require.NoError(t, os.Chmod(tmpDir, 0777))
 				},
@@ -55,7 +55,7 @@ func TestScripting(t *testing.T) {
 					}
 					harness := createTestScriptingHarness(ctx, t, client, tmpDir)
 					require.NoError(t, harness.Setup(ctx))
-					require.NoError(t, os.Chmod(tmpDir, 0555))
+					require.NoError(t, os.Chmod(tmpDir, 0000))
 					assert.Error(t, harness.Cleanup(ctx))
 					require.NoError(t, os.Chmod(tmpDir, 0777))
 				},
