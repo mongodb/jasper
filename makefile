@@ -2,9 +2,9 @@
 name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
-compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(allPackages),./$(target))))
 testPackages := $(name) cli remote options mock scripting internal-executor
 allPackages := $(testPackages) remote-internal testutil benchmarks util
+compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(allPackages),./$(target))))
 lintPackages := $(allPackages)
 projectPath := github.com/mongodb/jasper
 # end project configuration
