@@ -72,23 +72,19 @@ func (opts Download) Download() error {
 // Extract extracts the download to the path specified, using the archive format
 // specified.
 func (opts Download) Extract() error {
-	var archiveHandler archiver.Archiver
+	var archiveHandler archiver.Unarchiver
 	switch opts.ArchiveOpts.Format {
 	case ArchiveAuto:
-		unzipper := archiver.MatchingFormat(opts.Path)
-		if unzipper == nil {
-			return errors.Errorf("could not detect archive format for %s", opts.Path)
-		}
-		archiveHandler = unzipper
+		return archiver.Unarchive(opts.Path, opts.ArchiveOpts.TargetPath)
 	case ArchiveTarGz:
-		archiveHandler = archiver.TarGz
+		archiveHandler = archiver.DefaultTarGz
 	case ArchiveZip:
-		archiveHandler = archiver.Zip
+		archiveHandler = archiver.DefaultZip
 	default:
 		return errors.Errorf("unrecognized archive format %s", opts.ArchiveOpts.Format)
 	}
 
-	if err := archiveHandler.Open(opts.Path, opts.ArchiveOpts.TargetPath); err != nil {
+	if err := archiveHandler.Unarchive(opts.Path, opts.ArchiveOpts.TargetPath); err != nil {
 		return errors.Wrapf(err, "problem extracting archive %s to %s", opts.Path, opts.ArchiveOpts.TargetPath)
 	}
 

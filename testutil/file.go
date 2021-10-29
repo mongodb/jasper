@@ -8,30 +8,17 @@ import (
 
 	"github.com/mholt/archiver"
 	"github.com/mongodb/grip"
+	"github.com/pkg/errors"
 )
 
 // AddFileToDirectory adds an archive file given by fileName with the given
 // fileContents to the directory.
-func AddFileToDirectory(dir string, fileName string, fileContents string) error {
-	if format := archiver.MatchingFormat(fileName); format != nil {
-		tmpFile, err := ioutil.TempFile(dir, "tmp.txt")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(tmpFile.Name())
-		if _, err := tmpFile.Write([]byte(fileContents)); err != nil {
-			catcher := grip.NewBasicCatcher()
-			catcher.Add(err)
-			catcher.Add(tmpFile.Close())
-			return catcher.Resolve()
-		}
-		if err := tmpFile.Close(); err != nil {
-			return err
-		}
-
-		if err := format.Make(filepath.Join(dir, fileName), []string{tmpFile.Name()}); err != nil {
-			return err
-		}
+func AddFileToDirectory(dir, fileName, fileContents string) error {
+	archived, err := tryAddFileToArchive(dir, fileName, fileContents)
+	if err != nil {
+		return errors.Wrap(err, "adding file to archive")
+	}
+	if archived {
 		return nil
 	}
 
@@ -46,6 +33,38 @@ func AddFileToDirectory(dir string, fileName string, fileContents string) error 
 		return catcher.Resolve()
 	}
 	return file.Close()
+}
+
+func tryAddFileToArchive(dir, fileName, fileContents string) (bool, error) {
+	format, err := archiver.ByExtension(fileName)
+	if err != nil {
+		return false, nil
+	}
+	archiveFormat, ok := format.(archiver.Archiver)
+	if !ok {
+		return false, nil
+	}
+
+	tmpFile, err := ioutil.TempFile(dir, "tmp.txt")
+	if err != nil {
+		return false, err
+	}
+	defer os.RemoveAll(tmpFile.Name())
+	if _, err := tmpFile.Write([]byte(fileContents)); err != nil {
+		catcher := grip.NewBasicCatcher()
+		catcher.Add(err)
+		catcher.Add(tmpFile.Close())
+		return false, catcher.Resolve()
+	}
+	if err := tmpFile.Close(); err != nil {
+		return false, err
+	}
+
+	if err := archiveFormat.Archive([]string{tmpFile.Name()}, filepath.Join(dir, fileName)); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // BuildDirectory is the project-level directory where all build artifacts are
