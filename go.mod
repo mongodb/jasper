@@ -14,7 +14,7 @@ require (
 	github.com/evergreen-ci/birch v0.0.0-20211025210128-7f3409c2b515
 	github.com/evergreen-ci/bond v0.0.0-20211028185610-dd9f42390412
 	github.com/evergreen-ci/certdepot v0.0.0-20211018155101-af6e44c6102a
-	github.com/evergreen-ci/gimlet v0.0.0-20211027140321-f4161ce147cc
+	github.com/evergreen-ci/gimlet v0.0.0-20211029160936-5b64c7b33753
 	github.com/evergreen-ci/lru v0.0.0-20200601164352-d1b427740b3b
 	github.com/evergreen-ci/mrpc v0.0.0-20211025143107-842bca81a3f8
 	github.com/evergreen-ci/poplar v0.0.0-20211028171636-d45516ea1ce5
@@ -34,6 +34,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/cli v1.22.5
+	github.com/xdg/scram v1.0.3 // indirect
+	github.com/xdg/stringprep v1.0.3 // indirect
 	go.mongodb.org/mongo-driver v1.7.3
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309

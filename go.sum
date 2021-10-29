@@ -308,11 +308,15 @@ github.com/evergreen-ci/certdepot v0.0.0-20211018155101-af6e44c6102a/go.mod h1:X
 github.com/evergreen-ci/gimlet v0.0.0-20211018155143-ebbbff34990a/go.mod h1:F2dAoc1x1+JwZH9ylB9tpeOnztafEx2IbZjEz8GQzOM=
 github.com/evergreen-ci/gimlet v0.0.0-20211027140321-f4161ce147cc h1:RhIWBVOR/ApcBdK0nxEeZNJ6vyKdFhguDAgj+IEPZkM=
 github.com/evergreen-ci/gimlet v0.0.0-20211027140321-f4161ce147cc/go.mod h1:/fPgVsOEUfFU0iUt03MzgTf0AWJbZF8BWwWuey7LuGg=
+github.com/evergreen-ci/gimlet v0.0.0-20211029160936-5b64c7b33753 h1:VIKaKtaMtTRa6ScX5rA4WCMOKzT6uZDDZozwcLVn7xc=
+github.com/evergreen-ci/gimlet v0.0.0-20211029160936-5b64c7b33753/go.mod h1:57Sr3kCsdBlf9ii/ZYyuNDTzcDLDN7laOyJeIXYPGGs=
 github.com/evergreen-ci/juniper v0.0.0-20210624185208-0fd21a88954c/go.mod h1:LewZWRe1jV5XJhNksoB0rpvlwsg+D6M3yvzIFJZ8OJs=
 github.com/evergreen-ci/lru v0.0.0-20200601164352-d1b427740b3b h1:ubBjSVvWSiaLK/eTUd+L5BnrPORauhNlxrks4cd7pzU=
 github.com/evergreen-ci/lru v0.0.0-20200601164352-d1b427740b3b/go.mod h1:DAkfpYGgjm0VkXsfh+XbJuoOAy/A5CYbpFnnDPmqdT8=
 github.com/evergreen-ci/mrpc v0.0.0-20211025143107-842bca81a3f8 h1:J8fB9j5/gMf/+2Xgigfbyo9p712g8bnUgMoOZCdPSH4=
 github.com/evergreen-ci/mrpc v0.0.0-20211025143107-842bca81a3f8/go.mod h1:VYRQQhC5yfKxVyTMLTU0HQiotj9kyNV4N5NH+wLjMG0=
+github.com/evergreen-ci/negroni v1.0.1-0.20211028183800-67b6d7c2c035 h1:oVU/ni/sRq+GAogUMLa7LBGtvVHMVLbisuytxBC5KaY=
+github.com/evergreen-ci/negroni v1.0.1-0.20211028183800-67b6d7c2c035/go.mod h1:pvK7NM0ZC+sfTLuIiJN4BgM1S9S5Oo79PJReAFFph18=
 github.com/evergreen-ci/pail v0.0.0-20211018155204-833e3187cfe7 h1:H6mHcpv13shtJMkMYt0nW17bDfmqhCcBmf8xLCsVzKE=
 github.com/evergreen-ci/pail v0.0.0-20211018155204-833e3187cfe7/go.mod h1:5gJ3srLW+mTEtewtmEs5qdnFiKFtwoggc/U3oFCVAdc=
 github.com/evergreen-ci/poplar v0.0.0-20211028171636-d45516ea1ce5 h1:nFR0q4RmLKbxnbsvC7nyL24UIZIVmTU2XwUlTd+Hx9k=

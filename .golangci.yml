@@ -38,6 +38,11 @@ issues:
       linters:
         - gocognit
         - goconst
+    # TODO (EVG-15720): remove this exclusion rule once github.com/golang/protobuf
+    # has been replaced by google.golang.org/protobuf.
+    - linters:
+        - staticcheck
+      text: "ptypes.* is deprecated"
 
   # Enforce doc comments on exported types.
   include:
