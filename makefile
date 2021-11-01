@@ -3,7 +3,7 @@ name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testPackages := $(name) cli remote options mock scripting internal-executor
-allPackages := $(testPackages) remote-internal testutil benchmarks util
+allPackages := $(testPackages) remote-internal testutil testutil-options benchmarks util
 compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(allPackages),./$(target))))
 lintPackages := $(allPackages)
 projectPath := github.com/mongodb/jasper
@@ -145,7 +145,7 @@ ifneq (go,$(gobin))
 lintEnvVars := PATH="$(shell dirname $(gobin)):$(PATH)"
 endif
 $(buildDir)/output.%.lint: $(buildDir)/run-linter .FORCE
-	@$(lintEnvVars) ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --packages='$*'
+	@$(lintEnvVars) ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --lintArgs="--timeout=2m" --packages='$*'
 # end test and coverage artifacts
 
 # start Docker-related targets

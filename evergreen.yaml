@@ -119,6 +119,9 @@ tasks:
   - <<: *run-build
     tags: ["report"]
     name: lint-testutil
+  - <<: *run-build
+    tags: ["report"]
+    name: lint-testutil-options
 
   - <<: *run-build
     tags: ["report"]
