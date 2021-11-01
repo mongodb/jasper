@@ -14,7 +14,7 @@ import (
 	"github.com/evergreen-ci/bond/recall"
 	"github.com/evergreen-ci/lru"
 	"github.com/evergreen-ci/utility"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/mongodb/amboy/queue"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"

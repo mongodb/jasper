@@ -23,7 +23,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
-	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/mholt/archiver/v3 v3.5.0
 	github.com/mongodb/amboy v0.0.0-20211018154850-5a8b4826253e
 	github.com/mongodb/anser v0.0.0-20211015200222-352e7ea48e94 // indirect
 	github.com/mongodb/grip v0.0.0-20211028155128-86e6e47bafdb
