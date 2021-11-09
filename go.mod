@@ -13,7 +13,7 @@ require (
 	github.com/evergreen-ci/aviation v0.0.0-20211026175554-41a4410c650f
 	github.com/evergreen-ci/baobab v1.0.1-0.20211025210153-3206308845c1
 	github.com/evergreen-ci/birch v0.0.0-20211025210128-7f3409c2b515
-	github.com/evergreen-ci/bond v0.0.0-20211101153628-3fabd9ffaead
+	github.com/evergreen-ci/bond v0.0.0-20211109152423-ba2b6b207f56
 	github.com/evergreen-ci/certdepot v0.0.0-20211028185643-bccec0b3cb21
 	github.com/evergreen-ci/gimlet v0.0.0-20211029160936-5b64c7b33753
 	github.com/evergreen-ci/lru v0.0.0-20211029170532-008d075b972d
@@ -23,8 +23,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
-	github.com/klauspost/pgzip v1.2.5 // indirect
-	github.com/mholt/archiver/v3 v3.5.0
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mongodb/amboy v0.0.0-20211101161704-2b42087d24e6
 	github.com/mongodb/anser v0.0.0-20211101170237-60a39d433c32 // indirect
 	github.com/mongodb/grip v0.0.0-20211101151816-abbea0c0d465
