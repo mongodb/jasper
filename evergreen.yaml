@@ -127,9 +127,18 @@ tasks:
     tags: ["report"]
     name: lint-util
 
+  - name: verify-mod-tidy
+    commands:
+      - command: git.get_project
+        type: system
+        params:
+          directory: jasper
+      - func: run-make
+        vars: { target: "${task_name}" }
+
 task_groups:
   - name: lint_group
-    tasks: [ ".report"]
+    tasks: [ ".report" ]
     max_hosts: 3
     share_processes: true
     setup_group_can_fail_task: true
@@ -140,7 +149,7 @@ task_groups:
       - func: run-make
         vars: { target: "clean-results" }
   - name: test_group
-    tasks: [ ".test"]
+    tasks: [ ".test" ]
     max_hosts: 3
     share_processes: true   # This ensure that the Docker image pulled in the setup_group is shared between tasks.
     setup_group_can_fail_task: true
@@ -187,6 +196,7 @@ buildvariants:
       - archlinux-new-large
     tasks: 
       - name: lint_group
+      - name: verify-mod-tidy
 
   - name: lint-windows
     display_name: Lint (Windows)
