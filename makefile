@@ -48,9 +48,9 @@ endif
 
 ifneq (,$(RACE_DETECTOR))
 # cgo is required for using the race detector.
-export CGO_ENABLED=1
+export CGO_ENABLED := 1
 else
-export CGO_ENABLED=0
+export CGO_ENABLED := 0
 endif
 # end environment setup
 
@@ -81,8 +81,8 @@ $(buildDir)/$(name): cmd/$(name)/$(name).go $(srcFiles)
 testOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).test)
 lintOutput := $(foreach target,$(lintPackages),$(buildDir)/output.$(target).lint)
 coverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage)
-coverageHtmlOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
-.PRECIOUS: $(coverageOutput) $(coverageHtmlOutput) $(lintOutput) $(testOutput)
+htmlCoverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(target).coverage.html)
+.PRECIOUS: $(coverageOutput) $(htmlCoverageOutput) $(lintOutput) $(testOutput)
 # end output files
 
 # start basic development targets
@@ -96,8 +96,8 @@ test: $(testOutput)
 benchmark: $(buildDir)/run-benchmarks
 	./$<
 coverage: $(coverageOutput)
-coverage-html: $(coverageHtmlOutput)
-phony += compile lint test coverage coverage-html proto benchmarks
+html-coverage: $(htmlCoverageOutput)
+phony += compile lint test coverage html-coverage proto benchmarks
 
 # start convenience targets for running tests and coverage tasks on a
 # specific package.
@@ -119,9 +119,6 @@ testArgs += -run='$(RUN_TEST)'
 endif
 ifneq (,$(RUN_COUNT))
 testArgs += -count=$(RUN_COUNT)
-endif
-ifeq (,$(DISABLE_COVERAGE))
-testArgs += -cover
 endif
 ifneq (,$(RACE_DETECTOR))
 testArgs += -race

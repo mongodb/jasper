@@ -40,7 +40,7 @@ functions:
       working_dir: jasper
       binary: make
       args: ["${target}"]
-      include_expansions_in_env: ["DISABLE_COVERAGE", "DOCKER_IMAGE", "GOROOT", "RACE_DETECTOR", "SKIP_DOCKER_TESTS"]
+      include_expansions_in_env: ["DOCKER_IMAGE", "GOROOT", "RACE_DETECTOR", "SKIP_DOCKER_TESTS"]
   parse-results:
     command: gotest.parse_files
     type: setup
@@ -176,7 +176,6 @@ buildvariants:
   - name: race-detector
     display_name: Race Detector (Arch Linux)
     expansions:
-      DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
       RACE_DETECTOR: true
       SKIP_DOCKER_TESTS: true
@@ -189,7 +188,6 @@ buildvariants:
   - name: lint-linux
     display_name: Lint (Arch Linux)
     expansions:
-      DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
     run_on:
       - archlinux-new-small
@@ -201,7 +199,6 @@ buildvariants:
   - name: lint-windows
     display_name: Lint (Windows)
     expansions:
-      DISABLE_COVERAGE: true
       GOROOT: C:/golang/go1.16
     run_on:
       - windows-64-vs2019-small
@@ -212,7 +209,6 @@ buildvariants:
   - name: ubuntu
     display_name: Ubuntu 18.04
     expansions:
-      DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
       DOCKER_IMAGE: ubuntu
     run_on:
@@ -224,7 +220,6 @@ buildvariants:
   - name: macos
     display_name: macOS
     expansions:
-      DISABLE_COVERAGE: true
       GOROOT: /opt/golang/go1.16
     run_on:
       - macos-1014
@@ -239,7 +234,6 @@ buildvariants:
       - windows-64-vs2017-small
       - windows-64-vs2017-large
     expansions:
-      DISABLE_COVERAGE: true
       GOROOT: C:/golang/go1.16
     tasks:
       - name: test_group
