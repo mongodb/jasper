@@ -25,7 +25,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mongodb/amboy v0.0.0-20211101161704-2b42087d24e6
-	github.com/mongodb/anser v0.0.0-20211101170237-60a39d433c32 // indirect
+	github.com/mongodb/anser v0.0.0-20211116195831-fdc43007b59f // indirect
 	github.com/mongodb/grip v0.0.0-20211101151816-abbea0c0d465
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
