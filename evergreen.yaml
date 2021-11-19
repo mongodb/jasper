@@ -13,6 +13,7 @@ variables:
     # runs a build operation. The task name in evergreen should
     # correspond to a make target for the build operation.
     name: test
+    must_have_test_results: true
     commands:
       - func: run-make
         vars: { target: "${task_name}" }
@@ -119,6 +120,7 @@ tasks:
   - <<: *run-build
     tags: ["report"]
     name: lint-testutil
+
   - <<: *run-build
     tags: ["report"]
     name: lint-testutil-options
