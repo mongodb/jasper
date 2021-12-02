@@ -34,10 +34,10 @@ func (opts *Docker) Validate() error {
 		if OSSupportsDocker(runtime.GOOS) {
 			opts.OS = runtime.GOOS
 		} else {
-			catcher.Errorf("cannot set default platform to current runtime platform '%s' because it is unsupported", opts.OS)
+			catcher.Errorf("cannot set default OS to current runtime OS '%s' because it is unsupported", opts.OS)
 		}
 	} else if !OSSupportsDocker(opts.OS) {
-		catcher.Errorf("unrecognized platform '%s'", opts.OS)
+		catcher.Errorf("unrecognized OS '%s'", opts.OS)
 	}
 	if opts.Arch == "" {
 		opts.Arch = runtime.GOARCH
@@ -53,8 +53,8 @@ func (opts *Docker) Copy() *Docker {
 
 // OSSupportsDocker returns whether or not the operating system is supported by
 // Docker.
-func OSSupportsDocker(platform string) bool {
-	switch platform {
+func OSSupportsDocker(os string) bool {
+	switch os {
 	case "darwin", "linux", "windows":
 		return true
 	default:
