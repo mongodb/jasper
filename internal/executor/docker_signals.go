@@ -48,9 +48,9 @@ func dockerToSyscallSignal(dsig string, os string) (syscall.Signal, error) { //n
 			return sig, nil
 		}
 	default:
-		return syscall.Signal(-1), errors.Errorf("unrecognized os '%s'", os)
+		return syscall.Signal(-1), errors.Errorf("unrecognized OS '%s'", os)
 	}
-	return syscall.Signal(-1), errors.Errorf("unrecognized signal '%s' for os '%s'", dsig, os)
+	return syscall.Signal(-1), errors.Errorf("unrecognized signal '%s' for OS '%s'", dsig, os)
 }
 
 // These are constants taken from the signals in the syscall package for

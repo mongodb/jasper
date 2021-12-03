@@ -46,8 +46,8 @@ type docker struct {
 	signal   syscall.Signal
 }
 
-// DockerOptions represent options for a Docker runtime executor.
-// within a Docker container.
+// DockerOptions represent options for a Docker runtime executor within a Docker
+// container.
 type DockerOptions struct {
 	// Client is the Docker client to use. This is required.
 	Client *client.Client
@@ -59,7 +59,7 @@ type DockerOptions struct {
 	// OS is the operating system that Docker is running in. If unspecified,
 	// this defaults to the runtime GOOS.
 	OS string
-	// OS is the CPU architecture of the machine that Docker is running in. If
+	// Arch is the CPU architecture of the machine that Docker is running in. If
 	// unspecified, this defaults to runtime GOARCH.
 	Arch string
 }

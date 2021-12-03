@@ -17,10 +17,10 @@ type Docker struct {
 	APIVersion string `bson:"api_version,omitempty" json:"api_version,omitempty" yaml:"api_version,omitempty"`
 	Image      string `bson:"image,omitempty" json:"image,omitempty" yaml:"image,omitempty"`
 	// OS refers to the major operating system on which the Docker container
-	// runs.
+	// runs. If unspecified, this defaults to the runtime GOOS.
 	OS string `bson:"os,omitempty" json:"os,omitempty" yaml:"os,omitempty"`
 	// Arch is the CPU architecture of the machine on which the Docker container
-	// runs.
+	// runs. If unspecified, this defaults to the runtime GOARCH.
 	Arch string `bson:"arch,omitempty" json:"arch,omitempty" yaml:"arch,omitempty"`
 }
 
