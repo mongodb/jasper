@@ -35,7 +35,14 @@ func executorTypes() map[string]executorConstructor {
 			if image == "" {
 				image = testutil.DefaultDockerImage
 			}
-			return NewDocker(ctx, client, runtime.GOOS, image, args), nil
+			opts := DockerOptions{
+				Client:  client,
+				OS:      runtime.GOOS,
+				Arch:    runtime.GOARCH,
+				Image:   image,
+				Command: args,
+			}
+			return NewDocker(ctx, opts)
 		},
 	}
 }

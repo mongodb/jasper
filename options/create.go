@@ -283,7 +283,14 @@ func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, err
 		if err != nil {
 			return nil, errors.Wrap(err, "could not resolve Docker options")
 		}
-		return executor.NewDocker(ctx, client, opts.Docker.Platform, opts.Docker.Image, opts.Args), nil
+		opts := executor.DockerOptions{
+			Client:  client,
+			Image:   opts.Docker.Image,
+			Command: opts.Args,
+			OS:      opts.Docker.OS,
+			Arch:    opts.Docker.Arch,
+		}
+		return executor.NewDocker(ctx, opts)
 	}
 
 	return executor.NewLocal(ctx, opts.Args), nil

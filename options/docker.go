@@ -16,9 +16,12 @@ type Docker struct {
 	Port       int    `bson:"port,omitempty" json:"port,omitempty" yaml:"port,omitempty"`
 	APIVersion string `bson:"api_version,omitempty" json:"api_version,omitempty" yaml:"api_version,omitempty"`
 	Image      string `bson:"image,omitempty" json:"image,omitempty" yaml:"image,omitempty"`
-	// Platform refers to the major operating system on which the Docker
-	// container runs.
-	Platform string `bson:"platform,omitempty" json:"platform,omitempty" yaml:"platform,omitempty"`
+	// OS refers to the major operating system on which the Docker container
+	// runs. If unspecified, this defaults to the runtime GOOS.
+	OS string `bson:"os,omitempty" json:"os,omitempty" yaml:"os,omitempty"`
+	// Arch is the CPU architecture of the machine on which the Docker container
+	// runs. If unspecified, this defaults to the runtime GOARCH.
+	Arch string `bson:"arch,omitempty" json:"arch,omitempty" yaml:"arch,omitempty"`
 }
 
 // Validate checks whether all the required fields are set and sets defaults if
@@ -27,14 +30,17 @@ func (opts *Docker) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(opts.Port < 0, "port must be positive value")
 	catcher.NewWhen(opts.Image == "", "Docker image must be specified")
-	if opts.Platform == "" {
-		if PlatformSupportsDocker(runtime.GOOS) {
-			opts.Platform = runtime.GOOS
+	if opts.OS == "" {
+		if OSSupportsDocker(runtime.GOOS) {
+			opts.OS = runtime.GOOS
 		} else {
-			catcher.Errorf("failed to set default platform to current runtime platform '%s' because it is unsupported", opts.Platform)
+			catcher.Errorf("cannot set default OS to current runtime OS '%s' because it is unsupported", opts.OS)
 		}
-	} else if !PlatformSupportsDocker(opts.Platform) {
-		catcher.Errorf("unrecognized platform '%s'", opts.Platform)
+	} else if !OSSupportsDocker(opts.OS) {
+		catcher.Errorf("unrecognized OS '%s'", opts.OS)
+	}
+	if opts.Arch == "" {
+		opts.Arch = runtime.GOARCH
 	}
 	return catcher.Resolve()
 }
@@ -45,10 +51,10 @@ func (opts *Docker) Copy() *Docker {
 	return &optsCopy
 }
 
-// PlatformSupportsDocker returns whether or not the platform has support for
+// OSSupportsDocker returns whether or not the operating system is supported by
 // Docker.
-func PlatformSupportsDocker(platform string) bool {
-	switch platform {
+func OSSupportsDocker(os string) bool {
+	switch os {
 	case "darwin", "linux", "windows":
 		return true
 	default:

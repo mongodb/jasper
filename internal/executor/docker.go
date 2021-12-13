@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -25,8 +27,9 @@ type docker struct {
 	stdout   io.Writer
 	stderr   io.Writer
 
-	image    string
-	platform string
+	image string
+	os    string
+	arch  string
 
 	client *client.Client
 	ctx    context.Context
@@ -43,22 +46,60 @@ type docker struct {
 	signal   syscall.Signal
 }
 
+// DockerOptions represent options for a Docker runtime executor within a Docker
+// container.
+type DockerOptions struct {
+	// Client is the Docker client to use. This is required.
+	Client *client.Client
+	// Image is the name of the Docker image. This is required.
+	Image string
+	// Command is the arguments to the command to run in the Docker container.
+	// This is required.
+	Command []string
+	// OS is the operating system that Docker is running in. If unspecified,
+	// this defaults to the runtime GOOS.
+	OS string
+	// Arch is the CPU architecture of the machine that Docker is running in. If
+	// unspecified, this defaults to runtime GOARCH.
+	Arch string
+}
+
+// Validate checks that the required Docker fields are populated. It sets
+// default values where possible.
+func (o *DockerOptions) Validate() error {
+	catcher := grip.NewBasicCatcher()
+	catcher.NewWhen(o.Client == nil, "must specify a Docker client")
+	catcher.NewWhen(o.Image == "", "must specify a Docker image")
+	catcher.NewWhen(len(o.Command) == 0, "cannot specify an empty command to run in the container")
+	if o.OS == "" {
+		o.OS = runtime.GOOS
+	}
+	if o.Arch == "" {
+		o.Arch = runtime.GOARCH
+	}
+	return catcher.Resolve()
+}
+
 // NewDocker returns an Executor that creates a process within a Docker
 // container. Callers are expected to clean up resources by calling Close.
-func NewDocker(ctx context.Context, client *client.Client, platform, image string, args []string) Executor {
+func NewDocker(ctx context.Context, opts DockerOptions) (Executor, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid options")
+	}
 	return &docker{
 		ctx: ctx,
 		execOpts: types.ExecConfig{
-			Cmd: args,
+			Cmd: opts.Command,
 		},
-		platform: platform,
-		image:    image,
-		client:   client,
+		os:       opts.OS,
+		arch:     opts.Arch,
+		image:    opts.Image,
+		client:   opts.Client,
 		status:   Unstarted,
 		pid:      -1,
 		exitCode: -1,
 		signal:   syscall.Signal(-1),
-	}
+	}, nil
 }
 
 func (e *docker) Args() []string {
@@ -137,7 +178,10 @@ func (e *docker) setupContainer() error {
 		OpenStdin:    e.execOpts.AttachStdin,
 		AttachStdout: e.execOpts.AttachStdout,
 		AttachStderr: e.execOpts.AttachStderr,
-	}, &container.HostConfig{}, &network.NetworkingConfig{}, containerName)
+	}, &container.HostConfig{}, &network.NetworkingConfig{}, &specs.Platform{
+		OS:           e.os,
+		Architecture: e.arch,
+	}, containerName)
 	if err != nil {
 		return errors.Wrap(err, "problem creating container for process")
 	}
@@ -315,7 +359,7 @@ func (e *docker) Signal(sig syscall.Signal) error {
 		return errors.New("cannot signal a non-running process")
 	}
 
-	dsig, err := syscallToDockerSignal(sig, e.platform)
+	dsig, err := syscallToDockerSignal(sig, e.os)
 	if err != nil {
 		return errors.Wrapf(err, "could not get Docker equivalent of signal '%d'", sig)
 	}

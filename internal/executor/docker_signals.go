@@ -6,13 +6,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// This file contains platform-dependent Docker signals taken from
+// This file contains OS-dependent Docker signals taken from
 // github.com/docker/docker/pkg/signal.
 
 // syscallToDockerSignal converts the syscall.Signal to the equivalent Docker
 // signal.
-func syscallToDockerSignal(sig syscall.Signal, platform string) (string, error) {
-	switch platform {
+func syscallToDockerSignal(sig syscall.Signal, os string) (string, error) {
+	switch os {
 	case "darwin":
 		if dsig, ok := syscallToDockerDarwin()[sig]; ok {
 			return dsig, nil
@@ -26,15 +26,15 @@ func syscallToDockerSignal(sig syscall.Signal, platform string) (string, error) 
 			return dsig, nil
 		}
 	default:
-		return "", errors.Errorf("unrecognized platform '%s'", platform)
+		return "", errors.Errorf("unrecognized OS '%s'", os)
 	}
-	return "", errors.Errorf("unrecognized Docker signal '%d' for platform '%s'", sig, platform)
+	return "", errors.Errorf("unrecognized Docker signal '%d' for OS '%s'", sig, os)
 }
 
 // dockerToSyscallSignal converts the Docker signal to the equivalent
 // syscall.Signal.
-func dockerToSyscallSignal(dsig string, platform string) (syscall.Signal, error) { //nolint: deadcode
-	switch platform {
+func dockerToSyscallSignal(dsig string, os string) (syscall.Signal, error) { //nolint: deadcode
+	switch os {
 	case "darwin":
 		if sig, ok := dockerToSyscallDarwin()[dsig]; ok {
 			return sig, nil
@@ -48,9 +48,9 @@ func dockerToSyscallSignal(dsig string, platform string) (syscall.Signal, error)
 			return sig, nil
 		}
 	default:
-		return syscall.Signal(-1), errors.Errorf("unrecognized platform '%s'", platform)
+		return syscall.Signal(-1), errors.Errorf("unrecognized OS '%s'", os)
 	}
-	return syscall.Signal(-1), errors.Errorf("unrecognized signal '%s' for platform '%s'", dsig, platform)
+	return syscall.Signal(-1), errors.Errorf("unrecognized signal '%s' for OS '%s'", dsig, os)
 }
 
 // These are constants taken from the signals in the syscall package for

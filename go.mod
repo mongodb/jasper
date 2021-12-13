@@ -8,7 +8,7 @@ require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.2
 	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible
+	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/evergreen-ci/aviation v0.0.0-20211026175554-41a4410c650f
 	github.com/evergreen-ci/baobab v1.0.1-0.20211025210153-3206308845c1
@@ -28,6 +28,7 @@ require (
 	github.com/mongodb/anser v0.0.0-20211116195831-fdc43007b59f // indirect
 	github.com/mongodb/grip v0.0.0-20211101151816-abbea0c0d465
 	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.2
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pierrec/lz4/v4 v4.1.9 // indirect
 	github.com/pkg/errors v0.9.1
