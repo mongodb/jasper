@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestRPCService(t *testing.T) {
@@ -36,7 +37,7 @@ func TestRPCService(t *testing.T) {
 					require.NoError(t, err)
 					require.NoError(t, startTestRPCService(ctx, manager, addr, nil))
 
-					conn, err := grpc.DialContext(ctx, addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+					conn, err := grpc.DialContext(ctx, addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 					require.NoError(t, err)
 					client := internal.NewJasperProcessManagerClient(conn)
 

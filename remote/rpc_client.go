@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type rpcClient struct {
@@ -40,7 +41,7 @@ func NewRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentia
 		}
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConf)))
 	} else {
-		opts = append(opts, grpc.WithInsecure())
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	conn, err := grpc.DialContext(ctx, addr.String(), opts...)
