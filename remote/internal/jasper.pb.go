@@ -4010,11 +4010,11 @@ var fileDescriptor_d30110796082ce8e = []byte{
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConnInterface
+var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+const _ = grpc.SupportPackageIsVersion4
 
 // JasperProcessManagerClient is the client API for JasperProcessManager service.
 //
@@ -4066,10 +4066,10 @@ type JasperProcessManagerClient interface {
 }
 
 type jasperProcessManagerClient struct {
-	cc grpc.ClientConnInterface
+	cc *grpc.ClientConn
 }
 
-func NewJasperProcessManagerClient(cc grpc.ClientConnInterface) JasperProcessManagerClient {
+func NewJasperProcessManagerClient(cc *grpc.ClientConn) JasperProcessManagerClient {
 	return &jasperProcessManagerClient{cc}
 }
 

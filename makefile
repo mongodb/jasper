@@ -1,6 +1,7 @@
 # start project configuration
 name := jasper
 buildDir := build
+pbDir := remote/internal
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testPackages := $(name) cli remote options mock scripting internal-executor
 allPackages := $(testPackages) remote-internal testutil testutil-options benchmarks util
@@ -88,9 +89,23 @@ htmlCoverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(targ
 # start basic development targets
 compile: $(srcFiles)
 	$(gobin) build $(compilePackages)
-proto:
-	@mkdir -p remote/internal
-	protoc --go_out=plugins=grpc:remote/internal *.proto
+
+protocVersion := 3.6.1
+protocGenGoVersion := 1.3.2
+protoOS := $(shell uname -s | tr A-Z a-z)
+ifeq ($(protoOS),darwin)
+protoOS := osx
+endif
+protoOS := $(protoOS)-$(shell uname -m | tr A-Z a-z)
+$(buildDir)/protoc:
+	curl --retry 10 --retry-max-time 60 -L0 https://github.com/protocolbuffers/protobuf/releases/download/v$(protocVersion)/protoc-$(protocVersion)-$(protoOS).zip --output protoc.zip
+	unzip -q protoc.zip -d $(buildDir)/protoc
+	rm -f protoc.zip
+	GOBIN="$(abspath $(buildDir))" $(gobin) install github.com/golang/protobuf/protoc-gen-go@v$(protocGenGoVersion)
+proto: $(buildDir)/protoc
+	mkdir -p $(pbDir)
+	PATH="$(abspath $(buildDir)):$(PATH)" $(buildDir)/protoc/bin/protoc --go_out=plugins=grpc:$(pbDir) *.proto
+
 lint: $(lintOutput)
 test: $(testOutput)
 benchmark: $(buildDir)/run-benchmarks
@@ -178,7 +193,9 @@ clean:
 	rm -rf $(buildDir)
 clean-results:
 	rm -rf $(buildDir)/output.*
-phony += clean clean-results
+clean-proto:
+	rm -rf $(buildDir)/protoc $(buildDir)/protoc-gen-go
+phony += clean clean-results clean-proto
 # end cleanup targets
 
 # configure phony targets
