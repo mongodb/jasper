@@ -18,7 +18,7 @@ require (
 	github.com/evergreen-ci/gimlet v0.0.0-20211029160936-5b64c7b33753
 	github.com/evergreen-ci/lru v0.0.0-20211029170532-008d075b972d
 	github.com/evergreen-ci/mrpc v0.0.0-20211025143107-842bca81a3f8
-	github.com/evergreen-ci/poplar v0.0.0-20211028171636-d45516ea1ce5
+	github.com/evergreen-ci/poplar v0.0.0-20220119144730-b220d71c0330
 	github.com/evergreen-ci/utility v0.0.0-20211026201827-97b21fa2660a
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
