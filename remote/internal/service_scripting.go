@@ -84,19 +84,10 @@ func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *Scriptin
 		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", args.Id))
 	}
 
-	exportedArgs, err := args.Export()
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "exporting arguments"))
-	}
-
 	var testErr error
-	res, err := sh.Test(ctx, args.Directory, exportedArgs...)
+	res, err := sh.Test(ctx, args.Directory, args.Export()...)
 	if err != nil {
 		testErr = err
-	}
-	convertedRes, err := ConvertScriptingTestResults(res)
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "converting test results"))
 	}
 
 	outcome := &OperationOutcome{Success: testErr == nil}
@@ -105,6 +96,6 @@ func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *Scriptin
 	}
 	return &ScriptingHarnessTestResponse{
 		Outcome: outcome,
-		Results: convertedRes,
+		Results: ConvertScriptingTestResults(res),
 	}, nil
 }

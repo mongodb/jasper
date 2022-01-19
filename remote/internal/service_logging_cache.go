@@ -1,14 +1,13 @@
 package internal
 
 import (
-	context "context"
+	"context"
 
-	"github.com/golang/protobuf/ptypes"
-	empty "github.com/golang/protobuf/ptypes/empty"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/mongodb/jasper"
 	"github.com/pkg/errors"
-	codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var errLoggingCacheNotSupported = errors.New("logging cache is not supported")
@@ -32,12 +31,7 @@ func (s *jasperService) LoggingCacheCreate(ctx context.Context, args *LoggingCac
 	}
 	out.ManagerID = s.manager.ID()
 
-	logger, err := ConvertCachedLogger(out)
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "converting cached logger"))
-	}
-
-	return logger, nil
+	return ConvertCachedLogger(out), nil
 }
 
 func (s *jasperService) LoggingCacheGet(ctx context.Context, args *LoggingCacheArgs) (*LoggingCacheInstance, error) {
@@ -51,12 +45,7 @@ func (s *jasperService) LoggingCacheGet(ctx context.Context, args *LoggingCacheA
 		return nil, newGRPCError(codes.NotFound, errors.Errorf("getting logger with id '%s'", args.Id))
 	}
 
-	logger, err := ConvertCachedLogger(out)
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "converting cached logger"))
-	}
-
-	return logger, nil
+	return ConvertCachedLogger(out), nil
 }
 
 func (s *jasperService) LoggingCacheRemove(ctx context.Context, args *LoggingCacheArgs) (*OperationOutcome, error) {
@@ -89,7 +78,7 @@ func (s *jasperService) LoggingCacheCloseAndRemove(ctx context.Context, args *Lo
 	return &OperationOutcome{Success: true}, nil
 }
 
-func (s *jasperService) LoggingCacheClear(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
+func (s *jasperService) LoggingCacheClear(ctx context.Context, _ *emptypb.Empty) (*OperationOutcome, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
 		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
@@ -102,25 +91,20 @@ func (s *jasperService) LoggingCacheClear(ctx context.Context, _ *empty.Empty) (
 	return &OperationOutcome{Success: true}, nil
 }
 
-func (s *jasperService) LoggingCachePrune(ctx context.Context, arg *timestamp.Timestamp) (*OperationOutcome, error) {
+func (s *jasperService) LoggingCachePrune(ctx context.Context, arg *timestamppb.Timestamp) (*OperationOutcome, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
 		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)
 	}
 
-	ts, err := ptypes.Timestamp(arg)
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "converting input timestamp"))
-	}
-
-	if err := lc.Prune(ts); err != nil {
+	if err := lc.Prune(arg.AsTime()); err != nil {
 		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "pruning logging cache"))
 	}
 
 	return &OperationOutcome{Success: true}, nil
 }
 
-func (s *jasperService) LoggingCacheLen(ctx context.Context, _ *empty.Empty) (*LoggingCacheLenResponse, error) {
+func (s *jasperService) LoggingCacheLen(ctx context.Context, _ *emptypb.Empty) (*LoggingCacheLenResponse, error) {
 	lc := s.manager.LoggingCache(ctx)
 	if lc == nil {
 		return nil, newGRPCError(codes.FailedPrecondition, errLoggingCacheNotSupported)

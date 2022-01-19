@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/jasper/options"
 	internal "github.com/mongodb/jasper/remote/internal"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // rpcLoggingCache is the client-side representation of a jasper.LoggingCache
@@ -82,7 +82,7 @@ func (lc *rpcLoggingCache) CloseAndRemove(ctx context.Context, id string) error 
 }
 
 func (lc *rpcLoggingCache) Clear(ctx context.Context) error {
-	resp, err := lc.client.LoggingCacheClear(ctx, &empty.Empty{})
+	resp, err := lc.client.LoggingCacheClear(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -94,12 +94,7 @@ func (lc *rpcLoggingCache) Clear(ctx context.Context) error {
 }
 
 func (lc *rpcLoggingCache) Prune(ts time.Time) error {
-	pbts, err := ptypes.TimestampProto(ts)
-	if err != nil {
-		return errors.Wrap(err, "converting prune timestamp to protobuf timestamp")
-	}
-
-	resp, err := lc.client.LoggingCachePrune(lc.ctx, pbts)
+	resp, err := lc.client.LoggingCachePrune(lc.ctx, timestamppb.New(ts))
 	if err != nil {
 		return err
 	}
@@ -111,7 +106,7 @@ func (lc *rpcLoggingCache) Prune(ts time.Time) error {
 }
 
 func (lc *rpcLoggingCache) Len() (int, error) {
-	resp, err := lc.client.LoggingCacheLen(lc.ctx, &empty.Empty{})
+	resp, err := lc.client.LoggingCacheLen(lc.ctx, &emptypb.Empty{})
 	if err != nil {
 		return -1, err
 	}

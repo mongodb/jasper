@@ -8,17 +8,17 @@ import (
 	"time"
 
 	"github.com/evergreen-ci/lru"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
-	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func newGRPCError(code codes.Code, err error) error {
@@ -104,14 +104,14 @@ type jasperService struct {
 	UnimplementedJasperProcessManagerServer
 }
 
-func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResponse, error) {
+func (s *jasperService) Status(ctx context.Context, _ *emptypb.Empty) (*StatusResponse, error) {
 	return &StatusResponse{
 		HostId: s.hostID,
 		Active: true,
 	}, nil
 }
 
-func (s *jasperService) ID(ctx context.Context, _ *empty.Empty) (*IDResponse, error) {
+func (s *jasperService) ID(ctx context.Context, _ *emptypb.Empty) (*IDResponse, error) {
 	return &IDResponse{Value: s.manager.ID()}, nil
 }
 
@@ -289,13 +289,13 @@ func (s *jasperService) Respawn(ctx context.Context, id *JasperProcessID) (*Proc
 	return newProcInfo, nil
 }
 
-func (s *jasperService) Clear(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
+func (s *jasperService) Clear(ctx context.Context, _ *emptypb.Empty) (*OperationOutcome, error) {
 	s.manager.Clear(ctx)
 
 	return &OperationOutcome{Success: true}, nil
 }
 
-func (s *jasperService) Close(ctx context.Context, _ *empty.Empty) (*OperationOutcome, error) {
+func (s *jasperService) Close(ctx context.Context, _ *emptypb.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
 		err = errors.Wrap(err, "problem encountered closing service")
 		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "closing service"))
