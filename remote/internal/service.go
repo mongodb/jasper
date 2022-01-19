@@ -98,6 +98,10 @@ type jasperService struct {
 	cache      *lru.Cache
 	cacheOpts  options.Cache
 	cacheMutex sync.RWMutex
+
+	// UnimplementedJasperProcessManagerServer must be embedded for forward
+	// compatibility. See jasper_grpc.pb.go for more information.
+	UnimplementedJasperProcessManagerServer
 }
 
 func (s *jasperService) Status(ctx context.Context, _ *empty.Empty) (*StatusResponse, error) {

@@ -1,7 +1,6 @@
 # start project configuration
 name := jasper
 buildDir := build
-pbDir := remote/internal
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
 testPackages := $(name) cli remote options mock scripting internal-executor
 allPackages := $(testPackages) remote-internal testutil testutil-options benchmarks util
@@ -90,8 +89,7 @@ htmlCoverageOutput := $(foreach target,$(testPackages),$(buildDir)/output.$(targ
 compile: $(srcFiles)
 	$(gobin) build $(compilePackages)
 
-protocVersion := 3.6.1
-protocGenGoVersion := 1.3.2
+protocVersion := 3.19.3
 protoOS := $(shell uname -s | tr A-Z a-z)
 ifeq ($(protoOS),darwin)
 protoOS := osx
@@ -101,10 +99,10 @@ $(buildDir)/protoc:
 	curl --retry 10 --retry-max-time 60 -L0 https://github.com/protocolbuffers/protobuf/releases/download/v$(protocVersion)/protoc-$(protocVersion)-$(protoOS).zip --output protoc.zip
 	unzip -q protoc.zip -d $(buildDir)/protoc
 	rm -f protoc.zip
-	GOBIN="$(abspath $(buildDir))" $(gobin) install github.com/golang/protobuf/protoc-gen-go@v$(protocGenGoVersion)
+	GOBIN="$(abspath $(buildDir))" $(gobin) install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	GOBIN="$(abspath $(buildDir))" $(gobin) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 proto: $(buildDir)/protoc
-	mkdir -p $(pbDir)
-	PATH="$(abspath $(buildDir)):$(PATH)" $(buildDir)/protoc/bin/protoc --go_out=plugins=grpc:$(pbDir) *.proto
+	PATH="$(abspath $(buildDir)):$(PATH)" $(buildDir)/protoc/bin/protoc --go_out=. --go-grpc_out=. *.proto
 
 lint: $(lintOutput)
 test: $(testOutput)
@@ -194,7 +192,7 @@ clean:
 clean-results:
 	rm -rf $(buildDir)/output.*
 clean-proto:
-	rm -rf $(buildDir)/protoc $(buildDir)/protoc-gen-go
+	rm -rf $(buildDir)/protoc $(buildDir)/protoc-gen-go $(buildDir)/protoc-gen-go-grpc
 phony += clean clean-results clean-proto
 # end cleanup targets
 
