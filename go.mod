@@ -20,7 +20,6 @@ require (
 	github.com/evergreen-ci/mrpc v0.0.0-20211025143107-842bca81a3f8
 	github.com/evergreen-ci/poplar v0.0.0-20211028171636-d45516ea1ce5
 	github.com/evergreen-ci/utility v0.0.0-20211026201827-97b21fa2660a
-	github.com/golang/protobuf v1.5.2
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
 	github.com/mholt/archiver/v3 v3.5.1
@@ -40,4 +39,5 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
 	google.golang.org/grpc v1.43.0
+	google.golang.org/protobuf v1.27.1
 )

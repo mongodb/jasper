@@ -6,17 +6,17 @@ import (
 	"net"
 
 	"github.com/evergreen-ci/certdepot"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	internal "github.com/mongodb/jasper/remote/internal"
+	"github.com/mongodb/jasper/remote/internal"
 	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type rpcClient struct {
@@ -78,7 +78,7 @@ func newRPCClient(cc *grpc.ClientConn) Manager {
 }
 
 func (c *rpcClient) ID() string {
-	resp, err := c.client.ID(context.Background(), &empty.Empty{})
+	resp, err := c.client.ID(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return ""
 	}
@@ -189,11 +189,11 @@ func (c *rpcClient) Get(ctx context.Context, name string) (jasper.Process, error
 }
 
 func (c *rpcClient) Clear(ctx context.Context) {
-	_, _ = c.client.Clear(ctx, &empty.Empty{})
+	_, _ = c.client.Clear(ctx, &emptypb.Empty{})
 }
 
 func (c *rpcClient) Close(ctx context.Context) error {
-	resp, err := c.client.Close(ctx, &empty.Empty{})
+	resp, err := c.client.Close(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -205,7 +205,7 @@ func (c *rpcClient) Close(ctx context.Context) error {
 }
 
 func (c *rpcClient) Status(ctx context.Context) (string, bool, error) {
-	resp, err := c.client.Status(ctx, &empty.Empty{})
+	resp, err := c.client.Status(ctx, &emptypb.Empty{})
 	if err != nil {
 		return "", false, errors.WithStack(err)
 	}
