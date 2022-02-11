@@ -1,6 +1,7 @@
 package options
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -353,11 +354,14 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 	}
 
 	sender := &SafeSender{}
+	sender.Sender = baseSender
 	if opts.Buffer.Buffered {
-		sender.Sender = send.NewBufferedSender(baseSender, opts.Buffer.Duration, opts.Buffer.MaxSize)
+		s, err := send.NewBufferedSender(context.Background(), baseSender, send.BufferedSenderOptions{FlushInterval: opts.Buffer.Duration, BufferSize: opts.Buffer.MaxSize})
+		if err != nil {
+			return nil, errors.Wrap(err, "creating buffered sender")
+		}
+		sender.Sender = s
 		sender.baseSender = baseSender
-	} else {
-		sender.Sender = baseSender
 	}
 
 	formatter, err := opts.Format.MakeFormatter()
