@@ -354,7 +354,6 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 	}
 
 	sender := &SafeSender{}
-	sender.Sender = baseSender
 	if opts.Buffer.Buffered {
 		s, err := send.NewBufferedSender(context.Background(), baseSender, send.BufferedSenderOptions{FlushInterval: opts.Buffer.Duration, BufferSize: opts.Buffer.MaxSize})
 		if err != nil {
@@ -362,6 +361,8 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 		}
 		sender.Sender = s
 		sender.baseSender = baseSender
+	} else {
+		sender.Sender = baseSender
 	}
 
 	formatter, err := opts.Format.MakeFormatter()
