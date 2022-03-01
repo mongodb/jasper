@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/andybalholm/brotli v1.0.3 // indirect
 	github.com/cheynewallace/tabby v1.1.1
-	github.com/containerd/cgroups v1.0.2
+	github.com/containerd/cgroups v1.0.3
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
