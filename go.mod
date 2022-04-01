@@ -8,7 +8,7 @@ require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.3
 	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/evergreen-ci/aviation v0.0.0-20211026175554-41a4410c650f
 	github.com/evergreen-ci/baobab v1.0.1-0.20211025210153-3206308845c1
@@ -32,12 +32,12 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.9 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/square/certstrap v1.2.0 // indirect
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/cli v1.22.5
-	go.mongodb.org/mongo-driver v1.8.3
+	go.mongodb.org/mongo-driver v1.8.4
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
 	google.golang.org/grpc v1.45.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.28.0
 )
