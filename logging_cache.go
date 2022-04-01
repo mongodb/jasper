@@ -60,7 +60,7 @@ func (c *loggingCacheImpl) Create(id string, opts *options.Output) (*options.Cac
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; ok {
-		return nil, errors.Errorf("logger with id  '%s' exists", id)
+		return nil, errors.Errorf("logger '%s' already exists", id)
 	}
 	logger := opts.CachedLogger(id)
 
@@ -83,7 +83,7 @@ func (c *loggingCacheImpl) Prune(ts time.Time) error {
 	catcher := grip.NewBasicCatcher()
 	for id, logger := range c.cache {
 		if logger.Accessed.Before(ts) {
-			catcher.Wrapf(c.closeAndRemove(id), "pruning logger with id '%s'", id)
+			catcher.Wrapf(c.closeAndRemove(id), "pruning logger '%s'", id)
 		}
 	}
 
@@ -113,7 +113,7 @@ func (c *loggingCacheImpl) Put(id string, logger *options.CachedLogger) error {
 	defer c.mu.Unlock()
 
 	if _, ok := c.cache[id]; ok {
-		return errors.Errorf("cannot cache an existing logger with id '%s'", id)
+		return errors.Errorf("logger '%s' already exists", id)
 	}
 
 	logger.Accessed = time.Now()
@@ -166,7 +166,7 @@ func (c *loggingCacheImpl) Clear(_ context.Context) error {
 	var successfullyClosed []string
 	for id, logger := range c.cache {
 		if err := logger.Close(); err != nil {
-			catcher.Wrapf(logger.Close(), "closing logger with id '%s'", logger.ID)
+			catcher.Wrapf(logger.Close(), "closing logger '%s'", logger.ID)
 			continue
 		}
 		successfullyClosed = append(successfullyClosed, id)

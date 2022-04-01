@@ -103,7 +103,7 @@ func (c *LoggingCache) Clear(_ context.Context) error {
 	var closed []string
 	for id, logger := range c.Cache {
 		if err := logger.Close(); err != nil {
-			catcher.Wrapf(err, "closing logger with id '%s'", id)
+			catcher.Wrapf(err, "closing logger '%s'", id)
 			continue
 		}
 		closed = append(closed, id)
@@ -121,7 +121,7 @@ func (c *LoggingCache) Prune(lastAccessed time.Time) error {
 	catcher := grip.NewBasicCatcher()
 	for id, logger := range c.Cache {
 		if logger.Accessed.Before(lastAccessed) {
-			catcher.Wrapf(c.CloseAndRemove(context.Background(), id), "pruning logger with id '%s'", id)
+			catcher.Wrapf(c.CloseAndRemove(context.Background(), id), "pruning logger '%s'", id)
 		}
 	}
 	return catcher.Resolve()

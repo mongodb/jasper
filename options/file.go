@@ -27,7 +27,7 @@ type WriteFile struct {
 // the file.
 func (opts *WriteFile) validateContent() error {
 	if len(opts.Content) > 0 && opts.Reader != nil {
-		return errors.New("cannot have both data and reader set as file content")
+		return errors.New("cannot have both raw data bytes and data reader set as file content")
 	}
 	// If neither is set, ensure that Content is empty rather than nil to
 	// prevent potential writes with a nil slice.
@@ -54,7 +54,7 @@ func (opts *WriteFile) Validate() error {
 // needed and the file if it does not exist yet.
 func (opts *WriteFile) DoWrite() error {
 	if err := makeEnclosingDirectories(filepath.Dir(opts.Path)); err != nil {
-		return errors.Wrap(err, "problem making enclosing directories")
+		return errors.Wrap(err, "making enclosing directories")
 	}
 
 	openFlags := os.O_RDWR | os.O_CREATE
@@ -66,26 +66,26 @@ func (opts *WriteFile) DoWrite() error {
 
 	file, err := os.OpenFile(opts.Path, openFlags, 0666)
 	if err != nil {
-		return errors.Wrapf(err, "error opening file %s", opts.Path)
+		return errors.Wrapf(err, "opening file '%s'", opts.Path)
 	}
 
 	catcher := grip.NewBasicCatcher()
 
 	reader, err := opts.ContentReader()
 	if err != nil {
-		catcher.Wrap(file.Close(), "error closing file")
-		catcher.Wrap(err, "error getting file content as bytes")
+		catcher.Wrap(file.Close(), "closing file")
+		catcher.Wrap(err, "getting file content as bytes")
 		return catcher.Resolve()
 	}
 
 	bufReader := bufio.NewReader(reader)
 	if _, err = io.Copy(file, bufReader); err != nil {
-		catcher.Wrap(file.Close(), "error closing file")
-		catcher.Wrap(err, "error writing content to file")
+		catcher.Wrap(file.Close(), "closing file")
+		catcher.Wrap(err, "writing content to file")
 		return catcher.Resolve()
 	}
 
-	return errors.Wrap(file.Close(), "error closing file")
+	return errors.Wrap(file.Close(), "closing file")
 }
 
 // WriteBufferedContent writes the content to a file by repeatedly calling
@@ -93,12 +93,12 @@ func (opts *WriteFile) DoWrite() error {
 // WriteFile containing the next content to write to the file.
 func (opts *WriteFile) WriteBufferedContent(doWrite func(bufopts WriteFile) error) error {
 	if err := opts.validateContent(); err != nil {
-		return errors.Wrap(err, "could not validate file content source")
+		return errors.Wrap(err, "invalid file content source")
 	}
 	didWrite := false
 	for buf, err := opts.contentBytes(); len(buf) != 0; buf, err = opts.contentBytes() {
 		if err != nil && err != io.EOF {
-			return errors.Wrap(err, "error getting content bytes")
+			return errors.Wrap(err, "getting content bytes")
 		}
 
 		bufOpts := *opts
@@ -108,7 +108,7 @@ func (opts *WriteFile) WriteBufferedContent(doWrite func(bufopts WriteFile) erro
 		}
 
 		if writeErr := doWrite(bufOpts); err != nil {
-			return errors.Wrap(writeErr, "could not perform buffered write")
+			return errors.Wrap(writeErr, "writing content")
 		}
 
 		didWrite = true
@@ -122,14 +122,14 @@ func (opts *WriteFile) WriteBufferedContent(doWrite func(bufopts WriteFile) erro
 		return nil
 	}
 
-	return errors.Wrap(doWrite(*opts), "could not perform buffered write")
+	return errors.Wrap(doWrite(*opts), "writing to file")
 
 }
 
 // SetPerm sets the file permissions on the file. This should be called after
 // DoWrite. If no file exists at (WriteFile).Path, it will error.
 func (opts *WriteFile) SetPerm() error {
-	return errors.Wrap(os.Chmod(opts.Path, opts.Perm), "error setting permissions")
+	return errors.Wrap(os.Chmod(opts.Path, opts.Perm), "setting file permissions")
 }
 
 // contentBytes returns the contents to be written to the file as a byte slice.
@@ -137,7 +137,7 @@ func (opts *WriteFile) SetPerm() error {
 // should process the byte slice before checking for the io.EOF condition.
 func (opts *WriteFile) contentBytes() ([]byte, error) {
 	if err := opts.validateContent(); err != nil {
-		return nil, errors.Wrap(err, "could not validate file content source")
+		return nil, errors.Wrap(err, "invalid file content source")
 	}
 
 	if opts.Reader != nil {
@@ -153,7 +153,7 @@ func (opts *WriteFile) contentBytes() ([]byte, error) {
 // ContentReader returns the contents to be written to the file as an io.Reader.
 func (opts *WriteFile) ContentReader() (io.Reader, error) {
 	if err := opts.validateContent(); err != nil {
-		return nil, errors.Wrap(err, "could not validate file content source")
+		return nil, errors.Wrap(err, "invalid file content source")
 	}
 
 	if opts.Reader != nil {

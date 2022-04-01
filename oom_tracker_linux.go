@@ -1,5 +1,3 @@
-// +build linux
-
 package jasper
 
 import (
@@ -15,14 +13,14 @@ import (
 func (o *oomTrackerImpl) Clear(ctx context.Context) error {
 	sudo, err := isSudo(ctx)
 	if err != nil {
-		return errors.Wrap(err, "error checking sudo")
+		return errors.Wrap(err, "checking sudo")
 	}
 
 	if sudo {
-		return errors.Wrap(exec.CommandContext(ctx, "sudo", "dmesg", "-c").Run(), "error clearing dmesg")
+		return errors.Wrap(exec.CommandContext(ctx, "sudo", "dmesg", "-c").Run(), "clearing dmesg")
 	}
 
-	return errors.Wrap(exec.CommandContext(ctx, "dmesg", "-c").Run(), "error clearing dmesg")
+	return errors.Wrap(exec.CommandContext(ctx, "dmesg", "-c").Run(), "clearing dmesg")
 }
 
 func (o *oomTrackerImpl) Check(ctx context.Context) error {
@@ -33,7 +31,7 @@ func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	}
 	lines, pids, err := analyzer.analyzeKernelLog(ctx)
 	if err != nil {
-		return errors.Wrap(err, "error searching log")
+		return errors.Wrap(err, "searching log")
 	}
 	o.Lines = lines
 	o.PIDs = pids

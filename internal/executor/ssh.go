@@ -154,10 +154,10 @@ func (e *ssh) SignalInfo() (sig syscall.Signal, signaled bool) {
 func (e *ssh) Close() error {
 	catcher := grip.NewBasicCatcher()
 	if err := e.session.Close(); err != nil && err != io.EOF {
-		catcher.Wrap(err, "error closing SSH session")
+		catcher.Wrap(err, "closing SSH session")
 	}
 	if err := e.client.Close(); err != nil && err != io.EOF {
-		catcher.Wrap(err, "error closing SSH client")
+		catcher.Wrap(err, "closing SSH client")
 	}
 	return catcher.Resolve()
 }

@@ -25,12 +25,12 @@ func RunLogging(ctx context.Context) error {
 		fmt.Sprintf("jasper-log-benchmark-%d", time.Now().Unix()),
 	)
 	if err := os.Mkdir(prefix, os.ModePerm); err != nil {
-		return errors.Wrap(err, "problem creating benchmark directory")
+		return errors.Wrap(err, "creating benchmark directory")
 	}
 
 	resultFile, err := os.Create(filepath.Join(prefix, "results.txt"))
 	if err != nil {
-		return errors.Wrap(err, "problem creating result file")
+		return errors.Wrap(err, "creating result file")
 	}
 
 	var resultText string
@@ -44,8 +44,8 @@ func RunLogging(ctx context.Context) error {
 
 	catcher := grip.NewBasicCatcher()
 	_, err = resultFile.WriteString(resultText)
-	catcher.Add(errors.Wrap(err, "failed to write benchmark results to file"))
-	catcher.Add(resultFile.Close())
+	catcher.Wrap(err, "writing benchmark results to file")
+	catcher.Wrap(resultFile.Close(), "closing result file")
 
 	return catcher.Resolve()
 }
@@ -82,7 +82,7 @@ func runIteration(ctx context.Context, makeProc makeProcess, opts *options.Creat
 	}
 	exitCode, err := proc.Wait(ctx)
 	if err != nil && !proc.Info(ctx).Timeout {
-		return errors.Wrapf(err, "process with id '%s' exited unexpectedly with code %d", proc.ID(), exitCode)
+		return errors.Wrapf(err, "process '%s' exited unexpectedly with code %d", proc.ID(), exitCode)
 	}
 	return nil
 }

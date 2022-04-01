@@ -151,7 +151,6 @@ func TestDefaultTrigger(t *testing.T) {
 			trigger(info)
 			assert.Equal(t, 1, count)
 		},
-		// "": func(ctx context.Context, t *testing.T, mngr Manager) {},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())

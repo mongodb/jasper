@@ -223,19 +223,19 @@ func (o *Output) Close() error {
 	// Close the outputSender and errorSender, which does not close the
 	// underlying send.Sender.
 	if o.outputSender != nil {
-		catcher.Wrap(o.outputSender.Close(), "problem closing output sender")
+		catcher.Wrap(o.outputSender.Close(), "closing output sender")
 	}
 	if o.errorSender != nil {
-		catcher.Wrap(o.errorSender.Close(), "problem closing error sender")
+		catcher.Wrap(o.errorSender.Close(), "closing error sender")
 	}
 	// Close the sender wrapped by the send.WriterSender.
 	if o.outputSender != nil {
-		catcher.Wrap(o.outputSender.Sender.Close(), "problem closing wrapped output sender")
+		catcher.Wrap(o.outputSender.Sender.Close(), "closing wrapped output sender")
 	}
 	// Since senders are shared, only close error's senders if output hasn't
 	// already closed them.
 	if o.errorSender != nil && (o.SuppressOutput || o.SendOutputToError) {
-		catcher.Wrap(o.errorSender.Sender.Close(), "problem closing wrapped error sender")
+		catcher.Wrap(o.errorSender.Sender.Close(), "closing wrapped error sender")
 	}
 
 	return catcher.Resolve()

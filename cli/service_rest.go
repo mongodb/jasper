@@ -46,7 +46,7 @@ func serviceCommandREST(cmd string, operation serviceOperation) cli.Command {
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewSynchronizedManager(false)
 			if err != nil {
-				return errors.Wrap(err, "error creating REST manager")
+				return errors.Wrap(err, "creating REST manager")
 			}
 
 			opts := daemonOptions{
@@ -84,7 +84,7 @@ func (d *restDaemon) Start(s baobab.Service) error {
 
 	go func(ctx context.Context, d *restDaemon) {
 		defer recovery.LogStackTraceAndContinue("REST service")
-		grip.Error(errors.Wrap(d.run(ctx), "error running REST service"))
+		grip.Error(errors.Wrap(d.run(ctx), "running REST service"))
 	}(ctx, d)
 
 	return nil
@@ -96,7 +96,7 @@ func (d *restDaemon) Stop(s baobab.Service) error {
 }
 
 func (d *restDaemon) run(ctx context.Context) error {
-	return errors.Wrap(runServices(ctx, d.newService), "error running REST service")
+	return errors.Wrap(runServices(ctx, d.newService), "running REST service")
 }
 
 func (d *restDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
@@ -114,15 +114,15 @@ func newRESTService(ctx context.Context, host string, port int, manager jasper.M
 	app := srv.App(ctx)
 	app.SetPrefix("jasper")
 	if err := app.SetHost(host); err != nil {
-		return nil, errors.Wrap(err, "error setting REST host")
+		return nil, errors.Wrap(err, "setting REST host")
 	}
 	if err := app.SetPort(port); err != nil {
-		return nil, errors.Wrap(err, "error setting REST port")
+		return nil, errors.Wrap(err, "setting REST port")
 	}
 
 	go func() {
 		defer recovery.LogStackTraceAndContinue("REST service")
-		grip.Warning(errors.Wrap(app.Run(ctx), "error running REST app"))
+		grip.Warning(errors.Wrap(app.Run(ctx), "running REST app"))
 	}()
 
 	return func() error { return nil }, nil

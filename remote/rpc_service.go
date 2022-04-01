@@ -32,7 +32,7 @@ func AttachService(ctx context.Context, manager jasper.Manager, s *grpc.Server) 
 func StartRPCService(ctx context.Context, manager jasper.Manager, addr net.Addr, creds *certdepot.Credentials) (util.CloseFunc, error) {
 	lis, err := net.Listen(addr.Network(), addr.String())
 	if err != nil {
-		return nil, errors.Wrapf(err, "error listening on %s", addr.String())
+		return nil, errors.Wrapf(err, "listening on '%s'", addr.String())
 	}
 
 	opts := []grpc.ServerOption{
@@ -42,7 +42,7 @@ func StartRPCService(ctx context.Context, manager jasper.Manager, addr net.Addr,
 	if creds != nil {
 		tlsConf, err := creds.Resolve()
 		if err != nil {
-			return nil, errors.Wrap(err, "error generating TLS config from server credentials")
+			return nil, errors.Wrap(err, "generating TLS config from server credentials")
 		}
 		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConf)))
 	}
@@ -52,7 +52,7 @@ func StartRPCService(ctx context.Context, manager jasper.Manager, addr net.Addr,
 	ctx, cancel := context.WithCancel(ctx)
 	if err := AttachService(ctx, manager, service); err != nil {
 		cancel()
-		return nil, errors.Wrap(err, "could not attach manager to service")
+		return nil, errors.Wrap(err, "attaching process manager to service")
 	}
 	go func() {
 		defer recovery.LogStackTraceAndContinue("RPC service")
@@ -72,7 +72,7 @@ func StartRPCServiceWithFile(ctx context.Context, manager jasper.Manager, addr n
 		var err error
 		creds, err = certdepot.NewCredentialsFromFile(filePath)
 		if err != nil {
-			return nil, errors.Wrap(err, "error getting credentials from file")
+			return nil, errors.Wrap(err, "getting credentials from file")
 		}
 	}
 

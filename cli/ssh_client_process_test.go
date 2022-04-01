@@ -324,7 +324,6 @@ func TestSSHProcess(t *testing.T) {
 			proc.ResetTags()
 			assert.Equal(t, proc.ID(), inputChecker.ID)
 		},
-		// "": func(ctx context.Context, t *testing.T, proc *sshProcess, manager *sshClient, baseManager *mock.Manager) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
 			client, err := NewSSHClient(mockClientOptions(), mockRemoteOptions())

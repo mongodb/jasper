@@ -20,39 +20,39 @@ func (s *mdbScriptingHarness) ID() string { return s.id }
 func (s *mdbScriptingHarness) Setup(ctx context.Context) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &scriptingSetupRequest{ID: s.id})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := s.client.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	resp := &shell.ErrorResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (s *mdbScriptingHarness) Cleanup(ctx context.Context) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &scriptingCleanupRequest{ID: s.id})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := s.client.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	resp := &shell.ErrorResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (s *mdbScriptingHarness) Run(ctx context.Context, args []string) error {
@@ -61,20 +61,20 @@ func (s *mdbScriptingHarness) Run(ctx context.Context, args []string) error {
 	r.Params.Args = args
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := s.client.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	resp := &shell.ErrorResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (s *mdbScriptingHarness) RunScript(ctx context.Context, in string) error {
@@ -83,20 +83,20 @@ func (s *mdbScriptingHarness) RunScript(ctx context.Context, in string) error {
 	r.Params.Script = in
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := s.client.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	resp := &shell.ErrorResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (s *mdbScriptingHarness) Build(ctx context.Context, dir string, args []string) (string, error) {
@@ -106,20 +106,20 @@ func (s *mdbScriptingHarness) Build(ctx context.Context, dir string, args []stri
 	r.Params.Args = args
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return "", errors.Wrap(err, "could not create request")
+		return "", errors.Wrap(err, "creating request")
 	}
 
 	msg, err := s.client.doRequest(ctx, req)
 	if err != nil {
-		return "", errors.Wrap(err, "failed during request")
+		return "", errors.Wrap(err, "making request")
 	}
 
 	resp := &scriptingBuildResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return "", errors.Wrap(err, "could not read response")
+		return "", errors.Wrap(err, "converting wire message to response")
 	}
 
-	return resp.Path, errors.Wrap(resp.SuccessOrError(), "error in response")
+	return resp.Path, errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (s *mdbScriptingHarness) Test(ctx context.Context, dir string, opts ...scripting.TestOptions) ([]scripting.TestResult, error) {
@@ -129,18 +129,18 @@ func (s *mdbScriptingHarness) Test(ctx context.Context, dir string, opts ...scri
 	r.Params.Options = opts
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 
 	msg, err := s.client.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	resp := &scriptingTestResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 
-	return resp.Results, errors.Wrap(resp.SuccessOrError(), "error in response")
+	return resp.Results, errors.Wrap(resp.SuccessOrError(), "response contained error")
 }

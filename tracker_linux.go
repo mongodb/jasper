@@ -37,7 +37,7 @@ func NewProcessTracker(name string) (ProcessTracker, error) {
 		infos:              []ProcessInfo{},
 	}
 	if err := tracker.setDefaultCgroupIfInvalid(); err != nil {
-		grip.Debug(message.WrapErrorf(err, "could not initialize process tracker named '%s' with cgroup", name))
+		grip.Debug(message.WrapErrorf(err, "initializing process tracker named '%s' with cgroup", name))
 	}
 
 	return tracker, nil
@@ -58,7 +58,7 @@ func (t *linuxProcessTracker) setDefaultCgroupIfInvalid() error {
 
 	cgroup, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/"+t.Name), &specs.LinuxResources{})
 	if err != nil {
-		return errors.Wrap(err, "could not create default cgroup")
+		return errors.Wrap(err, "creating default cgroup")
 	}
 	t.cgroup = cgroup
 
@@ -76,7 +76,7 @@ func (t *linuxProcessTracker) Add(info ProcessInfo) error {
 
 	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: info.PID}
 	if err := t.cgroup.Add(proc); err != nil {
-		return errors.Wrapf(err, "failed to add process with pid '%d' to cgroup", info.PID)
+		return errors.Wrapf(err, "adding process with PID '%d' to cgroup", info.PID)
 	}
 	return nil
 }
@@ -90,7 +90,7 @@ func (t *linuxProcessTracker) listCgroupPIDs() ([]int, error) {
 
 	procs, err := t.cgroup.Processes(defaultSubsystem, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not list tracked PIDs")
+		return nil, errors.Wrap(err, "listing tracked PIDs")
 	}
 
 	pids := make([]int, 0, len(procs))
@@ -109,12 +109,12 @@ func (t *linuxProcessTracker) doCleanupByCgroup() error {
 
 	pids, err := t.listCgroupPIDs()
 	if err != nil {
-		return errors.Wrap(err, "could not find tracked processes")
+		return errors.Wrap(err, "finding tracked processes")
 	}
 
 	catcher := grip.NewBasicCatcher()
 	for _, pid := range pids {
-		catcher.Add(errors.Wrapf(cleanupProcess(pid), "error while cleaning up process with pid '%d'", pid))
+		catcher.Wrapf(cleanupProcess(pid), "cleaning up process with PID '%d'", pid)
 	}
 
 	// Delete the cgroup. If the process tracker is still used, the cgroup must
@@ -155,9 +155,9 @@ func cleanupProcess(pid int) error {
 func (t *linuxProcessTracker) Cleanup() error {
 	catcher := grip.NewBasicCatcher()
 	if t.validCgroup() {
-		catcher.Add(errors.Wrap(t.doCleanupByCgroup(), "error occurred while cleaning up processes tracked by cgroup"))
+		catcher.Wrap(t.doCleanupByCgroup(), "cleaning up processes tracked by cgroup")
 	}
-	catcher.Add(errors.Wrap(t.doCleanupByEnvironmentVariable(), "error occurred while cleaning up processes tracked by environment variable"))
+	catcher.Wrap(t.doCleanupByEnvironmentVariable(), "cleaning up processes tracked by environment variable")
 
 	return catcher.Resolve()
 }

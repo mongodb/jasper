@@ -41,7 +41,7 @@ func (opts *CreateOptions) Export() (*options.Create, error) {
 	if opts.Output != nil {
 		exportedOutput, err := opts.Output.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting output")
+			return nil, errors.Wrap(err, "exporting output")
 		}
 		out.Output = exportedOutput
 	}
@@ -49,21 +49,21 @@ func (opts *CreateOptions) Export() (*options.Create, error) {
 	for _, opt := range opts.OnSuccess {
 		exportedOpt, err := opt.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting create options")
+			return nil, errors.Wrap(err, "exporting create options")
 		}
 		out.OnSuccess = append(out.OnSuccess, exportedOpt)
 	}
 	for _, opt := range opts.OnFailure {
 		exportedOpt, err := opt.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting create options")
+			return nil, errors.Wrap(err, "exporting create options")
 		}
 		out.OnFailure = append(out.OnFailure, exportedOpt)
 	}
 	for _, opt := range opts.OnTimeout {
 		exportedOpt, err := opt.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting create options")
+			return nil, errors.Wrap(err, "exporting create options")
 		}
 		out.OnTimeout = append(out.OnTimeout, exportedOpt)
 	}
@@ -83,7 +83,7 @@ func ConvertCreateOptions(opts *options.Create) (*CreateOptions, error) {
 
 	output, err := ConvertOutputOptions(opts.Output)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem converting output options")
+		return nil, errors.Wrap(err, "converting output options")
 	}
 
 	co := &CreateOptions{
@@ -100,21 +100,21 @@ func ConvertCreateOptions(opts *options.Create) (*CreateOptions, error) {
 	for _, opt := range opts.OnSuccess {
 		convertedOpts, err := ConvertCreateOptions(opt)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem converting create options")
+			return nil, errors.Wrap(err, "converting on success create options")
 		}
 		co.OnSuccess = append(co.OnSuccess, convertedOpts)
 	}
 	for _, opt := range opts.OnFailure {
 		convertedOpts, err := ConvertCreateOptions(opt)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem converting create options")
+			return nil, errors.Wrap(err, "converting on failure create options")
 		}
 		co.OnFailure = append(co.OnFailure, convertedOpts)
 	}
 	for _, opt := range opts.OnTimeout {
 		convertedOpts, err := ConvertCreateOptions(opt)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem converting create options")
+			return nil, errors.Wrap(err, "converting on timeout create options")
 		}
 		co.OnTimeout = append(co.OnTimeout, convertedOpts)
 	}
@@ -127,7 +127,7 @@ func ConvertCreateOptions(opts *options.Create) (*CreateOptions, error) {
 func (info *ProcessInfo) Export() (jasper.ProcessInfo, error) {
 	opts, err := info.Options.Export()
 	if err != nil {
-		return jasper.ProcessInfo{}, errors.Wrap(err, "problem exporting create options")
+		return jasper.ProcessInfo{}, errors.Wrap(err, "exporting create options")
 	}
 	return jasper.ProcessInfo{
 		ID:         info.Id,
@@ -149,7 +149,7 @@ func (info *ProcessInfo) Export() (jasper.ProcessInfo, error) {
 func ConvertProcessInfo(info jasper.ProcessInfo) (*ProcessInfo, error) {
 	opts, err := ConvertCreateOptions(&info.Options)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem converting create options")
+		return nil, errors.Wrap(err, "converting create options")
 	}
 	return &ProcessInfo{
 		Id:         info.ID,
@@ -228,7 +228,7 @@ func (opts *OutputOptions) Export() (options.Output, error) {
 	for _, logger := range opts.Loggers {
 		exportedLogger, err := logger.Export()
 		if err != nil {
-			return options.Output{}, errors.Wrap(err, "problem exporting logger config")
+			return options.Output{}, errors.Wrap(err, "exporting logger config")
 		}
 		loggers = append(loggers, exportedLogger)
 	}
@@ -249,7 +249,7 @@ func ConvertOutputOptions(opts options.Output) (OutputOptions, error) {
 	for _, logger := range opts.Loggers {
 		convertedLoggerConfig, err := ConvertLoggerConfig(logger)
 		if err != nil {
-			return OutputOptions{}, errors.Wrap(err, "problem converting logger config")
+			return OutputOptions{}, errors.Wrap(err, "converting logger config")
 		}
 		loggers = append(loggers, convertedLoggerConfig)
 	}
@@ -285,7 +285,7 @@ func (logger *LoggerConfig) Export() (*options.LoggerConfig, error) {
 		return logger.GetRaw().Export()
 	}
 	if producer == nil {
-		return nil, errors.New("logger config options invalid")
+		return nil, errors.New("invalid logger config options")
 	}
 
 	config := &options.LoggerConfig{}
@@ -298,7 +298,7 @@ func (logger *LoggerConfig) Export() (*options.LoggerConfig, error) {
 func ConvertLoggerConfig(config *options.LoggerConfig) (*LoggerConfig, error) {
 	data, err := json.Marshal(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem marshalling logger config")
+		return nil, errors.Wrap(err, "marshalling logger config to JSON")
 	}
 
 	return &LoggerConfig{
@@ -494,7 +494,7 @@ func (opts *BuildloggerV2Options) Export() options.LoggerProducer {
 func (opts *BuildloggerV3Options) Export() (*options.LoggerConfig, error) {
 	data, err := json.Marshal(&opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem marshaling buildlogger v3 options")
+		return nil, errors.Wrap(err, "marshalling buildlogger v3 options to JSON")
 	}
 
 	return options.NewLoggerConfig("BuildloggerV3", options.RawLoggerConfigFormatJSON, data), nil
@@ -532,7 +532,7 @@ func ConvertRawLoggerConfigFormat(f options.RawLoggerConfigFormat) RawLoggerConf
 func (logger *RawLoggerConfig) Export() (*options.LoggerConfig, error) {
 	config := &options.LoggerConfig{}
 	if err := logger.Format.Export().Unmarshal(logger.ConfigData, config); err != nil {
-		return nil, errors.Wrap(err, "problem unmarshalling raw config")
+		return nil, errors.Wrap(err, "unmarshalling raw config")
 	}
 	return config, nil
 }
@@ -783,7 +783,7 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 	case *ScriptingOptions_Golang:
 		output, err := o.Output.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting output options")
+			return nil, errors.Wrap(err, "exporting output options")
 		}
 		return &options.ScriptingGolang{
 			Gopath:         val.Golang.Gopath,
@@ -798,7 +798,7 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 	case *ScriptingOptions_Python:
 		output, err := o.Output.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting output options")
+			return nil, errors.Wrap(err, "exporting output options")
 		}
 		return &options.ScriptingPython{
 			VirtualEnvPath:      val.Python.VirtualEnvPath,
@@ -814,7 +814,7 @@ func (o *ScriptingOptions) Export() (options.ScriptingHarness, error) {
 	case *ScriptingOptions_Roswell:
 		output, err := o.Output.Export()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem exporting output options")
+			return nil, errors.Wrap(err, "exporting output options")
 		}
 		return &options.ScriptingRoswell{
 			Path:           val.Roswell.Path,
@@ -837,7 +837,7 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 	case *options.ScriptingGolang:
 		out, err := ConvertOutputOptions(val.Output)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem converting output options")
+			return nil, errors.Wrap(err, "converting output options")
 		}
 		return &ScriptingOptions{
 			Duration:    int64(val.CachedDuration),
@@ -856,7 +856,7 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 	case *options.ScriptingPython:
 		out, err := ConvertOutputOptions(val.Output)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem converting output options")
+			return nil, errors.Wrap(err, "converting output options")
 		}
 		return &ScriptingOptions{
 			Duration:    int64(val.CachedDuration),
@@ -876,7 +876,7 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 	case *options.ScriptingRoswell:
 		out, err := ConvertOutputOptions(val.Output)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem converting output options")
+			return nil, errors.Wrap(err, "converting output options")
 		}
 		return &ScriptingOptions{
 			Duration:    int64(val.CachedDuration),
@@ -891,7 +891,7 @@ func ConvertScriptingOptions(opts options.ScriptingHarness) (*ScriptingOptions, 
 			},
 		}, nil
 	default:
-		return nil, errors.Errorf("scripting options for '%T' is not supported", opts)
+		return nil, errors.Errorf("scripting options for %T is not supported", opts)
 	}
 }
 
@@ -1126,7 +1126,7 @@ func ConvertCachedLogger(opts *options.CachedLogger) *LoggingCacheInstance {
 func ConvertLoggingCreateArgs(id string, opts *options.Output) (*LoggingCacheCreateArgs, error) {
 	o, err := ConvertOutputOptions(*opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem converting output options")
+		return nil, errors.Wrap(err, "converting output options")
 	}
 	return &LoggingCacheCreateArgs{
 		Id:      id,

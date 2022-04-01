@@ -66,7 +66,7 @@ func (e *roswellEnvironment) RunScript(ctx context.Context, script string) error
 	}
 
 	if err := e.manager.WriteFile(ctx, wo); err != nil {
-		return errors.Wrap(err, "problem writing script file")
+		return errors.Wrap(err, "writing script file")
 	}
 
 	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).AddEnv("ROSWELL_HOME", e.opts.Path).
@@ -91,10 +91,10 @@ func (e *roswellEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Path).Run(ctx),
-			"problem removing remote roswell environment '%s'", e.opts.Path)
+			"removing remote roswell environment '%s'", e.opts.Path)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Path),
-			"problem removing local roswell environment '%s'", e.opts.Path)
+			"removing local roswell environment '%s'", e.opts.Path)
 	}
 }
 

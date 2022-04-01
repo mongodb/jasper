@@ -111,7 +111,7 @@ func (e *golangEnvironment) RunScript(ctx context.Context, script string) error 
 		Content: []byte(script),
 	}
 	if err := e.manager.WriteFile(ctx, wo); err != nil {
-		return errors.Wrap(err, "problem writing script file")
+		return errors.Wrap(err, "writing script file")
 	}
 
 	return e.manager.CreateCommand(ctx).Environment(e.opts.Environment).
@@ -122,10 +122,10 @@ func (e *golangEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Gopath).Run(ctx),
-			"problem removing remote golang environment '%s'", e.opts.Gopath)
+			"removing remote golang environment '%s'", e.opts.Gopath)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Gopath),
-			"problem removing local golang environment '%s'", e.opts.Gopath)
+			"removing local golang environment '%s'", e.opts.Gopath)
 	}
 }
 

@@ -42,7 +42,7 @@ func (s *jasperService) LoggingCacheGet(ctx context.Context, args *LoggingCacheA
 
 	out, err := lc.Get(args.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Errorf("getting logger with id '%s'", args.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Errorf("getting logger '%s'", args.Id))
 	}
 
 	return ConvertCachedLogger(out), nil
@@ -59,7 +59,7 @@ func (s *jasperService) LoggingCacheRemove(ctx context.Context, args *LoggingCac
 		if errors.Cause(err) == jasper.ErrCachedLoggerNotFound {
 			code = codes.NotFound
 		}
-		return nil, newGRPCError(code, errors.Wrapf(err, "removing logger with id '%s'", args.Id))
+		return nil, newGRPCError(code, errors.Wrapf(err, "removing logger '%s'", args.Id))
 	}
 
 	return &OperationOutcome{Success: true}, nil
@@ -72,7 +72,7 @@ func (s *jasperService) LoggingCacheCloseAndRemove(ctx context.Context, args *Lo
 	}
 
 	if err := lc.CloseAndRemove(ctx, args.Id); err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "closing and removing logger with id '%s'", args.Id))
+		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "closing and removing logger '%s'", args.Id))
 	}
 
 	return &OperationOutcome{Success: true}, nil

@@ -61,13 +61,13 @@ func (p *restProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 func (p *restProcess) Wait(ctx context.Context) (int, error) {
 	resp, err := p.client.doRequest(ctx, http.MethodGet, p.client.getURL("/process/%s/wait", p.id), nil)
 	if err != nil {
-		return -1, errors.Wrap(err, "request returned error")
+		return -1, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
 	var waitResp restWaitResponse
 	if err = gimlet.GetJSON(resp.Body, &waitResp); err != nil {
-		return -1, errors.Wrap(err, "reading response from wait")
+		return -1, errors.Wrap(err, "reading response")
 	}
 	if waitResp.Error != "" {
 		return waitResp.ExitCode, errors.New(waitResp.Error)
@@ -78,7 +78,7 @@ func (p *restProcess) Wait(ctx context.Context) (int, error) {
 func (p *restProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 	resp, err := p.client.doRequest(ctx, http.MethodGet, p.client.getURL("/process/%s/respawn", p.id), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -94,17 +94,17 @@ func (p *restProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 }
 
 func (p *restProcess) RegisterTrigger(_ context.Context, _ jasper.ProcessTrigger) error {
-	return errors.New("cannot register triggers on remote processes")
+	return errors.New("cannot register in-memory trigger on remote processes")
 }
 
 func (p *restProcess) RegisterSignalTrigger(_ context.Context, _ jasper.SignalTrigger) error {
-	return errors.New("cannot register signal trigger on remote processes")
+	return errors.New("cannot register in-memory signal trigger on remote processes")
 }
 
 func (p *restProcess) RegisterSignalTriggerID(ctx context.Context, triggerID jasper.SignalTriggerID) error {
 	resp, err := p.client.doRequest(ctx, http.MethodPatch, p.client.getURL("/process/%s/trigger/signal/%s", p.id, triggerID), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -151,7 +151,7 @@ func (p *restProcess) ResetTags() {
 	resp, err := p.client.doRequest(context.Background(), http.MethodDelete, p.client.getURL("/process/%s/tags", p.id), nil)
 	if err != nil {
 		grip.Warning(message.WrapError(err, message.Fields{
-			"message": "request returned error",
+			"message": "making request",
 			"process": p.id,
 		}))
 		return

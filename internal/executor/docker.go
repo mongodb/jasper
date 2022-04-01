@@ -70,7 +70,7 @@ func (o *DockerOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(o.Client == nil, "must specify a Docker client")
 	catcher.NewWhen(o.Image == "", "must specify a Docker image")
-	catcher.NewWhen(len(o.Command) == 0, "cannot specify an empty command to run in the container")
+	catcher.NewWhen(len(o.Command) == 0, "must specify a command to run in the container")
 	if o.OS == "" {
 		o.OS = runtime.GOOS
 	}
@@ -151,11 +151,11 @@ func (e *docker) Start() error {
 	}
 
 	if err := e.setupContainer(); err != nil {
-		return errors.Wrap(err, "could not set up container for process")
+		return errors.Wrap(err, "setting up container for process")
 	}
 
 	if err := e.startContainer(); err != nil {
-		return errors.Wrap(err, "could not start process within container")
+		return errors.Wrap(err, "starting process within container")
 	}
 
 	e.setStatus(Running)
@@ -183,7 +183,7 @@ func (e *docker) setupContainer() error {
 		Architecture: e.arch,
 	}, containerName)
 	if err != nil {
-		return errors.Wrap(err, "problem creating container for process")
+		return errors.Wrap(err, "creating container for process")
 	}
 	grip.WarningWhen(len(createResp.Warnings) != 0, message.Fields{
 		"message":  "warnings during container creation for process",
@@ -199,11 +199,11 @@ func (e *docker) setupContainer() error {
 // container.
 func (e *docker) startContainer() error {
 	if err := e.setupIOStream(); err != nil {
-		return e.withRemoveContainer(errors.Wrap(err, "problem setting up I/O streaming to process in container"))
+		return e.withRemoveContainer(errors.Wrap(err, "setting up I/O streaming to process in container"))
 	}
 
 	if err := e.client.ContainerStart(e.ctx, e.getContainerID(), types.ContainerStartOptions{}); err != nil {
-		return e.withRemoveContainer(errors.Wrap(err, "problem starting container for process"))
+		return e.withRemoveContainer(errors.Wrap(err, "starting container for process"))
 	}
 
 	return nil
@@ -224,7 +224,7 @@ func (e *docker) setupIOStream() error {
 		Stderr: e.execOpts.AttachStderr,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not set attach I/O to process in container")
+		return errors.Wrap(err, "attaching I/O to container process")
 	}
 
 	go e.runIOStream(stream)
@@ -243,8 +243,8 @@ func (e *docker) runIOStream(stream types.HijackedResponse) {
 		go func() {
 			defer wg.Done()
 			_, err := io.Copy(stream.Conn, e.stdin)
-			grip.Error(errors.Wrap(err, "problem streaming input to process"))
-			grip.Error(errors.Wrap(stream.CloseWrite(), "problem closing process input stream"))
+			grip.Error(errors.Wrap(err, "streaming input to process"))
+			grip.Error(errors.Wrap(stream.CloseWrite(), "closing input stream to process"))
 		}()
 	}
 
@@ -261,7 +261,7 @@ func (e *docker) runIOStream(stream types.HijackedResponse) {
 				stderr = ioutil.Discard
 			}
 			if _, err := stdcopy.StdCopy(stdout, stderr, stream.Reader); err != nil {
-				grip.Error(errors.Wrap(err, "problem streaming output from process"))
+				grip.Error(errors.Wrap(err, "streaming output from process"))
 			}
 		}()
 	}
@@ -292,7 +292,7 @@ func (e *docker) removeContainer() error {
 	if err := e.client.ContainerRemove(rmCtx, e.containerID, types.ContainerRemoveOptions{
 		Force: true,
 	}); err != nil {
-		return errors.Wrap(err, "problem cleaning up container for process")
+		return errors.Wrap(err, "cleaning up container for process")
 	}
 
 	e.setContainerID("")
@@ -302,7 +302,7 @@ func (e *docker) removeContainer() error {
 
 func (e *docker) Wait() error {
 	if e.getStatus().Before(Running) {
-		return errors.New("cannot wait on unstarted process")
+		return errors.New("cannot wait on an unstarted process")
 	}
 	if e.getStatus().After(Running) {
 		return e.exitErr
@@ -331,7 +331,7 @@ func (e *docker) Wait() error {
 		}
 		e.exitErr = err
 		e.setStatus(Exited)
-		return errors.Wrap(err, "error waiting for container to finish running")
+		return errors.Wrap(err, "waiting for container to finish running")
 	case <-e.ctx.Done():
 		_ = handleContextError()
 		return e.exitErr
@@ -361,10 +361,10 @@ func (e *docker) Signal(sig syscall.Signal) error {
 
 	dsig, err := syscallToDockerSignal(sig, e.os)
 	if err != nil {
-		return errors.Wrapf(err, "could not get Docker equivalent of signal '%d'", sig)
+		return errors.Wrapf(err, "translating signal '%s' to Docker equivalent", sig)
 	}
 	if err := e.client.ContainerKill(e.ctx, e.getContainerID(), dsig); err != nil {
-		return errors.Wrap(err, "could not signal process within container")
+		return errors.Wrap(err, "signalling process within container")
 	}
 
 	e.signal = sig
@@ -444,8 +444,8 @@ func (e *docker) SignalInfo() (sig syscall.Signal, signaled bool) {
 // closes the connection to the Docker daemon.
 func (e *docker) Close() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.Wrap(e.removeContainer(), "error removing Docker container")
-	catcher.Wrap(e.client.Close(), "error closing Docker client")
+	catcher.Wrap(e.removeContainer(), "removing Docker container")
+	catcher.Wrap(e.client.Close(), "closing Docker client")
 	e.setStatus(Closed)
 	return catcher.Resolve()
 }
@@ -455,7 +455,7 @@ func (e *docker) Close() error {
 func (e *docker) getProcessState() (*types.ContainerState, error) {
 	resp, err := e.client.ContainerInspect(e.ctx, e.getContainerID())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not inspect container")
+		return nil, errors.Wrap(err, "inspecting container")
 	}
 	if resp.ContainerJSONBase == nil || resp.ContainerJSONBase.State == nil {
 		return nil, errors.Wrap(err, "introspection of container's process is missing state information")

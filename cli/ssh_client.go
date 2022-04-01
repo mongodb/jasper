@@ -25,7 +25,7 @@ type sshClient struct {
 // machine's Jasper service over SSH using the remote machine's Jasper CLI.
 func NewSSHClient(clientOpts ClientOptions, remoteOpts options.Remote) (remote.Manager, error) {
 	if err := remoteOpts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "problem validating remote options")
+		return nil, errors.Wrap(err, "invalid remote options")
 	}
 	for _, arg := range remoteOpts.Args {
 		if strings.HasPrefix(arg, "-v") {
@@ -41,12 +41,12 @@ func NewSSHClient(clientOpts ClientOptions, remoteOpts options.Remote) (remote.M
 	)
 
 	if err := clientOpts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "problem validating client options")
+		return nil, errors.Wrap(err, "invalid client options")
 	}
 
 	runner, err := newSSHRunner(clientOpts, remoteOpts)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not set up SSH client")
+		return nil, errors.Wrap(err, "setting up SSH client")
 	}
 	return &sshClient{
 		client: runner,
@@ -87,7 +87,7 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return c.client.manager.CreateCommand(ctx).SetRunFunc(func(opts options.Command) error {
 		output, err := c.runManagerCommand(ctx, CreateCommand, &opts)
 		if err != nil {
-			return errors.Wrap(err, "could not run command from given input")
+			return errors.Wrap(err, "running command")
 		}
 
 		if _, err := ExtractOutcomeResponse(output); err != nil {
@@ -126,7 +126,7 @@ func (c *sshClient) GetScripting(ctx context.Context, id string) (scripting.Harn
 }
 
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {
-	return errors.New("cannot register existing processes on remote manager")
+	return errors.New("cannot register existing local processes on remote manager")
 }
 
 func (c *sshClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
@@ -143,7 +143,7 @@ func (c *sshClient) List(ctx context.Context, f options.Filter) ([]jasper.Proces
 	procs := make([]jasper.Process, len(resp.Infos))
 	for i := range resp.Infos {
 		if procs[i], err = newSSHProcess(c.client, resp.Infos[i]); err != nil {
-			return nil, errors.Wrap(err, "problem creating SSH process")
+			return nil, errors.Wrap(err, "creating SSH process")
 		}
 	}
 
@@ -164,7 +164,7 @@ func (c *sshClient) Group(ctx context.Context, tag string) ([]jasper.Process, er
 	procs := make([]jasper.Process, len(resp.Infos))
 	for i := range resp.Infos {
 		if procs[i], err = newSSHProcess(c.client, resp.Infos[i]); err != nil {
-			return nil, errors.Wrap(err, "problem creating SSH process")
+			return nil, errors.Wrap(err, "creating SSH process")
 		}
 	}
 
@@ -338,7 +338,7 @@ type sshRunner struct {
 func newSSHRunner(clientOpts ClientOptions, remoteOpts options.Remote) (*sshRunner, error) {
 	manager, err := jasper.NewSynchronizedManager(false)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating underlying manager")
+		return nil, errors.Wrap(err, "creating underlying process manager")
 	}
 
 	return &sshRunner{
@@ -354,13 +354,13 @@ func newSSHRunner(clientOpts ClientOptions, remoteOpts options.Remote) (*sshRunn
 func (r *sshRunner) runClientCommand(ctx context.Context, subcommand []string, subcommandInput interface{}) (json.RawMessage, error) {
 	input, err := clientInput(subcommandInput)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating client input")
+		return nil, errors.Wrap(err, "creating client input")
 	}
 	output := clientOutput()
 
 	cmd := r.newCommand(ctx, subcommand, input, output)
 	if err := cmd.Run(ctx); err != nil {
-		return nil, errors.Wrapf(err, "problem running command '%s' over SSH", r.clientOpts.buildCommand(subcommand...))
+		return nil, errors.Wrapf(err, "running command '%s' over SSH", r.clientOpts.buildCommand(subcommand...))
 	}
 
 	return output.Bytes(), nil
@@ -399,7 +399,7 @@ func clientInput(input interface{}) (json.RawMessage, error) {
 
 	inputBytes, err := json.MarshalIndent(input, "", "    ")
 	if err != nil {
-		return nil, errors.Wrap(err, "could not encode input as JSON")
+		return nil, errors.Wrap(err, "encoding input as JSON")
 	}
 
 	return inputBytes, nil

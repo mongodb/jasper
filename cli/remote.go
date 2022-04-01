@@ -164,12 +164,12 @@ func remoteCreateScripting() cli.Command {
 			return doPassthroughInputOutput(c, in, func(ctx context.Context, client remote.Manager) interface{} {
 				harnessOpts, err := in.Export()
 				if err != nil {
-					return &IDResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating scripting harness"))}
+					return &IDResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness options"))}
 				}
 
 				env, err := client.CreateScripting(ctx, harnessOpts)
 				if err != nil {
-					return &IDResponse{ID: harnessOpts.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating scripting harness"))}
+					return &IDResponse{ID: harnessOpts.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "creating scripting harness"))}
 				}
 				return &IDResponse{ID: env.ID(), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
@@ -187,7 +187,7 @@ func remoteGetScripting() cli.Command {
 			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
 				_, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness with ID '%s'", input.ID))
+					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))
 				}
 				return makeOutcomeResponse(nil)
 			})

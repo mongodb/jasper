@@ -62,7 +62,7 @@ func TestProcessImplementations(t *testing.T) {
 						containers, err := client.ContainerList(ctx, types.ContainerListOptions{All: true})
 						require.NoError(t, err)
 						for _, container := range containers {
-							grip.Error(errors.Wrap(client.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true}), "problem cleaning up container"))
+							grip.Error(errors.Wrap(client.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true}), "cleaning up container"))
 						}
 					}()
 				}

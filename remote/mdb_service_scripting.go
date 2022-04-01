@@ -33,7 +33,7 @@ func (s *mdbService) scriptingSetup(ctx context.Context, w io.Writer, msg mongow
 		return
 	}
 	if err := harness.Setup(ctx); err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem setting up harness"), ScriptingSetupCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "setting up harness"), ScriptingSetupCommand)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (s *mdbService) scriptingCleanup(ctx context.Context, w io.Writer, msg mong
 		return
 	}
 	if err := harness.Cleanup(ctx); err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem cleaning up harness"), ScriptingCleanupCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "cleaning up harness"), ScriptingCleanupCommand)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (s *mdbService) scriptingRun(ctx context.Context, w io.Writer, msg mongowir
 		return
 	}
 	if err := harness.Run(ctx, req.Params.Args); err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem running command"), ScriptingRunCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "running command"), ScriptingRunCommand)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (s *mdbService) scriptingRunScript(ctx context.Context, w io.Writer, msg mo
 		return
 	}
 	if err := harness.RunScript(ctx, req.Params.Script); err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem running script"), ScriptingRunScriptCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "running script"), ScriptingRunScriptCommand)
 		return
 	}
 
@@ -106,7 +106,7 @@ func (s *mdbService) scriptingBuild(ctx context.Context, w io.Writer, msg mongow
 	}
 	path, err := harness.Build(ctx, req.Params.Dir, req.Params.Args)
 	if err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "problem building artifact"), ScriptingBuildCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "building artifact"), ScriptingBuildCommand)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (s *mdbService) serviceScriptingRequest(ctx context.Context, w io.Writer, m
 
 	if req != nil {
 		if err := shell.MessageToRequest(msg, req); err != nil {
-			shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not read request"), command)
+			shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "converting wire message to request"), command)
 			return false
 		}
 	}
@@ -149,7 +149,7 @@ func (s *mdbService) getHarness(ctx context.Context, w io.Writer, id, command st
 		return harness
 	}
 
-	shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrapf(err, "problem fetching scripting harness with id %s", id), command)
+	shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrapf(err, "fetching scripting harness '%s'", id), command)
 	return nil
 }
 
@@ -157,7 +157,7 @@ func (s *mdbService) serviceScriptingResponse(ctx context.Context, w io.Writer, 
 	if resp != nil {
 		shellResp, err := shell.ResponseToMessage(mongowire.OP_REPLY, resp)
 		if err != nil {
-			shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not make response"), command)
+			shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "converting response to wire message"), command)
 			return
 		}
 

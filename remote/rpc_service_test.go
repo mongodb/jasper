@@ -25,7 +25,6 @@ func TestRPCService(t *testing.T) {
 					_, err := client.RegisterSignalTriggerID(ctx, internal.ConvertSignalTriggerParams("foo", jasper.CleanTerminationSignalTrigger))
 					assert.Error(t, err)
 				},
-				//"": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)

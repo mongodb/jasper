@@ -23,17 +23,17 @@ func (lc *mdbLoggingCache) Create(id string, opts *options.Output) (*options.Cac
 	r.Params.Options = *opts
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(lc.ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	var resp loggingCacheLoggerResponse
 	if err = shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err = resp.SuccessOrError(); err != nil {
 		return nil, errors.Wrap(err, "error in response")
@@ -49,17 +49,17 @@ func (lc *mdbLoggingCache) Put(_ string, _ *options.CachedLogger) error {
 func (lc *mdbLoggingCache) Get(id string) (*options.CachedLogger, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCacheGetRequest{ID: id})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(lc.ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	var resp loggingCacheLoggerResponse
 	if err = shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
 		return nil, errors.Wrap(err, "error in response")
@@ -71,17 +71,17 @@ func (lc *mdbLoggingCache) Get(id string) (*options.CachedLogger, error) {
 func (lc *mdbLoggingCache) Remove(id string) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCacheRemoveRequest{ID: id})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(lc.ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
 	return resp.SuccessOrError()
@@ -90,17 +90,17 @@ func (lc *mdbLoggingCache) Remove(id string) error {
 func (lc *mdbLoggingCache) CloseAndRemove(ctx context.Context, id string) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCacheCloseAndRemoveRequest{ID: id})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
 	return resp.SuccessOrError()
@@ -109,17 +109,17 @@ func (lc *mdbLoggingCache) CloseAndRemove(ctx context.Context, id string) error 
 func (lc *mdbLoggingCache) Clear(ctx context.Context) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCacheClearRequest{Clear: 1})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
 	return resp.SuccessOrError()
@@ -128,17 +128,17 @@ func (lc *mdbLoggingCache) Clear(ctx context.Context) error {
 func (lc *mdbLoggingCache) Prune(lastAccessed time.Time) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCachePruneRequest{LastAccessed: lastAccessed})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(lc.ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
 	return resp.SuccessOrError()
@@ -147,17 +147,17 @@ func (lc *mdbLoggingCache) Prune(lastAccessed time.Time) error {
 func (lc *mdbLoggingCache) Len() (int, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &loggingCacheLenRequest{})
 	if err != nil {
-		return -1, errors.Wrap(err, "could not create request")
+		return -1, errors.Wrap(err, "creating request")
 	}
 
 	msg, err := lc.client.doRequest(lc.ctx, req)
 	if err != nil {
-		return -1, errors.Wrap(err, "failed during request")
+		return -1, errors.Wrap(err, "making request")
 	}
 
 	var resp loggingCacheLenResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return -1, errors.Wrap(err, "could not read response")
+		return -1, errors.Wrap(err, "converting wire message to response")
 	}
 
 	if err := resp.SuccessOrError(); err != nil {

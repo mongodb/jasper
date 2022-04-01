@@ -1,5 +1,3 @@
-// +build darwin
-
 package jasper
 
 import (
@@ -19,10 +17,10 @@ func (o *oomTrackerImpl) Clear(ctx context.Context) error {
 	}
 
 	if sudo {
-		return errors.Wrap(exec.CommandContext(ctx, "sudo", "log", "erase", "--all").Run(), "error clearing log")
+		return errors.Wrap(exec.CommandContext(ctx, "sudo", "log", "erase", "--all").Run(), "clearing log")
 	}
 
-	return errors.Wrap(exec.CommandContext(ctx, "log", "erase", "--all").Run(), "error clearing log")
+	return errors.Wrap(exec.CommandContext(ctx, "log", "erase", "--all").Run(), "clearing log")
 }
 
 func (o *oomTrackerImpl) Check(ctx context.Context) error {
@@ -33,7 +31,7 @@ func (o *oomTrackerImpl) Check(ctx context.Context) error {
 	}
 	lines, pids, err := analyzer.analyzeKernelLog(ctx)
 	if err != nil {
-		return errors.Wrap(err, "error searching log")
+		return errors.Wrap(err, "searching log")
 	}
 	o.Lines = lines
 	o.PIDs = pids

@@ -103,7 +103,6 @@ func TestGetInMemoryLogStream(t *testing.T) {
 					}
 					assert.Equal(t, 1, outputCount)
 				},
-				// "": func(ctx context.Context, t *testing.T, opts *options.Create, output string) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					tctx, tcancel := context.WithTimeout(ctx, testutil.ProcessTestTimeout)

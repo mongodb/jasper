@@ -16,7 +16,7 @@ func (t *windowsProcessTracker) setJobIfInvalid() error {
 	}
 	job, err := NewWindowsJobObject(t.Name)
 	if err != nil {
-		return errors.Wrap(err, "error creating new job object")
+		return errors.Wrap(err, "creating new job object")
 	}
 	t.job = job
 	return nil
@@ -26,14 +26,14 @@ func (t *windowsProcessTracker) setJobIfInvalid() error {
 func NewProcessTracker(name string) (ProcessTracker, error) {
 	t := &windowsProcessTracker{processTrackerBase: &processTrackerBase{Name: name}}
 	if err := t.setJobIfInvalid(); err != nil {
-		return nil, errors.Wrap(err, "problem creating job object for new process tracker")
+		return nil, errors.Wrap(err, "creating job object for new process tracker")
 	}
 	return t, nil
 }
 
 func (t *windowsProcessTracker) Add(info ProcessInfo) error {
 	if err := t.setJobIfInvalid(); err != nil {
-		return errors.Wrap(err, "could not add process because job was not created properly")
+		return errors.Wrap(err, "setting up job object")
 	}
 	return t.job.AssignProcess(uint(info.PID))
 }

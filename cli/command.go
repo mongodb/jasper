@@ -77,13 +77,13 @@ func runCmd() cli.Command { //nolint: gocognit
 					if c.NArg() == 0 {
 						return errors.New("must specify at least one command")
 					}
-					return errors.Wrap(c.Set(commandFlagName, strings.Join(c.Args(), " ")), "problem setting command")
+					return errors.Wrap(c.Set(commandFlagName, strings.Join(c.Args(), " ")), "setting command")
 				}
 				return nil
 			},
 			func(c *cli.Context) error {
 				if c.String(idFlagName) == "" {
-					return errors.Wrap(c.Set(idFlagName, defaultID.String()), "problem setting ID")
+					return errors.Wrap(c.Set(idFlagName, defaultID.String()), "setting ID")
 				}
 				return nil
 			}),
@@ -102,7 +102,7 @@ func runCmd() cli.Command { //nolint: gocognit
 			inMemoryCap := 1000
 			logger, err := jasper.NewInMemoryLogger(inMemoryCap)
 			if err != nil {
-				return errors.Wrap(err, "problem creating new in memory logger")
+				return errors.Wrap(err, "creating new in memory logger")
 			}
 
 			return withConnection(ctx, c, func(client remote.Manager) error {
@@ -136,9 +136,9 @@ func runCmd() cli.Command { //nolint: gocognit
 						// Don't return on error, because if any of the
 						// sub-commands fail, it will fail to print the log
 						// lines.
-						grip.Error(errors.Wrap(err, "problem encountered while running commands"))
+						grip.Error(errors.Wrap(err, "running command"))
 					} else {
-						return errors.Wrap(err, "problem running command")
+						return errors.Wrap(err, "running command")
 					}
 				}
 
@@ -186,7 +186,7 @@ func printLogs(ctx context.Context, client remote.Manager, cmd *jasper.Command, 
 				case <-timer.C:
 					logLines, err := client.GetLogStream(ctx, id, inMemoryCap)
 					if err != nil {
-						grip.Error(message.WrapError(err, "problem polling for log lines, aborting log streaming"))
+						grip.Error(message.WrapError(err, "polling for log lines"))
 						return
 					}
 
@@ -246,7 +246,7 @@ func list() cli.Command {
 				filter := options.Filter(c.String(filterFlagName))
 				if filter == "" {
 					filter = options.All
-					return errors.Wrap(c.Set(filterFlagName, string(filter)), "problem setting default filter")
+					return errors.Wrap(c.Set(filterFlagName, string(filter)), "setting default filter")
 				}
 				return errors.Wrapf(filter.Validate(), "invalid filter '%s'", filter)
 			}),
@@ -271,7 +271,7 @@ func list() cli.Command {
 				}
 
 				if err != nil {
-					return errors.Wrap(err, "problem getting list")
+					return errors.Wrap(err, "getting list")
 				}
 
 				t := tabby.New()
@@ -313,7 +313,7 @@ func kill() cli.Command {
 					if c.NArg() != 1 {
 						return errors.New("must specify a process ID")
 					}
-					return errors.Wrap(c.Set(idFlagName, c.Args().First()), "problem setting id from positional flags")
+					return errors.Wrap(c.Set(idFlagName, c.Args().First()), "setting ID from positional flags")
 				}
 				return nil
 			}),
@@ -440,7 +440,7 @@ func download() cli.Command {
 					if c.NArg() != 1 {
 						return errors.New("must specify a URL")
 					}
-					return errors.Wrap(c.Set(urlFlagName, c.Args().First()), "problem setting URL from positional flags")
+					return errors.Wrap(c.Set(urlFlagName, c.Args().First()), "setting URL from positional flags")
 				}
 				return nil
 			}),
@@ -466,5 +466,4 @@ func download() cli.Command {
 			})
 		},
 	}
-
 }

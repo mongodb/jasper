@@ -45,7 +45,7 @@ func scriptingSetup() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				sh, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return makeOutcomeResponse(errors.Wrapf(err, "scripting harness with id '%s' not found", input.ID))
+					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))
 				}
 				if err := sh.Setup(ctx); err != nil {
 					return makeOutcomeResponse(err)
@@ -66,7 +66,7 @@ func scriptingRun() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				sh, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return makeOutcomeResponse(errors.Wrapf(err, "scripting harness with id '%s' not found", input.ID))
+					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))
 				}
 				if err := sh.Run(ctx, input.Args); err != nil {
 					return makeOutcomeResponse(err)
@@ -87,7 +87,7 @@ func scriptingRunScript() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				sh, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return makeOutcomeResponse(errors.Wrapf(err, "scripting harness with id '%s' not found", input.ID))
+					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))
 				}
 				if err := sh.RunScript(ctx, input.Script); err != nil {
 					return makeOutcomeResponse(err)
@@ -108,7 +108,7 @@ func scriptingBuild() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				sh, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return ScriptingBuildResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "scripting harness with id '%s' not found", input.ID))}
+					return ScriptingBuildResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))}
 				}
 				path, err := sh.Build(ctx, input.Directory, input.Args)
 				if err != nil {
@@ -130,7 +130,7 @@ func scriptingTest() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				sh, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return ScriptingTestResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "scripting harness with id '%s' not found", input.ID))}
+					return ScriptingTestResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))}
 				}
 				results, err := sh.Test(ctx, input.Directory, input.Options...)
 				if err != nil {
@@ -152,7 +152,7 @@ func scriptingCleanup() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				sh, err := client.GetScripting(ctx, input.ID)
 				if err != nil {
-					return makeOutcomeResponse(errors.Wrapf(err, "scripting harness with id '%s' not found", input.ID))
+					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))
 				}
 				if err := sh.Cleanup(ctx); err != nil {
 					return makeOutcomeResponse(err)

@@ -36,7 +36,7 @@ func newSignalTriggerRegistry() *signalTriggerRegistry {
 // RegisterSignalTriggerFactory registers a factory to create the signal trigger
 // represented by the id.
 func RegisterSignalTriggerFactory(id SignalTriggerID, factory SignalTriggerFactory) error {
-	return errors.Wrap(jasperSignalTriggerRegistry.registerSignalTriggerFactory(id, factory), "problem registering signal trigger factory")
+	return errors.Wrap(jasperSignalTriggerRegistry.registerSignalTriggerFactory(id, factory), "registering signal trigger factory")
 }
 
 // GetSignalTriggerFactory retrieves a factory to create the signal trigger
@@ -50,7 +50,7 @@ func (r *signalTriggerRegistry) registerSignalTriggerFactory(id SignalTriggerID,
 	defer r.mu.Unlock()
 
 	if string(id) == "" {
-		return errors.New("cannot register an empty signal trigger id")
+		return errors.New("cannot register an empty signal trigger ID")
 	}
 
 	if _, ok := r.signalTriggers[id]; ok {
@@ -58,7 +58,7 @@ func (r *signalTriggerRegistry) registerSignalTriggerFactory(id SignalTriggerID,
 	}
 
 	if factory == nil {
-		return errors.Errorf("cannot register a nil factory for signal trigger id '%s'", string(id))
+		return errors.Errorf("cannot register a nil factory for signal trigger '%s'", string(id))
 	}
 
 	r.signalTriggers[id] = factory

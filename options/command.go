@@ -35,7 +35,7 @@ func (opts *Command) Validate() error {
 		opts.Process.Args = []string{""}
 	}
 	catcher.Add(opts.Process.Validate())
-	catcher.NewWhen(opts.Priority != 0 && !opts.Priority.IsValid(), "priority is not in the valid range of values")
+	catcher.NewWhen(opts.Priority != 0 && !opts.Priority.IsValid(), "invalid priority")
 	catcher.NewWhen(len(opts.Commands) == 0, "must specify at least one command")
 	return catcher.Resolve()
 }

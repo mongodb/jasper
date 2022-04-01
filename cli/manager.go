@@ -69,7 +69,7 @@ func managerCreateProcess() cli.Command {
 			return doPassthroughInputOutput(c, opts, func(ctx context.Context, client remote.Manager) interface{} {
 				proc, err := client.CreateProcess(ctx, opts)
 				if err != nil {
-					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error creating process"))}
+					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "creating process"))}
 				}
 				return &InfoResponse{Info: proc.Info(ctx), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
@@ -113,7 +113,7 @@ func managerGet() cli.Command {
 			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
 				proc, err := client.Get(ctx, input.ID)
 				if err != nil {
-					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error getting process with ID '%s'", input.ID))}
+					return &InfoResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting process '%s'", input.ID))}
 				}
 				return &InfoResponse{Info: proc.Info(ctx), OutcomeResponse: *makeOutcomeResponse(nil)}
 			})
@@ -131,7 +131,7 @@ func managerList() cli.Command {
 			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
 				procs, err := client.List(ctx, input.Filter)
 				if err != nil {
-					return &InfosResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error listing processes with filter '%s'", input.Filter))}
+					return &InfosResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "listing processes with filter '%s'", input.Filter))}
 				}
 				infos := make([]jasper.ProcessInfo, 0, len(procs))
 				for _, proc := range procs {
@@ -153,7 +153,7 @@ func managerGroup() cli.Command {
 			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
 				procs, err := client.Group(ctx, input.Tag)
 				if err != nil {
-					return &InfosResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error grouping processes with tag '%s'", input.Tag))}
+					return &InfosResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "grouping processes with tag '%s'", input.Tag))}
 				}
 				infos := make([]jasper.ProcessInfo, 0, len(procs))
 				for _, proc := range procs {

@@ -36,7 +36,7 @@ type mdbService struct {
 func StartMDBService(ctx context.Context, m jasper.Manager, addr net.Addr) (util.CloseFunc, error) {
 	host, p, err := net.SplitHostPort(addr.String())
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid address")
+		return nil, errors.Wrapf(err, "invalid address '%s'", addr)
 	}
 	port, err := strconv.Atoi(p)
 	if err != nil {
@@ -45,7 +45,7 @@ func StartMDBService(ctx context.Context, m jasper.Manager, addr net.Addr) (util
 
 	baseSvc, err := shell.NewShellService(host, port)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create base service")
+		return nil, errors.Wrap(err, "creating base service")
 	}
 	svc := &mdbService{
 		Service:      baseSvc,
@@ -58,7 +58,7 @@ func StartMDBService(ctx context.Context, m jasper.Manager, addr net.Addr) (util
 		},
 	}
 	if err := svc.registerHandlers(); err != nil {
-		return nil, errors.Wrap(err, "error registering handlers")
+		return nil, errors.Wrap(err, "registering handlers")
 	}
 
 	cctx, ccancel := context.WithCancel(context.Background())
@@ -130,7 +130,7 @@ func (s *mdbService) registerHandlers() error {
 			Type:    mongowire.OP_COMMAND,
 			Command: name,
 		}, handler); err != nil {
-			return errors.Wrapf(err, "could not register handler for %s", name)
+			return errors.Wrapf(err, "registering handler for command '%s'", name)
 		}
 	}
 
@@ -154,7 +154,7 @@ func (s *mdbService) pruneCache(ctx context.Context) {
 		case <-timer.C:
 			s.cacheMutex.RLock()
 			if !s.cacheOpts.Disabled {
-				grip.Error(message.WrapError(s.cache.Prune(s.cacheOpts.MaxSize, nil, false), "error during cache pruning"))
+				grip.Error(message.WrapError(s.cache.Prune(s.cacheOpts.MaxSize, nil, false), "pruning cache"))
 			}
 			timer.Reset(s.cacheOpts.PruneDelay)
 			s.cacheMutex.RUnlock()

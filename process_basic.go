@@ -33,7 +33,7 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 
 	exec, deadline, err := opts.Resolve(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building command from options")
+		return nil, errors.Wrap(err, "building command from options")
 	}
 
 	p := &basicProcess{
@@ -50,17 +50,17 @@ func newBasicProcess(ctx context.Context, opts *options.Create) (Process, error)
 	if err = p.RegisterTrigger(ctx, makeOptionsCloseTrigger()); err != nil {
 		catcher := grip.NewBasicCatcher()
 		catcher.Add(err)
-		catcher.Wrap(opts.Close(), "problem closing options")
-		catcher.Wrap(exec.Close(), "problem closing executor")
-		return nil, errors.Wrap(catcher.Resolve(), "problem registering options close trigger")
+		catcher.Wrap(opts.Close(), "closing options")
+		catcher.Wrap(exec.Close(), "closing executor")
+		return nil, errors.Wrap(catcher.Resolve(), "registering options close trigger")
 	}
 
 	if err = exec.Start(); err != nil {
 		catcher := grip.NewBasicCatcher()
 		catcher.Add(err)
-		catcher.Wrap(opts.Close(), "problem closing options")
-		catcher.Wrap(exec.Close(), "problem closing executor")
-		return nil, errors.Wrap(catcher.Resolve(), "problem starting process execution")
+		catcher.Wrap(opts.Close(), "closing options")
+		catcher.Wrap(exec.Close(), "closing executor")
+		return nil, errors.Wrap(catcher.Resolve(), "starting process execution")
 	}
 
 	p.info.StartAt = time.Now()
@@ -141,12 +141,12 @@ func (p *basicProcess) Signal(_ context.Context, sig syscall.Signal) error {
 	defer p.RUnlock()
 
 	if p.info.Complete {
-		return errors.New("cannot signal a process that has terminated")
+		return errors.New("cannot signal a process that has already exited")
 	}
 
 	if skipSignal := p.signalTriggers.Run(p.info, sig); !skipSignal {
 		sig = makeCompatible(sig)
-		return errors.Wrapf(p.exec.Signal(sig), "problem sending signal '%s' to '%s'", sig, p.id)
+		return errors.Wrapf(p.exec.Signal(sig), "sending signal '%s' to process '%s'", sig, p.id)
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 
 	select {
 	case <-ctx.Done():
-		return -1, errors.New("operation canceled")
+		return -1, errors.Wrap(ctx.Err(), "operation canceled")
 	case <-p.waitProcessed:
 	}
 
@@ -185,7 +185,7 @@ func (p *basicProcess) RegisterTrigger(_ context.Context, trigger ProcessTrigger
 	defer p.Unlock()
 
 	if p.info.Complete {
-		return errors.New("cannot register trigger after process exits")
+		return errors.New("cannot register trigger after process has already exited")
 	}
 
 	p.triggers = append(p.triggers, trigger)
@@ -202,7 +202,7 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 	defer p.Unlock()
 
 	if p.info.Complete {
-		return errors.New("cannot register signal trigger after process exits")
+		return errors.New("cannot register signal trigger after process has already exited")
 	}
 
 	p.signalTriggers = append(p.signalTriggers, trigger)
@@ -213,9 +213,9 @@ func (p *basicProcess) RegisterSignalTrigger(_ context.Context, trigger SignalTr
 func (p *basicProcess) RegisterSignalTriggerID(ctx context.Context, id SignalTriggerID) error {
 	makeTrigger, ok := GetSignalTriggerFactory(id)
 	if !ok {
-		return errors.Errorf("could not find signal trigger with id '%s'", id)
+		return errors.Errorf("could not find signal trigger '%s'", id)
 	}
-	return errors.Wrap(p.RegisterSignalTrigger(ctx, makeTrigger()), "failed to register signal trigger")
+	return errors.Wrap(p.RegisterSignalTrigger(ctx, makeTrigger()), "register signal trigger")
 }
 
 func (p *basicProcess) Tag(t string) {

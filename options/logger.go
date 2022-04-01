@@ -86,12 +86,11 @@ func (f RawLoggerConfigFormat) Unmarshal(data []byte, out interface{}) error {
 	switch f {
 	case RawLoggerConfigFormatBSON:
 		if err := bson.Unmarshal(data, out); err != nil {
-			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
-
+			return errors.Wrapf(err, "unmarshalling BSON input into %T", out)
 		}
 	case RawLoggerConfigFormatJSON:
 		if err := json.Unmarshal(data, out); err != nil {
-			return errors.Wrapf(err, "could not render '%s' input into '%s'", data, out)
+			return errors.Wrapf(err, "unmarshalling JSON input into %T", out)
 
 		}
 	default:
@@ -198,7 +197,7 @@ func (lc *LoggerConfig) Type() string { return lc.info.Type }
 func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 	if lc.sender == nil {
 		if err := lc.resolveProducer(); err != nil {
-			return nil, errors.Wrap(err, "problem resolving logger producer")
+			return nil, errors.Wrap(err, "resolving logger producer")
 		}
 
 		sender, err := lc.producer.Configure()
@@ -216,12 +215,12 @@ func (lc *LoggerConfig) Resolve() (send.Sender, error) {
 // reconstruct the LoggerConfig.
 func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 	if err := lc.resolveProducer(); err != nil {
-		return nil, errors.Wrap(err, "problem resolving logger producer")
+		return nil, errors.Wrap(err, "resolving logger producer")
 	}
 
 	data, err := bson.Marshal(lc.producer)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem producing logger config")
+		return nil, errors.Wrap(err, "marshalling logger config to BSON")
 	}
 
 	return bson.Marshal(&loggerConfigInfo{
@@ -236,7 +235,7 @@ func (lc *LoggerConfig) MarshalBSON() ([]byte, error) {
 func (lc *LoggerConfig) UnmarshalBSON(b []byte) error {
 	info := loggerConfigInfo{}
 	if err := bson.Unmarshal(b, &info); err != nil {
-		return errors.Wrap(err, "problem unmarshalling config logger info")
+		return errors.Wrap(err, "unmarshalling BSON config logger info")
 	}
 
 	lc.info = info
@@ -248,12 +247,12 @@ func (lc *LoggerConfig) UnmarshalBSON(b []byte) error {
 // reconstruct the LoggerConfig.
 func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
 	if err := lc.resolveProducer(); err != nil {
-		return nil, errors.Wrap(err, "problem resolving logger producer")
+		return nil, errors.Wrap(err, "resolving logger producer")
 	}
 
 	data, err := json.Marshal(lc.producer)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem producing logger config")
+		return nil, errors.Wrap(err, "marshalling logger config to JSON")
 	}
 
 	return json.Marshal(&loggerConfigInfo{
@@ -268,7 +267,7 @@ func (lc *LoggerConfig) MarshalJSON() ([]byte, error) {
 func (lc *LoggerConfig) UnmarshalJSON(b []byte) error {
 	info := loggerConfigInfo{}
 	if err := json.Unmarshal(b, &info); err != nil {
-		return errors.Wrap(err, "problem unmarshalling config logger info")
+		return errors.Wrap(err, "unmarshalling JSON config logger info")
 	}
 
 	lc.info = info
@@ -292,7 +291,7 @@ func (lc *LoggerConfig) resolveProducer() error {
 
 	if len(lc.info.Config) > 0 {
 		if err := lc.info.Format.Unmarshal(lc.info.Config, lc.producer); err != nil {
-			return errors.Wrap(err, "problem unmarshalling data")
+			return errors.Wrap(err, "unmarshalling data into producer")
 		}
 	}
 
@@ -316,7 +315,7 @@ func (opts *BaseOptions) Validate() error {
 
 	catcher.NewWhen(!opts.Level.Valid(), "invalid log level")
 	catcher.Wrap(opts.Buffer.Validate(), "invalid buffering options")
-	catcher.Add(opts.Format.Validate())
+	catcher.Wrap(opts.Format.Validate(), "invalid format")
 	return catcher.Resolve()
 }
 
@@ -370,7 +369,7 @@ func NewSafeSender(baseSender send.Sender, opts BaseOptions) (send.Sender, error
 		return nil, err
 	}
 	if err := sender.SetFormatter(formatter); err != nil {
-		return nil, errors.New("failed to set log format")
+		return nil, errors.Wrap(err, "setting log format")
 	}
 
 	return sender, nil
@@ -393,9 +392,9 @@ func (s *SafeSender) GetSender() send.Sender {
 func (s *SafeSender) Close() error {
 	catcher := grip.NewBasicCatcher()
 
-	catcher.Wrap(s.Sender.Close(), "problem closing sender")
+	catcher.Wrap(s.Sender.Close(), "closing sender")
 	if s.baseSender != nil {
-		catcher.Wrap(s.baseSender.Close(), "problem closing base sender")
+		catcher.Wrap(s.baseSender.Close(), "closing base sender")
 	}
 
 	return catcher.Resolve()

@@ -21,7 +21,7 @@ func NewInMemoryLogger(maxSize int) (*options.LoggerConfig, error) {
 	}
 	config := &options.LoggerConfig{}
 	if err := config.Set(loggerProducer); err != nil {
-		return nil, errors.Wrap(err, "problem setting logger producer for logger config")
+		return nil, errors.Wrap(err, "setting logger producer for logger config")
 	}
 	return config, nil
 }
@@ -67,7 +67,7 @@ func GetInMemoryLogStream(ctx context.Context, proc Process, count int) ([]strin
 		msgs, _, err := inMemorySender.GetCount(count)
 		if err != nil {
 			if err != io.EOF {
-				err = errors.Wrap(err, "failed to get logs from in-memory stream")
+				err = errors.Wrap(err, "getting logs from in-memory stream")
 			}
 			return nil, err
 		}

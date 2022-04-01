@@ -28,7 +28,7 @@ func (s *restScriptingHarness) ID() string { return s.id }
 func (s *restScriptingHarness) Setup(ctx context.Context) error {
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/setup", s.id), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 	return nil
@@ -39,12 +39,12 @@ func (s *restScriptingHarness) Run(ctx context.Context, args []string) error {
 		Args []string `json:"args"`
 	}{Args: args})
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return errors.Wrap(err, "building request")
 	}
 
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/run", s.id), body)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -54,7 +54,7 @@ func (s *restScriptingHarness) Run(ctx context.Context, args []string) error {
 func (s *restScriptingHarness) RunScript(ctx context.Context, script string) error {
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/script", s.id), bytes.NewBuffer([]byte(script)))
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -70,12 +70,12 @@ func (s *restScriptingHarness) Build(ctx context.Context, dir string, args []str
 		Args:      args,
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "problem building request")
+		return "", errors.Wrap(err, "building request")
 	}
 
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/build", s.id), body)
 	if err != nil {
-		return "", errors.Wrap(err, "request returned error")
+		return "", errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -84,7 +84,7 @@ func (s *restScriptingHarness) Build(ctx context.Context, dir string, args []str
 	}{}
 
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		return "", errors.Wrap(err, "problem reading response")
+		return "", errors.Wrap(err, "reading response")
 	}
 
 	return out.Path, nil
@@ -100,12 +100,12 @@ func (s *restScriptingHarness) Test(ctx context.Context, dir string, args ...scr
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building request")
+		return nil, errors.Wrap(err, "building request")
 	}
 
 	resp, err := s.client.doRequest(ctx, http.MethodPost, s.client.getURL("/scripting/%s/test", s.id), body)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -115,7 +115,7 @@ func (s *restScriptingHarness) Test(ctx context.Context, dir string, args ...scr
 	}{}
 
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		return nil, errors.Wrap(err, "problem reading response")
+		return nil, errors.Wrap(err, "reading response")
 	}
 
 	if out.Error != "" {
@@ -128,7 +128,7 @@ func (s *restScriptingHarness) Test(ctx context.Context, dir string, args ...scr
 func (s *restScriptingHarness) Cleanup(ctx context.Context) error {
 	resp, err := s.client.doRequest(ctx, http.MethodDelete, s.client.getURL("/scripting/%s", s.id), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 

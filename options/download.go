@@ -25,14 +25,12 @@ func (opts Download) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
 	if opts.URL == "" {
-		catcher.New("download url cannot be empty")
+		catcher.New("download URL cannot be empty")
 	}
 
-	if !filepath.IsAbs(opts.Path) {
-		catcher.New("download path must be an absolute path")
-	}
+	catcher.ErrorfWhen(!filepath.IsAbs(opts.Path), "download path '%s' must be an absolute path", opts.Path)
 
-	catcher.Add(opts.ArchiveOpts.Validate())
+	catcher.Wrap(opts.ArchiveOpts.Validate(), "invalid archive options")
 
 	return catcher.Resolve()
 }
@@ -41,7 +39,7 @@ func (opts Download) Validate() error {
 func (opts Download) Download() error {
 	req, err := http.NewRequest(http.MethodGet, opts.URL, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return errors.Wrap(err, "building request")
 	}
 
 	client := utility.GetHTTPClient()
@@ -49,11 +47,11 @@ func (opts Download) Download() error {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errors.Wrapf(err, "problem downloading file for url %s", opts.URL)
+		return errors.Wrapf(err, "downloading file for URL '%s'", opts.URL)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("%s: could not download %s to path %s", resp.Status, opts.URL, opts.Path)
+		return errors.Errorf("%s: could not download URL '%s' to path '%s'", resp.Status, opts.URL, opts.Path)
 	}
 
 	if err = writeFile(resp.Body, opts.Path); err != nil {
@@ -62,7 +60,7 @@ func (opts Download) Download() error {
 
 	if opts.ArchiveOpts.ShouldExtract {
 		if err = opts.Extract(); err != nil {
-			return errors.Wrapf(err, "problem extracting file %s to path %s", opts.Path, opts.ArchiveOpts.TargetPath)
+			return errors.Wrapf(err, "extracting file '%s' to path '%s'", opts.Path, opts.ArchiveOpts.TargetPath)
 		}
 	}
 
@@ -81,11 +79,11 @@ func (opts Download) Extract() error {
 	case ArchiveZip:
 		archiveHandler = archiver.DefaultZip
 	default:
-		return errors.Errorf("unrecognized archive format %s", opts.ArchiveOpts.Format)
+		return errors.Errorf("unrecognized archive format '%s'", opts.ArchiveOpts.Format)
 	}
 
 	if err := archiveHandler.Unarchive(opts.Path, opts.ArchiveOpts.TargetPath); err != nil {
-		return errors.Wrapf(err, "problem extracting archive %s to %s", opts.Path, opts.ArchiveOpts.TargetPath)
+		return errors.Wrapf(err, "extracting archive %s to %s", opts.Path, opts.ArchiveOpts.TargetPath)
 	}
 
 	return nil
@@ -103,11 +101,8 @@ type MongoDBDownload struct {
 func (opts MongoDBDownload) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
-	if !filepath.IsAbs(opts.Path) {
-		catcher.Add(errors.New("download path must be an absolute path"))
-	}
-
-	catcher.Add(opts.BuildOpts.Validate())
+	catcher.ErrorfWhen(!filepath.IsAbs(opts.Path), "download path '%s' must be an absolute path", opts.Path)
+	catcher.Wrap(opts.BuildOpts.Validate(), "invalid MongoDB build options")
 
 	return catcher.Resolve()
 }
@@ -123,13 +118,8 @@ type Cache struct {
 func (opts Cache) Validate() error {
 	catcher := grip.NewBasicCatcher()
 
-	if opts.MaxSize < 0 {
-		catcher.Add(errors.New("max size cannot be negative"))
-	}
-
-	if opts.PruneDelay < 0 {
-		catcher.Add(errors.New("prune delay cannot be negative"))
-	}
+	catcher.NewWhen(opts.MaxSize < 0, "max size cannot be negative")
+	catcher.NewWhen(opts.PruneDelay < 0, "prune delay cannot be negative")
 
 	return catcher.Resolve()
 }

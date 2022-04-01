@@ -28,7 +28,7 @@ func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, erro
 	}
 	bpm, ok := pm.(*basicProcessManager)
 	if !ok {
-		return nil, errors.New("process manager construction error")
+		return nil, errors.Errorf("programmatic error: expected basic process manager but actually got %T", pm)
 	}
 
 	return &selfClearingProcessManager{
@@ -47,7 +47,7 @@ func NewSSHLibrarySelfClearingProcessManager(maxProcs int, trackProcs bool) (Man
 	}
 	bpm, ok := pm.(*basicProcessManager)
 	if !ok {
-		return nil, errors.New("process manager construction error")
+		return nil, errors.Errorf("programmatic error: expected basic process manager but actually got %T", pm)
 	}
 
 	return &selfClearingProcessManager{
@@ -61,7 +61,7 @@ func (m *selfClearingProcessManager) checkProcCapacity(ctx context.Context) erro
 		// We are at capacity, we can try to perform a clear.
 		m.Clear(ctx)
 		if len(m.basicProcessManager.procs) == m.maxProcs {
-			return errors.New("cannot create any more processes")
+			return errors.New("hit maximum running process limit")
 		}
 	}
 

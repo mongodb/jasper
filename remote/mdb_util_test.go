@@ -93,7 +93,7 @@ func waitForMDBService(ctx context.Context, addr net.Addr) (Manager, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, errors.Wrap(ctx.Err(), "context done before connection could be established to service")
+			return nil, errors.Wrap(ctx.Err(), "establishing connection to service")
 		case <-timer.C:
 			client, err := NewMDBClient(ctx, addr, 0)
 			if err != nil {

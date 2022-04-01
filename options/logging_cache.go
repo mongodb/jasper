@@ -41,7 +41,7 @@ func (cl *CachedLogger) Close() error {
 		catcher.Add(cl.Error.Close())
 	}
 
-	return errors.Wrap(catcher.Resolve(), "problem clearing logger cache")
+	return errors.Wrap(catcher.Resolve(), "closing cached logger")
 }
 
 func (cl *CachedLogger) getSender(preferError bool) (send.Sender, error) {
@@ -189,7 +189,7 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 	case LoggingPayloadFormatJSON:
 		payload := message.Fields{}
 		if err := json.Unmarshal(data, &payload); err != nil {
-			return nil, errors.Wrap(err, "problem parsing json from message body")
+			return nil, errors.Wrap(err, "parsing JSON from message body")
 		}
 
 		if lp.AddMetadata {
@@ -200,7 +200,7 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 	case LoggingPayloadFormatBSON:
 		payload := message.Fields{}
 		if err := bson.Unmarshal(data, &payload); err != nil {
-			return nil, errors.Wrap(err, "problem parsing bson from message body")
+			return nil, errors.Wrap(err, "parsing BSON from message body")
 		}
 
 		if lp.AddMetadata {
@@ -231,12 +231,12 @@ func (lp *LoggingPayload) splitByteSlice(data []byte) (interface{}, error) {
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "problem reading bson from message data")
+			return nil, errors.Wrap(err, "reading BSON from message data")
 		}
 
 		payload, err := doc.MarshalBSON()
 		if err != nil {
-			return nil, errors.Wrap(err, "problem constructing bson form")
+			return nil, errors.Wrap(err, "constructing BSON from document")
 		}
 		out = append(out, payload)
 	}

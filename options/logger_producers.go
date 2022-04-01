@@ -45,12 +45,12 @@ func (opts *DefaultLoggerOptions) Configure() (send.Sender, error) {
 
 	sender, err := send.NewNativeLogger(opts.Prefix, opts.Base.Level)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating base default logger")
+		return nil, errors.Wrap(err, "creating base default logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating safe default logger")
+		return nil, errors.Wrap(err, "creating safe default logger")
 	}
 	return sender, nil
 }
@@ -92,12 +92,12 @@ func (opts *FileLoggerOptions) Configure() (send.Sender, error) {
 
 	sender, err := send.NewPlainFileLogger(DefaultLogName, opts.Filename, opts.Base.Level)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating base file logger")
+		return nil, errors.Wrap(err, "creating base file logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating safe file logger")
+		return nil, errors.Wrap(err, "creating safe file logger")
 	}
 	return sender, nil
 }
@@ -135,12 +135,12 @@ func (opts *InheritedLoggerOptions) Configure() (send.Sender, error) {
 
 	sender = grip.GetSender()
 	if err = sender.SetLevel(opts.Base.Level); err != nil {
-		return nil, errors.Wrap(err, "problem creating base inherited logger")
+		return nil, errors.Wrap(err, "creating base inherited logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating safe inherited logger")
+		return nil, errors.Wrap(err, "creating safe inherited logger")
 	}
 	return sender, nil
 }
@@ -184,12 +184,12 @@ func (opts *InMemoryLoggerOptions) Configure() (send.Sender, error) {
 
 	sender, err := send.NewInMemorySender(DefaultLogName, opts.Base.Level, opts.InMemoryCap)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating base in-memory logger")
+		return nil, errors.Wrap(err, "creating base in-memory logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating safe in-memory logger")
+		return nil, errors.Wrap(err, "creating safe in-memory logger")
 	}
 	return sender, nil
 }
@@ -230,12 +230,12 @@ func (opts *SplunkLoggerOptions) Configure() (send.Sender, error) {
 
 	sender, err := send.NewSplunkLogger(DefaultLogName, opts.Splunk, opts.Base.Level)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating base splunk logger")
+		return nil, errors.Wrap(err, "creating base splunk logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating safe splunk logger")
+		return nil, errors.Wrap(err, "creating safe splunk logger")
 	}
 	return sender, nil
 }
@@ -272,12 +272,12 @@ func (opts *BuildloggerV2Options) Configure() (send.Sender, error) {
 
 	sender, err := send.NewBuildlogger(DefaultLogName, &opts.Buildlogger, opts.Base.Level)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating base buildlogger logger")
+		return nil, errors.Wrap(err, "creating base buildlogger logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem creating safe buildlogger logger")
+		return nil, errors.Wrap(err, "creating safe buildlogger logger")
 	}
 	return sender, nil
 }

@@ -47,7 +47,7 @@ func serviceCommandWire(cmd string, operation serviceOperation) cli.Command {
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewSynchronizedManager(false)
 			if err != nil {
-				return errors.Wrap(err, "error creating wire manager")
+				return errors.Wrap(err, "creating wire manager")
 			}
 
 			opts := daemonOptions{
@@ -85,7 +85,7 @@ func (d *wireDaemon) Start(s baobab.Service) error {
 
 	go func(ctx context.Context, d *wireDaemon) {
 		defer recovery.LogStackTraceAndContinue("wire service")
-		grip.Error(errors.Wrap(d.run(ctx), "error running wire service"))
+		grip.Error(errors.Wrap(d.run(ctx), "running wire service"))
 	}(ctx, d)
 
 	return nil
@@ -97,18 +97,18 @@ func (d *wireDaemon) Stop(s baobab.Service) error {
 }
 
 func (d *wireDaemon) run(ctx context.Context) error {
-	return errors.Wrap(runServices(ctx, d.newService), "error running wire service")
+	return errors.Wrap(runServices(ctx, d.newService), "running wire service")
 }
 
 func (d *wireDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", d.host, d.port))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve wire address")
+		return nil, errors.Wrap(err, "resolving wire address")
 	}
 
 	closeService, err := remote.StartMDBService(ctx, d.manager, addr)
 	if err != nil {
-		return nil, errors.Wrap(err, "error starting wire service")
+		return nil, errors.Wrap(err, "starting wire service")
 	}
 	return closeService, nil
 }

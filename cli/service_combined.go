@@ -108,14 +108,14 @@ func newCombinedDaemon(rest *restDaemon, rpc *rpcDaemon) *combinedDaemon {
 
 func (d *combinedDaemon) Start(s baobab.Service) error {
 	catcher := grip.NewBasicCatcher()
-	catcher.Add(errors.Wrap(d.rpcDaemon.Start(s), "error starting RPC service"))
-	catcher.Add(errors.Wrap(d.restDaemon.Start(s), "error starting REST service"))
+	catcher.Add(errors.Wrap(d.rpcDaemon.Start(s), "starting RPC service"))
+	catcher.Add(errors.Wrap(d.restDaemon.Start(s), "starting REST service"))
 	return catcher.Resolve()
 }
 
 func (d *combinedDaemon) Stop(s baobab.Service) error {
 	catcher := grip.NewBasicCatcher()
-	catcher.Add(errors.Wrap(d.rpcDaemon.Stop(s), "error stopping RPC service"))
-	catcher.Add(errors.Wrap(d.restDaemon.Stop(s), "error stopping REST service"))
+	catcher.Add(errors.Wrap(d.rpcDaemon.Stop(s), "stopping RPC service"))
+	catcher.Add(errors.Wrap(d.restDaemon.Stop(s), "stopping REST service"))
 	return catcher.Resolve()
 }

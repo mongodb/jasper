@@ -148,7 +148,7 @@ func (s *Service) pruneCache(ctx context.Context) {
 			s.cacheMutex.RLock()
 			if !s.cacheOpts.Disabled {
 				if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
-					grip.Error(errors.Wrap(err, "error during cache pruning"))
+					grip.Error(errors.Wrap(err, "pruning cache"))
 				}
 			}
 			timer.Reset(s.cacheOpts.PruneDelay)
@@ -188,7 +188,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem reading request").Error(),
+			Message:    errors.Wrap(err, "reading create options from request").Error(),
 		})
 		return
 	}
@@ -209,7 +209,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		cancel()
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem submitting request").Error(),
+			Message:    errors.Wrap(err, "creating process").Error(),
 		})
 		return
 	}
@@ -225,7 +225,7 @@ func (s *Service) createProcess(rw http.ResponseWriter, r *http.Request) {
 		if !info.Complete {
 			writeError(rw, gimlet.ErrorResponse{
 				StatusCode: http.StatusInternalServerError,
-				Message:    errors.Wrap(err, "problem registering trigger").Error(),
+				Message:    errors.Wrap(err, "registering trigger").Error(),
 			})
 			return
 		}
@@ -278,7 +278,7 @@ func (s *Service) listProcesses(rw http.ResponseWriter, r *http.Request) {
 	if err := filter.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "invalid input").Error(),
+			Message:    errors.Wrap(err, "invalid filter").Error(),
 		})
 		return
 	}
@@ -472,8 +472,7 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 	if err := s.manager.Register(ctx, newProc); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message: errors.Wrap(
-				err, "failed to register respawned process").Error(),
+			Message:    errors.Wrap(err, "registering respawned process").Error(),
 		})
 		cancel()
 		return
@@ -487,8 +486,7 @@ func (s *Service) respawnProcess(rw http.ResponseWriter, r *http.Request) {
 		if !newProcInfo.Complete {
 			writeError(rw, gimlet.ErrorResponse{
 				StatusCode: http.StatusInternalServerError,
-				Message: errors.Wrap(
-					err, "failed to register trigger on respawned process").Error(),
+				Message:    errors.Wrap(err, "registering trigger on respawned process").Error(),
 			})
 			return
 		}
@@ -505,7 +503,7 @@ func (s *Service) signalProcess(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "problem converting signal '%s'", vars["signal"]).Error(),
+			Message:    errors.Wrapf(err, "invalid signal '%s'", vars["signal"]).Error(),
 		})
 		return
 	}
@@ -536,7 +534,7 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem reading request").Error(),
+			Message:    errors.Wrap(err, "reading download options from request").Error(),
 		})
 		return
 	}
@@ -544,7 +542,7 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem validating download options").Error(),
+			Message:    errors.Wrap(err, "invalid download options").Error(),
 		})
 		return
 	}
@@ -552,7 +550,7 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.Download(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem occurred during file download for URL %s", opts.URL).Error(),
+			Message:    errors.Wrapf(err, "downloading file for for URL '%s'", opts.URL).Error(),
 		})
 		return
 	}
@@ -567,7 +565,7 @@ func (s *Service) getLogStream(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "problem converting count '%s'", vars["count"]).Error(),
+			Message:    errors.Wrapf(err, "invalid count '%s'", vars["count"]).Error(),
 		})
 		return
 	}
@@ -591,7 +589,7 @@ func (s *Service) getLogStream(rw http.ResponseWriter, r *http.Request) {
 	} else if err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "could not get logs for process '%s'", id).Error(),
+			Message:    errors.Wrapf(err, "getting logs for process '%s'", id).Error(),
 		})
 		return
 	}
@@ -607,7 +605,7 @@ func (s *Service) signalEvent(rw http.ResponseWriter, r *http.Request) {
 	if err := jasper.SignalEvent(ctx, name); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem signaling event named '%s'", name).Error(),
+			Message:    errors.Wrapf(err, "signaling event '%s'", name).Error(),
 		})
 		return
 	}
@@ -620,7 +618,7 @@ func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem reading request").Error(),
+			Message:    errors.Wrap(err, "reading file write options from request").Error(),
 		})
 		return
 	}
@@ -628,7 +626,7 @@ func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem validating file write options").Error(),
+			Message:    errors.Wrap(err, "invalid file write options").Error(),
 		})
 		return
 	}
@@ -636,7 +634,7 @@ func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.DoWrite(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem occurred during file write to %s", opts.Path).Error(),
+			Message:    errors.Wrapf(err, "writing file '%s'", opts.Path).Error(),
 		})
 		return
 	}
@@ -644,7 +642,7 @@ func (s *Service) writeFile(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.SetPerm(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "problem occurred while setting permissions on file %s", opts.Path).Error(),
+			Message:    errors.Wrapf(err, "setting permissions on file '%s'", opts.Path).Error(),
 		})
 		return
 	}
@@ -674,7 +672,7 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem reading request").Error(),
+			Message:    errors.Wrap(err, "reading cache options from request").Error(),
 		})
 		return
 	}
@@ -682,7 +680,7 @@ func (s *Service) configureCache(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem validating cache options").Error(),
+			Message:    errors.Wrap(err, "invalid cache options").Error(),
 		})
 		return
 	}
@@ -705,7 +703,7 @@ func (s *Service) downloadMongoDB(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, &opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem reading request").Error(),
+			Message:    errors.Wrap(err, "reading MongoDB download options from request").Error(),
 		})
 		return
 	}
@@ -713,7 +711,7 @@ func (s *Service) downloadMongoDB(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.Validate(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem validating MongoDB download options").Error(),
+			Message:    errors.Wrap(err, "invalid MongoDB download options").Error(),
 		})
 		return
 	}
@@ -721,7 +719,7 @@ func (s *Service) downloadMongoDB(rw http.ResponseWriter, r *http.Request) {
 	if err := jasper.SetupDownloadMongoDBReleases(r.Context(), s.cache, opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrap(err, "problem in download setup").Error(),
+			Message:    errors.Wrap(err, "setting up download").Error(),
 		})
 		return
 	}
@@ -749,7 +747,7 @@ func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Reques
 	if !ok {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Errorf("could not find signal trigger with id '%s'", sigTriggerID).Error(),
+			Message:    errors.Errorf("getting signal trigger '%s'", sigTriggerID).Error(),
 		})
 		return
 	}
@@ -757,7 +755,7 @@ func (s *Service) registerSignalTriggerID(rw http.ResponseWriter, r *http.Reques
 	if err := proc.RegisterSignalTrigger(ctx, makeTrigger()); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "registering signal trigger with id '%s'", sigTriggerID).Error(),
+			Message:    errors.Wrapf(err, "registering signal trigger '%s'", sigTriggerID).Error(),
 		})
 		return
 	}
@@ -788,7 +786,7 @@ func (s *Service) sendMessages(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, payload); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrapf(err, "parsing payload for %s", id).Error(),
+			Message:    errors.Wrap(err, "parsing payload").Error(),
 		})
 		return
 	}
