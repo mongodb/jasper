@@ -269,10 +269,10 @@ type SignalInput struct {
 func (in *SignalInput) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	if len(in.ID) == 0 {
-		catcher.Add(errors.New("Jasper process ID must not be empty"))
+		catcher.New("Jasper process ID must not be empty")
 	}
 	if in.Signal <= 0 {
-		catcher.Add(errors.New("signal must be greater than 0"))
+		catcher.New("signal must be greater than 0")
 	}
 	return catcher.Resolve()
 }
@@ -293,7 +293,7 @@ func (in *SignalTriggerIDInput) Validate() error {
 	}
 	_, ok := jasper.GetSignalTriggerFactory(in.SignalTriggerID)
 	if !ok {
-		return errors.Errorf("could not find signal trigger with id '%s'", in.SignalTriggerID)
+		return errors.Errorf("could not find signal trigger '%s'", in.SignalTriggerID)
 	}
 	return nil
 }
@@ -392,7 +392,7 @@ func BuildScriptingCreateInput(in options.ScriptingHarness) (*ScriptingCreateInp
 	var err error
 	out.Payload, err = json.Marshal(in)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building message payload")
+		return nil, errors.Wrap(err, "building message payload")
 	}
 
 	return out, nil

@@ -16,27 +16,25 @@ func makeEnclosingDirectories(path string) error {
 			return err
 		}
 	} else if !info.IsDir() {
-		return errors.Errorf("'%s' already exists and is not a directory", path)
+		return errors.Errorf("path '%s' already exists and is not a directory", path)
 	}
 	return nil
 }
 
 func writeFile(reader io.Reader, path string) error {
 	if err := makeEnclosingDirectories(filepath.Dir(path)); err != nil {
-		return errors.Wrap(err, "problem making enclosing directories")
+		return errors.Wrap(err, "making enclosing directories")
 	}
 
 	file, err := os.Create(path)
 	if err != nil {
-		return errors.Wrap(err, "problem creating file")
+		return errors.Wrap(err, "creating file")
 	}
 
 	catcher := grip.NewBasicCatcher()
-	if _, err := io.Copy(file, reader); err != nil {
-		catcher.Add(errors.Wrap(err, "problem writing file"))
-	}
-
-	catcher.Add(errors.Wrap(file.Close(), "problem closing file"))
+	_, err = io.Copy(file, reader)
+	catcher.Wrap(err, "writing file")
+	catcher.Wrap(file.Close(), "closing file")
 
 	return catcher.Resolve()
 }

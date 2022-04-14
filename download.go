@@ -25,7 +25,7 @@ func makeEnclosingDirectories(path string) error {
 			return err
 		}
 	} else if !info.IsDir() {
-		return errors.Errorf("'%s' already exists and is not a directory", path)
+		return errors.Errorf("path '%s' already exists and is not a directory", path)
 	}
 	return nil
 }
@@ -33,12 +33,12 @@ func makeEnclosingDirectories(path string) error {
 // SetupDownloadMongoDBReleases performs necessary setup to download MongoDB with the given options.
 func SetupDownloadMongoDBReleases(ctx context.Context, cache *lru.Cache, opts options.MongoDBDownload) error {
 	if err := makeEnclosingDirectories(opts.Path); err != nil {
-		return errors.Wrap(err, "problem creating enclosing directories")
+		return errors.Wrap(err, "creating enclosing directories")
 	}
 
 	feed, err := bond.GetArtifactsFeed(ctx, opts.Path)
 	if err != nil {
-		return errors.Wrap(err, "problem making artifacts feed")
+		return errors.Wrap(err, "making artifacts feed")
 	}
 
 	catcher := grip.NewBasicCatcher()
@@ -46,11 +46,11 @@ func SetupDownloadMongoDBReleases(ctx context.Context, cache *lru.Cache, opts op
 	jobs := createDownloadJobs(opts.Path, urls, catcher)
 
 	if err = setupDownloadJobsAsync(ctx, jobs, processDownloadJobs(ctx, addMongoDBFilesToCache(cache, opts.Path))); err != nil {
-		catcher.Add(errors.Wrap(err, "problem starting download jobs"))
+		catcher.Wrap(err, "starting download jobs")
 	}
 
 	for err = range errs {
-		catcher.Add(errors.Wrap(err, "problem initializing download jobs"))
+		catcher.Wrap(err, "initializing download jobs")
 	}
 
 	return catcher.Resolve()
@@ -65,7 +65,7 @@ func createDownloadJobs(path string, urls <-chan string, catcher grip.Catcher) <
 		for url := range urls {
 			j, err := recall.NewDownloadJob(url, path, true)
 			if err != nil {
-				catcher.Add(errors.Wrapf(err, "problem creating download job for %s", url))
+				catcher.Wrapf(err, "creating download job for URL '%s'", url)
 				continue
 			}
 
@@ -81,12 +81,12 @@ func processDownloadJobs(ctx context.Context, processFile func(string) error) fu
 	return func(q amboy.Queue) error {
 		grip.Infof("waiting for %d download jobs to complete", q.Stats(ctx).Total)
 		if !amboy.WaitInterval(ctx, q, time.Second) {
-			return errors.New("download job timed out")
+			return errors.New("download jobs queue timed out")
 		}
 		grip.Info("all download tasks complete, processing errors now")
 
 		if err := amboy.ResolveErrors(ctx, q); err != nil {
-			return errors.Wrap(err, "problem completing download jobs")
+			return errors.Wrap(err, "executing download jobs")
 		}
 
 		catcher := grip.NewBasicCatcher()
@@ -94,11 +94,12 @@ func processDownloadJobs(ctx context.Context, processFile func(string) error) fu
 			catcher.Add(job.Error())
 			downloadJob, ok := job.(*recall.DownloadFileJob)
 			if !ok {
-				catcher.Add(errors.New("problem retrieving download job from queue"))
+				catcher.Errorf("could not retrieve job '%s' from queue, expected download job but got %T instead", job.ID(), job)
 				continue
 			}
-			if err := processFile(filepath.Join(downloadJob.Directory, downloadJob.FileName)); err != nil {
-				catcher.Add(err)
+			file := filepath.Join(downloadJob.Directory, downloadJob.FileName)
+			if err := processFile(file); err != nil {
+				catcher.Wrapf(err, "processing file '%s'", file)
 			}
 		}
 		return catcher.Resolve()
@@ -108,17 +109,17 @@ func processDownloadJobs(ctx context.Context, processFile func(string) error) fu
 func setupDownloadJobsAsync(ctx context.Context, jobs <-chan amboy.Job, processJobs func(amboy.Queue) error) error {
 	q := queue.NewLocalLimitedSize(2, 1048)
 	if err := q.Start(ctx); err != nil {
-		return errors.Wrap(err, "problem starting download job queue")
+		return errors.Wrap(err, "starting download job queue")
 	}
 
 	if err := amboy.PopulateQueue(ctx, q, jobs); err != nil {
-		return errors.Wrap(err, "problem adding download jobs to queue")
+		return errors.Wrap(err, "enqueueing download jobs")
 	}
 
 	go func() {
 		defer recovery.LogStackTraceAndContinue("download job generator")
 		if err := processJobs(q); err != nil {
-			grip.Errorf(errors.Wrap(err, "error occurred while adding jobs to cache").Error())
+			grip.Error(errors.Wrap(err, "processing jobs"))
 		}
 	}()
 
@@ -129,7 +130,7 @@ func addMongoDBFilesToCache(cache *lru.Cache, absRootPath string) func(string) e
 	return func(fileName string) error {
 		filePath := filepath.Join(absRootPath, fileName)
 		if err := cache.AddFile(filePath); err != nil {
-			return errors.Wrapf(err, "problem adding file %s to cache", filePath)
+			return errors.Wrapf(err, "adding file '%s' to LRU cache", filePath)
 		}
 
 		baseName := filepath.Base(fileName)
@@ -144,7 +145,7 @@ func addMongoDBFilesToCache(cache *lru.Cache, absRootPath string) func(string) e
 			// Cache only handles individual files, not directories.
 			if !info.IsDir() {
 				if err := cache.AddStat(path, info); err != nil {
-					return errors.Wrapf(err, "problem adding file %s to cache", path)
+					return errors.Wrapf(err, "adding file '%s' to LRU cache", path)
 				}
 			}
 

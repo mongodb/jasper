@@ -32,7 +32,7 @@ func TestSetupDownloadMongoDBReleasesFailsWithZeroOptions(t *testing.T) {
 	opts := options.MongoDBDownload{}
 	err := SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "problem creating enclosing directories")
+	assert.Contains(t, err.Error(), "creating enclosing directories")
 }
 
 func TestSetupDownloadMongoDBReleasesWithInvalidPath(t *testing.T) {
@@ -48,7 +48,7 @@ func TestSetupDownloadMongoDBReleasesWithInvalidPath(t *testing.T) {
 
 	err = SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "problem creating enclosing directories")
+	assert.Contains(t, err.Error(), "creating enclosing directories")
 }
 
 func TestSetupDownloadMongoDBReleasesWithInvalidArtifactsFeed(t *testing.T) {
@@ -66,7 +66,7 @@ func TestSetupDownloadMongoDBReleasesWithInvalidArtifactsFeed(t *testing.T) {
 
 	err = SetupDownloadMongoDBReleases(ctx, lru.NewCache(), opts)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "problem making artifacts feed")
+	assert.Contains(t, err.Error(), "making artifacts feed")
 }
 
 func TestCreateValidDownloadJobs(t *testing.T) {
@@ -107,11 +107,11 @@ func TestCreateDownloadJobsWithInvalidPath(t *testing.T) {
 	jobs := createDownloadJobs(dir, urls, catcher)
 
 	for range jobs {
-		assert.Fail(t, "should not create job for bad url")
+		assert.Fail(t, "should not create job for bad URL")
 	}
 	err := catcher.Resolve()
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "problem creating download job for "+testURL)
+	assert.Contains(t, err.Error(), "creating download job")
 }
 
 func TestProcessDownloadJobs(t *testing.T) {
@@ -177,7 +177,7 @@ func TestAddMongoDBFilesToCacheWithInvalidPath(t *testing.T) {
 
 	err = addMongoDBFilesToCache(lru.NewCache(), absPath)(fileName)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "problem adding file "+filepath.Join(absPath, fileName)+" to cache")
+	assert.Contains(t, err.Error(), "adding file '"+filepath.Join(absPath, fileName)+"' to LRU cache")
 }
 
 func TestDownloadAndExtract(t *testing.T) {

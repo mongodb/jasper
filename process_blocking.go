@@ -35,7 +35,7 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 
 	exec, deadline, err := opts.Resolve(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building command from options")
+		return nil, errors.Wrap(err, "building command from options")
 	}
 
 	p := &blockingProcess{
@@ -51,16 +51,16 @@ func newBlockingProcess(ctx context.Context, opts *options.Create) (Process, err
 
 	if err = p.RegisterTrigger(ctx, makeOptionsCloseTrigger()); err != nil {
 		catcher := grip.NewBasicCatcher()
-		catcher.Wrap(opts.Close(), "problem closing options")
+		catcher.Wrap(opts.Close(), "closing options")
 		catcher.Add(err)
-		return nil, errors.Wrap(catcher.Resolve(), "problem registering options close trigger")
+		return nil, errors.Wrap(catcher.Resolve(), "registering options close trigger")
 	}
 
 	if err = exec.Start(); err != nil {
 		catcher := grip.NewBasicCatcher()
-		catcher.Wrap(opts.Close(), "problem closing options")
+		catcher.Wrap(opts.Close(), "closing options")
 		catcher.Add(err)
-		return nil, errors.Wrap(catcher.Resolve(), "problem starting command")
+		return nil, errors.Wrap(catcher.Resolve(), "starting command")
 	}
 
 	p.info = ProcessInfo{
@@ -184,7 +184,7 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 			p.mu.RLock()
 			p.triggers.Run(info)
 			p.mu.RUnlock()
-			p.setErr(ctx.Err())
+			p.setErr(errors.Wrap(ctx.Err(), "processing operations"))
 			p.mu.Lock()
 			// Set the options now because our view of the process info may be
 			// stale. The options could have been modified in between the above
@@ -277,7 +277,7 @@ func (p *blockingProcess) Complete(_ context.Context) bool {
 
 func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	if p.hasCompleteInfo() {
-		return errors.New("cannot signal a process that has terminated")
+		return errors.New("cannot signal a process that has already exited")
 	}
 
 	out := make(chan error, 1)
@@ -291,7 +291,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 
 		if skipSignal := p.signalTriggers.Run(p.getInfo(), sig); !skipSignal {
 			sig = makeCompatible(sig)
-			out <- errors.Wrapf(exec.Signal(sig), "problem sending signal '%s' to '%s'",
+			out <- errors.Wrapf(exec.Signal(sig), "sending signal '%s' to process '%s'",
 				sig, p.id)
 		} else {
 			out <- nil
@@ -304,19 +304,19 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		case res := <-out:
 			return res
 		case <-ctx.Done():
-			return errors.New("context canceled")
+			return errors.Wrap(ctx.Err(), "waiting for operation to be processed")
 		case <-p.complete:
 			// If the process is complete because the operations channel
 			// signaled the process, the signal was successful.
 			if p.Info(ctx).ExitCode == int(sig) {
 				return nil
 			}
-			return errors.New("cannot signal after process is complete")
+			return errors.New("cannot signal a process that has already exited")
 		}
 	case <-ctx.Done():
-		return errors.New("context canceled")
+		return errors.Wrap(ctx.Err(), "waiting for operation to be enqueued")
 	case <-p.complete:
-		return errors.New("cannot signal after process is complete")
+		return errors.New("cannot signal a process that has already exited")
 	}
 }
 
@@ -329,7 +329,7 @@ func (p *blockingProcess) RegisterTrigger(_ context.Context, trigger ProcessTrig
 	defer p.mu.Unlock()
 
 	if p.info.Complete {
-		return errors.New("cannot register trigger after process exits")
+		return errors.New("cannot register trigger after a process has already exited")
 	}
 
 	p.triggers = append(p.triggers, trigger)
@@ -346,7 +346,7 @@ func (p *blockingProcess) RegisterSignalTrigger(_ context.Context, trigger Signa
 	defer p.mu.Unlock()
 
 	if p.info.Complete {
-		return errors.New("cannot register trigger after process exits")
+		return errors.New("cannot register trigger after a process has already exited")
 	}
 
 	p.signalTriggers = append(p.signalTriggers, trigger)
@@ -357,9 +357,9 @@ func (p *blockingProcess) RegisterSignalTrigger(_ context.Context, trigger Signa
 func (p *blockingProcess) RegisterSignalTriggerID(ctx context.Context, id SignalTriggerID) error {
 	makeTrigger, ok := GetSignalTriggerFactory(id)
 	if !ok {
-		return errors.Errorf("could not find signal trigger with id '%s'", id)
+		return errors.Errorf("could not find signal trigger '%s'", id)
 	}
-	return errors.Wrap(p.RegisterSignalTrigger(ctx, makeTrigger()), "failed to register signal trigger")
+	return errors.Wrap(p.RegisterSignalTrigger(ctx, makeTrigger()), "registering signal trigger")
 }
 
 func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
@@ -385,7 +385,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 		case p.ops <- waiter:
 			continue
 		case <-ctx.Done():
-			return -1, errors.New("wait operation canceled")
+			return -1, errors.Wrap(ctx.Err(), "waiting for process to exit")
 		case err := <-out:
 			return p.getInfo().ExitCode, errors.WithStack(err)
 		case <-p.complete:

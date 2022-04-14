@@ -112,7 +112,7 @@ func (c *Command) String() string {
 func (c *Command) Export() ([]*options.Create, error) {
 	opts, err := c.getCreateOpts()
 	if err != nil {
-		return nil, errors.Wrap(err, "problem getting process creation options")
+		return nil, errors.Wrap(err, "getting process creation options")
 	}
 	return opts, nil
 }
@@ -513,7 +513,7 @@ func (c *Command) setupEnv() {
 func (c *Command) Run(ctx context.Context) error {
 	if c.opts.Prerequisite != nil && !c.opts.Prerequisite() {
 		grip.Debug(message.Fields{
-			"op":  "noop after prerequisite returned false",
+			"op":  "no-op after prerequisite returned false",
 			"id":  c.opts.ID,
 			"cmd": c.String(),
 		})
@@ -535,8 +535,8 @@ func (c *Command) Run(ctx context.Context) error {
 
 	for idx, opt := range opts {
 		if err := ctx.Err(); err != nil {
-			catcher.Add(errors.Wrap(err, "operation canceled"))
-			catcher.Add(c.Close())
+			catcher.Wrapf(err, "running command at index %d", idx)
+			catcher.Wrap(c.Close(), "closing command")
 			return catcher.Resolve()
 		}
 
@@ -586,7 +586,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 	for _, parallelCmd := range parallelCmds {
 		go func(innerCmd Command) {
 			defer func() {
-				err := recovery.HandlePanicWithError(recover(), nil, "parallel command encountered error")
+				err := recovery.HandlePanicWithError(recover(), nil, "parallel command execution")
 				if err != nil {
 					cmdResults <- cmdResult{err: err}
 				}
@@ -788,7 +788,7 @@ func (c *Command) getCreateOpt(args []string) (*options.Create, error) {
 		if c.opts.Process.Remote == nil && strings.ContainsAny(args[0], " \"'") {
 			spl, err := shlex.Split(args[0])
 			if err != nil {
-				return nil, errors.Wrap(err, "problem splitting argstring")
+				return nil, errors.Wrap(err, "splitting args string using shell rules")
 			}
 			return c.getCreateOpt(spl)
 		}
@@ -837,7 +837,7 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 	writeOutput := getMsgOutput(opts.Output)
 	proc, err := c.makeProc(ctx, opts)
 	if err != nil {
-		return errors.Wrap(err, "problem starting command")
+		return errors.Wrap(err, "creating process")
 	}
 	c.procs = append(c.procs, proc)
 
@@ -845,7 +845,7 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 		waitCatcher := grip.NewBasicCatcher()
 		for _, proc := range c.procs {
 			_, err = proc.Wait(ctx)
-			waitCatcher.Add(errors.Wrapf(err, "error waiting on process '%s'", proc.ID()))
+			waitCatcher.Wrapf(err, "waiting on process '%s'", proc.ID())
 		}
 		err = waitCatcher.Resolve()
 		msg["err"] = err
@@ -865,14 +865,14 @@ func getMsgOutput(opts options.Output) func(msg message.Fields) message.Fields {
 	logger, err := NewInMemoryLogger(1000)
 	if err != nil {
 		return func(msg message.Fields) message.Fields {
-			msg["log_err"] = errors.Wrap(err, "could not set up in-memory sender for capturing output")
+			msg["log_err"] = errors.Wrap(err, "setting up in-memory sender for capturing output")
 			return msg
 		}
 	}
 	sender, err := logger.Resolve()
 	if err != nil {
 		return func(msg message.Fields) message.Fields {
-			msg["log_err"] = errors.Wrap(err, "could not set up in-memory sender for capturing output")
+			msg["log_err"] = errors.Wrap(err, "setting up in-memory sender for capturing output")
 			return msg
 		}
 	}
@@ -915,7 +915,7 @@ func (c *Command) Wait(ctx context.Context) (int, error) {
 	for _, proc := range c.procs {
 		exitCode, err := proc.Wait(ctx)
 		if err != nil || exitCode != 0 {
-			return exitCode, errors.Wrapf(err, "error waiting on process '%s'", proc.ID())
+			return exitCode, errors.Wrapf(err, "waiting on process '%s'", proc.ID())
 		}
 	}
 

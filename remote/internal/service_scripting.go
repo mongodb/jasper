@@ -10,7 +10,7 @@ import (
 func (s *jasperService) ScriptingHarnessSetup(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
 	sh, err := s.scripting.Get(id.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", id.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", id.Id))
 	}
 
 	if err = sh.Setup(ctx); err != nil {
@@ -23,7 +23,7 @@ func (s *jasperService) ScriptingHarnessSetup(ctx context.Context, id *Scripting
 func (s *jasperService) ScriptingHarnessCleanup(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
 	sh, err := s.scripting.Get(id.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", id.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", id.Id))
 	}
 
 	if err = sh.Cleanup(ctx); err != nil {
@@ -36,7 +36,7 @@ func (s *jasperService) ScriptingHarnessCleanup(ctx context.Context, id *Scripti
 func (s *jasperService) ScriptingHarnessRun(ctx context.Context, args *ScriptingHarnessRunArgs) (*OperationOutcome, error) {
 	sh, err := s.scripting.Get(args.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", args.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", args.Id))
 	}
 
 	if err = sh.Run(ctx, args.Args); err != nil {
@@ -49,7 +49,7 @@ func (s *jasperService) ScriptingHarnessRun(ctx context.Context, args *Scripting
 func (s *jasperService) ScriptingHarnessRunScript(ctx context.Context, args *ScriptingHarnessRunScriptArgs) (*OperationOutcome, error) {
 	sh, err := s.scripting.Get(args.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", args.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", args.Id))
 	}
 
 	err = sh.RunScript(ctx, args.Script)
@@ -63,7 +63,7 @@ func (s *jasperService) ScriptingHarnessRunScript(ctx context.Context, args *Scr
 func (s *jasperService) ScriptingHarnessBuild(ctx context.Context, args *ScriptingHarnessBuildArgs) (*ScriptingHarnessBuildResponse, error) {
 	sh, err := s.scripting.Get(args.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", args.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", args.Id))
 	}
 
 	path, err := sh.Build(ctx, args.Directory, args.Args)
@@ -81,7 +81,7 @@ func (s *jasperService) ScriptingHarnessBuild(ctx context.Context, args *Scripti
 func (s *jasperService) ScriptingHarnessTest(ctx context.Context, args *ScriptingHarnessTestArgs) (*ScriptingHarnessTestResponse, error) {
 	sh, err := s.scripting.Get(args.Id)
 	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness with id '%s'", args.Id))
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", args.Id))
 	}
 
 	var testErr error

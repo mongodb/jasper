@@ -78,12 +78,9 @@ func (opts *RemoteConfig) validate() error {
 			numAuthMethods++
 		}
 	}
-	if numAuthMethods != 1 {
-		catcher.Errorf("must specify exactly one authentication method, found %d", numAuthMethods)
-	}
-	if opts.Key == "" && opts.KeyFile == "" && opts.KeyPassphrase != "" {
-		catcher.New("cannot set passphrase without specifying key or key file")
-	}
+	catcher.ErrorfWhen(numAuthMethods != 1, "must specify exactly one authentication method, found %d", numAuthMethods)
+	catcher.NewWhen(opts.Key == "" && opts.KeyFile == "" && opts.KeyPassphrase != "", "cannot set passphrase without specifying key or key file")
+
 	return catcher.Resolve()
 }
 
@@ -92,7 +89,7 @@ func (opts *RemoteConfig) resolve() (*ssh.ClientConfig, error) {
 	if opts.Key != "" || opts.KeyFile != "" {
 		pubkey, err := opts.publicKeyAuth()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get public key")
+			return nil, errors.Wrap(err, "getting public key")
 		}
 		auth = append(auth, pubkey)
 	}
@@ -113,7 +110,7 @@ func (opts *RemoteConfig) publicKeyAuth() (ssh.AuthMethod, error) {
 		var err error
 		key, err = ioutil.ReadFile(opts.KeyFile)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not read key file")
+			return nil, errors.Wrap(err, "reading key file")
 		}
 	} else {
 		key = []byte(opts.Key)
@@ -127,7 +124,7 @@ func (opts *RemoteConfig) publicKeyAuth() (ssh.AuthMethod, error) {
 		signer, err = ssh.ParsePrivateKey(key)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get signer")
+		return nil, errors.Wrap(err, "getting signer")
 	}
 	return ssh.PublicKeys(signer), nil
 }
@@ -163,55 +160,55 @@ func (opts *Remote) Resolve() (*ssh.Client, *ssh.Session, error) {
 	if opts.Proxy != nil {
 		proxyConfig, err := opts.Proxy.resolve()
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create proxy config")
+			return nil, nil, errors.Wrap(err, "creating proxy config")
 		}
 		proxyClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", opts.Proxy.Host, opts.Proxy.Port), proxyConfig)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not dial proxy")
+			return nil, nil, errors.Wrap(err, "dialing proxy")
 		}
 
 		targetConn, err := proxyClient.Dial("tcp", fmt.Sprintf("%s:%d", opts.Host, opts.Port))
 		if err != nil {
 			catcher := grip.NewBasicCatcher()
-			catcher.Wrap(proxyClient.Close(), "error closing connection to proxy")
-			catcher.Wrap(err, "could not dial target host")
+			catcher.Wrap(proxyClient.Close(), "closing connection to proxy")
+			catcher.Wrap(err, "dialing target host")
 			return nil, nil, catcher.Resolve()
 		}
 
 		targetConfig, err := opts.resolve()
 		if err != nil {
 			catcher := grip.NewBasicCatcher()
-			catcher.Wrap(proxyClient.Close(), "error closing connection to proxy")
-			catcher.Wrap(err, "could not create target config")
+			catcher.Wrap(proxyClient.Close(), "closing connection to proxy")
+			catcher.Wrap(err, "creating target config")
 			return nil, nil, catcher.Resolve()
 		}
 		gatewayConn, chans, reqs, err := ssh.NewClientConn(targetConn, fmt.Sprintf("%s:%d", opts.Host, opts.Port), targetConfig)
 		if err != nil {
 			catcher := grip.NewBasicCatcher()
-			catcher.Wrap(targetConn.Close(), "error closing connection to target")
-			catcher.Wrap(proxyClient.Close(), "error closing connection to proxy")
-			catcher.Wrap(err, "could not establish connection to target via proxy")
-			return nil, nil, catcher.Resolve()
+			catcher.Wrap(targetConn.Close(), "closing connection to target")
+			catcher.Wrap(proxyClient.Close(), "closing connection to proxy")
+			catcher.Add(err)
+			return nil, nil, errors.Wrap(catcher.Resolve(), "establishing connection")
 		}
 		client = ssh.NewClient(gatewayConn, chans, reqs)
 	} else {
 		var err error
 		config, err := opts.resolve()
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create config")
+			return nil, nil, errors.Wrap(err, "creating config")
 		}
 		client, err = ssh.Dial("tcp", fmt.Sprintf("%s:%d", opts.Host, opts.Port), config)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not dial host")
+			return nil, nil, errors.Wrap(err, "dialing host")
 		}
 	}
 
 	session, err := client.NewSession()
 	if err != nil {
 		catcher := grip.NewBasicCatcher()
-		catcher.Add(client.Close())
-		catcher.Add(err)
-		return nil, nil, errors.Wrap(catcher.Resolve(), "could not establish session")
+		catcher.Wrap(client.Close(), "closing client")
+		catcher.Wrap(err, "creating client session")
+		return nil, nil, catcher.Resolve()
 	}
 	return client, session, nil
 }

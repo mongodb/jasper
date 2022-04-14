@@ -20,7 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Returns path to release and to mongod
+// downloadMongoDB downloads MongoDB for testing. It returns the directory
+// containing the downloaded MongoDB files and the mongod executable itself.
 func downloadMongoDB(t *testing.T) (string, string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -185,7 +186,7 @@ func TestMongod(t *testing.T) {
 								assert.NoError(t, err)
 							}
 						case <-ctx.Done():
-							require.FailNow(t, "could not check process wait result", ctx.Err().Error())
+							require.FailNow(t, "context errored before processes exited: %s", ctx.Err())
 						}
 					}
 

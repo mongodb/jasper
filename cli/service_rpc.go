@@ -51,7 +51,7 @@ func serviceCommandRPC(cmd string, operation serviceOperation) cli.Command {
 		Action: func(c *cli.Context) error {
 			manager, err := jasper.NewSynchronizedManager(false)
 			if err != nil {
-				return errors.Wrap(err, "error creating RPC manager")
+				return errors.Wrap(err, "creating RPC manager")
 			}
 
 			opts := daemonOptions{
@@ -93,7 +93,7 @@ func (d *rpcDaemon) Start(s baobab.Service) error {
 
 	go func(ctx context.Context, d *rpcDaemon) {
 		defer recovery.LogStackTraceAndContinue("RPC service")
-		grip.Error(errors.Wrap(d.run(ctx), "error running RPC service"))
+		grip.Error(errors.Wrap(d.run(ctx), "running RPC service"))
 	}(ctx, d)
 
 	return nil
@@ -105,7 +105,7 @@ func (d *rpcDaemon) Stop(s baobab.Service) error {
 }
 
 func (d *rpcDaemon) run(ctx context.Context) error {
-	return errors.Wrap(runServices(ctx, d.newService), "error running RPC service")
+	return errors.Wrap(runServices(ctx, d.newService), "running RPC service")
 }
 
 func (d *rpcDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
@@ -123,12 +123,12 @@ func (d *rpcDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
 func newRPCService(ctx context.Context, host string, port int, manager jasper.Manager, credsFilePath string) (util.CloseFunc, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve RPC address")
+		return nil, errors.Wrap(err, "resolving RPC address")
 	}
 
 	closeService, err := remote.StartRPCServiceWithFile(ctx, manager, addr, credsFilePath)
 	if err != nil {
-		return nil, errors.Wrap(err, "error starting RPC service")
+		return nil, errors.Wrap(err, "starting RPC service")
 	}
 	return closeService, nil
 }

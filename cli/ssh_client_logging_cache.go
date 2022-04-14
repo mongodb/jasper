@@ -35,7 +35,7 @@ func (lc *sshLoggingCache) Create(id string, opts *options.Output) (*options.Cac
 
 	resp, err := ExtractCachedLoggerResponse(output)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "reading cached logger response")
 	}
 
 	return &resp.Logger, nil
@@ -75,7 +75,7 @@ func (lc *sshLoggingCache) Remove(id string) error {
 func (lc *sshLoggingCache) CloseAndRemove(ctx context.Context, id string) error {
 	output, err := lc.runCommand(ctx, LoggingCacheCloseAndRemoveCommand, IDInput{ID: id})
 	if err != nil {
-		return errors.Wrap(err, "problem running command")
+		return errors.Wrap(err, "running command")
 	}
 
 	if _, err = ExtractOutcomeResponse(output); err != nil {
@@ -88,11 +88,14 @@ func (lc *sshLoggingCache) CloseAndRemove(ctx context.Context, id string) error 
 func (lc *sshLoggingCache) Clear(ctx context.Context) error {
 	output, err := lc.runCommand(ctx, LoggingCacheClearCommand, nil)
 	if err != nil {
-		return errors.Wrap(err, "problem running command")
+		return errors.Wrap(err, "running command")
 	}
 
-	_, err = ExtractOutcomeResponse(output)
-	return err
+	if _, err = ExtractOutcomeResponse(output); err != nil {
+		return errors.Wrap(err, "reading outcome response")
+	}
+
+	return nil
 }
 
 func (lc *sshLoggingCache) Prune(ts time.Time) error {

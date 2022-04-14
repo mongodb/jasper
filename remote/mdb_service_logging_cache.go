@@ -36,7 +36,7 @@ func (s *mdbService) loggingCacheCreate(ctx context.Context, w io.Writer, msg mo
 
 	logger, err := lc.Create(req.Params.ID, &req.Params.Options)
 	if err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not create logger"), LoggingCacheCreateCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "creating logger"), LoggingCacheCreateCommand)
 		return
 	}
 	logger.ManagerID = s.manager.ID()
@@ -54,7 +54,7 @@ func (s *mdbService) loggingCacheGet(ctx context.Context, w io.Writer, msg mongo
 
 	logger, err := lc.Get(req.ID)
 	if err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrapf(err, "getting logger with id '%s'", req.ID), LoggingCacheGetCommand)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrapf(err, "getting logger '%s'", req.ID), LoggingCacheGetCommand)
 		return
 	}
 
@@ -148,7 +148,7 @@ func (s *mdbService) loggingCacheRequest(ctx context.Context, msg mongowire.Mess
 
 	if req != nil {
 		if err := shell.MessageToRequest(msg, req); err != nil {
-			return nil, errors.Wrap(err, "could not read request")
+			return nil, errors.Wrap(err, "reading request from wire message")
 		}
 	}
 
@@ -163,7 +163,7 @@ func (s *mdbService) loggingCacheResponse(ctx context.Context, w io.Writer, resp
 
 	shellResp, err := shell.ResponseToMessage(mongowire.OP_REPLY, resp)
 	if err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "could not make response"), command)
+		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "converting response to wire message"), command)
 		return
 	}
 

@@ -130,7 +130,7 @@ func (j *amboyJob) Run(ctx context.Context) {
 	defer j.MarkComplete()
 
 	if j.ExitCode >= 0 {
-		j.AddError(errors.New("cannot run command more than once"))
+		j.AddError(errors.New("cannot run a command more than once"))
 		return
 	}
 
@@ -209,7 +209,7 @@ func (j *amboySimpleCapturedOutputJob) Run(ctx context.Context) {
 	defer j.MarkComplete()
 
 	if j.ExitCode >= 0 {
-		j.AddError(errors.New("cannot run command more than once"))
+		j.AddError(errors.New("cannot run a command more than once"))
 		return
 	}
 
@@ -280,7 +280,7 @@ func (j *amboyForegroundOutputJob) Run(ctx context.Context) {
 	defer j.MarkComplete()
 
 	if j.ExitCode >= 0 {
-		j.AddError(errors.New("cannot run command more than once"))
+		j.AddError(errors.New("cannot run a command more than once"))
 		return
 	}
 

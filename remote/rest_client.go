@@ -70,7 +70,7 @@ func (c *restClient) getURL(route string, args ...interface{}) string {
 func makeBody(data interface{}) (io.Reader, error) {
 	payload, err := json.Marshal(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem marshaling request body")
+		return nil, errors.Wrap(err, "marshalling request body")
 	}
 
 	return bytes.NewBuffer(payload), nil
@@ -100,13 +100,13 @@ func handleError(resp *http.Response) error {
 func (c *restClient) doRequest(ctx context.Context, method string, url string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building request")
+		return nil, errors.Wrap(err, "building request")
 	}
 
 	req = req.WithContext(ctx)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem making request")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	if err = handleError(resp); err != nil {
@@ -119,7 +119,7 @@ func (c *restClient) doRequest(ctx context.Context, method string, url string, b
 func (c *restClient) ID() string {
 	resp, err := c.doRequest(context.Background(), http.MethodGet, c.getURL("/id"), nil)
 	if err != nil {
-		grip.Debug(errors.Wrap(err, "request returned error"))
+		grip.Debug(errors.Wrap(err, "making request"))
 		return ""
 	}
 	defer resp.Body.Close()
@@ -135,18 +135,18 @@ func (c *restClient) ID() string {
 func (c *restClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	body, err := makeBody(opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building request for job create")
+		return nil, errors.Wrap(err, "building request for job create")
 	}
 
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/create"), body)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
 	var info jasper.ProcessInfo
 	if err := gimlet.GetJSON(resp.Body, &info); err != nil {
-		return nil, errors.Wrap(err, "problem reading process info from response")
+		return nil, errors.Wrap(err, "reading process info from response")
 	}
 
 	return &restProcess{
@@ -161,17 +161,17 @@ func (c *restClient) CreateCommand(ctx context.Context) *jasper.Command {
 
 func (c *restClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
 	if err := opts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "problem validating input")
+		return nil, errors.Wrap(err, "invalid scripting options")
 	}
 
 	body, err := makeBody(opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem building request for scripting create")
+		return nil, errors.Wrap(err, "building request for scripting create")
 	}
 
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/scripting/create/%s", opts.Type()), body)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -184,7 +184,7 @@ func (c *restClient) CreateScripting(ctx context.Context, opts options.Scripting
 	}{}
 
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		return nil, errors.Wrap(err, "problem reading response")
+		return nil, errors.Wrap(err, "reading response")
 	}
 
 	return newRESTScriptingHarness(c, out.ID), nil
@@ -193,7 +193,7 @@ func (c *restClient) CreateScripting(ctx context.Context, opts options.Scripting
 func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
 	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/scripting/%s", id), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -205,13 +205,13 @@ func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Har
 }
 
 func (c *restClient) Register(ctx context.Context, proc jasper.Process) error {
-	return errors.New("cannot register a local process on a remote service")
+	return errors.New("cannot register local processes on a remote service")
 }
 
 func (c *restClient) getListOfProcesses(resp *http.Response) ([]jasper.Process, error) {
 	payload := []jasper.ProcessInfo{}
 	if err := gimlet.GetJSON(resp.Body, &payload); err != nil {
-		return nil, errors.Wrap(err, "problem reading process info from response")
+		return nil, errors.Wrap(err, "reading process info from response")
 	}
 
 	output := []jasper.Process{}
@@ -232,7 +232,7 @@ func (c *restClient) List(ctx context.Context, f options.Filter) ([]jasper.Proce
 
 	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/list/%s", string(f)), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -248,7 +248,7 @@ func (c *restClient) List(ctx context.Context, f options.Filter) ([]jasper.Proce
 func (c *restClient) Group(ctx context.Context, name string) ([]jasper.Process, error) {
 	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/list/group/%s", name), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -264,7 +264,7 @@ func (c *restClient) Group(ctx context.Context, name string) ([]jasper.Process, 
 func (c *restClient) getProcess(ctx context.Context, id string) (*http.Response, error) {
 	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/process/%s", id), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	return resp, nil
@@ -305,7 +305,7 @@ func (c *restClient) Clear(ctx context.Context) {
 	// should not really ever happen.
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/clear"), nil)
 	if err != nil {
-		grip.Debug(errors.Wrap(err, "request returned error"))
+		grip.Debug(errors.Wrap(err, "making request"))
 	}
 	defer resp.Body.Close()
 }
@@ -329,7 +329,7 @@ func (c *restClient) GetBuildloggerURLs(ctx context.Context, id string) ([]strin
 
 	urls := []string{}
 	if err = gimlet.GetJSON(resp.Body, &urls); err != nil {
-		return nil, errors.Wrap(err, "problem reading urls from response")
+		return nil, errors.Wrap(err, "reading URLs from response")
 	}
 
 	return urls, nil
@@ -344,7 +344,7 @@ func (c *restClient) GetLogStream(ctx context.Context, id string, count int) (ja
 
 	stream := jasper.LogStream{}
 	if err = gimlet.GetJSON(resp.Body, &stream); err != nil {
-		return jasper.LogStream{}, errors.Wrap(err, "problem reading logs from response")
+		return jasper.LogStream{}, errors.Wrap(err, "reading logs from response")
 	}
 
 	return stream, nil
@@ -353,12 +353,12 @@ func (c *restClient) GetLogStream(ctx context.Context, id string, count int) (ja
 func (c *restClient) DownloadFile(ctx context.Context, opts options.Download) error {
 	body, err := makeBody(opts)
 	if err != nil {
-		return errors.Wrap(err, "problem building request")
+		return errors.Wrap(err, "building request")
 	}
 
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/download"), body)
 	if err != nil {
-		return errors.Wrap(err, "problem downloading file")
+		return errors.Wrap(err, "downloading file")
 	}
 	defer resp.Body.Close()
 
@@ -411,13 +411,13 @@ func (c *restClient) WriteFile(ctx context.Context, opts options.WriteFile) erro
 	sendOpts := func(opts options.WriteFile) error {
 		body, err := makeBody(opts)
 		if err != nil {
-			return errors.Wrap(err, "problem building request")
+			return errors.Wrap(err, "building request")
 		}
 		resp, err := c.doRequest(ctx, http.MethodPut, c.getURL("/file/write"), body)
 		if err != nil {
-			return errors.Wrap(err, "problem writing file")
+			return errors.Wrap(err, "writing file")
 		}
-		return errors.Wrap(resp.Body.Close(), "problem closing response body")
+		return errors.Wrap(resp.Body.Close(), "closing response body")
 	}
 
 	return opts.WriteBufferedContent(sendOpts)
@@ -431,7 +431,7 @@ func (c *restClient) SendMessages(ctx context.Context, lp options.LoggingPayload
 
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/logging/id/%s/send", lp.LoggerID), body)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 

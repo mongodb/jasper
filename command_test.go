@@ -511,7 +511,6 @@ func TestCommandImplementation(t *testing.T) {
 							require.NoError(t, cmd.Run(ctx))
 							assert.True(t, runFuncCalled)
 						},
-						// "": func(ctx context.Context, t *testing.T, cmd Command) {},
 					} {
 						t.Run(name, func(t *testing.T) {
 							ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)

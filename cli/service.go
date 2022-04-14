@@ -170,7 +170,7 @@ func validateLimits(flagNames ...string) func(*cli.Context) error {
 		for _, flagName := range flagNames {
 			l := c.Int(flagName)
 			if l < -1 {
-				catcher.Errorf("%s is not a valid limit value for %s", l, flagName)
+				catcher.Errorf("'%s' is not a valid limit value for flag '%s'", l, flagName)
 			}
 		}
 		return catcher.Resolve()
@@ -182,7 +182,7 @@ func validateLogLevel(flagName string) func(*cli.Context) error {
 		l := c.String(logLevelFlagName)
 		priority := level.FromString(l)
 		if !priority.IsValid() {
-			return errors.Errorf("%s is not a valid log level", l)
+			return errors.Errorf("'%s' is not a valid log level", l)
 		}
 		return nil
 	}
@@ -200,7 +200,7 @@ func makeLogger(c *cli.Context) *options.LoggerConfig {
 		if tokenFilePath := c.String(splunkTokenFilePathFlagName); tokenFilePath != "" {
 			token, err := ioutil.ReadFile(tokenFilePath)
 			if err != nil {
-				grip.Error(errors.Wrapf(err, "could not read splunk token file from path '%s'", tokenFilePath))
+				grip.Error(errors.Wrapf(err, "could not read Splunk token file from path '%s'", tokenFilePath))
 				return nil
 			}
 			info.Token = string(token)
@@ -334,7 +334,7 @@ func makeUserEnvironment(user string, vars []string) map[string]string { //nolin
 	file := "/etc/passwd"
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
-		grip.Debug(message.WrapErrorf(err, "could not read file '%s'", file))
+		grip.Debug(message.WrapErrorf(err, "reading file '%s' to populate environment variables", file))
 		return env
 	}
 
@@ -360,7 +360,7 @@ func makeUserEnvironment(user string, vars []string) map[string]string { //nolin
 			}
 		}
 	}
-	grip.Debug(message.WrapErrorf(err, "could not find user environment variables in file '%s'", file))
+	grip.Debug(message.WrapErrorf(err, "finding user environment variables in file '%s'", file))
 	return env
 }
 
@@ -388,25 +388,25 @@ func serviceCommand(cmd string, operation serviceOperation) cli.Command {
 func serviceForceReinstall(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		stopErr := message.WrapError(svc.Stop(), message.Fields{
-			"msg":    "error stopping service",
-			"cmd":    "force-reinstall",
-			"config": fmt.Sprintf("%#v", *config),
+			"message": "error stopping service",
+			"cmd":     "force-reinstall",
+			"config":  fmt.Sprintf("%#v", *config),
 		})
 		uninstallErr := message.WrapError(svc.Uninstall(), message.Fields{
-			"msg":    "error uninstalling service",
-			"cmd":    "force-reinstall",
-			"config": fmt.Sprintf("%#v", *config),
+			"message": "error uninstalling service",
+			"cmd":     "force-reinstall",
+			"config":  fmt.Sprintf("%#v", *config),
 		})
 
 		catcher := grip.NewBasicCatcher()
-		catcher.Wrap(svc.Install(), "error installing service")
-		catcher.Wrap(svc.Start(), "error starting service")
+		catcher.Wrap(svc.Install(), "installing service")
+		catcher.Wrap(svc.Start(), "starting service")
 		if catcher.HasErrors() {
 			grip.Debug(stopErr)
 			grip.Debug(uninstallErr)
 		}
 		return catcher.Resolve()
-	}), "error force reinstalling service")
+	}), "force reinstalling service")
 }
 
 // serviceInstall registers the service with the given configuration in the
@@ -414,42 +414,42 @@ func serviceForceReinstall(daemon baobab.Interface, config *baobab.Config) error
 func serviceInstall(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		return svc.Install()
-	}), "error installing service")
+	}), "installing service")
 }
 
 // serviceUninstall removes the service from the service manager.
 func serviceUninstall(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		return svc.Uninstall()
-	}), "error uninstalling service")
+	}), "uninstalling service")
 }
 
 // serviceStart begins the service if it has not already started.
 func serviceStart(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		return svc.Start()
-	}), "error starting service")
+	}), "starting service")
 }
 
 // serviceStop ends the running service.
 func serviceStop(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		return svc.Stop()
-	}), "error stopping service")
+	}), "stopping service")
 }
 
 // serviceRestart stops the existing service and starts it again.
 func serviceRestart(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		return svc.Restart()
-	}), "error restarting service")
+	}), "restarting service")
 }
 
 // serviceRun runs the service in the foreground.
 func serviceRun(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		return svc.Run()
-	}), "error running service")
+	}), "running service")
 }
 
 // serviceStatus gets the current status of the running service.
@@ -457,10 +457,10 @@ func serviceStatus(daemon baobab.Interface, config *baobab.Config) error {
 	return errors.Wrap(withService(daemon, config, func(svc baobab.Service) error {
 		status, err := svc.Status()
 		if err != nil {
-			return errors.Wrapf(writeOutput(os.Stdout, &ServiceStatusResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "error getting status from service"))}), "error writing to standard output")
+			return errors.Wrapf(writeOutput(os.Stdout, &ServiceStatusResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting status from service"))}), "writing to standard output")
 		}
-		return errors.Wrapf(writeOutput(os.Stdout, &ServiceStatusResponse{Status: statusToString(status), OutcomeResponse: *makeOutcomeResponse(nil)}), "error writing status to standard output")
-	}), "error getting service status")
+		return errors.Wrapf(writeOutput(os.Stdout, &ServiceStatusResponse{Status: statusToString(status), OutcomeResponse: *makeOutcomeResponse(nil)}), "writing status to standard output")
+	}), "getting service status")
 }
 
 // ServiceStatus represents the state of the service.

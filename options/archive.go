@@ -45,11 +45,8 @@ func (opts Archive) Validate() error {
 
 	catcher := grip.NewBasicCatcher()
 
-	if !filepath.IsAbs(opts.TargetPath) {
-		catcher.Add(errors.New("download path must be an absolute path"))
-	}
-
-	catcher.Add(opts.Format.Validate())
+	catcher.ErrorfWhen(!filepath.IsAbs(opts.TargetPath), "download path '%s' must be an absolute path", opts.TargetPath)
+	catcher.Wrap(opts.Format.Validate(), "invalid archive format")
 
 	return catcher.Resolve()
 }

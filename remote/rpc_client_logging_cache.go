@@ -21,7 +21,7 @@ type rpcLoggingCache struct {
 func (lc *rpcLoggingCache) Create(id string, opts *options.Output) (*options.CachedLogger, error) {
 	args, err := internal.ConvertLoggingCreateArgs(id, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem converting create args")
+		return nil, errors.Wrap(err, "converting logging create args")
 	}
 	resp, err := lc.client.LoggingCacheCreate(lc.ctx, args)
 	if err != nil {
@@ -46,7 +46,7 @@ func (lc *rpcLoggingCache) Get(id string) (*options.CachedLogger, error) {
 		return nil, err
 	}
 	if !resp.Outcome.Success {
-		return nil, errors.Errorf("failed to get logger: %s", resp.Outcome.Text)
+		return nil, errors.Errorf("getting cached logger: %s", resp.Outcome.Text)
 	}
 
 	out, err := resp.Export()
@@ -63,7 +63,7 @@ func (lc *rpcLoggingCache) Remove(id string) error {
 		return err
 	}
 	if !resp.Success {
-		return errors.Errorf("failed to remove: %s", resp.Text)
+		return errors.Errorf("removing cached logger: %s", resp.Text)
 	}
 
 	return nil
@@ -76,7 +76,7 @@ func (lc *rpcLoggingCache) CloseAndRemove(ctx context.Context, id string) error 
 	}
 
 	if !resp.Success {
-		return errors.Errorf("failed to close and remove: %s", resp.Text)
+		return errors.Errorf("closing and removing cached logger: %s", resp.Text)
 	}
 	return nil
 }
@@ -87,7 +87,7 @@ func (lc *rpcLoggingCache) Clear(ctx context.Context) error {
 		return err
 	}
 	if !resp.Success {
-		return errors.Errorf("failed to clear the logging cache: %s", resp.Text)
+		return errors.Errorf("clearing logging cache: %s", resp.Text)
 	}
 
 	return nil
@@ -99,7 +99,7 @@ func (lc *rpcLoggingCache) Prune(ts time.Time) error {
 		return err
 	}
 	if !resp.Success {
-		return errors.Errorf("failed to prune logging cache: %s", resp.Text)
+		return errors.Errorf("pruning logging cache: %s", resp.Text)
 	}
 
 	return nil
@@ -111,7 +111,7 @@ func (lc *rpcLoggingCache) Len() (int, error) {
 		return -1, err
 	}
 	if !resp.Outcome.Success {
-		return -1, errors.Errorf("failed to get logging cache length: %s", resp.Outcome.Text)
+		return -1, errors.Errorf("getting logging cache length: %s", resp.Outcome.Text)
 	}
 
 	return int(resp.Len), nil

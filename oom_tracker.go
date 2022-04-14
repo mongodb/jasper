@@ -34,7 +34,7 @@ func isSudo(ctx context.Context) (bool, error) {
 		case *exec.ExitError:
 			return false, nil
 		default:
-			return false, errors.Wrap(err, "error executing sudo date")
+			return false, errors.Wrap(err, "executing sudo permissions check")
 		}
 	}
 
@@ -50,7 +50,7 @@ type logAnalyzer struct {
 func (a *logAnalyzer) analyzeKernelLog(ctx context.Context) ([]string, []int, error) {
 	sudo, err := isSudo(ctx)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error checking sudo")
+		return nil, nil, errors.Wrap(err, "checking sudo")
 	}
 
 	var cmd *exec.Cmd
@@ -61,11 +61,11 @@ func (a *logAnalyzer) analyzeKernelLog(ctx context.Context) ([]string, []int, er
 	}
 	logPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error creating StdoutPipe for log command")
+		return nil, nil, errors.Wrap(err, "creating standard output pipe for log command")
 	}
 	scanner := bufio.NewScanner(logPipe)
 	if err := cmd.Start(); err != nil {
-		return nil, nil, errors.Wrap(err, "Error starting log command")
+		return nil, nil, errors.Wrap(err, "starting log command")
 	}
 
 	lines := []string{}
@@ -86,6 +86,6 @@ func (a *logAnalyzer) analyzeKernelLog(ctx context.Context) ([]string, []int, er
 		return nil, nil, errors.New("request cancelled")
 	case errs <- cmd.Wait():
 		err = <-errs
-		return lines, pids, errors.Wrap(err, "Error waiting for log command")
+		return lines, pids, errors.Wrap(err, "waiting for log command")
 	}
 }

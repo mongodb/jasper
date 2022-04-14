@@ -33,7 +33,7 @@ func NewMDBClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) 
 	dialer := net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not establish connection to %s service at address %s", addr.Network(), addr.String())
+		return nil, errors.Wrapf(err, "establishing connection to '%s' service at address '%s'", addr.Network(), addr.String())
 	}
 	timeout := reqTimeout
 	if timeout.Seconds() == 0 {
@@ -45,21 +45,21 @@ func NewMDBClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) 
 func (c *mdbClient) ID() string {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &idRequest{ID: 1})
 	if err != nil {
-		grip.Warning(message.WrapError(err, "could not create request"))
+		grip.Warning(message.WrapError(err, "creating request"))
 		return ""
 	}
 	msg, err := c.doRequest(context.Background(), req)
 	if err != nil {
-		grip.Warning(message.WrapError(err, "failed during request"))
+		grip.Warning(message.WrapError(err, "making request"))
 		return ""
 	}
 	var resp idResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		grip.Warning(message.WrapError(err, "could not read response"))
+		grip.Warning(message.WrapError(err, "converting wire message to response"))
 		return ""
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		grip.Warning(message.WrapError(err, "error in response"))
+		grip.Warning(message.WrapError(err, "response contained error"))
 		return ""
 	}
 	return resp.ID
@@ -68,18 +68,18 @@ func (c *mdbClient) ID() string {
 func (c *mdbClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, createProcessRequest{Options: *opts})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 	var resp infoResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	return &mdbProcess{info: resp.Info, doRequest: c.doRequest}, nil
 }
@@ -91,7 +91,7 @@ func (c *mdbClient) CreateCommand(ctx context.Context) *jasper.Command {
 func (c *mdbClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
 	marshalledOpts, err := bson.Marshal(opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem marshalling options")
+		return nil, errors.Wrap(err, "marshalling options to BSON")
 	}
 
 	r := &scriptingCreateRequest{}
@@ -99,21 +99,21 @@ func (c *mdbClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 	r.Params.Options = marshalledOpts
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	resp := &scriptingCreateResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 
 	if err = resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	return &mdbScriptingHarness{
 		client: c,
@@ -124,21 +124,21 @@ func (c *mdbClient) CreateScripting(ctx context.Context, opts options.ScriptingH
 func (c *mdbClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &scriptingGetRequest{ID: id})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 
 	resp := &shell.ErrorResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 
 	if err = resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	return &mdbScriptingHarness{
 		client: c,
@@ -156,20 +156,20 @@ func (c *mdbClient) LoggingCache(ctx context.Context) jasper.LoggingCache {
 func (c *mdbClient) SendMessages(ctx context.Context, lp options.LoggingPayload) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &sendMessagesRequest{Payload: lp})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 
 	resp := &shell.ErrorResponse{}
 	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
 
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (c *mdbClient) Register(ctx context.Context, proc jasper.Process) error {
@@ -179,18 +179,18 @@ func (c *mdbClient) Register(ctx context.Context, proc jasper.Process) error {
 func (c *mdbClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, listRequest{Filter: f})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 	var resp infosResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	infos := resp.Infos
 	procs := make([]jasper.Process, 0, len(infos))
@@ -203,18 +203,18 @@ func (c *mdbClient) List(ctx context.Context, f options.Filter) ([]jasper.Proces
 func (c *mdbClient) Group(ctx context.Context, tag string) ([]jasper.Process, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, groupRequest{Tag: tag})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 	var resp infosResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	infos := resp.Infos
 	procs := make([]jasper.Process, 0, len(infos))
@@ -227,18 +227,18 @@ func (c *mdbClient) Group(ctx context.Context, tag string) ([]jasper.Process, er
 func (c *mdbClient) Get(ctx context.Context, id string) (jasper.Process, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &getProcessRequest{ID: id})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 	var resp infoResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	info := resp.Info
 	return &mdbProcess{info: info, doRequest: c.doRequest}, nil
@@ -247,52 +247,52 @@ func (c *mdbClient) Get(ctx context.Context, id string) (jasper.Process, error) 
 func (c *mdbClient) Clear(ctx context.Context) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &clearRequest{Clear: 1})
 	if err != nil {
-		grip.Warning(message.WrapError(err, "could not create request"))
+		grip.Warning(message.WrapError(err, "creating request"))
 		return
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		grip.Warning(message.WrapError(err, "failed during request"))
+		grip.Warning(message.WrapError(err, "making request"))
 		return
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		grip.Warning(message.WrapError(shell.MessageToResponse(msg, &resp), "could not read response"))
+		grip.Warning(message.WrapError(shell.MessageToResponse(msg, &resp), "converting wire message to response"))
 	}
-	grip.Warning(message.WrapError(resp.SuccessOrError(), "error in response"))
+	grip.Warning(message.WrapError(resp.SuccessOrError(), "response contained error"))
 }
 
 func (c *mdbClient) Close(ctx context.Context) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &closeRequest{Close: 1})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (c *mdbClient) WriteFile(ctx context.Context, opts options.WriteFile) error {
 	sendOpts := func(opts options.WriteFile) error {
 		req, err := shell.RequestToMessage(mongowire.OP_QUERY, writeFileRequest{Options: opts})
 		if err != nil {
-			return errors.Wrap(err, "could not create request")
+			return errors.Wrap(err, "creating request")
 		}
 		msg, err := c.doRequest(ctx, req)
 		if err != nil {
-			return errors.Wrap(err, "failed during request")
+			return errors.Wrap(err, "making request")
 		}
 		var resp shell.ErrorResponse
 		if err := shell.MessageToResponse(msg, &resp); err != nil {
-			return errors.Wrap(err, "could not read response")
+			return errors.Wrap(err, "converting wire message to response")
 		}
-		return errors.Wrap(resp.SuccessOrError(), "error in response")
+		return errors.Wrap(resp.SuccessOrError(), "response contained error")
 	}
 	return opts.WriteBufferedContent(sendOpts)
 }
@@ -306,49 +306,49 @@ func (c *mdbClient) CloseConnection() error {
 func (c *mdbClient) ConfigureCache(ctx context.Context, opts options.Cache) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, configureCacheRequest{Options: opts})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (c *mdbClient) DownloadFile(ctx context.Context, opts options.Download) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, downloadFileRequest{Options: opts})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (c *mdbClient) DownloadMongoDB(ctx context.Context, opts options.MongoDBDownload) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, downloadMongoDBRequest{Options: opts})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (c *mdbClient) GetLogStream(ctx context.Context, id string, count int) (jasper.LogStream, error) {
@@ -357,18 +357,18 @@ func (c *mdbClient) GetLogStream(ctx context.Context, id string, count int) (jas
 	r.Params.Count = count
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return jasper.LogStream{}, errors.Wrap(err, "could not create request")
+		return jasper.LogStream{}, errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return jasper.LogStream{}, errors.Wrap(err, "failed during request")
+		return jasper.LogStream{}, errors.Wrap(err, "making request")
 	}
 	var resp getLogStreamResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return jasper.LogStream{}, errors.Wrap(err, "could not read response)")
+		return jasper.LogStream{}, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return jasper.LogStream{}, errors.Wrap(err, "error in response")
+		return jasper.LogStream{}, errors.Wrap(err, "response contained error")
 	}
 	return resp.LogStream, nil
 }
@@ -376,18 +376,18 @@ func (c *mdbClient) GetLogStream(ctx context.Context, id string, count int) (jas
 func (c *mdbClient) GetBuildloggerURLs(ctx context.Context, id string) ([]string, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, getBuildloggerURLsRequest{ID: id})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 	var resp getBuildloggerURLsResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "could not read response)")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	return resp.URLs, nil
 }
@@ -395,17 +395,17 @@ func (c *mdbClient) GetBuildloggerURLs(ctx context.Context, id string) ([]string
 func (c *mdbClient) SignalEvent(ctx context.Context, name string) error {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, signalEventRequest{Name: name})
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := c.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "could not read response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 // doRequest sends the given request and reads the response.
@@ -413,11 +413,11 @@ func (c *mdbClient) doRequest(ctx context.Context, req mongowire.Message) (mongo
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	if err := mongowire.SendMessage(ctx, req, c.conn); err != nil {
-		return nil, errors.Wrap(err, "problem sending request")
+		return nil, errors.Wrap(err, "sending request message")
 	}
 	msg, err := mongowire.ReadMessage(ctx, c.conn)
 	if err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "reading response message")
 	}
 	return msg, nil
 }

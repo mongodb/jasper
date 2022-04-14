@@ -36,7 +36,7 @@ func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLib
 	if trackProcs {
 		tracker, err := NewProcessTracker(m.id)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to make process tracker")
+			return nil, errors.Wrap(err, "making process tracker")
 		}
 		m.tracker = tracker
 	}
@@ -56,7 +56,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 
 	proc, err := NewProcess(ctx, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem constructing process")
+		return nil, errors.Wrap(err, "constructing process")
 	}
 
 	grip.Warning(message.WrapError(m.loggers.Put(proc.ID(), &options.CachedLogger{
@@ -78,7 +78,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.Add(proc.Info(ctx)); err != nil {
-			grip.Warning(message.WrapError(err, "problem adding process to tracker during process creation"))
+			grip.Warning(message.WrapError(err, "adding process to tracker during process creation"))
 		}
 	}
 
@@ -110,13 +110,13 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.Add(proc.Info(ctx)); err != nil {
-			grip.Warning(message.WrapError(err, "problem adding process to tracker during process registration"))
+			grip.Warning(errors.Wrap(err, "adding process to tracker during process registration"))
 		}
 	}
 
 	_, ok := m.procs[id]
 	if ok {
-		return errors.New("cannot register process that exists")
+		return errors.New("cannot register process that already exists")
 	}
 
 	m.procs[id] = proc
@@ -199,7 +199,7 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 
 	if m.tracker != nil {
 		if err := m.tracker.Cleanup(); err != nil {
-			grip.Warning(message.WrapError(err, "process tracker did not clean up all processes successfully"))
+			grip.Warning(errors.Wrap(err, "cleaning up tracked processes"))
 		} else {
 			return nil
 		}
@@ -238,5 +238,5 @@ func (m *basicProcessManager) WriteFile(ctx context.Context, opts options.WriteF
 		return errors.Wrap(err, "invalid write options")
 	}
 
-	return errors.Wrapf(opts.DoWrite(), "error writing file '%s'", opts.Path)
+	return errors.Wrapf(opts.DoWrite(), "writing file '%s'", opts.Path)
 }

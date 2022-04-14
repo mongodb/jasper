@@ -29,7 +29,7 @@ func NewSynchronizedManager(trackProcs bool) (Manager, error) {
 func NewSSHLibrarySynchronizedManager(trackProcs bool) (Manager, error) {
 	basicManager, err := newBasicProcessManager(map[string]Process{}, trackProcs, true)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem constructing underlying manager")
+		return nil, errors.Wrap(err, "creating underlying basic process manager")
 	}
 	return &synchronizedProcessManager{manager: basicManager}, nil
 }

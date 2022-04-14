@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package jasper
@@ -106,7 +107,6 @@ func TestWindowsProcessTracker(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, 1, int(info.NumberOfAssignedProcesses))
 		},
-		// "": func(ctx context.Context, t *testing.T, tracker *windowsProcessTracker) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
 			if _, runningInEvgAgent := os.LookupEnv("EVR_TASK_ID"); runningInEvgAgent {

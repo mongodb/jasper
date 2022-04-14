@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package jasper
@@ -203,7 +204,6 @@ func TestLinuxProcessTrackerWithEnvironmentVariables(t *testing.T) {
 					assert.NoError(t, tracker.Cleanup())
 					assert.True(t, proc.Running(ctx))
 				},
-				// "": func(ctx, context.Context, t *testing.T, tracker *linuxProcessTracker, envVarName string, envVarValue string) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)

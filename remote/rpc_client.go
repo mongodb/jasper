@@ -37,7 +37,7 @@ func NewRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentia
 	if creds != nil {
 		tlsConf, err := creds.Resolve()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not resolve credentials into TLS config")
+			return nil, errors.Wrap(err, "resolving credentials into TLS config")
 		}
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConf)))
 	} else {
@@ -46,7 +46,7 @@ func NewRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Credentia
 
 	conn, err := grpc.DialContext(ctx, addr.String(), opts...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not establish connection to %s service at address %s", addr.Network(), addr.String())
+		return nil, errors.Wrapf(err, "establishing connection to '%s' service at address '%s'", addr.Network(), addr.String())
 	}
 
 	return newRPCClient(conn), nil
@@ -62,7 +62,7 @@ func NewRPCClientWithFile(ctx context.Context, addr net.Addr, filePath string) (
 		var err error
 		creds, err = certdepot.NewCredentialsFromFile(filePath)
 		if err != nil {
-			return nil, errors.Wrap(err, "error getting credentials from file")
+			return nil, errors.Wrap(err, "getting credentials from file")
 		}
 	}
 
@@ -88,7 +88,7 @@ func (c *rpcClient) ID() string {
 func (c *rpcClient) CreateProcess(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 	convertedOpts, err := internal.ConvertCreateOptions(opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem converting create options")
+		return nil, errors.Wrap(err, "converting create options")
 	}
 	proc, err := c.client.Create(ctx, convertedOpts)
 	if err != nil {
@@ -105,7 +105,7 @@ func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
 	seOpts, err := internal.ConvertScriptingOptions(opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid scripting options")
+		return nil, errors.Wrap(err, "converting scripting options")
 	}
 	seid, err := c.client.ScriptingHarnessCreate(ctx, seOpts)
 	if err != nil {
@@ -134,7 +134,7 @@ func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
 func (c *rpcClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
 	procs, err := c.client.List(ctx, internal.ConvertFilter(f))
 	if err != nil {
-		return nil, errors.Wrap(err, "problem getting streaming client")
+		return nil, errors.Wrap(err, "getting streaming client")
 	}
 
 	out := []jasper.Process{}
@@ -143,7 +143,7 @@ func (c *rpcClient) List(ctx context.Context, f options.Filter) ([]jasper.Proces
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, errors.Wrap(err, "problem getting list")
+			return nil, errors.Wrap(err, "receiving process list")
 		}
 
 		out = append(out, &rpcProcess{
@@ -158,7 +158,7 @@ func (c *rpcClient) List(ctx context.Context, f options.Filter) ([]jasper.Proces
 func (c *rpcClient) Group(ctx context.Context, name string) ([]jasper.Process, error) {
 	procs, err := c.client.Group(ctx, &internal.TagName{Value: name})
 	if err != nil {
-		return nil, errors.Wrap(err, "problem getting streaming client")
+		return nil, errors.Wrap(err, "getting streaming client")
 	}
 
 	out := []jasper.Process{}
@@ -167,7 +167,7 @@ func (c *rpcClient) Group(ctx context.Context, name string) ([]jasper.Process, e
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, errors.Wrap(err, "problem getting group")
+			return nil, errors.Wrap(err, "receiving process list")
 		}
 
 		out = append(out, &rpcProcess{
@@ -182,7 +182,7 @@ func (c *rpcClient) Group(ctx context.Context, name string) ([]jasper.Process, e
 func (c *rpcClient) Get(ctx context.Context, name string) (jasper.Process, error) {
 	info, err := c.client.Get(ctx, &internal.JasperProcessID{Value: name})
 	if err != nil {
-		return nil, errors.Wrap(err, "problem finding process")
+		return nil, errors.Wrap(err, "finding process")
 	}
 
 	return &rpcProcess{client: c.client, info: info}, nil
@@ -287,7 +287,7 @@ func (c *rpcClient) SignalEvent(ctx context.Context, name string) error {
 func (c *rpcClient) WriteFile(ctx context.Context, jopts options.WriteFile) error {
 	stream, err := c.client.WriteFile(ctx)
 	if err != nil {
-		return errors.Wrap(err, "error getting client stream to write file")
+		return errors.Wrap(err, "getting client stream")
 	}
 
 	sendOpts := func(jopts options.WriteFile) error {
@@ -297,8 +297,8 @@ func (c *rpcClient) WriteFile(ctx context.Context, jopts options.WriteFile) erro
 
 	if err = jopts.WriteBufferedContent(sendOpts); err != nil {
 		catcher := grip.NewBasicCatcher()
-		catcher.Wrapf(err, "error reading from content source")
-		catcher.Wrapf(stream.CloseSend(), "error closing send stream after error during read: %s", err.Error())
+		catcher.Wrapf(err, "reading from content source")
+		catcher.Wrapf(stream.CloseSend(), "closing send stream after error during read: %s", err.Error())
 		return catcher.Resolve()
 	}
 

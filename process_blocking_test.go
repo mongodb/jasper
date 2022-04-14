@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/internal/executor"
@@ -203,7 +204,7 @@ func TestBlockingProcess(t *testing.T) {
 					go proc.reactor(ctx, deadline, cmd)
 					_, err = proc.Wait(cctx)
 					require.Error(t, err)
-					assert.Contains(t, err.Error(), "operation canceled")
+					assert.True(t, utility.IsContextError(errors.Cause(err)))
 				},
 				"WaitShouldReturnNilForSuccessfulCommandsWithoutIDs": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.info.Options.Args = []string{"sleep", "10"}

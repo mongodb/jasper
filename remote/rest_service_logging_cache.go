@@ -20,7 +20,7 @@ func (s *Service) loggingCacheCreate(rw http.ResponseWriter, r *http.Request) {
 	if err := gimlet.GetJSON(r.Body, opts); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "problem parsing options").Error(),
+			Message:    errors.Wrap(err, "parsing options").Error(),
 		})
 		return
 	}

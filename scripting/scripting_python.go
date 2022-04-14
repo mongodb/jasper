@@ -82,7 +82,7 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 		Content: []byte(script),
 	}
 	if err := e.manager.WriteFile(ctx, wo); err != nil {
-		return errors.Wrap(err, "problem writing script file")
+		return errors.Wrap(err, "writing script file")
 	}
 
 	return e.manager.CreateCommand(ctx).
@@ -120,10 +120,10 @@ func (e *pythonEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.VirtualEnvPath).Run(ctx),
-			"problem removing remote python environment '%s'", e.opts.VirtualEnvPath)
+			"removing remote Python environment '%s'", e.opts.VirtualEnvPath)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.VirtualEnvPath),
-			"problem removing local python environment '%s'", e.opts.VirtualEnvPath)
+			"removing local Python environment '%s'", e.opts.VirtualEnvPath)
 	}
 }
 
@@ -148,7 +148,7 @@ func (e *pythonEnvironment) Test(ctx context.Context, dir string, tests ...TestO
 
 		err := e.manager.CreateCommand(ctx).Directory(dir).Environment(e.opts.Environment).SetOutputOptions(e.opts.Output).Add(args).Run(ctx)
 
-		catcher.Wrapf(err, "python test %s", t)
+		catcher.Wrapf(err, "Python test '%s'", t.Name)
 
 		out[idx] = t.getResult(ctx, err, startAt)
 	}

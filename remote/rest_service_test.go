@@ -59,94 +59,94 @@ func TestRESTService(t *testing.T) {
 
 			_, err := client.List(ctx, options.All)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = client.CreateProcess(ctx, nil)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = client.Group(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = client.Get(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			err = client.Close(ctx)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = client.getProcessInfo(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = client.GetLogStream(ctx, "foo", 1)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = client.GetBuildloggerURLs(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			err = client.DownloadFile(ctx, options.Download{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			err = client.DownloadMongoDB(ctx, options.MongoDBDownload{})
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			err = client.ConfigureCache(ctx, options.Cache{})
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 		},
 		"ClientRequestsFailWithMalformedURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "http;//", 1)
 
 			_, err := client.List(ctx, options.All)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = client.Group(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = client.CreateProcess(ctx, nil)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = client.Get(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			err = client.Close(ctx)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = client.getProcessInfo(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = client.GetLogStream(ctx, "foo", 1)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = client.GetBuildloggerURLs(ctx, "foo")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			err = client.DownloadFile(ctx, options.Download{URL: "foo", Path: "bar"})
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			err = client.DownloadMongoDB(ctx, options.MongoDBDownload{})
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			err = client.ConfigureCache(ctx, options.Cache{})
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 		},
 		"ProcessMethodsWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "://", 1)
@@ -158,11 +158,11 @@ func TestRESTService(t *testing.T) {
 
 			err := proc.Signal(ctx, syscall.SIGTERM)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			_, err = proc.Wait(ctx)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 
 			proc.Tag("a")
 
@@ -173,7 +173,7 @@ func TestRESTService(t *testing.T) {
 
 			err = proc.RegisterSignalTriggerID(ctx, jasper.CleanTerminationSignalTrigger)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem building request")
+			assert.Contains(t, err.Error(), "building request")
 		},
 		"ProcessRequestsFailWithBadURL": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			client.prefix = strings.Replace(client.prefix, "http://", "http;//", 1)
@@ -185,11 +185,11 @@ func TestRESTService(t *testing.T) {
 
 			err := proc.Signal(ctx, syscall.SIGTERM)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			_, err = proc.Wait(ctx)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 
 			proc.Tag("a")
 
@@ -200,7 +200,7 @@ func TestRESTService(t *testing.T) {
 
 			err = proc.RegisterSignalTriggerID(ctx, jasper.CleanTerminationSignalTrigger)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "problem making request")
+			assert.Contains(t, err.Error(), "making request")
 		},
 		"CheckSafetyOfTagMethods": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			proc := &restProcess{
@@ -277,7 +277,7 @@ func TestRESTService(t *testing.T) {
 			proc, err := client.CreateProcess(ctx, testoptions.TrueCreateOpts())
 			assert.Error(t, err)
 			assert.Nil(t, proc)
-			assert.Contains(t, err.Error(), "problem submitting request")
+			assert.Contains(t, err.Error(), "creating process")
 		},
 		"CreateFailsForTriggerReasons": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			srv.manager = &mock.Manager{
@@ -286,7 +286,7 @@ func TestRESTService(t *testing.T) {
 			proc, err := client.CreateProcess(ctx, testoptions.TrueCreateOpts())
 			require.Error(t, err)
 			assert.Nil(t, proc)
-			assert.Contains(t, err.Error(), "problem registering trigger")
+			assert.Contains(t, err.Error(), "registering trigger")
 		},
 		"MetricsPopulatedForValidProcess": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			id := "foo"
@@ -347,7 +347,7 @@ func TestRESTService(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-			assert.Contains(t, handleError(resp).Error(), "problem converting signal 'f'")
+			assert.Contains(t, handleError(resp).Error(), "invalid signal")
 		},
 		"ServiceDownloadFileFailsWithInvalidOptions": func(ctx context.Context, t *testing.T, srv *Service, client *restClient) {
 			body, err := makeBody(struct {

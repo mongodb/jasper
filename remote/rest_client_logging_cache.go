@@ -25,7 +25,7 @@ func (lc *restLoggingCache) Create(id string, opts *options.Output) (*options.Ca
 
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodPost, lc.client.getURL("/logging/id/%s", id), body)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -48,7 +48,7 @@ func (lc *restLoggingCache) Put(id string, cl *options.CachedLogger) error {
 func (lc *restLoggingCache) Get(id string) (*options.CachedLogger, error) {
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/id/%s", id), nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "request returned error")
+		return nil, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -66,7 +66,7 @@ func (lc *restLoggingCache) Get(id string) (*options.CachedLogger, error) {
 func (lc *restLoggingCache) Remove(id string) error {
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/id/%s", id), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -76,7 +76,7 @@ func (lc *restLoggingCache) Remove(id string) error {
 func (lc *restLoggingCache) CloseAndRemove(ctx context.Context, id string) error {
 	resp, err := lc.client.doRequest(ctx, http.MethodDelete, lc.client.getURL("/logging/id/%s/close", id), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -86,7 +86,7 @@ func (lc *restLoggingCache) CloseAndRemove(ctx context.Context, id string) error
 func (lc *restLoggingCache) Clear(ctx context.Context) error {
 	resp, err := lc.client.doRequest(ctx, http.MethodDelete, lc.client.getURL("/logging/clear"), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -96,7 +96,7 @@ func (lc *restLoggingCache) Clear(ctx context.Context) error {
 func (lc *restLoggingCache) Prune(ts time.Time) error {
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodDelete, lc.client.getURL("/logging/prune/%s", ts.Format(time.RFC3339)), nil)
 	if err != nil {
-		return errors.Wrap(err, "request returned error")
+		return errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 
@@ -106,7 +106,7 @@ func (lc *restLoggingCache) Prune(ts time.Time) error {
 func (lc *restLoggingCache) Len() (int, error) {
 	resp, err := lc.client.doRequest(lc.ctx, http.MethodGet, lc.client.getURL("/logging/len"), nil)
 	if err != nil {
-		return -1, errors.Wrap(err, "request returned error")
+		return -1, errors.Wrap(err, "making request")
 	}
 	defer resp.Body.Close()
 

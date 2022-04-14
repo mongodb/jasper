@@ -128,50 +128,50 @@ func (p *mdbProcess) Signal(ctx context.Context, sig syscall.Signal) error {
 	r.Params.Signal = int(sig)
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := p.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrapf(err, "failed to get signal response for process %s", p.ID())
+		return errors.Wrapf(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (p *mdbProcess) Wait(ctx context.Context) (int, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, waitRequest{p.ID()})
 	if err != nil {
-		return -1, errors.Wrap(err, "could not create request")
+		return -1, errors.Wrap(err, "creating request")
 	}
 	msg, err := p.doRequest(ctx, req)
 	if err != nil {
-		return -1, errors.Wrap(err, "failed during request")
+		return -1, errors.Wrap(err, "making request")
 	}
 	var resp waitResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return -1, errors.Wrap(err, "failed to get wait response for process %s")
+		return -1, errors.Wrap(err, "converting wire message to response")
 	}
-	return resp.ExitCode, errors.Wrap(resp.SuccessOrError(), "error in response")
+	return resp.ExitCode, errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (p *mdbProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, respawnRequest{ID: p.ID()})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "creating request")
 	}
 	msg, err := p.doRequest(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed during request")
+		return nil, errors.Wrap(err, "making request")
 	}
 	var resp infoResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return nil, errors.Wrap(err, "problem with received response")
+		return nil, errors.Wrap(err, "converting wire message to response")
 	}
 	if err := resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "error in response")
+		return nil, errors.Wrap(err, "response contained error")
 	}
 	return &mdbProcess{info: resp.Info, doRequest: p.doRequest}, nil
 }
@@ -190,17 +190,17 @@ func (p *mdbProcess) RegisterSignalTriggerID(ctx context.Context, sigID jasper.S
 	r.Params.SignalTriggerID = sigID
 	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
 	if err != nil {
-		return errors.Wrap(err, "could not create request")
+		return errors.Wrap(err, "creating request")
 	}
 	msg, err := p.doRequest(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "failed during request")
+		return errors.Wrap(err, "making request")
 	}
 	var resp shell.ErrorResponse
 	if err := shell.MessageToResponse(msg, &resp); err != nil {
-		return errors.Wrap(err, "problem with received response")
+		return errors.Wrap(err, "converting wire message to response")
 	}
-	return errors.Wrap(resp.SuccessOrError(), "error in response")
+	return errors.Wrap(resp.SuccessOrError(), "response contained error")
 }
 
 func (p *mdbProcess) Tag(tag string) {

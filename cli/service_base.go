@@ -64,9 +64,9 @@ func (d *baseDaemon) setup(ctx context.Context, cancel context.CancelFunc) error
 func (d *baseDaemon) setupLogger(opts *options.LoggerConfig) error {
 	sender, err := opts.Resolve()
 	if err != nil {
-		return errors.Wrap(err, "could not configure logging")
+		return errors.Wrap(err, "configuring logger")
 	}
-	return errors.Wrap(grip.SetSender(sender), "could not set grip logger")
+	return errors.Wrap(grip.SetSender(sender), "setting Grip logger")
 }
 
 // checkPreconditions runs the daemon's precondition commands.

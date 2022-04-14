@@ -136,11 +136,11 @@ func (p *sshProcess) Respawn(ctx context.Context) (jasper.Process, error) {
 }
 
 func (p *sshProcess) RegisterTrigger(ctx context.Context, t jasper.ProcessTrigger) error {
-	return errors.New("cannot register triggers on remote processes")
+	return errors.New("cannot register in-memory triggers on remote processes")
 }
 
 func (p *sshProcess) RegisterSignalTrigger(ctx context.Context, t jasper.SignalTrigger) error {
-	return errors.New("cannot register signal triggers on remote processes")
+	return errors.New("cannot register in-memory signal triggers on remote processes")
 }
 
 func (p *sshProcess) RegisterSignalTriggerID(ctx context.Context, sigID jasper.SignalTriggerID) error {

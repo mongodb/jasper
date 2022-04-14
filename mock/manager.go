@@ -163,7 +163,7 @@ func (m *Manager) Get(ctx context.Context, id string) (jasper.Process, error) {
 		}
 	}
 
-	return nil, errors.Errorf("proc with id '%s' not found", id)
+	return nil, errors.Errorf("process '%s' not found", id)
 }
 
 // Clear removes all processes from Procs.

@@ -92,7 +92,7 @@ func (e *execSSHBinary) Start() error {
 	resolvedArgs += strings.Join(e.cmdArgs, " ")
 	path, err := exec.LookPath("ssh")
 	if err != nil {
-		return errors.Wrap(err, "could not find SSH binary")
+		return errors.Wrap(err, "finding SSH binary")
 	}
 	e.cmd.Path = path
 	e.cmd.Args = []string{"ssh"}

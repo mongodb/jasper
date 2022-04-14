@@ -70,7 +70,7 @@ func (opts *Docker) Resolve() (*client.Client, error) {
 	if opts.Host != "" && opts.Port > 0 {
 		addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", opts.Host, opts.Port))
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not resolve Docker daemon address %s:%d", opts.Host, opts.Port)
+			return nil, errors.Wrapf(err, "resolving Docker daemon address %s:%d", opts.Host, opts.Port)
 		}
 		clientOpts = append(clientOpts, client.WithHost(addr.String()))
 	}
@@ -83,7 +83,7 @@ func (opts *Docker) Resolve() (*client.Client, error) {
 
 	client, err := client.NewClientWithOpts(clientOpts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create Docker client")
+		return nil, errors.Wrap(err, "creating Docker client")
 	}
 	return client, nil
 }

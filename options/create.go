@@ -77,11 +77,11 @@ type Create struct {
 func MakeCreation(cmdStr string) (*Create, error) {
 	args, err := shlex.Split(cmdStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem parsing shell command")
+		return nil, errors.Wrap(err, "parsing shell command")
 	}
 
 	if len(args) == 0 {
-		return nil, errors.Errorf("'%s' did not parse to valid args array", cmdStr)
+		return nil, errors.Errorf("command '%s' did not parse to valid args array", cmdStr)
 	}
 
 	return &Create{
@@ -98,13 +98,13 @@ func (opts *Create) Validate() error {
 	catcher := grip.NewBasicCatcher()
 	catcher.NewWhen(len(opts.Args) == 0, "invalid process, must specify at least one argument")
 
-	catcher.NewWhen(opts.Timeout < 0, "when specifying a timeout, it must be non-negative")
-	catcher.NewWhen(opts.Timeout > 0 && opts.Timeout < time.Second, "when specifying a timeout, it must be greater than one second")
-	catcher.NewWhen(opts.TimeoutSecs < 0, "when specifying timeout in seconds, it must be non-negative")
+	catcher.NewWhen(opts.Timeout < 0, "timeout cannot be negative")
+	catcher.NewWhen(opts.Timeout > 0 && opts.Timeout < time.Second, "timeout must be greater than one second if specified")
+	catcher.NewWhen(opts.TimeoutSecs < 0, "timeout seconds cannot be negative")
 
 	if opts.Timeout > 0 && opts.TimeoutSecs > 0 {
 		catcher.ErrorfWhen(time.Duration(opts.TimeoutSecs)*time.Second != opts.Timeout,
-			"cannot specify different timeout (in nanos) (%s) and timeout seconds (%d)",
+			"cannot specify different timeout (%s) and timeout seconds (%d)",
 			opts.Timeout, opts.TimeoutSecs)
 	}
 
@@ -114,9 +114,9 @@ func (opts *Create) Validate() error {
 		info, err := os.Stat(opts.WorkingDirectory)
 
 		if os.IsNotExist(err) {
-			catcher.Errorf("cannot use %s as working directory because it does not exist", opts.WorkingDirectory)
+			catcher.Errorf("cannot use '%s' as working directory because it does not exist", opts.WorkingDirectory)
 		} else if !info.IsDir() {
-			catcher.Errorf("cannot use %s as working directory because it is not a directory", opts.WorkingDirectory)
+			catcher.Errorf("cannot use '%s' as working directory because it is not a directory", opts.WorkingDirectory)
 		}
 	}
 
@@ -187,11 +187,11 @@ func (opts *Create) Hash() hash.Hash {
 // terminated by timeout. If there is no deadline, it returns the zero time.
 func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.Time, resolveErr error) {
 	if ctx.Err() != nil {
-		return nil, time.Time{}, errors.New("cannot resolve command with canceled context")
+		return nil, time.Time{}, ctx.Err()
 	}
 
 	if err := opts.Validate(); err != nil {
-		return nil, time.Time{}, errors.WithStack(err)
+		return nil, time.Time{}, errors.Wrap(err, "invalid options")
 	}
 
 	var deadline time.Time
@@ -213,11 +213,11 @@ func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.
 
 	cmd, err := opts.resolveExecutor(ctx)
 	if err != nil {
-		return nil, time.Time{}, errors.Wrap(err, "could not resolve process executor")
+		return nil, time.Time{}, errors.Wrap(err, "resolving process executor")
 	}
 	defer func() {
 		if resolveErr != nil {
-			grip.Error(errors.Wrap(cmd.Close(), "problem closing process executor"))
+			grip.Error(errors.Wrap(cmd.Close(), "closing process executor"))
 		}
 	}()
 
@@ -259,7 +259,7 @@ func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.
 
 	// Senders require Close() or else command output is not guaranteed to log.
 	opts.closers = append(opts.closers, func() error {
-		return errors.Wrap(opts.Output.Close(), "problem closing output")
+		return errors.Wrap(opts.Output.Close(), "closing output")
 	})
 
 	return cmd, deadline, nil
@@ -270,7 +270,7 @@ func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, err
 		if opts.Remote.UseSSHLibrary {
 			client, session, err := opts.Remote.Resolve()
 			if err != nil {
-				return nil, errors.Wrap(err, "could not resolve SSH client and session")
+				return nil, errors.Wrap(err, "resolving SSH client and session")
 			}
 			return executor.NewSSH(ctx, client, session, opts.Args), nil
 		}
@@ -281,7 +281,7 @@ func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, err
 	if opts.Docker != nil {
 		client, err := opts.Docker.Resolve()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not resolve Docker options")
+			return nil, errors.Wrap(err, "resolving Docker options")
 		}
 		opts := executor.DockerOptions{
 			Client:  client,

@@ -55,7 +55,6 @@ func TestWindowsEvents(t *testing.T) {
 					require.NoError(t, err)
 					assert.Zero(t, status)
 				},
-				// "": func(ctx context.Context, t *testing.T, client internal.JasperProcessManagerClient) {},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)

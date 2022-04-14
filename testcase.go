@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -387,9 +386,7 @@ func ProcessTests() []ProcessTestCase {
 				_, err = proc.Wait(ctx)
 				assert.NoError(t, err)
 
-				err = proc.Signal(ctx, syscall.SIGTERM)
-				require.Error(t, err)
-				assert.True(t, strings.Contains(err.Error(), "cannot signal a process that has terminated"))
+				assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
 			},
 		},
 	}

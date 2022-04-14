@@ -125,19 +125,19 @@ func validatePort(flagName string) func(*cli.Context) error {
 func readInput(input io.Reader, output interface{}) error {
 	bytes, err := ioutil.ReadAll(input)
 	if err != nil {
-		return errors.Wrap(err, "error reading from input")
+		return errors.Wrap(err, "reading from input")
 	}
-	return errors.Wrap(json.Unmarshal(bytes, output), "error decoding to output")
+	return errors.Wrap(json.Unmarshal(bytes, output), "decoding JSON to output")
 }
 
 // writeOutput encodes the output as JSON and writes it to w.
 func writeOutput(output io.Writer, input interface{}) error {
 	bytes, err := json.MarshalIndent(input, "", "    ")
 	if err != nil {
-		return errors.Wrap(err, "error encoding input")
+		return errors.Wrap(err, "encoding input as JSON")
 	}
 	if _, err := output.Write(bytes); err != nil {
-		return errors.Wrap(err, "error writing to output")
+		return errors.Wrap(err, "writing to output")
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func writeOutput(output io.Writer, input interface{}) error {
 func newRemoteManager(ctx context.Context, service, host string, port int, credsFilePath string) (remote.Manager, error) {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve address")
+		return nil, errors.Wrap(err, "resolving address")
 	}
 
 	if service == RESTService {
@@ -168,14 +168,14 @@ func doPassthroughInputOutput(c *cli.Context, input Validator, request func(cont
 	defer cancel()
 
 	if err := readInput(os.Stdin, input); err != nil {
-		return errors.Wrap(err, "error reading from standard input")
+		return errors.Wrap(err, "reading from standard input")
 	}
 	if err := input.Validate(); err != nil {
 		return errors.Wrap(err, "input is invalid")
 	}
 
 	return withConnection(ctx, c, func(client remote.Manager) error {
-		return errors.Wrap(writeOutput(os.Stdout, request(ctx, client)), "error writing to standard output")
+		return errors.Wrap(writeOutput(os.Stdout, request(ctx, client)), "writing to standard output")
 	})
 }
 
@@ -186,7 +186,7 @@ func doPassthroughOutput(c *cli.Context, request func(context.Context, remote.Ma
 	defer cancel()
 
 	return withConnection(ctx, c, func(client remote.Manager) error {
-		return errors.Wrap(writeOutput(os.Stdout, request(ctx, client)), "error writing to standard output")
+		return errors.Wrap(writeOutput(os.Stdout, request(ctx, client)), "writing to standard output")
 	})
 }
 
@@ -200,7 +200,7 @@ func withConnection(ctx context.Context, c *cli.Context, operation func(remote.M
 
 	client, err := newRemoteManager(ctx, service, host, port, credsFilePath)
 	if err != nil {
-		return errors.Wrap(err, "error setting up remote client")
+		return errors.Wrap(err, "setting up remote client")
 	}
 
 	catcher := grip.NewBasicCatcher()
@@ -214,7 +214,7 @@ func withConnection(ctx context.Context, c *cli.Context, operation func(remote.M
 func withService(daemon service.Interface, config *service.Config, operation func(service.Service) error) error {
 	svc, err := service.New(daemon, config)
 	if err != nil {
-		return errors.Wrap(err, "error initializing new service")
+		return errors.Wrap(err, "initializing new service")
 	}
 	return operation(svc)
 }
@@ -226,7 +226,7 @@ func runServices(ctx context.Context, makeServices ...func(context.Context) (uti
 	closeAllServices := func(closeServices []util.CloseFunc) error {
 		catcher := grip.NewBasicCatcher()
 		for _, closeService := range closeServices {
-			catcher.Add(errors.Wrap(closeService(), "error closing service"))
+			catcher.Wrap(closeService(), "closing service")
 		}
 		return catcher.Resolve()
 	}
@@ -235,7 +235,7 @@ func runServices(ctx context.Context, makeServices ...func(context.Context) (uti
 		closeService, err := makeService(ctx)
 		if err != nil {
 			catcher := grip.NewBasicCatcher()
-			catcher.Wrap(err, "failed to create service")
+			catcher.Wrap(err, "creating service")
 			catcher.Add(closeAllServices(closeServices))
 			return catcher.Resolve()
 		}

@@ -22,7 +22,7 @@ func (c *cacheImpl) Create(jpm jasper.Manager, opts options.ScriptingHarness) (H
 
 	h, err := NewHarness(jpm, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "problem constructing harness")
+		return nil, errors.Wrap(err, "constructing harness")
 	}
 
 	c.cache[h.ID()] = h
