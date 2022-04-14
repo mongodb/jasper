@@ -46,11 +46,11 @@ func SetupDownloadMongoDBReleases(ctx context.Context, cache *lru.Cache, opts op
 	jobs := createDownloadJobs(opts.Path, urls, catcher)
 
 	if err = setupDownloadJobsAsync(ctx, jobs, processDownloadJobs(ctx, addMongoDBFilesToCache(cache, opts.Path))); err != nil {
-		catcher.Add(errors.Wrap(err, "starting download jobs"))
+		catcher.Wrap(err, "starting download jobs")
 	}
 
 	for err = range errs {
-		catcher.Add(errors.Wrap(err, "initializing download jobs"))
+		catcher.Wrap(err, "initializing download jobs")
 	}
 
 	return catcher.Resolve()
@@ -65,7 +65,7 @@ func createDownloadJobs(path string, urls <-chan string, catcher grip.Catcher) <
 		for url := range urls {
 			j, err := recall.NewDownloadJob(url, path, true)
 			if err != nil {
-				catcher.Add(errors.Wrapf(err, "creating download job for URL '%s'", url))
+				catcher.Wrapf(err, "creating download job for URL '%s'", url)
 				continue
 			}
 

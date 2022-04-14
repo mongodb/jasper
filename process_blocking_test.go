@@ -203,7 +203,7 @@ func TestBlockingProcess(t *testing.T) {
 					go proc.reactor(ctx, deadline, cmd)
 					_, err = proc.Wait(cctx)
 					require.Error(t, err)
-					assert.Contains(t, err.Error(), "operation canceled")
+					assert.True(t, utility.IsContextError(err))
 				},
 				"WaitShouldReturnNilForSuccessfulCommandsWithoutIDs": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.info.Options.Args = []string{"sleep", "10"}

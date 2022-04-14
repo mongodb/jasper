@@ -169,7 +169,7 @@ func (p *basicProcess) Wait(ctx context.Context) (int, error) {
 
 	select {
 	case <-ctx.Done():
-		return -1, errors.Wrap(ctx.Err(), "operation canceled")
+		return -1, ctx.Err()
 	case <-p.waitProcessed:
 	}
 

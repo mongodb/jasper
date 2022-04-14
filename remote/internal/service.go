@@ -214,13 +214,11 @@ func (s *jasperService) Get(ctx context.Context, id *JasperProcessID) (*ProcessI
 func (s *jasperService) Signal(ctx context.Context, sig *SignalProcess) (*OperationOutcome, error) {
 	proc, err := s.manager.Get(ctx, sig.ProcessID.Value)
 	if err != nil {
-		err = errors.Wrapf(err, "couldn't find process '%s'", sig.ProcessID)
-		return nil, newGRPCError(codes.NotFound, err)
+		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting process '%s'", sig.ProcessID))
 	}
 
 	if err = proc.Signal(ctx, sig.Signal.Export()); err != nil {
-		err = errors.Wrapf(err, "sending signal '%s' to process '%s'", sig.Signal, sig.ProcessID)
-		return nil, newGRPCError(codes.Internal, err)
+		return nil, newGRPCError(codes.Internal, errors.Wrapf(err, "sending signal '%s' to process '%s'", sig.Signal, sig.ProcessID))
 	}
 
 	return &OperationOutcome{
@@ -297,7 +295,6 @@ func (s *jasperService) Clear(ctx context.Context, _ *emptypb.Empty) (*Operation
 
 func (s *jasperService) Close(ctx context.Context, _ *emptypb.Empty) (*OperationOutcome, error) {
 	if err := s.manager.Close(ctx); err != nil {
-		err = errors.Wrap(err, "closing service")
 		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "closing service"))
 	}
 
@@ -351,7 +348,6 @@ func (s *jasperService) DownloadMongoDB(ctx context.Context, opts *MongoDBDownlo
 func (s *jasperService) ConfigureCache(ctx context.Context, opts *CacheOptions) (*OperationOutcome, error) {
 	jopts := opts.Export()
 	if err := jopts.Validate(); err != nil {
-		err = errors.Wrap(err, "validating cache options")
 		return &OperationOutcome{
 			Success:  false,
 			Text:     errors.Wrap(err, "validating cache options").Error(),

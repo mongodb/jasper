@@ -170,7 +170,7 @@ func validateLimits(flagNames ...string) func(*cli.Context) error {
 		for _, flagName := range flagNames {
 			l := c.Int(flagName)
 			if l < -1 {
-				catcher.Errorf("'%s' is not a valid limit value for flag %s", l, flagName)
+				catcher.Errorf("'%s' is not a valid limit value for flag '%s'", l, flagName)
 			}
 		}
 		return catcher.Resolve()

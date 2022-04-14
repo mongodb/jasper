@@ -226,7 +226,7 @@ func runServices(ctx context.Context, makeServices ...func(context.Context) (uti
 	closeAllServices := func(closeServices []util.CloseFunc) error {
 		catcher := grip.NewBasicCatcher()
 		for _, closeService := range closeServices {
-			catcher.Add(errors.Wrap(closeService(), "closing service"))
+			catcher.Wrap(closeService(), "closing service")
 		}
 		return catcher.Resolve()
 	}

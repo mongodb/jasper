@@ -33,7 +33,7 @@ func NewMDBClient(ctx context.Context, addr net.Addr, reqTimeout time.Duration) 
 	dialer := net.Dialer{}
 	conn, err := dialer.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
-		return nil, errors.Wrapf(err, "establishing connection to %s service at address '%s'", addr.Network(), addr.String())
+		return nil, errors.Wrapf(err, "establishing connection to '%s' service at address '%s'", addr.Network(), addr.String())
 	}
 	timeout := reqTimeout
 	if timeout.Seconds() == 0 {

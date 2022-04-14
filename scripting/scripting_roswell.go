@@ -91,10 +91,10 @@ func (e *roswellEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Path).Run(ctx),
-			"removing remote roswell environment '%s'", e.opts.Path)
+			"removing remote Roswell environment '%s'", e.opts.Path)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Path),
-			"removing local roswell environment '%s'", e.opts.Path)
+			"removing local Roswell environment '%s'", e.opts.Path)
 	}
 }
 
@@ -127,7 +127,7 @@ func (e *roswellEnvironment) Test(ctx context.Context, dir string, tests ...Test
 
 		err := cmd.Run(tctx)
 
-		catcher.Wrapf(err, "roswell test %s", t)
+		catcher.Wrapf(err, "Roswell test '%s'", t.Name)
 
 		out[idx] = t.getResult(ctx, err, startAt)
 		cancel()

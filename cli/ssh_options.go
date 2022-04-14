@@ -20,7 +20,7 @@ type ClientOptions struct {
 // client type.
 func (opts *ClientOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(opts.BinaryPath == "", "client binary path cannot be empty")
+	catcher.NewWhen(opts.BinaryPath == "", "must specify client binary path")
 	catcher.NewWhen(opts.Type != RPCService && opts.Type != RESTService, "client type must be RPC or REST")
 	return catcher.Resolve()
 }

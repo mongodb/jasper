@@ -83,7 +83,7 @@ func (opts Download) Extract() error {
 	}
 
 	if err := archiveHandler.Unarchive(opts.Path, opts.ArchiveOpts.TargetPath); err != nil {
-		return errors.Wrapf(err, "extracting archive %s to %s", opts.Path, opts.ArchiveOpts.TargetPath)
+		return errors.Wrapf(err, "extracting archive '%s' to '%s'", opts.Path, opts.ArchiveOpts.TargetPath)
 	}
 
 	return nil

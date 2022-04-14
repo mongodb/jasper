@@ -184,7 +184,7 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 			p.mu.RLock()
 			p.triggers.Run(info)
 			p.mu.RUnlock()
-			p.setErr(ctx.Err())
+			p.setErr(errors.Wrap(ctx.Err(), "processing operations"))
 			p.mu.Lock()
 			// Set the options now because our view of the process info may be
 			// stale. The options could have been modified in between the above
@@ -304,7 +304,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 		case res := <-out:
 			return res
 		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "context canceled")
+			return errors.Wrap(ctx.Err(), "waiting for operation to be processed")
 		case <-p.complete:
 			// If the process is complete because the operations channel
 			// signaled the process, the signal was successful.
@@ -314,7 +314,7 @@ func (p *blockingProcess) Signal(ctx context.Context, sig syscall.Signal) error 
 			return errors.New("cannot signal a process that has already exited")
 		}
 	case <-ctx.Done():
-		return errors.Wrap(ctx.Err(), "context canceled")
+		return errors.Wrap(ctx.Err(), "waiting for operation to be enqueued")
 	case <-p.complete:
 		return errors.New("cannot signal a process that has already exited")
 	}
@@ -385,7 +385,7 @@ func (p *blockingProcess) Wait(ctx context.Context) (int, error) {
 		case p.ops <- waiter:
 			continue
 		case <-ctx.Done():
-			return -1, errors.Wrap(ctx.Err(), "operation canceled")
+			return -1, errors.Wrap(ctx.Err(), "waiting for process to exit")
 		case err := <-out:
 			return p.getInfo().ExitCode, errors.WithStack(err)
 		case <-p.complete:

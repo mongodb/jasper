@@ -122,10 +122,10 @@ func (e *golangEnvironment) Cleanup(ctx context.Context) error {
 	switch mgr := e.manager.(type) {
 	case remote:
 		return errors.Wrapf(mgr.CreateCommand(ctx).SetOutputOptions(e.opts.Output).AppendArgs("rm", "-rf", e.opts.Gopath).Run(ctx),
-			"removing remote golang environment '%s'", e.opts.Gopath)
+			"removing remote Golang environment '%s'", e.opts.Gopath)
 	default:
 		return errors.Wrapf(os.RemoveAll(e.opts.Gopath),
-			"removing local golang environment '%s'", e.opts.Gopath)
+			"removing local Golang environment '%s'", e.opts.Gopath)
 	}
 }
 
@@ -160,7 +160,7 @@ func (e *golangEnvironment) Test(ctx context.Context, dir string, tests ...TestO
 			SetOutputOptions(e.opts.Output).
 			Add(args).Run(ctx)
 
-		catcher.Wrapf(err, "golang test %s", t)
+		catcher.Wrapf(err, "Golang test '%s'", t.Name)
 
 		out[idx] = t.getResult(ctx, err, startAt)
 	}

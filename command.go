@@ -535,7 +535,7 @@ func (c *Command) Run(ctx context.Context) error {
 
 	for idx, opt := range opts {
 		if err := ctx.Err(); err != nil {
-			catcher.Wrap(err, "operation canceled")
+			catcher.Wrapf(err, "running command at index %d", idx)
 			catcher.Wrap(c.Close(), "closing command")
 			return catcher.Resolve()
 		}
@@ -845,7 +845,7 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 		waitCatcher := grip.NewBasicCatcher()
 		for _, proc := range c.procs {
 			_, err = proc.Wait(ctx)
-			waitCatcher.Add(errors.Wrapf(err, "waiting on process '%s'", proc.ID()))
+			waitCatcher.Wrapf(err, "waiting on process '%s'", proc.ID())
 		}
 		err = waitCatcher.Resolve()
 		msg["err"] = err

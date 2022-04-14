@@ -214,7 +214,7 @@ func NewSplunkLoggerProducer() LoggerProducer { return &SplunkLoggerOptions{} }
 // base options are valid.
 func (opts *SplunkLoggerOptions) Validate() error {
 	catcher := grip.NewBasicCatcher()
-	catcher.NewWhen(!opts.Splunk.Populated(), "missing connection info for output type splunk")
+	catcher.NewWhen(!opts.Splunk.Populated(), "missing connection info for output type Splunk")
 	catcher.Add(opts.Base.Validate())
 	return catcher.Resolve()
 }
@@ -230,12 +230,12 @@ func (opts *SplunkLoggerOptions) Configure() (send.Sender, error) {
 
 	sender, err := send.NewSplunkLogger(DefaultLogName, opts.Splunk, opts.Base.Level)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating base splunk logger")
+		return nil, errors.Wrap(err, "creating base Splunk logger")
 	}
 
 	sender, err = NewSafeSender(sender, opts.Base)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating safe splunk logger")
+		return nil, errors.Wrap(err, "creating safe Splunk logger")
 	}
 	return sender, nil
 }

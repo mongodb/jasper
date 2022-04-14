@@ -66,7 +66,7 @@ func (d *baseDaemon) setupLogger(opts *options.LoggerConfig) error {
 	if err != nil {
 		return errors.Wrap(err, "configuring logger")
 	}
-	return errors.Wrap(grip.SetSender(sender), "setting grip logger")
+	return errors.Wrap(grip.SetSender(sender), "setting Grip logger")
 }
 
 // checkPreconditions runs the daemon's precondition commands.
