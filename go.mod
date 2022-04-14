@@ -8,7 +8,7 @@ require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.3
 	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/evergreen-ci/aviation v0.0.0-20220405151811-ff4a78a4297c
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
