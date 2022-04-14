@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/google/uuid"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/internal/executor"
