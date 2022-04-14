@@ -550,7 +550,7 @@ func (s *Service) downloadFile(rw http.ResponseWriter, r *http.Request) {
 	if err := opts.Download(); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusInternalServerError,
-			Message:    errors.Wrapf(err, "downloading file for for URL '%s'", opts.URL).Error(),
+			Message:    errors.Wrapf(err, "downloading file for URL '%s'", opts.URL).Error(),
 		})
 		return
 	}
