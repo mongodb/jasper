@@ -4,11 +4,13 @@ go 1.16
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
+	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/andybalholm/brotli v1.0.3 // indirect
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.4
-	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/docker/docker v20.10.14+incompatible
+	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/docker v20.10.16+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/evergreen-ci/aviation v0.0.0-20220405151811-ff4a78a4297c
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
@@ -23,9 +25,11 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
 	github.com/mholt/archiver/v3 v3.5.1
+	github.com/moby/term v0.0.0-20200312100748-672ec06f55cd // indirect
 	github.com/mongodb/amboy v0.0.0-20220408184825-b2a14e2c511d
 	github.com/mongodb/grip v0.0.0-20220401165023-6a1d9bb90c21
 	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pierrec/lz4/v4 v4.1.9 // indirect
@@ -37,6 +41,8 @@ require (
 	go.mongodb.org/mongo-driver v1.9.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
+	gotest.tools/v3 v3.0.3 // indirect
 )
