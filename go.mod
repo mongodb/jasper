@@ -35,7 +35,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.9 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/square/certstrap v1.2.0 // indirect
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/cli v1.22.9
 	go.mongodb.org/mongo-driver v1.9.1
