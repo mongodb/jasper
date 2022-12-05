@@ -21,7 +21,7 @@ require (
 	github.com/evergreen-ci/lru v0.0.0-20220404184951-eb0842380798
 	github.com/evergreen-ci/mrpc v0.0.0-20220405154553-64b43a6c6190
 	github.com/evergreen-ci/poplar v0.0.0-20220405164038-0cfe3198c320
-	github.com/evergreen-ci/utility v0.0.0-20220404192535-d16eb64796e6
+	github.com/evergreen-ci/utility v0.0.0-20221202215218-c980e8dea464
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.0
 	github.com/mholt/archiver/v3 v3.5.1

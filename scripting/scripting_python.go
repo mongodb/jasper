@@ -2,6 +2,7 @@ package scripting
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"fmt"
@@ -10,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
@@ -93,7 +94,7 @@ func (e *pythonEnvironment) RunScript(ctx context.Context, script string) error 
 }
 
 func (e *pythonEnvironment) Build(ctx context.Context, dir string, args []string) (string, error) {
-	output := &util.LocalBuffer{}
+	output := utility.MakeSafeBuffer(bytes.Buffer{})
 
 	err := e.manager.CreateCommand(ctx).Directory(dir).RedirectErrorToOutput(true).Environment(e.opts.Environment).
 		Add(append([]string{e.opts.Interpreter(), "setup.py", "bdist_wheel"}, args...)).
