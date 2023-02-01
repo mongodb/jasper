@@ -8,7 +8,6 @@ require (
 	github.com/andybalholm/brotli v1.0.3 // indirect
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.4
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v20.10.22+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -37,7 +36,7 @@ require (
 	github.com/square/certstrap v1.2.0 // indirect
 	github.com/stretchr/testify v1.8.1
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/urfave/cli v1.22.10
+	github.com/urfave/cli v1.22.12
 	go.mongodb.org/mongo-driver v1.11.1
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
