@@ -7,7 +7,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/andybalholm/brotli v1.0.3 // indirect
 	github.com/cheynewallace/tabby v1.1.1
-	github.com/containerd/cgroups v1.0.4
+	github.com/containerd/cgroups v1.1.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v20.10.22+incompatible
