@@ -9,7 +9,7 @@ require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.4
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
+	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/docker v20.10.22+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/evergreen-ci/aviation v0.0.0-20220405151811-ff4a78a4297c
