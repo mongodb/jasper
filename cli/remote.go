@@ -5,7 +5,6 @@ import (
 
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -19,8 +18,6 @@ const (
 	GetLogStreamCommand       = "get-log-stream"
 	SignalEventCommand        = "signal-event"
 	SendMessagesCommand       = "send-messages"
-	CreateScriptingCommand    = "create-scripting"
-	GetScriptingCommand       = "get-scripting"
 )
 
 // Remote creates a cli.Command that supports the remote-specific methods in the
@@ -37,8 +34,6 @@ func Remote() cli.Command {
 			remoteGetBuildloggerURLs(),
 			remoteSignalEvent(),
 			remoteSendMessages(),
-			remoteCreateScripting(),
-			remoteGetScripting(),
 		},
 	}
 }
@@ -147,47 +142,6 @@ func remoteSendMessages() cli.Command {
 			return doPassthroughInputOutput(c, &input, func(ctx context.Context, client remote.Manager) interface{} {
 				if err := client.SendMessages(ctx, input); err != nil {
 					return makeOutcomeResponse(err)
-				}
-				return makeOutcomeResponse(nil)
-			})
-		},
-	}
-}
-
-func remoteCreateScripting() cli.Command {
-	return cli.Command{
-		Name:   CreateScriptingCommand,
-		Flags:  clientFlags(),
-		Before: clientBefore(),
-		Action: func(c *cli.Context) error {
-			in := &ScriptingCreateInput{}
-			return doPassthroughInputOutput(c, in, func(ctx context.Context, client remote.Manager) interface{} {
-				harnessOpts, err := in.Export()
-				if err != nil {
-					return &IDResponse{OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness options"))}
-				}
-
-				env, err := client.CreateScripting(ctx, harnessOpts)
-				if err != nil {
-					return &IDResponse{ID: harnessOpts.ID(), OutcomeResponse: *makeOutcomeResponse(errors.Wrapf(err, "creating scripting harness"))}
-				}
-				return &IDResponse{ID: env.ID(), OutcomeResponse: *makeOutcomeResponse(nil)}
-			})
-		},
-	}
-}
-
-func remoteGetScripting() cli.Command {
-	return cli.Command{
-		Name:   GetScriptingCommand,
-		Flags:  clientFlags(),
-		Before: clientBefore(),
-		Action: func(c *cli.Context) error {
-			input := &IDInput{}
-			return doPassthroughInputOutput(c, input, func(ctx context.Context, client remote.Manager) interface{} {
-				_, err := client.GetScripting(ctx, input.ID)
-				if err != nil {
-					return makeOutcomeResponse(errors.Wrapf(err, "getting scripting harness '%s'", input.ID))
 				}
 				return makeOutcomeResponse(nil)
 			})

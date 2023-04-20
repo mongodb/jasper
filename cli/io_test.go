@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -327,32 +326,6 @@ func TestExtractResponse(t *testing.T) {
 						assert.Equal(t, "foo", resp.URLs[0])
 					},
 				},
-				"ScriptingBuildResponse": {
-					input: fmt.Sprintf(`{
-					"outcome": {
-						"success": %t,
-						"message": "%s"
-					},
-					"path": "%s"
-					}`, outcome.Success, outcome.Message, "foo"),
-					extractAndCheck: func(t *testing.T, input json.RawMessage) {
-						resp, err := ExtractScriptingBuildResponse(input)
-						if outcome.Success {
-							require.NoError(t, err)
-							assert.True(t, resp.Successful())
-							assert.Equal(t, "foo", resp.Path)
-						} else {
-							require.Error(t, err)
-							assert.False(t, resp.Successful())
-
-							if outcome.Message != "" {
-								assert.Contains(t, resp.ErrorMessage(), outcome.Message)
-							} else {
-								assert.Contains(t, resp.ErrorMessage(), unspecifiedRequestFailure)
-							}
-						}
-					},
-				},
 				"CachedLoggerResponse": {
 					input: fmt.Sprintf(`{
 					"outcome": {
@@ -370,34 +343,6 @@ func TestExtractResponse(t *testing.T) {
 							require.NoError(t, err)
 							assert.Equal(t, "id", resp.Logger.ID)
 							assert.Equal(t, "manager_id", resp.Logger.ManagerID)
-						} else {
-							require.Error(t, err)
-							assert.False(t, resp.Successful())
-
-							if outcome.Message != "" {
-								assert.Contains(t, resp.ErrorMessage(), outcome.Message)
-							} else {
-								assert.Contains(t, resp.ErrorMessage(), unspecifiedRequestFailure)
-							}
-						}
-					},
-				},
-				"ScriptingTestResponse": {
-					input: fmt.Sprintf(`{
-					"outcome": {
-						"success": %t,
-						"message": "%s"
-					},
-					"results": [{"name": "%s", "outcome": "%s"}]
-					}`, outcome.Success, outcome.Message, "foo", scripting.TestOutcomeSuccess),
-					extractAndCheck: func(t *testing.T, input json.RawMessage) {
-						resp, err := ExtractScriptingTestResponse(input)
-						if outcome.Success {
-							require.NoError(t, err)
-							assert.True(t, resp.Successful())
-							require.Len(t, resp.Results, 1)
-							assert.Equal(t, "foo", resp.Results[0].Name)
-							assert.Equal(t, scripting.TestOutcomeSuccess, resp.Results[0].Outcome)
 						} else {
 							require.Error(t, err)
 							assert.False(t, resp.Successful())

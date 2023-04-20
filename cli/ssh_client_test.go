@@ -510,67 +510,6 @@ func TestSSHClient(t *testing.T) {
 			baseManager.FailCreate = true
 			assert.Error(t, client.SignalEvent(ctx, "foo"))
 		},
-		"CreateScriptingPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			inputChecker := &ScriptingCreateInput{}
-			resp := &IDResponse{ID: "id", OutcomeResponse: *makeOutcomeResponse(nil)}
-			baseManager.Create = makeCreateFunc(
-				t, client,
-				[]string{RemoteCommand, CreateScriptingCommand},
-				&inputChecker,
-				resp,
-			)
-			sh, err := client.CreateScripting(ctx, testoptions.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory()))
-			require.NoError(t, err)
-			assert.Equal(t, resp.ID, sh.ID())
-		},
-		"CreateScriptingFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			baseManager.FailCreate = true
-			sh, err := client.CreateScripting(ctx, testoptions.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory()))
-			assert.Error(t, err)
-			assert.Zero(t, sh)
-		},
-		"CreateScriptingFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			baseManager.Create = makeCreateFunc(
-				t, client,
-				[]string{RemoteCommand, CreateScriptingCommand},
-				nil,
-				invalidResponse(),
-			)
-			sh, err := client.CreateScripting(ctx, testoptions.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory()))
-			assert.Error(t, err)
-			assert.Zero(t, sh)
-		},
-		"GetScriptingPassesWithValidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			inputChecker := &IDInput{}
-			baseManager.Create = makeCreateFunc(
-				t, client,
-				[]string{RemoteCommand, GetScriptingCommand},
-				inputChecker,
-				makeOutcomeResponse(nil),
-			)
-			id := "id"
-			sh, err := client.GetScripting(ctx, id)
-			require.NoError(t, err)
-			assert.Equal(t, id, sh.ID())
-		},
-		"GetScriptingFailsIfBaseManagerCreateFails": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			baseManager.FailCreate = true
-			sh, err := client.GetScripting(ctx, "id")
-			assert.Error(t, err)
-			assert.Zero(t, sh)
-		},
-		"GetScriptingFailsWithInvalidResponse": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {
-			baseManager.Create = makeCreateFunc(
-				t, client,
-				[]string{RemoteCommand, GetScriptingCommand},
-				nil,
-				invalidResponse(),
-			)
-			sh, err := client.GetScripting(ctx, "id")
-			assert.Error(t, err)
-			assert.Zero(t, sh)
-		},
-		// "": func(ctx context.Context, t *testing.T, client *sshClient, baseManager *mock.Manager) {},
 	} {
 		t.Run(testName, func(t *testing.T) {
 			client, err := NewSSHClient(mockClientOptions(), mockRemoteOptions())

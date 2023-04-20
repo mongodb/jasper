@@ -2,7 +2,7 @@
 name := jasper
 buildDir := build
 srcFiles := $(shell find . -name "*.go" -not -path "./$(buildDir)/*" -not -name "*_test.go" -not -path "*\#*")
-testPackages := $(name) cli remote options mock scripting internal-executor
+testPackages := $(name) cli remote options mock internal-executor
 allPackages := $(testPackages) remote-internal testutil testutil-options benchmarks util
 compilePackages := $(subst $(name),,$(subst -,/,$(foreach target,$(allPackages),./$(target))))
 lintPackages := $(allPackages)

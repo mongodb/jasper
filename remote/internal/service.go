@@ -12,7 +12,6 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -38,10 +37,9 @@ func AttachService(ctx context.Context, manager jasper.Manager, s *grpc.Server) 
 	}
 
 	srv := &jasperService{
-		hostID:    hn,
-		manager:   manager,
-		cache:     lru.NewCache(),
-		scripting: scripting.NewCache(),
+		hostID:  hn,
+		manager: manager,
+		cache:   lru.NewCache(),
 		cacheOpts: options.Cache{
 			PruneDelay: jasper.DefaultCachePruneDelay,
 			MaxSize:    jasper.DefaultMaxCacheSize,
@@ -94,7 +92,6 @@ func getProcInfoNoHang(ctx context.Context, p jasper.Process) jasper.ProcessInfo
 type jasperService struct {
 	hostID     string
 	manager    jasper.Manager
-	scripting  scripting.HarnessCache
 	cache      *lru.Cache
 	cacheOpts  options.Cache
 	cacheMutex sync.RWMutex
@@ -517,35 +514,6 @@ func (s *jasperService) WriteFile(stream JasperProcessManager_WriteFileServer) e
 	}
 
 	return nil
-}
-
-func (s *jasperService) ScriptingHarnessCreate(ctx context.Context, opts *ScriptingOptions) (*ScriptingHarnessID, error) {
-	xopts, err := opts.Export()
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "converting options"))
-	}
-
-	if err = xopts.Validate(); err != nil {
-		return nil, newGRPCError(codes.InvalidArgument, errors.Wrap(err, "invalid scripting options"))
-	}
-
-	sh, err := s.scripting.Create(s.manager, xopts)
-	if err != nil {
-		return nil, newGRPCError(codes.Internal, errors.Wrap(err, "generating scripting harness"))
-	}
-
-	return &ScriptingHarnessID{Id: sh.ID()}, nil
-}
-func (s *jasperService) ScriptingHarnessGet(ctx context.Context, id *ScriptingHarnessID) (*OperationOutcome, error) {
-	sh, err := s.scripting.Get(id.Id)
-	if err != nil {
-		return nil, newGRPCError(codes.NotFound, errors.Wrapf(err, "getting scripting harness '%s'", id.Id))
-	}
-
-	return &OperationOutcome{
-		Success: true,
-		Text:    sh.ID(),
-	}, nil
 }
 
 func (s *jasperService) SendMessages(ctx context.Context, lp *LoggingPayload) (*OperationOutcome, error) {

@@ -11,7 +11,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 )
 
@@ -96,33 +95,6 @@ func (c *sshClient) CreateCommand(ctx context.Context) *jasper.Command {
 
 		return nil
 	})
-}
-
-func (c *sshClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	output, err := c.runRemoteCommand(ctx, CreateScriptingCommand, opts)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	resp, err := ExtractIDResponse(output)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return newSSHScriptingHarness(ctx, c.client, resp.ID), nil
-}
-
-func (c *sshClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	output, err := c.runRemoteCommand(ctx, GetScriptingCommand, &IDInput{ID: id})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if _, err := ExtractOutcomeResponse(output); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return newSSHScriptingHarness(ctx, c.client, id), nil
 }
 
 func (c *sshClient) Register(ctx context.Context, proc jasper.Process) error {

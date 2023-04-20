@@ -16,7 +16,6 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 )
 
@@ -157,51 +156,6 @@ func (c *restClient) CreateProcess(ctx context.Context, opts *options.Create) (j
 
 func (c *restClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
-}
-
-func (c *restClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	if err := opts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid scripting options")
-	}
-
-	body, err := makeBody(opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "building request for scripting create")
-	}
-
-	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/scripting/create/%s", opts.Type()), body)
-	if err != nil {
-		return nil, errors.Wrap(err, "making request")
-	}
-	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	out := struct {
-		ID string `json:"id"`
-	}{}
-
-	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		return nil, errors.Wrap(err, "reading response")
-	}
-
-	return newRESTScriptingHarness(c, out.ID), nil
-}
-
-func (c *restClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	resp, err := c.doRequest(ctx, http.MethodGet, c.getURL("/scripting/%s", id), nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "making request")
-	}
-	defer resp.Body.Close()
-
-	if err = handleError(resp); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return newRESTScriptingHarness(c, id), nil
 }
 
 func (c *restClient) Register(ctx context.Context, proc jasper.Process) error {
