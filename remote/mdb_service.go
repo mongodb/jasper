@@ -16,18 +16,16 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 )
 
 type mdbService struct {
 	mrpc.Service
-	manager      jasper.Manager
-	harnessCache scripting.HarnessCache
-	cache        *lru.Cache
-	cacheOpts    options.Cache
-	cacheMutex   sync.RWMutex
+	manager    jasper.Manager
+	cache      *lru.Cache
+	cacheOpts  options.Cache
+	cacheMutex sync.RWMutex
 }
 
 // StartMDBService wraps an existing Jasper manager in a MongoDB wire protocol
@@ -48,10 +46,9 @@ func StartMDBService(ctx context.Context, m jasper.Manager, addr net.Addr) (util
 		return nil, errors.Wrap(err, "creating base service")
 	}
 	svc := &mdbService{
-		Service:      baseSvc,
-		manager:      m,
-		harnessCache: scripting.NewCache(),
-		cache:        lru.NewCache(),
+		Service: baseSvc,
+		manager: m,
+		cache:   lru.NewCache(),
 		cacheOpts: options.Cache{
 			PruneDelay: jasper.DefaultCachePruneDelay,
 			MaxSize:    jasper.DefaultMaxCacheSize,
@@ -106,16 +103,6 @@ func (s *mdbService) registerHandlers() error {
 		GetBuildloggerURLsCommand: s.getBuildloggerURLs,
 		SignalEventCommand:        s.signalEvent,
 		SendMessagesCommand:       s.sendMessages,
-		ScriptingCreateCommand:    s.scriptingCreate,
-		ScriptingGetCommand:       s.scriptingGet,
-
-		// scripting.Harness commands
-		ScriptingSetupCommand:     s.scriptingSetup,
-		ScriptingCleanupCommand:   s.scriptingCleanup,
-		ScriptingRunCommand:       s.scriptingRun,
-		ScriptingRunScriptCommand: s.scriptingRunScript,
-		ScriptingBuildCommand:     s.scriptingBuild,
-		ScriptingTestCommand:      s.scriptingTest,
 
 		// jasper.LoggingCache commands
 		LoggingCacheCreateCommand:         s.loggingCacheCreate,

@@ -5,7 +5,6 @@ import (
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 )
 
 // RemoteManager implements the remote.Manager interface with exported fields
@@ -19,8 +18,6 @@ type RemoteManager struct {
 	FailGetLogStream       bool
 	FailGetBuildloggerURLs bool
 	FailSignalEvent        bool
-	FailCreateScripting    bool
-	FailGetScripting       bool
 	FailSendMessages       bool
 
 	// ConfigureCache input
@@ -135,22 +132,4 @@ func (c *RemoteManager) SendMessages(ctx context.Context, opts options.LoggingPa
 
 	c.SendMessagePayload = opts
 	return nil
-}
-
-// GetScripting returns the ScriptingHarness field. If FailGetScripting is set,
-// it returns an error.
-func (c *RemoteManager) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	if c.FailGetScripting {
-		return nil, mockFail()
-	}
-	return c.ScriptingHarness, nil
-}
-
-// CreateScripting returns the ScriptingHarness field. If FailCreateScripting is
-// set, it returns an error.
-func (c *RemoteManager) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	if c.FailCreateScripting {
-		return nil, mockFail()
-	}
-	return c.ScriptingHarness, nil
 }

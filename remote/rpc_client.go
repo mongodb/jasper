@@ -10,7 +10,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/remote/internal"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/mongodb/jasper/util"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -100,31 +99,6 @@ func (c *rpcClient) CreateProcess(ctx context.Context, opts *options.Create) (ja
 
 func (c *rpcClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
-}
-
-func (c *rpcClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	seOpts, err := internal.ConvertScriptingOptions(opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "converting scripting options")
-	}
-	seid, err := c.client.ScriptingHarnessCreate(ctx, seOpts)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return newRPCScriptingHarness(c.client, seid.Id), nil
-}
-
-func (c *rpcClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	resp, err := c.client.ScriptingHarnessGet(ctx, &internal.ScriptingHarnessID{Id: id})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	if !resp.Success {
-		return nil, errors.New(resp.Text)
-	}
-
-	return newRPCScriptingHarness(c.client, id), nil
 }
 
 func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {

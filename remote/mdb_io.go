@@ -6,7 +6,6 @@ import (
 	"github.com/evergreen-ci/mrpc/shell"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 )
 
 // infoRequest represents a request for runtime information regarding the
@@ -284,89 +283,4 @@ type loggingCacheLenRequest struct {
 
 type loggingCachePruneRequest struct {
 	LastAccessed time.Time `bson:"logging_cache_prune"`
-}
-
-type scriptingCreateRequest struct {
-	Params struct {
-		Type    string `bson:"type"`
-		Options []byte `bson:"options"`
-	} `bson:"create_scripting"`
-}
-
-type scriptingCreateResponse struct {
-	shell.ErrorResponse `bson:"error_response,inline"`
-	ID                  string `bson:"id"`
-}
-
-func makeScriptingCreateResponse(id string) *scriptingCreateResponse {
-	return &scriptingCreateResponse{
-		ErrorResponse: shell.MakeSuccessResponse(),
-		ID:            id,
-	}
-}
-
-type scriptingGetRequest struct {
-	ID string `bson:"get_scripting"`
-}
-
-type scriptingSetupRequest struct {
-	ID string `bson:"setup_scripting"`
-}
-
-type scriptingCleanupRequest struct {
-	ID string `bson:"cleanup_scripting"`
-}
-
-type scriptingRunRequest struct {
-	Params struct {
-		ID   string   `bson:"id"`
-		Args []string `bson:"args"`
-	} `bson:"run_scripting"`
-}
-
-type scriptingRunScriptRequest struct {
-	Params struct {
-		ID     string `bson:"id"`
-		Script string `bson:"script"`
-	} `bson:"run_script_scripting"`
-}
-
-type scriptingBuildRequest struct {
-	Params struct {
-		ID   string   `bson:"id"`
-		Dir  string   `bson:"dir"`
-		Args []string `bson:"args"`
-	} `bson:"build_scripting"`
-}
-
-type scriptingBuildResponse struct {
-	shell.ErrorResponse `bson:"error_response,inline"`
-	Path                string `bson:"path"`
-}
-
-func makeScriptingBuildResponse(path string) *scriptingBuildResponse {
-	return &scriptingBuildResponse{
-		ErrorResponse: shell.MakeSuccessResponse(),
-		Path:          path,
-	}
-}
-
-type scriptingTestRequest struct {
-	Params struct {
-		ID      string                  `bson:"id"`
-		Dir     string                  `bson:"dir"`
-		Options []scripting.TestOptions `bson:"options"`
-	} `bson:"test_scripting"`
-}
-
-type scriptingTestResponse struct {
-	shell.ErrorResponse `bson:"error_response,inline"`
-	Results             []scripting.TestResult
-}
-
-func makeScriptingTestResponse(results []scripting.TestResult, err error) *scriptingTestResponse {
-	return &scriptingTestResponse{
-		Results:       results,
-		ErrorResponse: shell.MakeErrorResponse(true, err),
-	}
 }

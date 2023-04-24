@@ -628,48 +628,6 @@ func TestClientImplementations(t *testing.T) {
 						assert.Equal(t, payload.Data, strings.TrimSpace(string(content)))
 					},
 				},
-				{
-					Name: "CreateScriptingSucceeds",
-					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
-						sh := createTestScriptingHarness(ctx, t, mngr, tmpDir)
-						assert.NotZero(t, sh)
-					},
-				},
-				{
-					Name: "CreateScriptingFailsWithInvalidOptions",
-					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						sh, err := mngr.CreateScripting(ctx, &options.ScriptingGolang{})
-						assert.Error(t, err)
-						assert.Zero(t, sh)
-					},
-				},
-				{
-					Name: "GetScriptingWithNonexistentHarnessFails",
-					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						_, err := mngr.GetScripting(ctx, "nonexistent")
-						assert.Error(t, err)
-					},
-				},
-				{
-					Name: "GetScriptingWithExistingHarnessSucceeds",
-					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "scripting_tests")
-						require.NoError(t, err)
-						defer func() {
-							assert.NoError(t, os.RemoveAll(tmpDir))
-						}()
-						expectedHarness := createTestScriptingHarness(ctx, t, mngr, tmpDir)
-
-						harness, err := mngr.GetScripting(ctx, expectedHarness.ID())
-						require.NoError(t, err)
-						assert.Equal(t, expectedHarness.ID(), harness.ID())
-					},
-				},
 			} {
 				t.Run(testCase.Name, func(t *testing.T) {
 					tctx, tcancel := context.WithTimeout(ctx, testutil.RPCTestTimeout)

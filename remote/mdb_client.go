@@ -11,9 +11,7 @@ import (
 	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type mdbClient struct {
@@ -86,64 +84,6 @@ func (c *mdbClient) CreateProcess(ctx context.Context, opts *options.Create) (ja
 
 func (c *mdbClient) CreateCommand(ctx context.Context) *jasper.Command {
 	return jasper.NewCommand().ProcConstructor(c.CreateProcess)
-}
-
-func (c *mdbClient) CreateScripting(ctx context.Context, opts options.ScriptingHarness) (scripting.Harness, error) {
-	marshalledOpts, err := bson.Marshal(opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "marshalling options to BSON")
-	}
-
-	r := &scriptingCreateRequest{}
-	r.Params.Type = opts.Type()
-	r.Params.Options = marshalledOpts
-	req, err := shell.RequestToMessage(mongowire.OP_QUERY, r)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating request")
-	}
-
-	msg, err := c.doRequest(ctx, req)
-	if err != nil {
-		return nil, errors.Wrap(err, "making request")
-	}
-
-	resp := &scriptingCreateResponse{}
-	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return nil, errors.Wrap(err, "converting wire message to response")
-	}
-
-	if err = resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "response contained error")
-	}
-	return &mdbScriptingHarness{
-		client: c,
-		id:     resp.ID,
-	}, nil
-}
-
-func (c *mdbClient) GetScripting(ctx context.Context, id string) (scripting.Harness, error) {
-	req, err := shell.RequestToMessage(mongowire.OP_QUERY, &scriptingGetRequest{ID: id})
-	if err != nil {
-		return nil, errors.Wrap(err, "creating request")
-	}
-
-	msg, err := c.doRequest(ctx, req)
-	if err != nil {
-		return nil, errors.Wrap(err, "making request")
-	}
-
-	resp := &shell.ErrorResponse{}
-	if err = shell.MessageToResponse(msg, resp); err != nil {
-		return nil, errors.Wrap(err, "converting wire message to response")
-	}
-
-	if err = resp.SuccessOrError(); err != nil {
-		return nil, errors.Wrap(err, "response contained error")
-	}
-	return &mdbScriptingHarness{
-		client: c,
-		id:     id,
-	}, nil
 }
 
 func (c *mdbClient) LoggingCache(ctx context.Context) jasper.LoggingCache {

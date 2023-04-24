@@ -90,32 +90,6 @@ func TestCLIRemote(t *testing.T) {
 
 					assert.True(t, resp.Successful())
 				},
-				"CreateScriptingSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					opts := testoptions.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory())
-					convertedOpts, err := BuildScriptingCreateInput(opts)
-					require.NoError(t, err)
-					input, err := json.Marshal(convertedOpts)
-					require.NoError(t, err)
-					resp := &IDResponse{}
-					require.NoError(t, execCLICommandInputOutput(t, c, remoteCreateScripting(), input, resp))
-					assert.NotZero(t, resp.ID)
-				},
-				"GetScriptingSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context) {
-					opts := testoptions.ValidPythonScriptingHarnessOptions(testutil.BuildDirectory())
-					convertedOpts, err := BuildScriptingCreateInput(opts)
-					require.NoError(t, err)
-					createInput, err := json.Marshal(convertedOpts)
-					require.NoError(t, err)
-					createResp := &IDResponse{}
-					require.NoError(t, execCLICommandInputOutput(t, c, remoteCreateScripting(), createInput, createResp))
-					assert.NotZero(t, createResp.ID)
-
-					input, err := json.Marshal(IDInput{ID: createResp.ID})
-					require.NoError(t, err)
-					resp := &OutcomeResponse{}
-					require.NoError(t, execCLICommandInputOutput(t, c, remoteGetScripting(), input, resp))
-					assert.True(t, resp.Successful())
-				},
 			} {
 				t.Run(testName, func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)

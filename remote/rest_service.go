@@ -17,7 +17,6 @@ import (
 	"github.com/mongodb/grip/recovery"
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 	"github.com/pkg/errors"
 )
 
@@ -26,7 +25,6 @@ import (
 type Service struct {
 	hostID     string
 	manager    jasper.Manager
-	harnesses  scripting.HarnessCache
 	cache      *lru.Cache
 	cacheOpts  options.Cache
 	cacheMutex sync.RWMutex
@@ -36,9 +34,8 @@ type Service struct {
 // access the application and routes via the App() method separately.
 func NewRESTService(m jasper.Manager) *Service {
 	return &Service{
-		manager:   m,
-		harnesses: scripting.NewCache(),
-		cache:     lru.NewCache(),
+		manager: m,
+		cache:   lru.NewCache(),
 	}
 }
 
@@ -77,14 +74,6 @@ func (s *Service) App(ctx context.Context) *gimlet.APIApp {
 	app.AddRoute("/process/{id}/signal/{signal}").Version(1).Patch().Handler(s.signalProcess)
 	app.AddRoute("/process/{id}/trigger/signal/{trigger-id}").Version(1).Patch().Handler(s.registerSignalTriggerID)
 	app.AddRoute("/signal/event/{name}").Version(1).Patch().Handler(s.signalEvent)
-	app.AddRoute("/scripting/create/{type}").Version(1).Post().Handler(s.scriptingCreate)
-	app.AddRoute("/scripting/{id}").Version(1).Get().Handler(s.scriptingCheck)
-	app.AddRoute("/scripting/{id}").Version(1).Delete().Handler(s.scriptingCleanup)
-	app.AddRoute("/scripting/{id}/setup").Version(1).Post().Handler(s.scriptingSetup)
-	app.AddRoute("/scripting/{id}/run").Version(1).Post().Handler(s.scriptingRun)
-	app.AddRoute("/scripting/{id}/script").Version(1).Post().Handler(s.scriptingRunScript)
-	app.AddRoute("/scripting/{id}/build").Version(1).Post().Handler(s.scriptingBuild)
-	app.AddRoute("/scripting/{id}/test").Version(1).Post().Handler(s.scriptingTest)
 	app.AddRoute("/logging/id/{id}").Version(1).Post().Handler(s.loggingCacheCreate)
 	app.AddRoute("/logging/id/{id}").Version(1).Get().Handler(s.loggingCacheGet)
 	app.AddRoute("/logging/id/{id}").Version(1).Delete().Handler(s.loggingCacheRemove)
@@ -794,61 +783,6 @@ func (s *Service) sendMessages(rw http.ResponseWriter, r *http.Request) {
 	if err := logger.Send(payload); err != nil {
 		writeError(rw, gimlet.ErrorResponse{
 			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
-	gimlet.WriteJSON(rw, struct{}{})
-}
-
-func (s *Service) scriptingCreate(rw http.ResponseWriter, r *http.Request) {
-	seopt, err := options.NewScriptingHarness(gimlet.GetVars(r)["type"])
-	if err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
-	if err = gimlet.GetJSON(r.Body, seopt); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
-	if err = seopt.Validate(); err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    errors.Wrap(err, "invalid options").Error(),
-		})
-		return
-	}
-
-	sh, err := s.harnesses.Create(s.manager, seopt)
-	if err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusBadRequest,
-			Message:    err.Error(),
-		})
-		return
-	}
-
-	gimlet.WriteJSON(rw, struct {
-		ID string `json:"id"`
-	}{
-		ID: sh.ID(),
-	})
-}
-
-func (s *Service) scriptingCheck(rw http.ResponseWriter, r *http.Request) {
-	_, err := s.harnesses.Get(gimlet.GetVars(r)["id"])
-	if err != nil {
-		writeError(rw, gimlet.ErrorResponse{
-			StatusCode: http.StatusNotFound,
 			Message:    err.Error(),
 		})
 		return

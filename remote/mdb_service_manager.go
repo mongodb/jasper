@@ -10,7 +10,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Constants representing manager commands.
@@ -376,43 +375,4 @@ func (s *mdbService) sendMessages(ctx context.Context, w io.Writer, msg mongowir
 	}
 
 	s.loggingCacheResponse(ctx, w, nil, SendMessagesCommand)
-}
-
-func (s *mdbService) scriptingGet(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req := &scriptingGetRequest{}
-	if !s.serviceScriptingRequest(ctx, w, msg, req, ScriptingGetCommand) {
-		return
-	}
-
-	harness := s.getHarness(ctx, w, req.ID, ScriptingGetCommand)
-	if harness == nil {
-		return
-	}
-
-	s.serviceScriptingResponse(ctx, w, nil, ScriptingGetCommand)
-}
-
-func (s *mdbService) scriptingCreate(ctx context.Context, w io.Writer, msg mongowire.Message) {
-	req := &scriptingCreateRequest{}
-	if !s.serviceScriptingRequest(ctx, w, msg, req, ScriptingCreateCommand) {
-		return
-	}
-
-	opts, err := options.NewScriptingHarness(req.Params.Type)
-	if err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "creating harness options"), ScriptingCreateCommand)
-		return
-	}
-	if err = bson.Unmarshal(req.Params.Options, opts); err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "unmarshalling BSON into scripting harness options"), ScriptingCreateCommand)
-		return
-	}
-
-	harness, err := s.harnessCache.Create(s.manager, opts)
-	if err != nil {
-		shell.WriteErrorResponse(ctx, w, mongowire.OP_REPLY, errors.Wrap(err, "creating harness"), ScriptingCreateCommand)
-		return
-	}
-
-	s.serviceScriptingResponse(ctx, w, makeScriptingCreateResponse(harness.ID()), ScriptingCreateCommand)
 }

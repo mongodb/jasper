@@ -5,7 +5,6 @@ import (
 
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
-	"github.com/mongodb/jasper/scripting"
 )
 
 // Manager provides an interface to access all functionality from a Jasper
@@ -21,9 +20,5 @@ type Manager interface {
 	GetLogStream(ctx context.Context, id string, count int) (jasper.LogStream, error)
 	GetBuildloggerURLs(ctx context.Context, id string) ([]string, error)
 	SignalEvent(ctx context.Context, name string) error
-
-	CreateScripting(context.Context, options.ScriptingHarness) (scripting.Harness, error)
-	GetScripting(context.Context, string) (scripting.Harness, error)
-
 	SendMessages(context.Context, options.LoggingPayload) error
 }
