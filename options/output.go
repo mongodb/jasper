@@ -2,7 +2,6 @@ package options
 
 import (
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/mongodb/grip"
@@ -36,7 +35,7 @@ func (o Output) outputIsNull() bool {
 		return true
 	}
 
-	if o.Output == ioutil.Discard {
+	if o.Output == io.Discard {
 		return true
 	}
 
@@ -56,7 +55,7 @@ func (o Output) errorIsNull() bool {
 		return true
 	}
 
-	if o.Error == ioutil.Discard {
+	if o.Error == io.Discard {
 		return true
 	}
 
@@ -112,7 +111,7 @@ func (o *Output) GetOutput() (io.Writer, error) {
 	}
 
 	if o.outputIsNull() && !o.outputLogging() {
-		return ioutil.Discard, nil
+		return io.Discard, nil
 	}
 
 	if o.outputMulti != nil {
@@ -125,7 +124,7 @@ func (o *Output) GetOutput() (io.Writer, error) {
 		for i := range o.Loggers {
 			sender, err := o.Loggers[i].Resolve()
 			if err != nil {
-				return ioutil.Discard, err
+				return io.Discard, err
 			}
 			outLoggers = append(outLoggers, sender)
 		}
@@ -137,7 +136,7 @@ func (o *Output) GetOutput() (io.Writer, error) {
 			var err error
 			outMulti, err = send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Info, Threshold: level.Trace}, outLoggers)
 			if err != nil {
-				return ioutil.Discard, err
+				return io.Discard, err
 			}
 		}
 		o.outputSender = send.NewWriterSender(outMulti)
@@ -162,7 +161,7 @@ func (o *Output) GetError() (io.Writer, error) {
 	}
 
 	if o.errorIsNull() && !o.errorLogging() {
-		return ioutil.Discard, nil
+		return io.Discard, nil
 	}
 
 	if o.errorMulti != nil {
@@ -175,14 +174,14 @@ func (o *Output) GetError() (io.Writer, error) {
 		for i := range o.Loggers {
 			sender, err := o.Loggers[i].Resolve()
 			if err != nil {
-				return ioutil.Discard, err
+				return io.Discard, err
 			}
 			errSenders = append(errSenders, sender)
 		}
 
 		errMulti, err := send.NewMultiSender(DefaultLogName, send.LevelInfo{Default: level.Error, Threshold: level.Trace}, errSenders)
 		if err != nil {
-			return ioutil.Discard, err
+			return io.Discard, err
 		}
 		// This will not close the Loggers' underlying senders.
 		o.errorSender = send.NewWriterSender(errMulti)

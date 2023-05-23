@@ -19,8 +19,8 @@ type Process struct {
 	WaitExitCode                int
 
 	ProcInfo         jasper.ProcessInfo
-	Triggers         jasper.ProcessTriggerSequence
-	SignalTriggers   jasper.SignalTriggerSequence
+	Triggers         jasper.ProcessTriggerSequence `json:"-"`
+	SignalTriggers   jasper.SignalTriggerSequence  `json:"-"`
 	SignalTriggerIDs []jasper.SignalTriggerID
 	Signals          []syscall.Signal
 	Tags             []string

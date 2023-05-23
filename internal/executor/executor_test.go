@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -47,6 +49,39 @@ func executorTypes() map[string]executorConstructor {
 	}
 }
 
+// pipeReader avoids data races when reading from the docker executor stdout.
+// These races happen if you just use a byte buffer for stdout since there isn't
+// synchronization writing to the byte buffer in the docker executor
+type pipeReader struct {
+	buffer bytes.Buffer
+	reader io.Reader
+	writer io.WriteCloser
+	wg     sync.WaitGroup
+}
+
+func (p *pipeReader) start(t *testing.T) {
+	p.wg.Add(1)
+	go func() {
+		result, err := io.ReadAll(p.reader)
+		p.buffer.Write(result)
+		assert.NoError(t, err)
+		p.wg.Done()
+	}()
+}
+
+func (p *pipeReader) closeAndWait() {
+	p.writer.Close()
+	p.wg.Wait()
+}
+
+func makePipeReader() (pipeReader, io.Writer) {
+	reader, writer := io.Pipe()
+	return pipeReader{
+		reader: reader,
+		writer: writer,
+	}, writer
+}
+
 type executorTestCase struct {
 	Name string
 	Case func(ctx context.Context, t *testing.T, makeExec executorConstructor)
@@ -79,12 +114,14 @@ func executorTestCases() []executorTestCase {
 				env := []string{"foo=bar", "bat=baz"}
 				exec.SetEnv(env)
 				assert.Equal(t, env, exec.Env())
-				stdout := &bytes.Buffer{}
-				exec.SetStdout(stdout)
+				pipeReader, writer := makePipeReader()
+				pipeReader.start(t)
+				exec.SetStdout(writer)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
+				pipeReader.closeAndWait()
 				for _, envVar := range env {
-					assert.Contains(t, stdout.String(), envVar)
+					assert.Contains(t, pipeReader.buffer.String(), envVar)
 				}
 			},
 		},
@@ -111,12 +148,14 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				stdout := &bytes.Buffer{}
-				exec.SetStdout(stdout)
-				require.Equal(t, stdout, exec.Stdout())
+				pipeReader, writer := makePipeReader()
+				pipeReader.start(t)
+				exec.SetStdout(writer)
+				require.Equal(t, writer, exec.Stdout())
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				assert.Equal(t, output, stdout.String())
+				pipeReader.closeAndWait()
+				assert.Equal(t, output, pipeReader.buffer.String())
 			},
 		},
 		{
@@ -130,11 +169,13 @@ func executorTestCases() []executorTestCase {
 				input := "hello"
 				stdin := bytes.NewBufferString(input)
 				exec.SetStdin(stdin)
-				stdout := &bytes.Buffer{}
-				exec.SetStdout(stdout)
+				pipeReader, writer := makePipeReader()
+				pipeReader.start(t)
+				exec.SetStdout(writer)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				assert.Equal(t, input, stdout.String())
+				pipeReader.closeAndWait()
+				assert.Equal(t, input, pipeReader.buffer.String())
 			},
 		},
 		{
@@ -146,12 +187,15 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				stderr := &bytes.Buffer{}
-				exec.SetStderr(stderr)
-				require.Equal(t, stderr, exec.Stderr())
+				pipeReader, writer := makePipeReader()
+				pipeReader.start(t)
+				exec.SetStdout(writer)
+				exec.SetStderr(writer)
+				require.Equal(t, writer, exec.Stderr())
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				assert.Equal(t, output, stderr.String())
+				pipeReader.closeAndWait()
+				assert.Equal(t, output, pipeReader.buffer.String())
 			},
 		},
 		{

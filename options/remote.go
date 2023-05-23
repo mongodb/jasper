@@ -2,7 +2,7 @@ package options
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/mongodb/grip"
@@ -108,7 +108,7 @@ func (opts *RemoteConfig) publicKeyAuth() (ssh.AuthMethod, error) {
 	var key []byte
 	if opts.KeyFile != "" {
 		var err error
-		key, err = ioutil.ReadFile(opts.KeyFile)
+		key, err = os.ReadFile(opts.KeyFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading key file")
 		}

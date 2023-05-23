@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,13 +20,13 @@ import (
 
 func TestNewSSHClient(t *testing.T) {
 	for testName, testCase := range map[string]func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions){
-		"NewSSHClientFailsWithEmptyRemoteOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
-			remoteOpts = options.Remote{}
+		"NewSSHClientFailsWithEmptyRemoteOptions": func(t *testing.T, _ options.Remote, clientOpts ClientOptions) {
+			remoteOpts := options.Remote{}
 			_, err := NewSSHClient(clientOpts, remoteOpts)
 			assert.Error(t, err)
 		},
-		"NewSSHClientFailsWithEmptyClientOptions": func(t *testing.T, remoteOpts options.Remote, clientOpts ClientOptions) {
-			clientOpts = ClientOptions{}
+		"NewSSHClientFailsWithEmptyClientOptions": func(t *testing.T, remoteOpts options.Remote, _ ClientOptions) {
+			clientOpts := ClientOptions{}
 			_, err := NewSSHClient(clientOpts, remoteOpts)
 			assert.Error(t, err)
 		},
@@ -537,7 +537,7 @@ func TestSSHClient(t *testing.T) {
 func makeCreateFunc(t *testing.T, client *sshClient, expectedClientSubcommand []string, inputChecker interface{}, expectedResponse interface{}) func(*options.Create) mock.Process {
 	return func(opts *options.Create) mock.Process {
 		if opts.StandardInputBytes != nil && inputChecker != nil {
-			input, err := ioutil.ReadAll(bytes.NewBuffer(opts.StandardInputBytes))
+			input, err := io.ReadAll(bytes.NewBuffer(opts.StandardInputBytes))
 			require.NoError(t, err)
 			require.NoError(t, json.Unmarshal(input, inputChecker))
 		}

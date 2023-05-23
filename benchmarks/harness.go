@@ -3,7 +3,6 @@ package benchmarks
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -123,7 +122,7 @@ func getInMemoryLoggerBenchmark(makeProc makeProcess, timeout time.Duration) pop
 
 func getFileLoggerBenchmark(makeProc makeProcess, timeout time.Duration) poplar.Benchmark {
 	return func(ctx context.Context, r poplar.Recorder, _ int) error {
-		file, err := ioutil.TempFile("", "bench_out.txt")
+		file, err := os.CreateTemp("", "bench_out.txt")
 		if err != nil {
 			return err
 		}

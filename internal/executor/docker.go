@@ -3,7 +3,6 @@ package executor
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"runtime"
 	"sync"
 	"syscall"
@@ -255,10 +254,10 @@ func (e *docker) runIOStream(stream types.HijackedResponse) {
 			stdout := e.stdout
 			stderr := e.stderr
 			if stdout == nil {
-				stdout = ioutil.Discard
+				stdout = io.Discard
 			}
 			if stderr == nil {
-				stderr = ioutil.Discard
+				stderr = io.Discard
 			}
 			if _, err := stdcopy.StdCopy(stdout, stderr, stream.Reader); err != nil {
 				grip.Error(errors.Wrap(err, "streaming output from process"))

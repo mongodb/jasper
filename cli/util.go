@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"net"
@@ -60,7 +59,7 @@ func requireStringFlag(name string) cli.BeforeFunc {
 	}
 }
 
-func requireOneFlag(names ...string) cli.BeforeFunc { //nolint: deadcode
+func requireOneFlag(names ...string) cli.BeforeFunc { //nolint:unused
 	return func(c *cli.Context) error {
 		var count int
 		for _, name := range names {
@@ -77,7 +76,8 @@ func requireOneFlag(names ...string) cli.BeforeFunc { //nolint: deadcode
 
 // requireRelativePath verifies that the path flag relPathFlagName is set to a
 // path relative to the directory path set for dirFlagName.
-//nolint: deadcode
+//
+//nolint:unused
 func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		relPath := util.ConsistentFilepath(c.String(relPathFlagName))
@@ -95,7 +95,8 @@ func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
 
 // requireStringSliceFlag verifies that the flag name is set to a non-empty
 // string slice.
-//nolint: deadcode
+//
+//nolint:unused
 func requireStringSliceFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if len(c.StringSlice(name)) == 0 {
@@ -123,7 +124,7 @@ func validatePort(flagName string) func(*cli.Context) error {
 
 // readInput reads JSON from the input and decodes it to the output.
 func readInput(input io.Reader, output interface{}) error {
-	bytes, err := ioutil.ReadAll(input)
+	bytes, err := io.ReadAll(input)
 	if err != nil {
 		return errors.Wrap(err, "reading from input")
 	}

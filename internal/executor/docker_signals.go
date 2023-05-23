@@ -31,28 +31,6 @@ func syscallToDockerSignal(sig syscall.Signal, os string) (string, error) {
 	return "", errors.Errorf("unrecognized Docker signal '%d' for OS '%s'", sig, os)
 }
 
-// dockerToSyscallSignal converts the Docker signal to the equivalent
-// syscall.Signal.
-func dockerToSyscallSignal(dsig string, os string) (syscall.Signal, error) { //nolint: deadcode
-	switch os {
-	case "darwin":
-		if sig, ok := dockerToSyscallDarwin()[dsig]; ok {
-			return sig, nil
-		}
-	case "linux":
-		if sig, ok := dockerToSyscallLinux()[dsig]; ok {
-			return sig, nil
-		}
-	case "windows":
-		if sig, ok := dockerToSyscallWindows()[dsig]; ok {
-			return sig, nil
-		}
-	default:
-		return syscall.Signal(-1), errors.Errorf("unrecognized OS '%s'", os)
-	}
-	return syscall.Signal(-1), errors.Errorf("unrecognized signal '%s' for OS '%s'", dsig, os)
-}
-
 // These are constants taken from the signals in the syscall package for
 // GOOS="linux".
 const (
@@ -96,76 +74,6 @@ const (
 	sigrtmin = 34
 	sigrtmax = 64
 )
-
-func dockerToSyscallLinux() map[string]syscall.Signal {
-	return map[string]syscall.Signal{
-		"ABRT":     linuxSIGABRT,
-		"ALRM":     linuxSIGALRM,
-		"BUS":      linuxSIGBUS,
-		"CHLD":     linuxSIGCHLD,
-		"CLD":      linuxSIGCLD,
-		"CONT":     linuxSIGCONT,
-		"FPE":      linuxSIGFPE,
-		"HUP":      linuxSIGHUP,
-		"ILL":      linuxSIGILL,
-		"INT":      linuxSIGINT,
-		"IO":       linuxSIGIO,
-		"IOT":      linuxSIGIOT,
-		"KILL":     linuxSIGKILL,
-		"PIPE":     linuxSIGPIPE,
-		"POLL":     linuxSIGPOLL,
-		"PROF":     linuxSIGPROF,
-		"PWR":      linuxSIGPWR,
-		"QUIT":     linuxSIGQUIT,
-		"SEGV":     linuxSIGSEGV,
-		"STKFLT":   linuxSIGSTKFLT,
-		"STOP":     linuxSIGSTOP,
-		"SYS":      linuxSIGSYS,
-		"TERM":     linuxSIGTERM,
-		"TRAP":     linuxSIGTRAP,
-		"TSTP":     linuxSIGTSTP,
-		"TTIN":     linuxSIGTTIN,
-		"TTOU":     linuxSIGTTOU,
-		"URG":      linuxSIGURG,
-		"USR1":     linuxSIGUSR1,
-		"USR2":     linuxSIGUSR2,
-		"VTALRM":   linuxSIGVTALRM,
-		"WINCH":    linuxSIGWINCH,
-		"XCPU":     linuxSIGXCPU,
-		"XFSZ":     linuxSIGXFSZ,
-		"RTMIN":    sigrtmin,
-		"RTMIN+1":  sigrtmin + 1,
-		"RTMIN+2":  sigrtmin + 2,
-		"RTMIN+3":  sigrtmin + 3,
-		"RTMIN+4":  sigrtmin + 4,
-		"RTMIN+5":  sigrtmin + 5,
-		"RTMIN+6":  sigrtmin + 6,
-		"RTMIN+7":  sigrtmin + 7,
-		"RTMIN+8":  sigrtmin + 8,
-		"RTMIN+9":  sigrtmin + 9,
-		"RTMIN+10": sigrtmin + 10,
-		"RTMIN+11": sigrtmin + 11,
-		"RTMIN+12": sigrtmin + 12,
-		"RTMIN+13": sigrtmin + 13,
-		"RTMIN+14": sigrtmin + 14,
-		"RTMIN+15": sigrtmin + 15,
-		"RTMAX-14": sigrtmax - 14,
-		"RTMAX-13": sigrtmax - 13,
-		"RTMAX-12": sigrtmax - 12,
-		"RTMAX-11": sigrtmax - 11,
-		"RTMAX-10": sigrtmax - 10,
-		"RTMAX-9":  sigrtmax - 9,
-		"RTMAX-8":  sigrtmax - 8,
-		"RTMAX-7":  sigrtmax - 7,
-		"RTMAX-6":  sigrtmax - 6,
-		"RTMAX-5":  sigrtmax - 5,
-		"RTMAX-4":  sigrtmax - 4,
-		"RTMAX-3":  sigrtmax - 3,
-		"RTMAX-2":  sigrtmax - 2,
-		"RTMAX-1":  sigrtmax - 1,
-		"RTMAX":    sigrtmax,
-	}
-}
 
 func syscallToDockerLinux() map[syscall.Signal]string {
 	return map[syscall.Signal]string{
@@ -274,43 +182,6 @@ const (
 	darwinSIGXFSZ   = syscall.Signal(0x19)
 )
 
-func dockerToSyscallDarwin() map[string]syscall.Signal {
-	return map[string]syscall.Signal{
-		"ABRT":   darwinSIGABRT,
-		"ALRM":   darwinSIGALRM,
-		"BUG":    darwinSIGBUS, // This one is spelled as "BUG" for Darwin even though it's "BUG" on Linux.
-		"CHLD":   darwinSIGCHLD,
-		"CONT":   darwinSIGCONT,
-		"EMT":    darwinSIGEMT,
-		"FPE":    darwinSIGFPE,
-		"HUP":    darwinSIGHUP,
-		"ILL":    darwinSIGILL,
-		"INFO":   darwinSIGINFO,
-		"INT":    darwinSIGINT,
-		"IO":     darwinSIGIO,
-		"IOT":    darwinSIGIOT,
-		"KILL":   darwinSIGKILL,
-		"PIPE":   darwinSIGPIPE,
-		"PROF":   darwinSIGPROF,
-		"QUIT":   darwinSIGQUIT,
-		"SEGV":   darwinSIGSEGV,
-		"STOP":   darwinSIGSTOP,
-		"SYS":    darwinSIGSYS,
-		"TERM":   darwinSIGTERM,
-		"TRAP":   darwinSIGTRAP,
-		"TSTP":   darwinSIGTSTP,
-		"TTIN":   darwinSIGTTIN,
-		"TTOU":   darwinSIGTTOU,
-		"URG":    darwinSIGURG,
-		"USR1":   darwinSIGUSR1,
-		"USR2":   darwinSIGUSR2,
-		"VTALRM": darwinSIGVTALRM,
-		"WINCH":  darwinSIGWINCH,
-		"XCPU":   darwinSIGXCPU,
-		"XFSZ":   darwinSIGXFSZ,
-	}
-}
-
 func syscallToDockerDarwin() map[syscall.Signal]string {
 	return map[syscall.Signal]string{
 		darwinSIGABRT: "ABRT",
@@ -354,13 +225,6 @@ const (
 	windowsSIGTERM = syscall.Signal(0x9)
 	windowsSIGKILL = syscall.Signal(0xf)
 )
-
-func dockerToSyscallWindows() map[string]syscall.Signal {
-	return map[string]syscall.Signal{
-		"KILL": windowsSIGKILL,
-		"TERM": windowsSIGTERM,
-	}
-}
 
 func syscallToDockerWindows() map[syscall.Signal]string {
 	return map[syscall.Signal]string{

@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -136,7 +135,7 @@ func TestCLIManager(t *testing.T) {
 					assert.True(t, resp.Successful())
 				},
 				"WriteFileSucceeds": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), "write_file")
+					tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), "write_file")
 					require.NoError(t, err)
 					defer func() {
 						assert.NoError(t, tmpFile.Close())
@@ -152,7 +151,7 @@ func TestCLIManager(t *testing.T) {
 
 					assert.True(t, resp.Successful())
 
-					data, err := ioutil.ReadFile(opts.Path)
+					data, err := os.ReadFile(opts.Path)
 					require.NoError(t, err)
 					assert.Equal(t, opts.Content, data)
 				},
