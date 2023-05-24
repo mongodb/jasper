@@ -56,6 +56,9 @@ func executorTypes() map[string]executorConstructor {
 				Command: args,
 			}
 			executor, err := NewDocker(ctx, opts)
+			if err != nil {
+				return nil, err
+			}
 			dockerExecutor := executor.(*docker)
 			return dockerWrapper{
 				dockerExecutor,
