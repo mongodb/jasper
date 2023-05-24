@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"runtime"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -18,6 +16,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Wrapper for testing that ensures
+// we can wait until all io is finished
+// to avoid issues with data races.
+type dockerWrapper struct {
+	*docker
+}
+
+func (wrapper dockerWrapper) Wait() error {
+	err := wrapper.docker.Wait()
+	wrapper.docker.ioWaitGroup.Wait()
+	return err
+}
 
 type executorConstructor func(ctx context.Context, args []string) (Executor, error)
 
@@ -44,42 +55,13 @@ func executorTypes() map[string]executorConstructor {
 				Image:   image,
 				Command: args,
 			}
-			return NewDocker(ctx, opts)
+			executor, err := NewDocker(ctx, opts)
+			dockerExecutor := executor.(*docker)
+			return dockerWrapper{
+				dockerExecutor,
+			}, nil
 		},
 	}
-}
-
-// pipeReader avoids data races when reading from the docker executor stdout.
-// These races happen if you just use a byte buffer for stdout since there isn't
-// synchronization writing to the byte buffer in the docker executor
-type pipeReader struct {
-	buffer bytes.Buffer
-	reader io.Reader
-	writer io.WriteCloser
-	wg     sync.WaitGroup
-}
-
-func (p *pipeReader) start(t *testing.T) {
-	p.wg.Add(1)
-	go func() {
-		result, err := io.ReadAll(p.reader)
-		p.buffer.Write(result)
-		assert.NoError(t, err)
-		p.wg.Done()
-	}()
-}
-
-func (p *pipeReader) closeAndWait() {
-	p.writer.Close()
-	p.wg.Wait()
-}
-
-func makePipeReader() (pipeReader, io.Writer) {
-	reader, writer := io.Pipe()
-	return pipeReader{
-		reader: reader,
-		writer: writer,
-	}, writer
 }
 
 type executorTestCase struct {
@@ -114,14 +96,12 @@ func executorTestCases() []executorTestCase {
 				env := []string{"foo=bar", "bat=baz"}
 				exec.SetEnv(env)
 				assert.Equal(t, env, exec.Env())
-				pipeReader, writer := makePipeReader()
-				pipeReader.start(t)
-				exec.SetStdout(writer)
+				stdout := &bytes.Buffer{}
+				exec.SetStdout(stdout)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				pipeReader.closeAndWait()
 				for _, envVar := range env {
-					assert.Contains(t, pipeReader.buffer.String(), envVar)
+					assert.Contains(t, stdout.String(), envVar)
 				}
 			},
 		},
@@ -148,14 +128,12 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				pipeReader, writer := makePipeReader()
-				pipeReader.start(t)
-				exec.SetStdout(writer)
-				require.Equal(t, writer, exec.Stdout())
+				stdout := &bytes.Buffer{}
+				exec.SetStdout(stdout)
+				require.Equal(t, stdout, exec.Stdout())
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				pipeReader.closeAndWait()
-				assert.Equal(t, output, pipeReader.buffer.String())
+				assert.Equal(t, output, stdout.String())
 			},
 		},
 		{
@@ -169,13 +147,11 @@ func executorTestCases() []executorTestCase {
 				input := "hello"
 				stdin := bytes.NewBufferString(input)
 				exec.SetStdin(stdin)
-				pipeReader, writer := makePipeReader()
-				pipeReader.start(t)
-				exec.SetStdout(writer)
+				stdout := &bytes.Buffer{}
+				exec.SetStdout(stdout)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				pipeReader.closeAndWait()
-				assert.Equal(t, input, pipeReader.buffer.String())
+				assert.Equal(t, input, stdout.String())
 			},
 		},
 		{
@@ -187,15 +163,12 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				pipeReader, writer := makePipeReader()
-				pipeReader.start(t)
-				exec.SetStdout(writer)
-				exec.SetStderr(writer)
-				require.Equal(t, writer, exec.Stderr())
+				stderr := &bytes.Buffer{}
+				exec.SetStderr(stderr)
+				require.Equal(t, stderr, exec.Stderr())
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
-				pipeReader.closeAndWait()
-				assert.Equal(t, output, pipeReader.buffer.String())
+				assert.Equal(t, output, stderr.String())
 			},
 		},
 		{

@@ -168,7 +168,7 @@ task_groups:
 #######################################
 buildvariants:
   - name: lint-linux
-    display_name: Lint (Ubuntu 22.04)
+    display_name: Lint
     expansions:
       GOROOT: /opt/golang/go1.20
     run_on:

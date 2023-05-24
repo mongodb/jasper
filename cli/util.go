@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -54,53 +53,6 @@ func requireStringFlag(name string) cli.BeforeFunc {
 	return func(c *cli.Context) error {
 		if c.String(name) == "" {
 			return errors.Errorf("must specify string for flag '%s'", name)
-		}
-		return nil
-	}
-}
-
-func requireOneFlag(names ...string) cli.BeforeFunc { //nolint:unused
-	return func(c *cli.Context) error {
-		var count int
-		for _, name := range names {
-			if c.IsSet(name) {
-				count++
-			}
-		}
-		if count != 1 {
-			return errors.Errorf("must specify exactly one flag from the following: %s", names)
-		}
-		return nil
-	}
-}
-
-// requireRelativePath verifies that the path flag relPathFlagName is set to a
-// path relative to the directory path set for dirFlagName.
-//
-//nolint:unused
-func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
-	return func(c *cli.Context) error {
-		relPath := util.ConsistentFilepath(c.String(relPathFlagName))
-		path := util.ConsistentFilepath(c.String(pathFlagName))
-		if filepath.IsAbs(relPath) {
-			if strings.HasPrefix(relPath, path) {
-				relPath = strings.TrimPrefix(relPath, path)
-				return errors.Wrapf(c.Set(relPathFlagName, relPath), "setting flag '%s' to relative path", relPathFlagName)
-			}
-			return errors.Errorf("path '%s' must be relative to the path '%s'", relPath, path)
-		}
-		return nil
-	}
-}
-
-// requireStringSliceFlag verifies that the flag name is set to a non-empty
-// string slice.
-//
-//nolint:unused
-func requireStringSliceFlag(name string) cli.BeforeFunc {
-	return func(c *cli.Context) error {
-		if len(c.StringSlice(name)) == 0 {
-			return errors.Errorf("must specify at least one string for flag '%s'", name)
 		}
 		return nil
 	}

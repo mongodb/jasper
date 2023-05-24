@@ -144,7 +144,8 @@ func TestManagerImplementations(t *testing.T) {
 
 					proc, err := newBlockingProcess(ctx, opts)
 					require.NoError(t, err)
-					assert.NotEmpty(t, proc)
+					// Must use NotNil here since NotEmpty can data race on the proc object
+					assert.NotNil(t, proc)
 					err = mngr.Register(ctx, proc)
 					require.NoError(t, err)
 					err = mngr.Register(ctx, proc)

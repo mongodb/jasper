@@ -43,6 +43,8 @@ type docker struct {
 	exitCode int
 	exitErr  error
 	signal   syscall.Signal
+
+	ioWaitGroup sync.WaitGroup
 }
 
 // DockerOptions represent options for a Docker runtime executor within a Docker
@@ -235,12 +237,11 @@ func (e *docker) setupIOStream() error {
 // stream is done.
 func (e *docker) runIOStream(stream types.HijackedResponse) {
 	defer stream.Close()
-	var wg sync.WaitGroup
 
 	if e.stdin != nil {
-		wg.Add(1)
+		e.ioWaitGroup.Add(1)
 		go func() {
-			defer wg.Done()
+			defer e.ioWaitGroup.Done()
 			_, err := io.Copy(stream.Conn, e.stdin)
 			grip.Error(errors.Wrap(err, "streaming input to process"))
 			grip.Error(errors.Wrap(stream.CloseWrite(), "closing input stream to process"))
@@ -248,9 +249,9 @@ func (e *docker) runIOStream(stream types.HijackedResponse) {
 	}
 
 	if e.stdout != nil || e.stderr != nil {
-		wg.Add(1)
+		e.ioWaitGroup.Add(1)
 		go func() {
-			defer wg.Done()
+			defer e.ioWaitGroup.Done()
 			stdout := e.stdout
 			stderr := e.stderr
 			if stdout == nil {
@@ -265,7 +266,7 @@ func (e *docker) runIOStream(stream types.HijackedResponse) {
 		}()
 	}
 
-	wg.Wait()
+	e.ioWaitGroup.Wait()
 }
 
 // withRemoveContainer returns the error as well as any error from cleaning up
