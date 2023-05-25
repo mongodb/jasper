@@ -19,8 +19,8 @@ type Process struct {
 	WaitExitCode                int
 
 	ProcInfo         jasper.ProcessInfo
-	Triggers         jasper.ProcessTriggerSequence `json:"-"` // omitted since ProcessTrigger is a function, and functions aren't JSON serializable
-	SignalTriggers   jasper.SignalTriggerSequence  `json:"-"` // omitted since SignalTrigger is a function, and functions aren't JSON serializable
+	Triggers         jasper.ProcessTriggerSequence
+	SignalTriggers   jasper.SignalTriggerSequence
 	SignalTriggerIDs []jasper.SignalTriggerID
 	Signals          []syscall.Signal
 	Tags             []string

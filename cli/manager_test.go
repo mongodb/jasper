@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/mongodb/jasper"
-	"github.com/mongodb/jasper/mock"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	testoptions "github.com/mongodb/jasper/testutil/options"
@@ -31,7 +30,7 @@ func TestCLIManager(t *testing.T) {
 					assert.NotEmpty(t, resp.ID)
 				},
 				"CommandsWithInputFailWithInvalidInput": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					input, err := json.Marshal(mock.Process{})
+					input, err := json.Marshal(map[string]string{"test": "test"})
 					require.NoError(t, err)
 					assert.Error(t, execCLICommandInputOutput(t, c, managerCreateProcess(), input, &InfoResponse{}))
 					assert.Error(t, execCLICommandInputOutput(t, c, managerCreateCommand(), input, &OutcomeResponse{}))
@@ -40,7 +39,7 @@ func TestCLIManager(t *testing.T) {
 					assert.Error(t, execCLICommandInputOutput(t, c, managerGroup(), input, &InfosResponse{}))
 				},
 				"CommandsWithoutInputPassWithInvalidInput": func(ctx context.Context, t *testing.T, c *cli.Context, jasperProcID string) {
-					input, err := json.Marshal(mock.Process{})
+					input, err := json.Marshal(map[string]string{"test": "test"})
 					require.NoError(t, err)
 					resp := &OutcomeResponse{}
 					assert.NoError(t, execCLICommandInputOutput(t, c, managerClear(), input, resp))
