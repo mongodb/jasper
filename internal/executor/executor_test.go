@@ -11,24 +11,12 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// Wrapper for testing that ensures
-// we can wait until all io is finished
-// to avoid issues with data races.
-type dockerWrapper struct {
-	*docker
-}
-
-func (wrapper dockerWrapper) Wait() error {
-	err := wrapper.docker.Wait()
-	wrapper.docker.ioWaitGroup.Wait()
-	return err
-}
 
 type executorConstructor func(ctx context.Context, args []string) (Executor, error)
 
@@ -55,14 +43,7 @@ func executorTypes() map[string]executorConstructor {
 				Image:   image,
 				Command: args,
 			}
-			executor, err := NewDocker(ctx, opts)
-			if err != nil {
-				return nil, err
-			}
-			dockerExecutor := executor.(*docker)
-			return dockerWrapper{
-				dockerExecutor,
-			}, nil
+			return NewDocker(ctx, opts)
 		},
 	}
 }
@@ -99,7 +80,7 @@ func executorTestCases() []executorTestCase {
 				env := []string{"foo=bar", "bat=baz"}
 				exec.SetEnv(env)
 				assert.Equal(t, env, exec.Env())
-				stdout := &bytes.Buffer{}
+				stdout := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStdout(stdout)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
@@ -131,7 +112,7 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				stdout := &bytes.Buffer{}
+				stdout := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStdout(stdout)
 				require.Equal(t, stdout, exec.Stdout())
 				require.NoError(t, exec.Start())
@@ -150,7 +131,7 @@ func executorTestCases() []executorTestCase {
 				input := "hello"
 				stdin := bytes.NewBufferString(input)
 				exec.SetStdin(stdin)
-				stdout := &bytes.Buffer{}
+				stdout := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStdout(stdout)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
@@ -166,7 +147,7 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				stderr := &bytes.Buffer{}
+				stderr := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStderr(stderr)
 				require.Equal(t, stderr, exec.Stderr())
 				require.NoError(t, exec.Start())
