@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -80,7 +80,7 @@ func TestWriteOutputInvalidInput(t *testing.T) {
 func TestWriteOutputInvalidOutput(t *testing.T) {
 	input := bytes.NewBufferString(`{"foo":"bar"}`)
 
-	output, err := ioutil.TempFile(testutil.BuildDirectory(), "write_output.txt")
+	output, err := os.CreateTemp(testutil.BuildDirectory(), "write_output.txt")
 	require.NoError(t, err)
 	defer os.RemoveAll(output.Name())
 	require.NoError(t, output.Close())
@@ -132,7 +132,7 @@ func TestCLICommon(t *testing.T) {
 						return withMockStdout(t, func(*os.File) error {
 							input := &mockInput{}
 							require.NoError(t, doPassthroughInputOutput(c, input, mockRequest("")))
-							output, err := ioutil.ReadAll(stdin)
+							output, err := io.ReadAll(stdin)
 							require.NoError(t, err)
 							assert.Len(t, output, 0)
 							return nil
@@ -163,7 +163,7 @@ func TestCLICommon(t *testing.T) {
 							expectedOutput := `{"value":"bar"}`
 							_, err := stdout.Seek(0, 0)
 							require.NoError(t, err)
-							output, err := ioutil.ReadAll(stdout)
+							output, err := io.ReadAll(stdout)
 							require.NoError(t, err)
 							assert.Equal(t, testutil.RemoveWhitespace(expectedOutput), testutil.RemoveWhitespace(string(output)))
 							return nil
@@ -175,7 +175,7 @@ func TestCLICommon(t *testing.T) {
 					return withMockStdin(t, input, func(stdin *os.File) error {
 						return withMockStdout(t, func(*os.File) error {
 							require.NoError(t, doPassthroughOutput(c, mockRequest("")))
-							output, err := ioutil.ReadAll(stdin)
+							output, err := io.ReadAll(stdin)
 							require.NoError(t, err)
 							assert.Len(t, output, len(input))
 							return nil
@@ -191,7 +191,7 @@ func TestCLICommon(t *testing.T) {
 						expectedOutput := `{"value": "bar"}`
 						_, err := stdout.Seek(0, 0)
 						require.NoError(t, err)
-						output, err := ioutil.ReadAll(stdout)
+						output, err := io.ReadAll(stdout)
 						require.NoError(t, err)
 						assert.Equal(t, testutil.RemoveWhitespace(expectedOutput), testutil.RemoveWhitespace(string(output)))
 						return nil

@@ -167,25 +167,12 @@ task_groups:
 #           Buildvariants             #
 #######################################
 buildvariants:
-  - name: race-detector
-    display_name: Race Detector (Arch Linux)
-    expansions:
-      GOROOT: /opt/golang/go1.16
-      RACE_DETECTOR: true
-      SKIP_DOCKER_TESTS: true
-    run_on:
-      - archlinux-new-small
-      - archlinux-new-large
-    tasks:
-      - name: test_group
-
   - name: lint-linux
-    display_name: Lint (Arch Linux)
+    display_name: Lint
     expansions:
-      GOROOT: /opt/golang/go1.16
+      GOROOT: /opt/golang/go1.20
     run_on:
-      - archlinux-new-small
-      - archlinux-new-large
+      - ubuntu2204-small
     tasks: 
       - name: lint_group
       - name: verify-mod-tidy
@@ -193,41 +180,37 @@ buildvariants:
   - name: lint-windows
     display_name: Lint (Windows)
     expansions:
-      GOROOT: C:/golang/go1.16
+      GOROOT: C:/golang/go1.20
     run_on:
-      - windows-64-vs2019-small
-      - windows-64-vs2019-large
+      - windows-vsCurrent-small
     tasks:
       - lint_group
 
   - name: ubuntu
-    display_name: Ubuntu 18.04
+    display_name: Ubuntu 22.04
     expansions:
-      GOROOT: /opt/golang/go1.16
+      GOROOT: /opt/golang/go1.20
+      RACE_DETECTOR: true
       DOCKER_IMAGE: ubuntu
     run_on:
-      - ubuntu1804-small
-      - ubuntu1804-large
+      - ubuntu2204-small
     tasks:
       - name: test_group
 
   - name: macos
     display_name: macOS
     expansions:
-      GOROOT: /opt/golang/go1.16
+      GOROOT: /opt/golang/go1.20
     run_on:
-      - macos-1014
+      - macos-1100-arm64
     tasks:
       - name: test_group
 
   - name: windows
     display_name: Windows
     run_on:
-      - windows-64-vs2019-small
-      - windows-64-vs2019-large
-      - windows-64-vs2017-small
-      - windows-64-vs2017-large
+      - windows-vsCurrent-small
     expansions:
-      GOROOT: C:/golang/go1.16
+      GOROOT: C:/golang/go1.20
     tasks:
       - name: test_group

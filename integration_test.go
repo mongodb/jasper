@@ -3,7 +3,6 @@ package jasper
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -43,7 +42,7 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	arch := "x86_64"
 	release := "4.0-stable"
 
-	dir, err := ioutil.TempDir("", "mongodb")
+	dir, err := os.MkdirTemp("", "mongodb")
 	require.NoError(t, err)
 
 	opts := bond.BuildOptions{
@@ -80,7 +79,7 @@ func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, 
 		procName := "mongod"
 		port := testutil.GetPortNumber()
 
-		dbPath, err := ioutil.TempDir(testutil.BuildDirectory(), procName)
+		dbPath, err := os.MkdirTemp(testutil.BuildDirectory(), procName)
 		if err != nil {
 			return nil, nil, err
 		}

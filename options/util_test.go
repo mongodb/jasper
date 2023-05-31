@@ -2,7 +2,7 @@ package options
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -131,7 +131,7 @@ func TestWriteFileOptions(t *testing.T) {
 					require.NoError(t, err)
 					assert.Equal(t, opts.Reader, reader)
 
-					content, err := ioutil.ReadAll(reader)
+					content, err := io.ReadAll(reader)
 					require.NoError(t, err)
 					assert.Equal(t, expected, content)
 				},
@@ -143,7 +143,7 @@ func TestWriteFileOptions(t *testing.T) {
 					assert.Equal(t, reader, opts.Reader)
 					assert.Empty(t, opts.Content)
 
-					content, err := ioutil.ReadAll(reader)
+					content, err := io.ReadAll(reader)
 					require.NoError(t, err)
 					assert.Equal(t, expected, content)
 				},
@@ -211,7 +211,7 @@ func TestWriteFileOptions(t *testing.T) {
 
 					require.NoError(t, opts.DoWrite())
 
-					fileContent, err := ioutil.ReadFile(opts.Path)
+					fileContent, err := os.ReadFile(opts.Path)
 					require.NoError(t, err)
 					assert.Equal(t, content, fileContent)
 				},
@@ -220,7 +220,7 @@ func TestWriteFileOptions(t *testing.T) {
 
 					require.NoError(t, opts.DoWrite())
 
-					fileContent, err := ioutil.ReadFile(opts.Path)
+					fileContent, err := os.ReadFile(opts.Path)
 					require.NoError(t, err)
 					assert.Equal(t, content, fileContent)
 				},
@@ -237,7 +237,7 @@ func TestWriteFileOptions(t *testing.T) {
 
 					require.NoError(t, opts.DoWrite())
 
-					fileContent, err := ioutil.ReadFile(opts.Path)
+					fileContent, err := os.ReadFile(opts.Path)
 					require.NoError(t, err)
 					assert.Equal(t, initialContent, fileContent[:len(initialContent)])
 					assert.Equal(t, content, fileContent[len(fileContent)-len(content):])
@@ -254,7 +254,7 @@ func TestWriteFileOptions(t *testing.T) {
 
 					require.NoError(t, opts.DoWrite())
 
-					fileContent, err := ioutil.ReadFile(opts.Path)
+					fileContent, err := os.ReadFile(opts.Path)
 					require.NoError(t, err)
 					assert.Equal(t, content, fileContent)
 				},

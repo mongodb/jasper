@@ -2,7 +2,7 @@ package options
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -57,7 +57,7 @@ func TestOutputOptions(t *testing.T) {
 		},
 		"DiscardIsNilForOutput": func(t *testing.T, opts Output) {
 			opts.Error = stderr
-			opts.Output = ioutil.Discard
+			opts.Output = io.Discard
 
 			assert.True(t, opts.outputIsNull())
 			assert.False(t, opts.errorIsNull())
@@ -68,7 +68,7 @@ func TestOutputOptions(t *testing.T) {
 			assert.False(t, opts.errorIsNull())
 		},
 		"DiscardIsNilForError": func(t *testing.T, opts Output) {
-			opts.Error = ioutil.Discard
+			opts.Error = io.Discard
 			opts.Output = stdout
 			assert.True(t, opts.errorIsNull())
 			assert.False(t, opts.outputIsNull())
@@ -81,7 +81,7 @@ func TestOutputOptions(t *testing.T) {
 		"OutputGetterNilIsIoDiscard": func(t *testing.T, opts Output) {
 			out, err := opts.GetOutput()
 			assert.NoError(t, err)
-			assert.Equal(t, ioutil.Discard, out)
+			assert.Equal(t, io.Discard, out)
 		},
 		"OutputGetterWhenPopulatedIsCorrect": func(t *testing.T, opts Output) {
 			opts.Output = stdout
@@ -92,7 +92,7 @@ func TestOutputOptions(t *testing.T) {
 		"ErrorGetterNilIsIoDiscard": func(t *testing.T, opts Output) {
 			outErr, err := opts.GetError()
 			assert.NoError(t, err)
-			assert.Equal(t, ioutil.Discard, outErr)
+			assert.Equal(t, io.Discard, outErr)
 		},
 		"ErrorGetterWhenPopulatedIsCorrect": func(t *testing.T, opts Output) {
 			opts.Error = stderr

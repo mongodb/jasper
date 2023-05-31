@@ -3,7 +3,6 @@ package jasper
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -55,7 +54,7 @@ func TestSetupDownloadMongoDBReleasesWithInvalidArtifactsFeed(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testutil.TestTimeout)
 	defer cancel()
 
-	dir, err := ioutil.TempDir(testutil.BuildDirectory(), "out")
+	dir, err := os.MkdirTemp(testutil.BuildDirectory(), "out")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -70,7 +69,7 @@ func TestSetupDownloadMongoDBReleasesWithInvalidArtifactsFeed(t *testing.T) {
 }
 
 func TestCreateValidDownloadJobs(t *testing.T) {
-	dir, err := ioutil.TempDir(testutil.BuildDirectory(), "out")
+	dir, err := os.MkdirTemp(testutil.BuildDirectory(), "out")
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -118,11 +117,11 @@ func TestProcessDownloadJobs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testutil.LongTestTimeout)
 	defer cancel()
 
-	downloadDir, err := ioutil.TempDir(testutil.BuildDirectory(), "download_test")
+	downloadDir, err := os.MkdirTemp(testutil.BuildDirectory(), "download_test")
 	require.NoError(t, err)
 	defer os.RemoveAll(downloadDir)
 
-	fileServerDir, err := ioutil.TempDir(testutil.BuildDirectory(), "download_test_server")
+	fileServerDir, err := os.MkdirTemp(testutil.BuildDirectory(), "download_test_server")
 	require.NoError(t, err)
 	defer os.RemoveAll(fileServerDir)
 
@@ -219,7 +218,7 @@ func TestDownloadAndExtract(t *testing.T) {
 		},
 	} {
 		t.Run(testName, func(t *testing.T) {
-			file, err := ioutil.TempFile(testutil.BuildDirectory(), "out.txt")
+			file, err := os.CreateTemp(testutil.BuildDirectory(), "out.txt")
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
 
@@ -227,7 +226,7 @@ func TestDownloadAndExtract(t *testing.T) {
 			require.NoError(t, err)
 			defer os.Remove(archiveFileName)
 
-			extractDir, err := ioutil.TempDir(testutil.BuildDirectory(), "out")
+			extractDir, err := os.MkdirTemp(testutil.BuildDirectory(), "out")
 			require.NoError(t, err)
 			defer os.RemoveAll(extractDir)
 
@@ -251,7 +250,7 @@ func TestDownloadAndExtract(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotZero(t, fileInfo.Size())
 
-			fileInfos, err := ioutil.ReadDir(extractDir)
+			fileInfos, err := os.ReadDir(extractDir)
 			require.NoError(t, err)
 			assert.Equal(t, 1, len(fileInfos))
 		})
@@ -259,7 +258,7 @@ func TestDownloadAndExtract(t *testing.T) {
 }
 
 func TestDownloadAndExtractFailsWithUnarchivedFile(t *testing.T) {
-	file, err := ioutil.TempFile(testutil.BuildDirectory(), "out.txt")
+	file, err := os.CreateTemp(testutil.BuildDirectory(), "out.txt")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
 

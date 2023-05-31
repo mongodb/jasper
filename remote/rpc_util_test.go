@@ -3,8 +3,8 @@ package remote
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 
 	"github.com/evergreen-ci/certdepot"
@@ -54,17 +54,17 @@ func makeTLSRPCServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manag
 	clientKeyFile := filepath.Join("testdata", "client.key")
 
 	// Make CA credentials
-	caCert, err := ioutil.ReadFile(caCertFile)
+	caCert, err := os.ReadFile(caCertFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading cert file")
 	}
 
 	// Make server credentials
-	serverCert, err := ioutil.ReadFile(serverCertFile)
+	serverCert, err := os.ReadFile(serverCertFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading cert file")
 	}
-	serverKey, err := ioutil.ReadFile(serverKeyFile)
+	serverKey, err := os.ReadFile(serverKeyFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading key file")
 	}
@@ -80,11 +80,11 @@ func makeTLSRPCServiceAndClient(ctx context.Context, mngr jasper.Manager) (Manag
 		return nil, errors.Wrap(err, "starting RPC service")
 	}
 
-	clientCert, err := ioutil.ReadFile(clientCertFile)
+	clientCert, err := os.ReadFile(clientCertFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading cert file")
 	}
-	clientKey, err := ioutil.ReadFile(clientKeyFile)
+	clientKey, err := os.ReadFile(clientKeyFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading key file")
 	}

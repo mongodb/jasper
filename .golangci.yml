@@ -2,22 +2,20 @@
 linters:
   disable-all: true
   enable:
-    - deadcode
+    - unused
     - errcheck
     - gocognit
     - goconst
     - gofmt
     - goimports
-    - golint
+    - revive
     - gosimple
     - govet
     - ineffassign
     - misspell
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
-    - varcheck
 
 run:
   skip-dirs:

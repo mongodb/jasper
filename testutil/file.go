@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -45,7 +44,7 @@ func tryAddFileToArchive(dir, fileName, fileContents string) (bool, error) {
 		return false, nil
 	}
 
-	tmpFile, err := ioutil.TempFile(dir, "tmp.txt")
+	tmpFile, err := os.CreateTemp(dir, "tmp.txt")
 	if err != nil {
 		return false, err
 	}

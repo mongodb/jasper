@@ -3,7 +3,6 @@ package jasper
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -763,7 +762,7 @@ func ManagerTests() []ManagerTestCase {
 		{
 			Name: "WriteFileSucceeds",
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
-				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
 					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
@@ -773,7 +772,7 @@ func ManagerTests() []ManagerTestCase {
 				opts := options.WriteFile{Path: tmpFile.Name(), Content: []byte("foo")}
 				require.NoError(t, mngr.WriteFile(ctx, opts))
 
-				content, err := ioutil.ReadFile(tmpFile.Name())
+				content, err := os.ReadFile(tmpFile.Name())
 				require.NoError(t, err)
 
 				assert.Equal(t, opts.Content, content)
@@ -782,7 +781,7 @@ func ManagerTests() []ManagerTestCase {
 		{
 			Name: "WriteFileAcceptsContentFromReader",
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
-				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
 					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
@@ -793,7 +792,7 @@ func ManagerTests() []ManagerTestCase {
 				opts := options.WriteFile{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
 				require.NoError(t, mngr.WriteFile(ctx, opts))
 
-				content, err := ioutil.ReadFile(tmpFile.Name())
+				content, err := os.ReadFile(tmpFile.Name())
 				require.NoError(t, err)
 
 				assert.Equal(t, buf, content)
@@ -802,7 +801,7 @@ func ManagerTests() []ManagerTestCase {
 		{
 			Name: "WriteFileSucceedsWithLargeContent",
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
-				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
 					assert.NoError(t, os.RemoveAll(tmpFile.Name()))
@@ -813,7 +812,7 @@ func ManagerTests() []ManagerTestCase {
 				opts := options.WriteFile{Path: tmpFile.Name(), Content: bytes.Repeat([]byte("foo"), mb)}
 				require.NoError(t, mngr.WriteFile(ctx, opts))
 
-				content, err := ioutil.ReadFile(tmpFile.Name())
+				content, err := os.ReadFile(tmpFile.Name())
 				require.NoError(t, err)
 
 				assert.Equal(t, opts.Content, content)
@@ -822,7 +821,7 @@ func ManagerTests() []ManagerTestCase {
 		{
 			Name: "WriteFileSucceedsWithLargeContentFromReader",
 			Case: func(ctx context.Context, t *testing.T, mngr Manager, modifyOpts testoptions.ModifyOpts) {
-				tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+				tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), filepath.Base(t.Name()))
 				require.NoError(t, err)
 				defer func() {
 					assert.NoError(t, tmpFile.Close())
@@ -834,7 +833,7 @@ func ManagerTests() []ManagerTestCase {
 				opts := options.WriteFile{Path: tmpFile.Name(), Reader: bytes.NewBuffer(buf)}
 				require.NoError(t, mngr.WriteFile(ctx, opts))
 
-				content, err := ioutil.ReadFile(tmpFile.Name())
+				content, err := os.ReadFile(tmpFile.Name())
 				require.NoError(t, err)
 
 				assert.Equal(t, buf, content)

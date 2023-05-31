@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/testutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -79,7 +80,7 @@ func executorTestCases() []executorTestCase {
 				env := []string{"foo=bar", "bat=baz"}
 				exec.SetEnv(env)
 				assert.Equal(t, env, exec.Env())
-				stdout := &bytes.Buffer{}
+				stdout := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStdout(stdout)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
@@ -111,7 +112,7 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				stdout := &bytes.Buffer{}
+				stdout := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStdout(stdout)
 				require.Equal(t, stdout, exec.Stdout())
 				require.NoError(t, exec.Start())
@@ -130,7 +131,7 @@ func executorTestCases() []executorTestCase {
 				input := "hello"
 				stdin := bytes.NewBufferString(input)
 				exec.SetStdin(stdin)
-				stdout := &bytes.Buffer{}
+				stdout := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStdout(stdout)
 				require.NoError(t, exec.Start())
 				require.NoError(t, exec.Wait())
@@ -146,7 +147,7 @@ func executorTestCases() []executorTestCase {
 				defer func() {
 					assert.NoError(t, exec.Close())
 				}()
-				stderr := &bytes.Buffer{}
+				stderr := utility.MakeSafeBuffer(bytes.Buffer{})
 				exec.SetStderr(stderr)
 				require.Equal(t, stderr, exec.Stderr())
 				require.NoError(t, exec.Start())

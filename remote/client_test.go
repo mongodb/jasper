@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -318,7 +317,7 @@ func TestClientImplementations(t *testing.T) {
 								assert.NotZero(t, fileInfo.Size())
 							},
 							"WritesFileIfExists": func(ctx context.Context, t *testing.T, mngr Manager, tempDir string) {
-								file, err := ioutil.TempFile(tempDir, "out.txt")
+								file, err := os.CreateTemp(tempDir, "out.txt")
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(file.Name()))
@@ -339,13 +338,13 @@ func TestClientImplementations(t *testing.T) {
 								assert.NotZero(t, fileInfo.Size())
 							},
 							"CreatesFileAndExtracts": func(ctx context.Context, t *testing.T, mngr Manager, tempDir string) {
-								downloadDir, err := ioutil.TempDir(tempDir, "out")
+								downloadDir, err := os.MkdirTemp(tempDir, "out")
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(downloadDir))
 								}()
 
-								fileServerDir, err := ioutil.TempDir(tempDir, "file_server")
+								fileServerDir, err := os.MkdirTemp(tempDir, "file_server")
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(fileServerDir))
@@ -390,19 +389,19 @@ func TestClientImplementations(t *testing.T) {
 								require.NoError(t, err)
 								assert.NotZero(t, fileInfo.Size())
 
-								dirContents, err := ioutil.ReadDir(destExtractDir)
+								dirContents, err := os.ReadDir(destExtractDir)
 								require.NoError(t, err)
 
 								assert.NotZero(t, len(dirContents))
 							},
 							"FailsForInvalidArchiveFormat": func(ctx context.Context, t *testing.T, mngr Manager, tempDir string) {
-								file, err := ioutil.TempFile(tempDir, filepath.Base(t.Name()))
+								file, err := os.CreateTemp(tempDir, filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(file.Name()))
 								}()
 								require.NoError(t, file.Close())
-								extractDir, err := ioutil.TempDir(tempDir, filepath.Base(t.Name())+"_extract")
+								extractDir, err := os.MkdirTemp(tempDir, filepath.Base(t.Name())+"_extract")
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(file.Name()))
@@ -420,7 +419,7 @@ func TestClientImplementations(t *testing.T) {
 								assert.Error(t, mngr.DownloadFile(ctx, opts))
 							},
 							"FailsForUnarchivedFile": func(ctx context.Context, t *testing.T, mngr Manager, tempDir string) {
-								extractDir, err := ioutil.TempDir(tempDir, filepath.Base(t.Name())+"_extract")
+								extractDir, err := os.MkdirTemp(tempDir, filepath.Base(t.Name())+"_extract")
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(extractDir))
@@ -436,12 +435,12 @@ func TestClientImplementations(t *testing.T) {
 								}
 								assert.Error(t, mngr.DownloadFile(ctx, opts))
 
-								dirContents, err := ioutil.ReadDir(extractDir)
+								dirContents, err := os.ReadDir(extractDir)
 								require.NoError(t, err)
 								assert.Zero(t, len(dirContents))
 							},
 							"FailsForInvalidURL": func(ctx context.Context, t *testing.T, mngr Manager, tempDir string) {
-								file, err := ioutil.TempFile(tempDir, filepath.Base(t.Name()))
+								file, err := os.CreateTemp(tempDir, filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(file.Name()))
@@ -450,7 +449,7 @@ func TestClientImplementations(t *testing.T) {
 								assert.Error(t, mngr.DownloadFile(ctx, options.Download{URL: "", Path: file.Name()}))
 							},
 							"FailsForNonexistentURL": func(ctx context.Context, t *testing.T, mngr Manager, tempDir string) {
-								file, err := ioutil.TempFile(tempDir, "out.txt")
+								file, err := os.CreateTemp(tempDir, "out.txt")
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(file.Name()))
@@ -468,7 +467,7 @@ func TestClientImplementations(t *testing.T) {
 							},
 						} {
 							t.Run(testName, func(t *testing.T) {
-								tempDir, err := ioutil.TempDir(testutil.BuildDirectory(), filepath.Base(t.Name()))
+								tempDir, err := os.MkdirTemp(testutil.BuildDirectory(), filepath.Base(t.Name()))
 								require.NoError(t, err)
 								defer func() {
 									assert.NoError(t, os.RemoveAll(tempDir))
@@ -513,7 +512,7 @@ func TestClientImplementations(t *testing.T) {
 				{
 					Name: "CreateProcessWithLogFile",
 					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
-						file, err := ioutil.TempFile(testutil.BuildDirectory(), filepath.Base(t.Name()))
+						file, err := os.CreateTemp(testutil.BuildDirectory(), filepath.Base(t.Name()))
 						require.NoError(t, err)
 						defer func() {
 							assert.NoError(t, os.RemoveAll(file.Name()))
@@ -544,7 +543,7 @@ func TestClientImplementations(t *testing.T) {
 						require.NoError(t, err)
 						assert.NotZero(t, info.Size())
 
-						fileContents, err := ioutil.ReadFile(file.Name())
+						fileContents, err := os.ReadFile(file.Name())
 						require.NoError(t, err)
 						assert.Contains(t, string(fileContents), output)
 					},
@@ -591,7 +590,7 @@ func TestClientImplementations(t *testing.T) {
 					Name: "SendMessagesSucceeds",
 					Case: func(ctx context.Context, t *testing.T, mngr Manager) {
 						lc := mngr.LoggingCache(ctx)
-						tmpDir, err := ioutil.TempDir(testutil.BuildDirectory(), "logging_cache")
+						tmpDir, err := os.MkdirTemp(testutil.BuildDirectory(), "logging_cache")
 						require.NoError(t, err)
 						defer func() {
 							assert.NoError(t, os.RemoveAll(tmpDir))
@@ -623,7 +622,7 @@ func TestClientImplementations(t *testing.T) {
 						}
 						assert.NoError(t, mngr.SendMessages(ctx, payload))
 
-						content, err := ioutil.ReadFile(tmpFile)
+						content, err := os.ReadFile(tmpFile)
 						require.NoError(t, err)
 						assert.Equal(t, payload.Data, strings.TrimSpace(string(content)))
 					},

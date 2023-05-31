@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -84,7 +83,7 @@ func handleError(resp *http.Response) error {
 		return errors.Wrapf(err, "HTTP status code %d", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return wrapError(errors.Wrap(err, "reading response body"))
 	}

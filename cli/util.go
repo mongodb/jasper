@@ -6,12 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"net"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -60,51 +58,6 @@ func requireStringFlag(name string) cli.BeforeFunc {
 	}
 }
 
-func requireOneFlag(names ...string) cli.BeforeFunc { //nolint: deadcode
-	return func(c *cli.Context) error {
-		var count int
-		for _, name := range names {
-			if c.IsSet(name) {
-				count++
-			}
-		}
-		if count != 1 {
-			return errors.Errorf("must specify exactly one flag from the following: %s", names)
-		}
-		return nil
-	}
-}
-
-// requireRelativePath verifies that the path flag relPathFlagName is set to a
-// path relative to the directory path set for dirFlagName.
-//nolint: deadcode
-func requireRelativePath(relPathFlagName, pathFlagName string) cli.BeforeFunc {
-	return func(c *cli.Context) error {
-		relPath := util.ConsistentFilepath(c.String(relPathFlagName))
-		path := util.ConsistentFilepath(c.String(pathFlagName))
-		if filepath.IsAbs(relPath) {
-			if strings.HasPrefix(relPath, path) {
-				relPath = strings.TrimPrefix(relPath, path)
-				return errors.Wrapf(c.Set(relPathFlagName, relPath), "setting flag '%s' to relative path", relPathFlagName)
-			}
-			return errors.Errorf("path '%s' must be relative to the path '%s'", relPath, path)
-		}
-		return nil
-	}
-}
-
-// requireStringSliceFlag verifies that the flag name is set to a non-empty
-// string slice.
-//nolint: deadcode
-func requireStringSliceFlag(name string) cli.BeforeFunc {
-	return func(c *cli.Context) error {
-		if len(c.StringSlice(name)) == 0 {
-			return errors.Errorf("must specify at least one string for flag '%s'", name)
-		}
-		return nil
-	}
-}
-
 const (
 	minPort = 1 << 10
 	maxPort = math.MaxUint16 - 1
@@ -123,7 +76,7 @@ func validatePort(flagName string) func(*cli.Context) error {
 
 // readInput reads JSON from the input and decodes it to the output.
 func readInput(input io.Reader, output interface{}) error {
-	bytes, err := ioutil.ReadAll(input)
+	bytes, err := io.ReadAll(input)
 	if err != nil {
 		return errors.Wrap(err, "reading from input")
 	}

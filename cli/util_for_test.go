@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -59,7 +59,7 @@ func withMockStdin(t *testing.T, input string, operation func(*os.File) error) e
 	defer func() {
 		os.Stdin = stdin
 	}()
-	tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), "mock_stdin.txt")
+	tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), "mock_stdin.txt")
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, tmpFile.Close())
@@ -80,7 +80,7 @@ func withMockStdout(t *testing.T, operation func(*os.File) error) error {
 	defer func() {
 		os.Stdout = stdout
 	}()
-	tmpFile, err := ioutil.TempFile(testutil.BuildDirectory(), "mock_stdout.txt")
+	tmpFile, err := os.CreateTemp(testutil.BuildDirectory(), "mock_stdout.txt")
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, tmpFile.Close())
@@ -108,7 +108,7 @@ func execCLICommandOutput(t *testing.T, c *cli.Context, cmd cli.Command, output 
 		if _, err := stdout.Seek(0, 0); err != nil {
 			return err
 		}
-		resp, err := ioutil.ReadAll(stdout)
+		resp, err := io.ReadAll(stdout)
 		if err != nil {
 			return err
 		}

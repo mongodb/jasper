@@ -136,9 +136,10 @@ func (p *blockingProcess) reactor(ctx context.Context, deadline time.Time, exec 
 			func() {
 				p.mu.RLock()
 				defer p.mu.RUnlock()
-				p.info.EndAt = finishTime
 
 				info = p.info
+
+				info.EndAt = finishTime
 				info.Complete = true
 				info.IsRunning = false
 
