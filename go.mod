@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.4
-	github.com/docker/docker v20.10.22+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/evergreen-ci/aviation v0.0.0-20220405151811-ff4a78a4297c
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
 	github.com/evergreen-ci/birch v0.0.0-20220401151432-c792c3d8e0eb
