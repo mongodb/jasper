@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups v1.0.4
-	github.com/docker/docker v20.10.22+incompatible
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/evergreen-ci/aviation v0.0.0-20220405151811-ff4a78a4297c
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
 	github.com/evergreen-ci/birch v0.0.0-20220401151432-c792c3d8e0eb
@@ -89,7 +89,6 @@ require (
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.3 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/square/certstrap v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
