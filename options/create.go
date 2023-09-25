@@ -39,9 +39,10 @@ const (
 type Create struct {
 	Args        []string          `bson:"args" json:"args" yaml:"args"`
 	Environment map[string]string `bson:"env,omitempty" json:"env,omitempty" yaml:"env,omitempty"`
-	// OverrideEnviron sets the process environment to match the currently
-	// executing process's environment. This is ignored if Remote or Docker
-	// options are specified.
+	// OverrideEnviron overrides the default behavior so that the process
+	// environment does not inherit the currently executing process's
+	// environment. By default, the process will inherit the current process's
+	// environment. This is ignored if Remote or Docker options are specified.
 	OverrideEnviron bool `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	// Synchronized specifies whether the process should be thread-safe or not.
 	// This is not guaranteed to be respected for managed processes.
