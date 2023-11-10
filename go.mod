@@ -17,7 +17,7 @@ require (
 	github.com/evergreen-ci/poplar v0.0.0-20220405164038-0cfe3198c320
 	github.com/evergreen-ci/utility v0.0.0-20221202215218-c980e8dea464
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mongodb/amboy v0.0.0-20220408184825-b2a14e2c511d
 	github.com/mongodb/grip v0.0.0-20220401165023-6a1d9bb90c21
