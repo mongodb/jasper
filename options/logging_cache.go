@@ -210,10 +210,10 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 		return message.NewSimpleFields(lp.Priority, payload), nil
 	default: // includes string case.
 		if lp.AddMetadata {
-			return message.NewBytesMessage(lp.Priority, data), nil
+			return message.NewExtendedBytesMessage(lp.Priority, data), nil
 		}
 
-		return message.NewSimpleBytesMessage(lp.Priority, data), nil
+		return message.NewBytesMessage(lp.Priority, data), nil
 	}
 }
 
