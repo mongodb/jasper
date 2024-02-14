@@ -193,7 +193,7 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 		}
 
 		if lp.AddMetadata {
-			return message.NewFields(lp.Priority, payload), nil
+			return message.NewExtendedFields(lp.Priority, payload), nil
 		}
 
 		return message.NewSimpleFields(lp.Priority, payload), nil
@@ -204,7 +204,7 @@ func (lp *LoggingPayload) produceMessage(data []byte) (message.Composer, error) 
 		}
 
 		if lp.AddMetadata {
-			return message.NewFields(lp.Priority, payload), nil
+			return message.NewExtendedFields(lp.Priority, payload), nil
 		}
 
 		return message.NewSimpleFields(lp.Priority, payload), nil
