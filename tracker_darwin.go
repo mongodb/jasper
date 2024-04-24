@@ -1,7 +1,5 @@
 package jasper
 
-// TODO
-
 type darwinProcessTracker struct {
 	*processTrackerBase
 }
