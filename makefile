@@ -158,25 +158,6 @@ $(buildDir)/output.%.lint: $(buildDir)/run-linter .FORCE
 	@$(lintEnvVars) ./$< --output=$@ --lintBin=$(buildDir)/golangci-lint --lintArgs="--timeout=2m" --packages='$*'
 # end test and coverage artifacts
 
-# start Docker-related targets
-dockerImage := $(DOCKER_IMAGE)
-ifeq ($(dockerImage),)
-dockerImage := ubuntu
-endif
-
-docker-setup:
-ifneq (true,$(SKIP_DOCKER_TESTS))
-	docker pull $(dockerImage)
-endif
-
-docker-cleanup:
-ifneq (true,$(SKIP_DOCKER_TESTS))
-	docker rm -f $(shell docker ps -a -q)
-	docker rmi -f $(dockerImage)
-endif
-phony += docker-setup docker-cleanup
-# end Docker-related targets
-
 # start module management targets
 mod-tidy:
 	$(gobin) mod tidy

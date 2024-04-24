@@ -2,7 +2,6 @@ package jasper
 
 import (
 	"context"
-	"os"
 	"runtime"
 	"testing"
 
@@ -42,22 +41,7 @@ func TestManagerImplementations(t *testing.T) {
 			require.NoError(t, err)
 			return NewRemoteManager(m, nil)
 		},
-		"DockerManager": func(_ context.Context, t *testing.T) Manager {
-			m, err := newBasicProcessManager(map[string]Process{}, false, false)
-			require.NoError(t, err)
-			image := os.Getenv("DOCKER_IMAGE")
-			if image == "" {
-				image = testutil.DefaultDockerImage
-			}
-			return NewDockerManager(m, &options.Docker{
-				Image: image,
-			})
-		},
 	} {
-		if testutil.IsDockerCase(managerName) {
-			testutil.SkipDockerIfUnsupported(t)
-		}
-
 		testCases := append(ManagerTests(), []ManagerTestCase{
 			{
 				Name: "CloseExecutesClosersForProcesses",

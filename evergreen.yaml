@@ -41,7 +41,7 @@ functions:
       working_dir: jasper
       binary: make
       args: ["${target}"]
-      include_expansions_in_env: ["DOCKER_IMAGE", "GOROOT", "RACE_DETECTOR", "SKIP_DOCKER_TESTS"]
+      include_expansions_in_env: ["GOROOT", "RACE_DETECTOR"]
   parse-results:
     command: gotest.parse_files
     type: setup
@@ -145,23 +145,13 @@ task_groups:
   - name: test_group
     tasks: [ ".test" ]
     max_hosts: 3
-    share_processes: true   # This ensure that the Docker image pulled in the setup_group is shared between tasks.
     setup_group_can_fail_task: true
     setup_group:
       - func: get-project-and-modules
-      - func: run-make
-        vars: { target: "docker-setup" }
-        variants:
-          - ubuntu
     teardown_task:
       - func: parse-results
       - func: run-make
         vars: { target: "clean-results" }
-    teardown_group:
-      - func: run-make
-        vars: { target: "docker-cleanup" }
-        variants:
-          - ubuntu
 
 #######################################
 #           Buildvariants             #
@@ -191,7 +181,6 @@ buildvariants:
     expansions:
       GOROOT: /opt/golang/go1.20
       RACE_DETECTOR: true
-      DOCKER_IMAGE: ubuntu
     run_on:
       - ubuntu2204-small
     tasks:

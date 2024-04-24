@@ -42,7 +42,7 @@ type Create struct {
 	// OverrideEnviron overrides the default behavior so that the process
 	// environment does not inherit the currently executing process's
 	// environment. By default, the process will inherit the current process's
-	// environment. This is ignored if Remote or Docker options are specified.
+	// environment. This is ignored if Remote options are specified.
 	OverrideEnviron bool `bson:"override_env,omitempty" json:"override_env,omitempty" yaml:"override_env,omitempty"`
 	// Synchronized specifies whether the process should be thread-safe or not.
 	// This is not guaranteed to be respected for managed processes.
@@ -54,8 +54,6 @@ type Create struct {
 	Output           Output `bson:"output" json:"output" yaml:"output"`
 	// Remote specifies options for creating processes over SSH.
 	Remote *Remote `bson:"remote,omitempty" json:"remote,omitempty" yaml:"remote,omitempty"`
-	// Docker specifies options for creating processes in Docker containers.
-	Docker *Docker `bson:"docker,omitempty" json:"docker,omitempty" yaml:"docker,omitempty"`
 	// TimeoutSecs takes precedence over Timeout. On remote interfaces,
 	// TimeoutSecs should be set instead of Timeout.
 	TimeoutSecs int           `bson:"timeout_secs,omitempty" json:"timeout_secs,omitempty" yaml:"timeout_secs,omitempty"`
@@ -121,12 +119,8 @@ func (opts *Create) Validate() error {
 		}
 	}
 
-	catcher.NewWhen(opts.Docker != nil && opts.Remote != nil, "cannot specify both Docker and SSH options")
 	if opts.Remote != nil {
 		catcher.Wrap(opts.Remote.Validate(), "invalid SSH options")
-	}
-	if opts.Docker != nil {
-		catcher.Wrap(opts.Docker.Validate(), "invalid Docker options")
 	}
 
 	if catcher.HasErrors() {
@@ -153,7 +147,7 @@ func (opts *Create) Validate() error {
 // isLocal returns whether or not the process to be created will be a local
 // process.
 func (opts *Create) isLocal() bool {
-	return opts.Remote == nil && opts.Docker == nil
+	return opts.Remote == nil
 }
 
 // Hash returns the canonical hash implementation for the create
@@ -279,21 +273,6 @@ func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, err
 		return executor.NewSSHBinary(ctx, opts.Remote.String(), opts.Remote.Args, opts.Args), nil
 	}
 
-	if opts.Docker != nil {
-		client, err := opts.Docker.Resolve()
-		if err != nil {
-			return nil, errors.Wrap(err, "resolving Docker options")
-		}
-		opts := executor.DockerOptions{
-			Client:  client,
-			Image:   opts.Docker.Image,
-			Command: opts.Args,
-			OS:      opts.Docker.OS,
-			Arch:    opts.Docker.Arch,
-		}
-		return executor.NewDocker(ctx, opts)
-	}
-
 	return executor.NewLocal(ctx, opts.Args), nil
 }
 
@@ -383,10 +362,6 @@ func (opts *Create) Copy() *Create {
 
 	if opts.Remote != nil {
 		optsCopy.Remote = opts.Remote.Copy()
-	}
-
-	if opts.Docker != nil {
-		optsCopy.Docker = opts.Docker.Copy()
 	}
 
 	optsCopy.Output = *opts.Output.Copy()
