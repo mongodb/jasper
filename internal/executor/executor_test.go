@@ -4,16 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/client"
 	"github.com/evergreen-ci/utility"
 	"github.com/mongodb/jasper/testutil"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,26 +21,6 @@ func executorTypes() map[string]executorConstructor {
 	return map[string]executorConstructor{
 		"StandardExec": func(ctx context.Context, args []string) (Executor, error) {
 			return NewLocal(ctx, args), nil
-		},
-		"Docker": func(ctx context.Context, args []string) (Executor, error) {
-			client, err := client.NewClientWithOpts(
-				client.WithAPIVersionNegotiation(),
-			)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			image := os.Getenv("DOCKER_IMAGE")
-			if image == "" {
-				image = testutil.DefaultDockerImage
-			}
-			opts := DockerOptions{
-				Client:  client,
-				OS:      runtime.GOOS,
-				Arch:    runtime.GOARCH,
-				Image:   image,
-				Command: args,
-			}
-			return NewDocker(ctx, opts)
 		},
 	}
 }
@@ -378,9 +355,6 @@ func TestExecutor(t *testing.T) {
 	defer cancel()
 
 	for execType, makeExec := range executorTypes() {
-		if testutil.IsDockerCase(execType) {
-			testutil.SkipDockerIfUnsupported(t)
-		}
 		t.Run(execType, func(t *testing.T) {
 			for _, testCase := range executorTestCases() {
 				t.Run(testCase.Name, func(t *testing.T) {

@@ -10,13 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
 	testoptions "github.com/mongodb/jasper/testutil/options"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,32 +36,7 @@ func TestProcessImplementations(t *testing.T) {
 		t.Run(pname, func(t *testing.T) {
 			for optsTestName, modifyOpts := range map[string]testoptions.ModifyOpts{
 				"LocalExecutor": func(opts *options.Create) *options.Create { return opts },
-				"DockerExecutor": func(opts *options.Create) *options.Create {
-					image := os.Getenv("DOCKER_IMAGE")
-					if image == "" {
-						image = testutil.DefaultDockerImage
-					}
-					opts.Docker = &options.Docker{
-						Image: image,
-					}
-					return opts
-				},
 			} {
-				if testutil.IsDockerCase(optsTestName) {
-					testutil.SkipDockerIfUnsupported(t)
-					// TODO (MAKE-1300): remove these lines that clean up docker
-					// containers and replace with (Process).Close().
-					defer func() {
-						client, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation())
-						require.NoError(t, err)
-						containers, err := client.ContainerList(ctx, types.ContainerListOptions{All: true})
-						require.NoError(t, err)
-						for _, container := range containers {
-							grip.Error(errors.Wrap(client.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true}), "cleaning up container"))
-						}
-					}()
-				}
-
 				testCases := append(ProcessTests(), []ProcessTestCase{
 					{
 						Name: "CanceledContextTimesOutEarly",
