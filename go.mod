@@ -20,7 +20,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mongodb/amboy v0.0.0-20220408184825-b2a14e2c511d
 	github.com/mongodb/grip v0.0.0-20240213223901-f906268d82b9
-	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
+	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.3
 	github.com/urfave/cli v1.22.10
