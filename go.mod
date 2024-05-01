@@ -22,8 +22,8 @@ require (
 	github.com/mongodb/grip v0.0.0-20240213223901-f906268d82b9
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.3
-	github.com/urfave/cli v1.22.10
+	github.com/stretchr/testify v1.9.0
+	github.com/urfave/cli v1.22.15
 	go.mongodb.org/mongo-driver v1.11.1
 	golang.org/x/crypto v0.7.0
 	golang.org/x/net v0.10.0
@@ -47,7 +47,7 @@ require (
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dghubble/oauth1 v0.7.2 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
@@ -86,11 +86,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rs/cors v1.8.2 // indirect
-	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/slack-go/slack v0.12.1 // indirect
 	github.com/square/certstrap v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
