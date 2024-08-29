@@ -87,10 +87,6 @@ func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, 
 
 		opts := options.Create{
 			Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath},
-			Output: options.Output{
-				Output: os.Stdout,
-				Error:  os.Stderr,
-			},
 		}
 		optslist[i] = opts
 	}
