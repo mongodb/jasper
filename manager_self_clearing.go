@@ -22,7 +22,7 @@ type selfClearingProcessManager struct {
 // The self clearing process manager is not thread safe. Wrap with the
 // synchronized process manager for multithreaded use.
 func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
-	pm, err := newBasicProcessManager(map[string]Process{}, trackProcs, false)
+	pm, err := newBasicProcessManager(map[string]Process{}, trackProcs)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -37,24 +37,25 @@ func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, erro
 	}, nil
 }
 
+// kim: TODO: remove
 // NewSSHLibrarySelfClearingProcessManager is the same as
 // NewSelfClearingProcessManager but uses the SSH library instead of the SSH
 // binary for remote processes.
-func NewSSHLibrarySelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
-	pm, err := newBasicProcessManager(map[string]Process{}, trackProcs, true)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	bpm, ok := pm.(*basicProcessManager)
-	if !ok {
-		return nil, errors.Errorf("programmatic error: expected basic process manager but actually got %T", pm)
-	}
-
-	return &selfClearingProcessManager{
-		basicProcessManager: bpm,
-		maxProcs:            maxProcs,
-	}, nil
-}
+// func NewSSHLibrarySelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
+//     pm, err := newBasicProcessManager(map[string]Process{}, trackProcs, true)
+//     if err != nil {
+//         return nil, errors.WithStack(err)
+//     }
+//     bpm, ok := pm.(*basicProcessManager)
+//     if !ok {
+//         return nil, errors.Errorf("programmatic error: expected basic process manager but actually got %T", pm)
+//     }
+//
+//     return &selfClearingProcessManager{
+//         basicProcessManager: bpm,
+//         maxProcs:            maxProcs,
+//     }, nil
+// }
 
 func (m *selfClearingProcessManager) checkProcCapacity(ctx context.Context) error {
 	if len(m.basicProcessManager.procs) == m.maxProcs {

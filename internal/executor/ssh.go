@@ -1,16 +1,7 @@
 package executor
 
-import (
-	"context"
-	"fmt"
-	"io"
-	"strings"
-	"syscall"
-
-	"github.com/mongodb/grip"
-	cryptossh "golang.org/x/crypto/ssh"
-)
-
+// kim: TODO: remove
+/*
 // ssh runs processes on a remote machine via SSH.
 type ssh struct {
 	session *cryptossh.Session
@@ -221,3 +212,4 @@ func sshToSyscallSignal(sig cryptossh.Signal) syscall.Signal {
 	}
 	return syscall.Signal(-1)
 }
+*/
