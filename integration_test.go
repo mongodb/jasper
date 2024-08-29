@@ -152,7 +152,6 @@ func TestMongod(t *testing.T) {
 							_, err := proc.Wait(ctx)
 							select {
 							case waitError <- err:
-								fmt.Println(err)
 							case <-ctx.Done():
 							}
 						}(proc)
