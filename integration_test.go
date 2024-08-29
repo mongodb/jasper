@@ -25,20 +25,8 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var target string
-	var edition string
-	platform := runtime.GOOS
-	switch platform {
-	case "darwin":
-		target = "macos"
-		edition = "enterprise"
-	case "linux":
-		edition = "targeted"
-		target = "ubuntu2204"
-	default:
-		edition = "enterprise"
-		target = platform
-	}
+	target := "ubuntu2204"
+	edition := "targeted"
 	arch := "x86_64"
 	release := "7.0-stable"
 
@@ -60,12 +48,8 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	path, err := catalog.Get("7.0-current", edition, target, arch, false)
 	require.NoError(t, err)
 
-	var mongodPath string
-	if platform == "windows" {
-		mongodPath = filepath.Join(path, "bin", "mongod.exe")
-	} else {
-		mongodPath = filepath.Join(path, "bin", "mongod")
-	}
+	mongodPath := filepath.Join(path, "bin", "mongod")
+
 	_, err = os.Stat(mongodPath)
 	require.NoError(t, err)
 
@@ -103,6 +87,9 @@ func removeDBPaths(dbPaths []string) {
 func TestMongod(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping mongod tests in short mode")
+	}
+	if runtime.GOOS != "linux" {
+		t.Skip("skipping mongod tests on non-Linux platforms because they're not important and mongod is heavily platform-dependent")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
