@@ -190,7 +190,7 @@ func TestCommandImplementation(t *testing.T) {
 										t.Run(subTestName, func(t *testing.T) {
 											cmd = *NewCommand().ProcConstructor(makeProc)
 											if isRemote {
-												cmd.User(user).Host("localhost") // kim: TODO: remove .Password("password")
+												cmd.User(user).Host("localhost")
 											}
 											subTestCase(ctx, t, cmd)
 										})

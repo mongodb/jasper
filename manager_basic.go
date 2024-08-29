@@ -13,12 +13,10 @@ import (
 )
 
 type basicProcessManager struct {
-	id    string
-	procs map[string]Process
-	// kim: TODO: remove
-	useSSHLibrary bool
-	tracker       ProcessTracker
-	loggers       LoggingCache
+	id      string
+	procs   map[string]Process
+	tracker ProcessTracker
+	loggers LoggingCache
 }
 
 // newBasicProcessManager returns a manager which is not thread safe for
@@ -29,10 +27,8 @@ func newBasicProcessManager(procs map[string]Process, trackProcs bool) (Manager,
 		procs = map[string]Process{}
 	}
 	m := basicProcessManager{
-		procs: procs,
-		id:    uuid.New().String(),
-		// kim: TODO: remove
-		// useSSHLibrary: useSSHLibrary,
+		procs:   procs,
+		id:      uuid.New().String(),
 		loggers: NewLoggingCache(),
 	}
 	if trackProcs {
@@ -51,11 +47,6 @@ func (m *basicProcessManager) ID() string {
 
 func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.AddEnvVar(ManagerEnvironID, m.id)
-
-	// kim: TODO: remove
-	// if opts.Remote != nil && m.useSSHLibrary {
-	//     opts.Remote.UseSSHLibrary = true
-	// }
 
 	proc, err := NewProcess(ctx, opts)
 	if err != nil {

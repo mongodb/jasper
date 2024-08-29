@@ -558,9 +558,6 @@ func mockRemoteOptions() options.Remote {
 	opts := options.Remote{}
 	opts.User = "user"
 	opts.Host = "localhost"
-	// kim: TODO: remove
-	// opts.Port = 12345
-	// opts.Password = "abc123"
 	return opts
 }
 

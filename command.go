@@ -123,16 +123,6 @@ func (c *Command) initRemote() {
 	}
 }
 
-// kim: TODO: remove
-// func (c *Command) initRemoteProxy() {
-//     if c.opts.Process.Remote == nil {
-//         c.opts.Process.Remote = &options.Remote{}
-//     }
-//     if c.opts.Process.Remote.Proxy == nil {
-//         c.opts.Process.Remote.Proxy = &options.Proxy{}
-//     }
-// }
-
 // Host sets the hostname for connecting to a remote host.
 func (c *Command) Host(h string) *Command {
 	c.initRemote()
@@ -147,14 +137,6 @@ func (c *Command) User(u string) *Command {
 	return c
 }
 
-// kim: TODO: remove
-// Port sets the port for connecting to a remote host.
-// func (c *Command) Port(p int) *Command {
-//     c.initRemote()
-//     c.opts.Process.Remote.Port = p
-//     return c
-// }
-
 // ExtendRemoteArgs allows you to add arguments, when needed, to the
 // Password sets the password in order to authenticate to a remote host.
 // underlying ssh command, for remote commands.
@@ -163,98 +145,6 @@ func (c *Command) ExtendRemoteArgs(args ...string) *Command {
 	c.opts.Process.Remote.Args = append(c.opts.Process.Remote.Args, args...)
 	return c
 }
-
-// kim: TODO: remove
-// PrivKey sets the private key in order to authenticate to a remote host.
-// func (c *Command) PrivKey(key string) *Command {
-//     c.initRemote()
-//     c.opts.Process.Remote.Key = key
-//     return c
-// }
-
-// kim: TODO: remove
-// PrivKeyFile sets the path to the private key file in order to authenticate to
-// a remote host.
-// func (c *Command) PrivKeyFile(path string) *Command {
-//     c.initRemote()
-//     c.opts.Process.Remote.KeyFile = path
-//     return c
-// }
-
-// kim: TODO: remove
-// PrivKeyPassphrase sets the passphrase for the private key file in order to
-// authenticate to a remote host.
-// func (c *Command) PrivKeyPassphrase(pass string) *Command {
-//     c.initRemote()
-//     c.opts.Process.Remote.KeyPassphrase = pass
-//     return c
-// }
-
-// kim: TODO: remove
-// Password sets the password in order to authenticate to a remote host.
-// func (c *Command) Password(p string) *Command {
-//     c.initRemote()
-//     c.opts.Process.Remote.Password = p
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyHost sets the proxy hostname for connecting to a proxy host.
-// func (c *Command) ProxyHost(h string) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.Host = h
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyUser sets the proxy username for connecting to a proxy host.
-// func (c *Command) ProxyUser(u string) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.User = u
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyPort sets the proxy port for connecting to a proxy host.
-// func (c *Command) ProxyPort(p int) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.Port = p
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyPrivKey sets the proxy private key in order to authenticate to a remote host.
-// func (c *Command) ProxyPrivKey(key string) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.Key = key
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyPrivKeyFile sets the path to the proxy private key file in order to
-// authenticate to a proxy host.
-// func (c *Command) ProxyPrivKeyFile(path string) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.KeyFile = path
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyPrivKeyPassphrase sets the passphrase for the private key file in order to
-// authenticate to a proxy host.
-// func (c *Command) ProxyPrivKeyPassphrase(pass string) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.KeyPassphrase = pass
-//     return c
-// }
-
-// kim: TODO: remove
-// ProxyPassword sets the password in order to authenticate to a proxy host.
-// func (c *Command) ProxyPassword(p string) *Command {
-//     c.initRemoteProxy()
-//     c.opts.Process.Remote.Proxy.Password = p
-//     return c
-// }
 
 // SetRemoteOptions sets the configuration for remote operations. This overrides
 // any existing remote configuration.

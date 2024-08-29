@@ -24,17 +24,6 @@ func NewSynchronizedManager(trackProcs bool) (Manager, error) {
 	return &synchronizedProcessManager{manager: basicManager}, nil
 }
 
-// kim: TODO: remove
-// NewSSHLibrarySynchronizedManager is the same as NewSynchronizedManager but
-// uses the SSH library instead of the SSH binary for remote processes.
-// func NewSSHLibrarySynchronizedManager(trackProcs bool) (Manager, error) {
-//     basicManager, err := newBasicProcessManager(map[string]Process{}, trackProcs, true)
-//     if err != nil {
-//         return nil, errors.Wrap(err, "creating underlying basic process manager")
-//     }
-//     return &synchronizedProcessManager{manager: basicManager}, nil
-// }
-
 type synchronizedProcessManager struct {
 	mu      sync.RWMutex
 	manager Manager
