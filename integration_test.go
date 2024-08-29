@@ -15,6 +15,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testutiloptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,30 +26,24 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	target := "ubuntu2204"
-	edition := "targeted"
-	arch := "x86_64"
-	release := "7.0-stable"
-
+	opts := testutiloptions.ValidMongoDBBuildOptions()
+	releases := []string{"7.0-stable"}
 	dir, err := os.MkdirTemp("", "mongodb")
 	require.NoError(t, err)
-
-	opts := bond.BuildOptions{
-		Target:  target,
-		Arch:    bond.MongoDBArch(arch),
-		Edition: bond.MongoDBEdition(edition),
-		Debug:   false,
-	}
-	releases := []string{release}
 	require.NoError(t, recall.DownloadReleases(releases, dir, opts))
 
 	catalog, err := bond.NewCatalog(ctx, dir)
 	require.NoError(t, err)
 
-	path, err := catalog.Get("7.0-current", edition, target, arch, false)
+	path, err := catalog.Get("7.0-current", string(opts.Edition), opts.Target, string(opts.Arch), false)
 	require.NoError(t, err)
 
-	mongodPath := filepath.Join(path, "bin", "mongod")
+	var mongodPath string
+	if runtime.GOOS == "windows" {
+		mongodPath = filepath.Join(path, "bin", "mongod.exe")
+	} else {
+		mongodPath = filepath.Join(path, "bin", "mongod")
+	}
 
 	_, err = os.Stat(mongodPath)
 	require.NoError(t, err)
