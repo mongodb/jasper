@@ -30,17 +30,17 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	platform := runtime.GOOS
 	switch platform {
 	case "darwin":
-		target = "osx"
+		target = "macos"
 		edition = "enterprise"
 	case "linux":
-		edition = "base"
-		target = platform
+		edition = "targeted"
+		target = "ubuntu2204"
 	default:
 		edition = "enterprise"
 		target = platform
 	}
 	arch := "x86_64"
-	release := "4.0-stable"
+	release := "7.0-stable"
 
 	dir, err := os.MkdirTemp("", "mongodb")
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	catalog, err := bond.NewCatalog(ctx, dir)
 	require.NoError(t, err)
 
-	path, err := catalog.Get("4.0-current", edition, target, arch, false)
+	path, err := catalog.Get("7.0-current", edition, target, arch, false)
 	require.NoError(t, err)
 
 	var mongodPath string
@@ -85,7 +85,13 @@ func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, 
 		}
 		dbPaths[i] = dbPath
 
-		opts := options.Create{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
+		opts := options.Create{
+			Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath},
+			Output: options.Output{
+				Output: os.Stdout,
+				Error:  os.Stderr,
+			},
+		}
 		optslist[i] = opts
 	}
 
@@ -163,6 +169,7 @@ func TestMongod(t *testing.T) {
 							_, err := proc.Wait(ctx)
 							select {
 							case waitError <- err:
+								fmt.Println(err)
 							case <-ctx.Done():
 							}
 						}(proc)
