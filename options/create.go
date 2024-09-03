@@ -262,14 +262,6 @@ func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.
 
 func (opts *Create) resolveExecutor(ctx context.Context) (executor.Executor, error) {
 	if opts.Remote != nil {
-		if opts.Remote.UseSSHLibrary {
-			client, session, err := opts.Remote.Resolve()
-			if err != nil {
-				return nil, errors.Wrap(err, "resolving SSH client and session")
-			}
-			return executor.NewSSH(ctx, client, session, opts.Args), nil
-		}
-
 		return executor.NewSSHBinary(ctx, opts.Remote.String(), opts.Remote.Args, opts.Args), nil
 	}
 

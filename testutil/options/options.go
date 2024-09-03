@@ -40,24 +40,35 @@ func SleepCreateOpts(num int) *options.Create {
 // ValidMongoDBDownloadOptions returns valid options for downloading a MongoDB
 // archive file.
 func ValidMongoDBDownloadOptions() options.MongoDBDownload {
-	target := runtime.GOOS
-	if target == "darwin" {
-		target = "osx"
-	}
-
-	edition := "enterprise"
-	if target == "linux" {
-		edition = "base"
-	}
-
 	return options.MongoDBDownload{
-		BuildOpts: bond.BuildOptions{
-			Target:  target,
-			Arch:    bond.MongoDBArch("x86_64"),
-			Edition: bond.MongoDBEdition(edition),
-			Debug:   false,
-		},
-		Releases: []string{"4.0-current"},
+		BuildOpts: ValidMongoDBBuildOptions(),
+		Releases:  []string{"7.0-current"},
+	}
+}
+
+// ValidMongoDBBuildOptions returns valid options for a MongoDB build.
+func ValidMongoDBBuildOptions() bond.BuildOptions {
+	var edition string
+	var target string
+	platform := runtime.GOOS
+	switch platform {
+	case "darwin":
+		edition = "enterprise"
+		target = "macos"
+	case "linux":
+		edition = "targeted"
+		target = "ubuntu2204"
+	default:
+		edition = "enterprise"
+		target = platform
+	}
+	arch := "x86_64"
+
+	return bond.BuildOptions{
+		Target:  target,
+		Arch:    bond.MongoDBArch(arch),
+		Edition: bond.MongoDBEdition(edition),
+		Debug:   false,
 	}
 }
 

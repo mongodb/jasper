@@ -15,6 +15,7 @@ import (
 	"github.com/mongodb/grip"
 	"github.com/mongodb/jasper/options"
 	"github.com/mongodb/jasper/testutil"
+	testutiloptions "github.com/mongodb/jasper/testutil/options"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,47 +26,25 @@ func downloadMongoDB(t *testing.T) (string, string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var target string
-	var edition string
-	platform := runtime.GOOS
-	switch platform {
-	case "darwin":
-		target = "osx"
-		edition = "enterprise"
-	case "linux":
-		edition = "base"
-		target = platform
-	default:
-		edition = "enterprise"
-		target = platform
-	}
-	arch := "x86_64"
-	release := "4.0-stable"
-
+	opts := testutiloptions.ValidMongoDBBuildOptions()
+	releases := []string{"7.0-stable"}
 	dir, err := os.MkdirTemp("", "mongodb")
 	require.NoError(t, err)
-
-	opts := bond.BuildOptions{
-		Target:  target,
-		Arch:    bond.MongoDBArch(arch),
-		Edition: bond.MongoDBEdition(edition),
-		Debug:   false,
-	}
-	releases := []string{release}
 	require.NoError(t, recall.DownloadReleases(releases, dir, opts))
 
 	catalog, err := bond.NewCatalog(ctx, dir)
 	require.NoError(t, err)
 
-	path, err := catalog.Get("4.0-current", edition, target, arch, false)
+	path, err := catalog.Get("7.0-current", string(opts.Edition), opts.Target, string(opts.Arch), false)
 	require.NoError(t, err)
 
 	var mongodPath string
-	if platform == "windows" {
+	if runtime.GOOS == "windows" {
 		mongodPath = filepath.Join(path, "bin", "mongod.exe")
 	} else {
 		mongodPath = filepath.Join(path, "bin", "mongod")
 	}
+
 	_, err = os.Stat(mongodPath)
 	require.NoError(t, err)
 
@@ -85,7 +64,9 @@ func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, 
 		}
 		dbPaths[i] = dbPath
 
-		opts := options.Create{Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath}}
+		opts := options.Create{
+			Args: []string{mongodPath, "--port", fmt.Sprintf("%d", port), "--dbpath", dbPath},
+		}
 		optslist[i] = opts
 	}
 
@@ -101,6 +82,9 @@ func removeDBPaths(dbPaths []string) {
 func TestMongod(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping mongod tests in short mode")
+	}
+	if runtime.GOOS != "linux" {
+		t.Skip("skipping mongod tests on non-Linux platforms because they're not important and mongod is heavily platform-dependent")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

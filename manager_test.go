@@ -37,7 +37,7 @@ func TestManagerImplementations(t *testing.T) {
 			return selfClearingManager
 		},
 		"RemoteManager": func(_ context.Context, t *testing.T) Manager {
-			m, err := newBasicProcessManager(map[string]Process{}, false, false)
+			m, err := newBasicProcessManager(map[string]Process{}, false)
 			require.NoError(t, err)
 			return NewRemoteManager(m, nil)
 		},

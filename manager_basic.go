@@ -13,25 +13,23 @@ import (
 )
 
 type basicProcessManager struct {
-	id            string
-	procs         map[string]Process
-	useSSHLibrary bool
-	tracker       ProcessTracker
-	loggers       LoggingCache
+	id      string
+	procs   map[string]Process
+	tracker ProcessTracker
+	loggers LoggingCache
 }
 
 // newBasicProcessManager returns a manager which is not thread safe for
 // creating arbitrary processes. By default, processes are basic processes
 // unless otherwise specified when creating the process.
-func newBasicProcessManager(procs map[string]Process, trackProcs bool, useSSHLibrary bool) (Manager, error) {
+func newBasicProcessManager(procs map[string]Process, trackProcs bool) (Manager, error) {
 	if procs == nil {
 		procs = map[string]Process{}
 	}
 	m := basicProcessManager{
-		procs:         procs,
-		id:            uuid.New().String(),
-		useSSHLibrary: useSSHLibrary,
-		loggers:       NewLoggingCache(),
+		procs:   procs,
+		id:      uuid.New().String(),
+		loggers: NewLoggingCache(),
 	}
 	if trackProcs {
 		tracker, err := NewProcessTracker(m.id)
@@ -49,10 +47,6 @@ func (m *basicProcessManager) ID() string {
 
 func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.Create) (Process, error) {
 	opts.AddEnvVar(ManagerEnvironID, m.id)
-
-	if opts.Remote != nil && m.useSSHLibrary {
-		opts.Remote.UseSSHLibrary = true
-	}
 
 	proc, err := NewProcess(ctx, opts)
 	if err != nil {

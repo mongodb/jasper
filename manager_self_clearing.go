@@ -22,26 +22,7 @@ type selfClearingProcessManager struct {
 // The self clearing process manager is not thread safe. Wrap with the
 // synchronized process manager for multithreaded use.
 func NewSelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
-	pm, err := newBasicProcessManager(map[string]Process{}, trackProcs, false)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	bpm, ok := pm.(*basicProcessManager)
-	if !ok {
-		return nil, errors.Errorf("programmatic error: expected basic process manager but actually got %T", pm)
-	}
-
-	return &selfClearingProcessManager{
-		basicProcessManager: bpm,
-		maxProcs:            maxProcs,
-	}, nil
-}
-
-// NewSSHLibrarySelfClearingProcessManager is the same as
-// NewSelfClearingProcessManager but uses the SSH library instead of the SSH
-// binary for remote processes.
-func NewSSHLibrarySelfClearingProcessManager(maxProcs int, trackProcs bool) (Manager, error) {
-	pm, err := newBasicProcessManager(map[string]Process{}, trackProcs, true)
+	pm, err := newBasicProcessManager(map[string]Process{}, trackProcs)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
