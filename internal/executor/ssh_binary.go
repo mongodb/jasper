@@ -119,6 +119,9 @@ func (e *execSSHBinary) Signal(sig syscall.Signal) error {
 	return e.cmd.Process.Signal(sig)
 }
 
+// SetGroupLeader is a noop for SSH processes.
+func (e *execSSHBinary) SetGroupLeader() {}
+
 // PID returns the PID of the local SSH binary process.
 func (e *execSSHBinary) PID() int {
 	if e.cmd == nil || e.cmd.Process == nil {
