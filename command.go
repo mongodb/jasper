@@ -406,6 +406,13 @@ func (c *Command) PostHook(h options.CommandPostHook) *Command { c.opts.PostHook
 // creation option. The PreHook is not run when using SetRunFunction.
 func (c *Command) PreHook(fn options.CommandPreHook) *Command { c.opts.PreHook = fn; return c }
 
+// SetGroupLeader marks the command as a group leader so when the process is started
+// the pgid is set to the process's pid. This is a noop for remote and non-unix commands.
+func (c *Command) SetGroupLeader() *Command {
+	c.opts.Process.GroupLeader = true
+	return c
+}
+
 func (c *Command) setupEnv() {
 	if c.opts.Process.Environment == nil {
 		c.opts.Process.Environment = map[string]string{}

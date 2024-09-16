@@ -66,6 +66,9 @@ type Create struct {
 	// interfaces, StandardInputBytes should be set instead of StandardInput.
 	StandardInput      io.Reader `bson:"-" json:"-" yaml:"-"`
 	StandardInputBytes []byte    `bson:"stdin_bytes" json:"stdin_bytes" yaml:"stdin_bytes"`
+	// GroupLeader sets the child process as a group leader so its pgid is set to its pid.
+	// This is a noop for remote executors and on non-unix systems.
+	GroupLeader bool `bson:"group_leader" json:"group_leader" yaml:"group_leader"`
 
 	closers []func() error
 }
@@ -256,6 +259,10 @@ func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.
 	opts.closers = append(opts.closers, func() error {
 		return errors.Wrap(opts.Output.Close(), "closing output")
 	})
+
+	if opts.GroupLeader {
+		cmd.SetGroupLeader()
+	}
 
 	return cmd, deadline, nil
 }

@@ -35,6 +35,9 @@ type Executor interface {
 	Wait() error
 	// Signal sends a signal to a running process.
 	Signal(syscall.Signal) error
+	// SetGroupLeader marks the local process as a group leader. This is a
+	// noop for remote executors and on non-unix systems.
+	SetGroupLeader()
 	// PID returns the local process ID of the process if it is running or
 	// complete. This is not guaranteed to return a valid value for remote
 	// executors and will return -1 if it could not be retrieved.
