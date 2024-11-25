@@ -26,8 +26,8 @@ require (
 	github.com/urfave/cli v1.22.10
 	go.mongodb.org/mongo-driver v1.11.1
 	golang.org/x/net v0.10.0
-	google.golang.org/grpc v1.51.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/grpc v1.56.3
+	google.golang.org/protobuf v1.30.0
 )
 
 require (
@@ -63,7 +63,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-github/v53 v53.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -115,7 +115,7 @@ require (
 	golang.org/x/text v0.9.0 // indirect
 	gonum.org/v1/gonum v0.11.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20211101144312-62acf1d99145 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
