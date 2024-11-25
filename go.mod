@@ -22,7 +22,7 @@ require (
 	github.com/mongodb/grip v0.0.0-20240213223901-f906268d82b9
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli v1.22.10
 	go.mongodb.org/mongo-driver v1.11.1
 	golang.org/x/net v0.10.0
