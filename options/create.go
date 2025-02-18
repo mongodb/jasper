@@ -114,9 +114,12 @@ func (opts *Create) Validate() error {
 
 	if opts.WorkingDirectory != "" && opts.isLocal() {
 		info, err := os.Stat(opts.WorkingDirectory)
-
 		if os.IsNotExist(err) {
 			catcher.Errorf("cannot use '%s' as working directory because it does not exist", opts.WorkingDirectory)
+		} else if err != nil {
+			catcher.Wrapf(err, "cannot use '%s' as working directory due to error", opts.WorkingDirectory)
+		} else if info == nil {
+			catcher.Errorf("cannot use '%s' as working directory because it was not found", opts.WorkingDirectory)
 		} else if !info.IsDir() {
 			catcher.Errorf("cannot use '%s' as working directory because it is not a directory", opts.WorkingDirectory)
 		}
