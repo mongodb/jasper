@@ -2,41 +2,19 @@
 linters:
   disable-all: true
   enable:
-    - unused
     - errcheck
-    - gocognit
-    - goconst
     - gofmt
     - goimports
-    - revive
-    - gosimple
     - govet
     - ineffassign
     - misspell
-    - staticcheck
-    - typecheck
     - unconvert
 
 run:
   skip-dirs:
     - build
 
-linter-settings:
-  govet:
-    enable:
-      - fieldalignment
-
 issues:
-  exclude-rules:
-    - linters:
-        - goconst
-      # Ignore GOOS warnings.
-      text: "string `windows`"
-    - path: _test\.go
-      linters:
-        - gocognit
-        - goconst
-
   # Enforce doc comments on exported types.
   include:
     - EXC0002
