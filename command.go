@@ -522,7 +522,7 @@ func (c *Command) RunParallel(ctx context.Context) error {
 			catcher.Add(c.Close())
 			catcherErr := catcher.Resolve()
 			if catcherErr != nil {
-				return errors.Wrapf(ctx.Err(), catcherErr.Error())
+				return errors.Wrap(ctx.Err(), catcherErr.Error())
 			}
 			return ctx.Err()
 		}
