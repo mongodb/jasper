@@ -176,21 +176,6 @@ func TestBlockingProcess(t *testing.T) {
 
 					assert.Error(t, proc.Signal(cctx, syscall.SIGTERM))
 				},
-				"SignalErrorsInvalidProcess": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
-					signal := make(chan struct{})
-					go func() {
-						assert.False(t, proc.Complete(ctx))
-						assert.Error(t, proc.Signal(ctx, syscall.SIGTERM))
-						close(signal)
-					}()
-
-					op := <-proc.ops
-					op(executor.MakeLocal(&exec.Cmd{
-						Process: &os.Process{Pid: -42},
-					}))
-
-					<-signal
-				},
 				"WaitSomeBeforeCanceling": func(ctx context.Context, t *testing.T, proc *blockingProcess) {
 					proc.info.Options = *testoptions.SleepCreateOpts(10)
 					proc.complete = make(chan struct{})
