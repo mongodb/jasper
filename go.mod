@@ -12,7 +12,6 @@ require (
 	github.com/evergreen-ci/certdepot v0.0.0-20250225174112-f4a81787f865
 	github.com/evergreen-ci/gimlet v0.0.0-20250224224034-b5040d5f7d06
 	github.com/evergreen-ci/lru v0.0.0-20250224223041-c0d64dfbee1d
-	github.com/evergreen-ci/mrpc v0.0.0-20250224223025-3905608f5ff3
 	github.com/evergreen-ci/poplar v0.0.0-20250225162719-802fdb7b988e
 	github.com/evergreen-ci/utility v0.0.0-20250224222128-c2a9c8dfbc87
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510

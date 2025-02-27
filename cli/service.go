@@ -375,7 +375,6 @@ func serviceCommand(cmd string, operation serviceOperation) cli.Command {
 			serviceCommandREST(cmd, operation),
 			serviceCommandRPC(cmd, operation),
 			serviceCommandCombined(cmd, operation),
-			serviceCommandWire(cmd, operation),
 		},
 	}
 }
