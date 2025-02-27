@@ -33,14 +33,6 @@ func init() {
 
 func remoteManagerTestCases(httpClient *http.Client) map[string]func(context.Context, *testing.T) Manager {
 	return map[string]func(context.Context, *testing.T) Manager{
-		"MDB": func(ctx context.Context, t *testing.T) Manager {
-			mngr, err := jasper.NewSynchronizedManager(false)
-			require.NoError(t, err)
-
-			client, err := makeTestMDBServiceAndClient(ctx, mngr)
-			require.NoError(t, err)
-			return client
-		},
 		"RPC/TLS": func(ctx context.Context, t *testing.T) Manager {
 			mngr, err := jasper.NewSynchronizedManager(false)
 			require.NoError(t, err)

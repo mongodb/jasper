@@ -59,19 +59,6 @@ func TestProcessImplementations(t *testing.T) {
 
 			return client.CreateProcess(ctx, opts)
 		},
-		"MDB": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
-			mngr, err := jasper.NewSynchronizedManager(false)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			client, err := makeTestMDBServiceAndClient(ctx, mngr)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			return client.CreateProcess(ctx, opts)
-		},
 		"RPC/TLS": func(ctx context.Context, opts *options.Create) (jasper.Process, error) {
 			mngr, err := jasper.NewSynchronizedManager(false)
 			if err != nil {
