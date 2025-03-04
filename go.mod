@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.10
-	go.mongodb.org/mongo-driver v1.12.1
+	go.mongodb.org/mongo-driver/v2 v2.0.0
 	golang.org/x/net v0.21.0
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.31.0
@@ -120,6 +120,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
+	go.mongodb.org/mongo-driver v1.17.3 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect
