@@ -9,10 +9,10 @@ require (
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
 	github.com/evergreen-ci/birch v0.0.0-20250224221624-64f481f4b888
 	github.com/evergreen-ci/bond v0.0.0-20250225175518-482c13099622
-	github.com/evergreen-ci/certdepot v0.0.0-20250225174112-f4a81787f865
-	github.com/evergreen-ci/gimlet v0.0.0-20250224224034-b5040d5f7d06
+	github.com/evergreen-ci/certdepot v0.0.0-20250304195821-c4871b667baf
+	github.com/evergreen-ci/gimlet v0.0.0-20250227195544-4800fc7e312f
 	github.com/evergreen-ci/lru v0.0.0-20250224223041-c0d64dfbee1d
-	github.com/evergreen-ci/poplar v0.0.0-20250225162719-802fdb7b988e
+	github.com/evergreen-ci/poplar v0.0.0-20250226220147-608ee5d893b2
 	github.com/evergreen-ci/utility v0.0.0-20250224222128-c2a9c8dfbc87
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.1
@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.10
-	go.mongodb.org/mongo-driver/v2 v2.0.0
+	go.mongodb.org/mongo-driver/v2 v2.1.0
 	golang.org/x/net v0.21.0
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.31.0
@@ -90,7 +90,7 @@ require (
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/lufia/plan9stats v0.0.0-20231016141302-07b5767bb0ed // indirect
 	github.com/mattn/go-xmpp v0.0.1 // indirect
-	github.com/mongodb/anser v0.0.0-20250225172621-d9ea322b5742 // indirect
+	github.com/mongodb/anser v0.0.0-20250304192308-25ea0fd7a126 // indirect
 	github.com/mongodb/ftdc v0.0.0-20220401165013-13e4af55e809 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
@@ -127,11 +127,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	go.step.sm/crypto v0.31.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
