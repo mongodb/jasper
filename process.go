@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 
 	"github.com/mongodb/grip"
+	"github.com/mongodb/grip/message"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
 )
@@ -42,28 +44,36 @@ func NewProcess(ctx context.Context, opts *options.Create) (Process, error) {
 		return proc, nil
 	}
 
-	err = defaultOOMScoreAdj(ctx, proc)
-	if err != nil {
-		return nil, errors.Wrap(err, "setting default oom_score_adj")
+	grip.Info(message.Fields{
+		"bynnbynn": "new process",
+		"proc id":  proc.ID(),
+		"pid":      proc.Info(ctx).PID,
+	})
+
+	// Child processes inherit the oom_score_adj from their parent process, so we
+	// want to set it to 0, which is the default value.
+	// Only supported by linux.
+	if runtime.GOOS == "linux" {
+		procInfo := proc.Info(ctx)
+		if procInfo.PID == 0 {
+			return nil, errors.New("cannot adjust oom_score_adj for process with empty process info")
+		}
+		PID := strconv.Itoa(procInfo.PID)
+
+		err = defaultOOMScoreAdj(ctx, PID)
+		if err != nil {
+			return nil, errors.Wrap(err, "setting default oom_score_adj")
+		}
 	}
 
 	return &synchronizedProcess{proc: proc}, nil
 }
 
-// adjustOOMScoreAdj sets the oom_score_adj for the given process to the given score.
-func adjustOOMScoreAdj(ctx context.Context, proc Process, score int) error {
-	if proc == nil {
-		return errors.New("cannot adjust oom_score_adj for nil process")
-	}
+// AdjustOOMScoreAdj sets the oom_score_adj for the given process to the given score.
+func AdjustOOMScoreAdj(ctx context.Context, PID string, score int) error {
 	if score < -1000 || score > 1000 {
 		return errors.Errorf("oom_score_adj must be between -1000 and 1000, but got %d", score)
 	}
-
-	procInfo := proc.Info(ctx)
-	if procInfo.PID == 0 {
-		return errors.New("cannot adjust oom_score_adj for process with empty info")
-	}
-	PID := strconv.Itoa(procInfo.PID)
 
 	oomScoreAdjPath := filepath.Join("/proc", PID, "oom_score_adj")
 	// WriteFile will create a new file with read only permissions if the file doesn't exist,
@@ -77,6 +87,6 @@ func adjustOOMScoreAdj(ctx context.Context, proc Process, score int) error {
 
 // defaultOOMScoreAdj sets the oom_score_adj for the given process to 0, which
 // is the default value.
-func defaultOOMScoreAdj(ctx context.Context, proc Process) error {
-	return adjustOOMScoreAdj(ctx, proc, 0)
+func defaultOOMScoreAdj(ctx context.Context, PID string) error {
+	return AdjustOOMScoreAdj(ctx, PID, 0)
 }
