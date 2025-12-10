@@ -106,7 +106,11 @@ func (c *rpcClient) Register(ctx context.Context, proc jasper.Process) error {
 }
 
 func (c *rpcClient) List(ctx context.Context, f options.Filter) ([]jasper.Process, error) {
-	procs, err := c.client.List(ctx, internal.ConvertFilter(f))
+	if err := f.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid filter")
+	}
+	filter := internal.ConvertFilter(f)
+	procs, err := c.client.List(ctx, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting streaming client")
 	}
