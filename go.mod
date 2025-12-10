@@ -24,7 +24,6 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli v1.22.10
 	go.mongodb.org/mongo-driver v1.17.6
-	golang.org/x/net v0.47.0
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
 )
@@ -125,6 +124,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.step.sm/crypto v0.31.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect

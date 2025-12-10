@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"io"
 	"os"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/mongodb/jasper"
 	"github.com/mongodb/jasper/options"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -125,6 +125,7 @@ func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*Proce
 
 	proc, err := s.manager.CreateProcess(pctx, jopts)
 	if err != nil {
+		cancel()
 		return nil, newGRPCError(codes.Internal, errors.WithStack(err))
 	}
 
@@ -149,7 +150,12 @@ func (s *jasperService) Create(ctx context.Context, opts *CreateOptions) (*Proce
 
 func (s *jasperService) List(f *Filter, stream JasperProcessManager_ListServer) error {
 	ctx := stream.Context()
-	procs, err := s.manager.List(ctx, options.Filter(strings.ToLower(f.GetName().String())))
+	name := strings.ToLower(f.GetName().String())
+	filter := options.Filter(name)
+	if err := filter.Validate(); err != nil {
+		return newGRPCError(codes.InvalidArgument, errors.Errorf("invalid filter"))
+	}
+	procs, err := s.manager.List(ctx, filter)
 	if err != nil {
 		return newGRPCError(codes.Internal, errors.WithStack(err))
 	}
