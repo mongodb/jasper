@@ -3,7 +3,7 @@ package jasper
 import (
 	"syscall"
 
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3/cgroup1"
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/message"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -15,7 +15,7 @@ const (
 	// added. There is no significance behind using the freezer subsystem
 	// over any other subsystem for this purpose; its purpose is to ensure all
 	// processes can be tracked in a single subsystem for cleanup.
-	defaultSubsystem = cgroups.Freezer
+	defaultSubsystem = cgroup1.Freezer
 )
 
 // linuxProcessTracker uses cgroups to track processes. If cgroups is not
@@ -23,7 +23,7 @@ const (
 // for the marker ManagerEnvironID.
 type linuxProcessTracker struct {
 	*processTrackerBase
-	cgroup cgroups.Cgroup
+	cgroup cgroup1.Cgroup
 	infos  []ProcessInfo
 }
 
@@ -45,7 +45,7 @@ func NewProcessTracker(name string) (ProcessTracker, error) {
 
 // validCgroup returns true if the cgroup is non-nil and not deleted.
 func (t *linuxProcessTracker) validCgroup() bool {
-	return t.cgroup != nil && t.cgroup.State() != cgroups.Deleted
+	return t.cgroup != nil && t.cgroup.State() != cgroup1.Deleted
 }
 
 // setDefaultCgroupIfInvalid attempts to set the tracker's cgroup if it is
@@ -56,7 +56,7 @@ func (t *linuxProcessTracker) setDefaultCgroupIfInvalid() error {
 		return nil
 	}
 
-	cgroup, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/"+t.Name), &specs.LinuxResources{})
+	cgroup, err := cgroup1.New(cgroup1.StaticPath("/"+t.Name), &specs.LinuxResources{})
 	if err != nil {
 		return errors.Wrap(err, "creating default cgroup")
 	}
@@ -74,7 +74,7 @@ func (t *linuxProcessTracker) Add(info ProcessInfo) error {
 		return nil
 	}
 
-	proc := cgroups.Process{Subsystem: defaultSubsystem, Pid: info.PID}
+	proc := cgroup1.Process{Subsystem: defaultSubsystem, Pid: info.PID}
 	if err := t.cgroup.Add(proc); err != nil {
 		return errors.Wrapf(err, "adding process with PID '%d' to cgroup", info.PID)
 	}
