@@ -80,8 +80,8 @@ github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 h1:iFaUwBSo5Svw6L
 github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5/go.mod h1:qssHWj60/X5sZFNxpG4HBPDHVqxNm4DfnCKgrbZOT+s=
 github.com/dsnet/golib v0.0.0-20171103203638-1ea166775780/go.mod h1:Lj+Z9rebOhdfkVLjJ8T6VcRQv3SXugXy999NBtR9aFY=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
-github.com/evergreen-ci/aviation v0.0.0-20250224221603-9ff1979a684a h1:OXAJX/mqSoKegKyDQgN87M5JmU0kSO6HjBXP7mZgknI=
-github.com/evergreen-ci/aviation v0.0.0-20250224221603-9ff1979a684a/go.mod h1:ZFls6H69lDtPDPdCh6cpvNBhKf4yDU5NsAo9Q3R899c=
+github.com/evergreen-ci/aviation v0.0.0-20260115180700-baca116d6d12 h1:AyDfa1ux+UDiLJJj3oM70dFR2S3OMM0TKJf3AYuVOMM=
+github.com/evergreen-ci/aviation v0.0.0-20260115180700-baca116d6d12/go.mod h1:elHsZLiCcNEDi18/om+O73XyGCKUcYoMPtgA288zueQ=
 github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52 h1:e5fgBYO+zFtcG84TL+1eq6vGg16W4vXYYPEsmfOomwE=
 github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52/go.mod h1:/9fbOyzmfyAMEVTvlXzG/ASiUb0ucC4bu05MeCrmV7I=
 github.com/evergreen-ci/birch v0.0.0-20250224221624-64f481f4b888 h1:ypl1JbRMZS5qETyTEUldCyJp1aLujr3i73xMqvzT2+g=
@@ -90,8 +90,8 @@ github.com/evergreen-ci/bond v0.0.0-20251209195750-b541586174f7 h1:Ex5a9llpYhm8t
 github.com/evergreen-ci/bond v0.0.0-20251209195750-b541586174f7/go.mod h1:dwKtHZQ8bJSIDzC1ukv3/BqWyILbs2XqTMaJAx8ZLGA=
 github.com/evergreen-ci/certdepot v0.0.0-20251209180210-3f52e45cc5a2 h1:bBwDxfZES3z3l2Socek1XBKYaTZIZ549PcaBZkw5UH4=
 github.com/evergreen-ci/certdepot v0.0.0-20251209180210-3f52e45cc5a2/go.mod h1:YLBfKY+Y1yFapi7AZUR0tfJ8H+pbzF1CO94ixHDaUOM=
-github.com/evergreen-ci/gimlet v0.0.0-20251205151908-163517996b82 h1:BuxBEXRzwGO4FXwOskW3kjBFzfDx2+jxQYYpRxNYsGE=
-github.com/evergreen-ci/gimlet v0.0.0-20251205151908-163517996b82/go.mod h1:Xiaegoek6n6GQnEt7pFMByuME0vw4sGcqD7KA7ilK7c=
+github.com/evergreen-ci/gimlet v0.0.0-20260113164336-bfe84f40e50d h1:D/ua80GfelpLtry9J8+q/K1MWb7m0V0QiXhOm0kCdj8=
+github.com/evergreen-ci/gimlet v0.0.0-20260113164336-bfe84f40e50d/go.mod h1:Xiaegoek6n6GQnEt7pFMByuME0vw4sGcqD7KA7ilK7c=
 github.com/evergreen-ci/lru v0.0.0-20251209201855-89a4cc8d867f h1:sXisMMrOFZVbclIs/pU6xGKDQ4ylpGFzWqqB9QT9NGU=
 github.com/evergreen-ci/lru v0.0.0-20251209201855-89a4cc8d867f/go.mod h1:6j2omnZaHKHv2WkpToHHsl0TK7Wja5GmxcYRvjkpJ2k=
 github.com/evergreen-ci/negroni v1.0.1-0.20211028183800-67b6d7c2c035 h1:oVU/ni/sRq+GAogUMLa7LBGtvVHMVLbisuytxBC5KaY=
