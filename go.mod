@@ -10,7 +10,7 @@ require (
 	github.com/evergreen-ci/birch v0.0.0-20250224221624-64f481f4b888
 	github.com/evergreen-ci/bond v0.0.0-20251209195750-b541586174f7
 	github.com/evergreen-ci/certdepot v0.0.0-20251209180210-3f52e45cc5a2
-	github.com/evergreen-ci/gimlet v0.0.0-20251205151908-163517996b82
+	github.com/evergreen-ci/gimlet v0.0.0-20260113164336-bfe84f40e50d
 	github.com/evergreen-ci/lru v0.0.0-20251209201855-89a4cc8d867f
 	github.com/evergreen-ci/poplar v0.0.0-20251209144431-fdec8d7b2505
 	github.com/evergreen-ci/utility v0.0.0-20251203163234-8a1c0ea8b717
