@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups/v3 v3.1.2
-	github.com/evergreen-ci/aviation v0.0.0-20250224221603-9ff1979a684a
+	github.com/evergreen-ci/aviation v0.0.0-20260115180700-baca116d6d12
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
 	github.com/evergreen-ci/birch v0.0.0-20250224221624-64f481f4b888
 	github.com/evergreen-ci/bond v0.0.0-20251209195750-b541586174f7
