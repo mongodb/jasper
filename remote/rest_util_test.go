@@ -29,13 +29,13 @@ tryStartService:
 			}
 
 			port := testutil.GetPortNumber()
-			if err := app.SetPort(port); err != nil {
+			if err := app.SetPort(ctx, port); err != nil {
 				continue tryStartService
 			}
 
 			srvCtx, srvCancel := context.WithCancel(ctx)
 			go func() {
-				grip.Warning(app.Run(srvCtx))
+				grip.Warning(srvCtx, app.Run(srvCtx))
 			}()
 
 			failedToConnect := make(chan struct{})
@@ -87,7 +87,7 @@ func newTestRESTClient(ctx context.Context, addr net.Addr, httpClient *http.Clie
 
 	go func() {
 		<-ctx.Done()
-		grip.Notice(client.CloseConnection())
+		grip.Notice(ctx, client.CloseConnection())
 	}()
 
 	return client

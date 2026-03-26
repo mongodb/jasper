@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -199,7 +200,7 @@ func makeLogger(c *cli.Context) *options.LoggerConfig {
 		if tokenFilePath := c.String(splunkTokenFilePathFlagName); tokenFilePath != "" {
 			token, err := os.ReadFile(tokenFilePath)
 			if err != nil {
-				grip.Error(errors.Wrapf(err, "could not read Splunk token file from path '%s'", tokenFilePath))
+				grip.Error(context.Background(), errors.Wrapf(err, "could not read Splunk token file from path '%s'", tokenFilePath))
 				return nil
 			}
 			info.Token = string(token)
@@ -333,7 +334,7 @@ func makeUserEnvironment(user string, vars []string) map[string]string { //nolin
 	file := "/etc/passwd"
 	content, err := os.ReadFile(file)
 	if err != nil {
-		grip.Debug(message.WrapErrorf(err, "reading file '%s' to populate environment variables", file))
+		grip.Debug(context.Background(), message.WrapErrorf(err, "reading file '%s' to populate environment variables", file))
 		return env
 	}
 
@@ -359,7 +360,7 @@ func makeUserEnvironment(user string, vars []string) map[string]string { //nolin
 			}
 		}
 	}
-	grip.Debug(message.WrapErrorf(err, "finding user environment variables in file '%s'", file))
+	grip.Debug(context.Background(), message.WrapErrorf(err, "finding user environment variables in file '%s'", file))
 	return env
 }
 
@@ -400,8 +401,8 @@ func serviceForceReinstall(daemon baobab.Interface, config *baobab.Config) error
 		catcher.Wrap(svc.Install(), "installing service")
 		catcher.Wrap(svc.Start(), "starting service")
 		if catcher.HasErrors() {
-			grip.Debug(stopErr)
-			grip.Debug(uninstallErr)
+			grip.Debug(context.Background(), stopErr)
+			grip.Debug(context.Background(), uninstallErr)
 		}
 		return catcher.Resolve()
 	}), "force reinstalling service")

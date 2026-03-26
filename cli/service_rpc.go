@@ -93,7 +93,7 @@ func (d *rpcDaemon) Start(s baobab.Service) error {
 
 	go func(ctx context.Context, d *rpcDaemon) {
 		defer recovery.LogStackTraceAndContinue("RPC service")
-		grip.Error(errors.Wrap(d.run(ctx), "running RPC service"))
+		grip.Error(ctx, errors.Wrap(d.run(ctx), "running RPC service"))
 	}(ctx, d)
 
 	return nil
@@ -113,7 +113,7 @@ func (d *rpcDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
 		return nil, errors.New("manager is not set on RPC service")
 	}
 
-	grip.Infof("starting RPC service at '%s:%d'", d.host, d.port)
+	grip.Infof(ctx, "starting RPC service at '%s:%d'", d.host, d.port)
 
 	return newRPCService(ctx, d.host, d.port, d.manager, d.credsFilePath)
 }

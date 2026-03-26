@@ -23,7 +23,7 @@ func (p *restProcess) ID() string { return p.id }
 
 func (p *restProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	info, err := p.client.getProcessInfo(ctx, p.id)
-	grip.Warning(message.WrapError(err, message.Fields{
+	grip.Warning(ctx, message.WrapError(err, message.Fields{
 		"message": "failed to get process info",
 		"process": p.id,
 	}))
@@ -32,7 +32,7 @@ func (p *restProcess) Info(ctx context.Context) jasper.ProcessInfo {
 
 func (p *restProcess) Running(ctx context.Context) bool {
 	info, err := p.client.getProcessInfo(ctx, p.id)
-	grip.Warning(message.WrapError(err, message.Fields{
+	grip.Warning(ctx, message.WrapError(err, message.Fields{
 		"message": "failed to get process running status",
 		"process": p.id,
 	}))
@@ -41,7 +41,7 @@ func (p *restProcess) Running(ctx context.Context) bool {
 
 func (p *restProcess) Complete(ctx context.Context) bool {
 	info, err := p.client.getProcessInfo(ctx, p.id)
-	grip.Warning(message.WrapError(err, message.Fields{
+	grip.Warning(ctx, message.WrapError(err, message.Fields{
 		"message": "failed to get process completion status",
 		"process": p.id,
 	}))
@@ -114,7 +114,7 @@ func (p *restProcess) RegisterSignalTriggerID(ctx context.Context, triggerID jas
 func (p *restProcess) Tag(tag string) {
 	resp, err := p.client.doRequest(context.Background(), http.MethodPost, p.client.getURL("/process/%s/tags?add=%s", p.id, tag), nil)
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to tag process",
 			"process": p.ID(),
 			"tag":     tag,
@@ -127,7 +127,7 @@ func (p *restProcess) Tag(tag string) {
 func (p *restProcess) GetTags() []string {
 	resp, err := p.client.doRequest(context.Background(), http.MethodGet, p.client.getURL("/process/%s/tags", p.id), nil)
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to get tags",
 			"process": p.ID(),
 		}))
@@ -137,7 +137,7 @@ func (p *restProcess) GetTags() []string {
 
 	out := []string{}
 	if err = gimlet.GetJSON(resp.Body, &out); err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to read tags from response",
 			"process": p.ID(),
 		}))
@@ -150,7 +150,7 @@ func (p *restProcess) GetTags() []string {
 func (p *restProcess) ResetTags() {
 	resp, err := p.client.doRequest(context.Background(), http.MethodDelete, p.client.getURL("/process/%s/tags", p.id), nil)
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "making request",
 			"process": p.id,
 		}))

@@ -136,7 +136,7 @@ func runCmd() cli.Command { //nolint: gocognit
 						// Don't return on error, because if any of the
 						// sub-commands fail, it will fail to print the log
 						// lines.
-						grip.Error(errors.Wrap(err, "running command"))
+						grip.Error(ctx, errors.Wrap(err, "running command"))
 					} else {
 						return errors.Wrap(err, "running command")
 					}
@@ -144,7 +144,7 @@ func runCmd() cli.Command { //nolint: gocognit
 
 				if wait {
 					exitCode, err := printLogs(ctx, client, cmd, inMemoryCap)
-					grip.Error(err)
+					grip.Error(ctx, err)
 					os.Exit(exitCode)
 				} else {
 					t := tabby.New()
@@ -181,12 +181,12 @@ func printLogs(ctx context.Context, client remote.Manager, cmd *jasper.Command, 
 			for {
 				select {
 				case <-ctx.Done():
-					grip.Notice("log fetching canceled")
+					grip.Notice(ctx, "log fetching canceled")
 					return
 				case <-timer.C:
 					logLines, err := client.GetLogStream(ctx, id, inMemoryCap)
 					if err != nil {
-						grip.Error(message.WrapError(err, "polling for log lines"))
+						grip.Error(ctx, message.WrapError(err, "polling for log lines"))
 						return
 					}
 

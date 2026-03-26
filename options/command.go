@@ -1,6 +1,8 @@
 package options
 
 import (
+	"context"
+
 	"github.com/mongodb/grip"
 	"github.com/mongodb/grip/level"
 	"github.com/mongodb/grip/logging"
@@ -49,7 +51,7 @@ type CommandPreHook func(*Command, *Create)
 // that prints information from the creation options.
 func NewLoggingPreHook(logger grip.Journaler, lp level.Priority) CommandPreHook {
 	return func(cmd *Command, opt *Create) {
-		logger.Log(lp, message.Fields{
+		logger.Log(context.Background(), lp, message.Fields{
 			"id":     cmd.ID,
 			"dir":    opt.WorkingDirectory,
 			"cmd":    opt.Args,

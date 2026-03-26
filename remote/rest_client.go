@@ -117,7 +117,7 @@ func (c *restClient) doRequest(ctx context.Context, method string, url string, b
 func (c *restClient) ID() string {
 	resp, err := c.doRequest(context.Background(), http.MethodGet, c.getURL("/id"), nil)
 	if err != nil {
-		grip.Debug(errors.Wrap(err, "making request"))
+		grip.Debug(context.Background(), errors.Wrap(err, "making request"))
 		return ""
 	}
 	defer resp.Body.Close()
@@ -258,7 +258,7 @@ func (c *restClient) Clear(ctx context.Context) {
 	// should not really ever happen.
 	resp, err := c.doRequest(ctx, http.MethodPost, c.getURL("/clear"), nil)
 	if err != nil {
-		grip.Debug(errors.Wrap(err, "making request"))
+		grip.Debug(ctx, errors.Wrap(err, "making request"))
 	}
 	defer resp.Body.Close()
 }

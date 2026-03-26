@@ -84,7 +84,7 @@ func (d *restDaemon) Start(s baobab.Service) error {
 
 	go func(ctx context.Context, d *restDaemon) {
 		defer recovery.LogStackTraceAndContinue("REST service")
-		grip.Error(errors.Wrap(d.run(ctx), "running REST service"))
+		grip.Error(ctx, errors.Wrap(d.run(ctx), "running REST service"))
 	}(ctx, d)
 
 	return nil
@@ -103,7 +103,7 @@ func (d *restDaemon) newService(ctx context.Context) (util.CloseFunc, error) {
 	if d.manager == nil {
 		return nil, errors.New("manager is not set on REST service")
 	}
-	grip.Infof("starting REST service at '%s:%d'", d.host, d.port)
+	grip.Infof(ctx, "starting REST service at '%s:%d'", d.host, d.port)
 	return newRESTService(ctx, d.host, d.port, d.manager)
 }
 
@@ -116,13 +116,13 @@ func newRESTService(ctx context.Context, host string, port int, manager jasper.M
 	if err := app.SetHost(host); err != nil {
 		return nil, errors.Wrap(err, "setting REST host")
 	}
-	if err := app.SetPort(port); err != nil {
+	if err := app.SetPort(ctx, port); err != nil {
 		return nil, errors.Wrap(err, "setting REST port")
 	}
 
 	go func() {
 		defer recovery.LogStackTraceAndContinue("REST service")
-		grip.Warning(errors.Wrap(app.Run(ctx), "running REST app"))
+		grip.Warning(ctx, errors.Wrap(app.Run(ctx), "running REST app"))
 	}()
 
 	return func() error { return nil }, nil

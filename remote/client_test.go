@@ -27,8 +27,8 @@ import (
 
 func init() {
 	sender := grip.GetSender()
-	grip.Error(sender.SetLevel(send.LevelInfo{Default: level.Info, Threshold: level.Info}))
-	grip.Error(grip.SetSender(sender))
+	grip.Error(context.Background(), sender.SetLevel(send.LevelInfo{Default: level.Info, Threshold: level.Info}))
+	grip.Error(context.Background(), grip.SetSender(sender))
 }
 
 func remoteManagerTestCases(httpClient *http.Client) map[string]func(context.Context, *testing.T) Manager {
@@ -360,7 +360,7 @@ func TestClientImplementations(t *testing.T) {
 								listener, err := net.Listen("tcp", fileServerAddr)
 								require.NoError(t, err)
 								go func() {
-									grip.Info(fileServer.Serve(listener))
+									grip.Info(ctx, fileServer.Serve(listener))
 								}()
 
 								baseURL := fmt.Sprintf("http://%s", fileServerAddr)

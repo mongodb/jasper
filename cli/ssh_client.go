@@ -159,7 +159,7 @@ func (c *sshClient) Get(ctx context.Context, id string) (jasper.Process, error) 
 
 func (c *sshClient) Clear(ctx context.Context) {
 	if _, err := c.runManagerCommand(ctx, ClearCommand, nil); err != nil {
-		grip.Debug(errors.Wrap(err, "clearing manager"))
+		grip.Debug(ctx, errors.Wrap(err, "clearing manager"))
 	}
 }
 

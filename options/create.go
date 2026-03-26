@@ -218,7 +218,7 @@ func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.
 	}
 	defer func() {
 		if resolveErr != nil {
-			grip.Error(errors.Wrap(cmd.Close(), "closing process executor"))
+			grip.Error(ctx, errors.Wrap(cmd.Close(), "closing process executor"))
 		}
 	}()
 
@@ -239,7 +239,7 @@ func (opts *Create) Resolve(ctx context.Context) (exe executor.Executor, t time.
 
 	defer func() {
 		if resolveErr != nil {
-			grip.Error(errors.Wrap(opts.Output.Close(), "closing output"))
+			grip.Error(ctx, errors.Wrap(opts.Output.Close(), "closing output"))
 		}
 	}()
 	stdout, err := opts.Output.GetOutput()
