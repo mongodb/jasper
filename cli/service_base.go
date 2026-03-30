@@ -98,10 +98,10 @@ func (d *baseDaemon) handleSignals(ctx context.Context, cancel context.CancelFun
 
 	select {
 	case <-sig:
-		grip.Debug("received signal")
+		grip.Debug(ctx, "received signal")
 	case <-ctx.Done():
-		grip.Debug("context canceled")
+		grip.Debug(ctx, "context canceled")
 	case <-exit:
-		grip.Debug("received daemon exit signal")
+		grip.Debug(ctx, "received daemon exit signal")
 	}
 }

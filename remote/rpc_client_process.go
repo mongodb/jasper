@@ -23,7 +23,7 @@ func (p *rpcProcess) ID() string { return p.info.Id }
 func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(ctx, message.WrapError(err, message.Fields{
 			"message": "failed to get process info",
 			"process": p.ID(),
 		}))
@@ -32,7 +32,7 @@ func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 	p.info = info
 
 	exportedInfo, err := p.info.Export()
-	grip.Warning(message.WrapError(err, message.Fields{
+	grip.Warning(ctx, message.WrapError(err, message.Fields{
 		"message": "failed to convert info for process",
 		"process": p.ID(),
 	}))
@@ -42,7 +42,7 @@ func (p *rpcProcess) Info(ctx context.Context) jasper.ProcessInfo {
 func (p *rpcProcess) Running(ctx context.Context) bool {
 	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(ctx, message.WrapError(err, message.Fields{
 			"message": "failed to get process running status",
 			"process": p.ID(),
 		}))
@@ -56,7 +56,7 @@ func (p *rpcProcess) Running(ctx context.Context) bool {
 func (p *rpcProcess) Complete(ctx context.Context) bool {
 	info, err := p.client.Get(ctx, &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(ctx, message.WrapError(err, message.Fields{
 			"message": "failed to get process completion status",
 			"process": p.ID(),
 		}))
@@ -136,7 +136,7 @@ func (p *rpcProcess) Tag(tag string) {
 		Tags:      []string{tag},
 	})
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to tag process",
 			"process": p.ID(),
 			"tag":     tag,
@@ -144,7 +144,7 @@ func (p *rpcProcess) Tag(tag string) {
 		return
 	}
 	if !resp.Success {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to tag process",
 			"process": p.ID(),
 			"tag":     tag,
@@ -157,7 +157,7 @@ func (p *rpcProcess) Tag(tag string) {
 func (p *rpcProcess) GetTags() []string {
 	resp, err := p.client.GetTags(context.Background(), &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to get tags",
 			"process": p.ID(),
 		}))
@@ -170,14 +170,14 @@ func (p *rpcProcess) GetTags() []string {
 func (p *rpcProcess) ResetTags() {
 	resp, err := p.client.ResetTags(context.Background(), &internal.JasperProcessID{Value: p.info.Id})
 	if err != nil {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to reset tags",
 			"process": p.ID(),
 		}))
 		return
 	}
 	if !resp.Success {
-		grip.Warning(message.WrapError(err, message.Fields{
+		grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 			"message": "failed to reset tags",
 			"process": p.ID(),
 			"reason":  resp.Text,

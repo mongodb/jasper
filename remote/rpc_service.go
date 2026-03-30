@@ -56,7 +56,7 @@ func StartRPCService(ctx context.Context, manager jasper.Manager, addr net.Addr,
 	}
 	go func() {
 		defer recovery.LogStackTraceAndContinue("RPC service")
-		grip.Notice(service.Serve(lis))
+		grip.Notice(ctx, service.Serve(lis))
 	}()
 
 	return func() error { service.Stop(); cancel(); return nil }, nil

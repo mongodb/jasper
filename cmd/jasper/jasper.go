@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/mongodb/grip"
@@ -10,7 +11,7 @@ import (
 
 func main() {
 	app := newApp()
-	grip.Error(app.Run(os.Args))
+	grip.Error(context.Background(), app.Run(os.Args))
 }
 
 func newApp() *cli.App {

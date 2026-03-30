@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"syscall"
 
 	"github.com/containerd/cgroups/v3/cgroup1"
@@ -37,7 +38,7 @@ func NewProcessTracker(name string) (ProcessTracker, error) {
 		infos:              []ProcessInfo{},
 	}
 	if err := tracker.setDefaultCgroupIfInvalid(); err != nil {
-		grip.Debug(message.WrapErrorf(err, "initializing process tracker named '%s' with cgroup", name))
+		grip.Debug(context.Background(), message.WrapErrorf(err, "initializing process tracker named '%s' with cgroup", name))
 	}
 
 	return tracker, nil

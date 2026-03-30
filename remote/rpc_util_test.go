@@ -106,7 +106,7 @@ func startTestRPCService(ctx context.Context, mngr jasper.Manager, addr net.Addr
 
 	go func() {
 		<-ctx.Done()
-		grip.Error(closeService())
+		grip.Error(ctx, closeService())
 	}()
 
 	return nil
@@ -122,7 +122,7 @@ func newTestRPCClient(ctx context.Context, addr net.Addr, creds *certdepot.Crede
 
 	go func() {
 		<-ctx.Done()
-		grip.Notice(client.CloseConnection())
+		grip.Notice(ctx, client.CloseConnection())
 	}()
 
 	return client, nil

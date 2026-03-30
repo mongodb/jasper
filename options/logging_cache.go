@@ -2,6 +2,7 @@ package options
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"strings"
@@ -110,7 +111,7 @@ func (cl *CachedLogger) Send(lp *LoggingPayload) error {
 		return errors.WithStack(err)
 	}
 
-	sender.Send(msg)
+	sender.Send(context.Background(), msg)
 
 	return nil
 }

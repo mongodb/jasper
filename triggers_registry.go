@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"sync"
 
 	"github.com/mongodb/grip"
@@ -25,7 +26,7 @@ func init() {
 	}
 
 	for id, factory := range signalTriggers {
-		grip.EmergencyPanic(RegisterSignalTriggerFactory(id, factory))
+		grip.EmergencyPanic(context.Background(), RegisterSignalTriggerFactory(id, factory))
 	}
 }
 

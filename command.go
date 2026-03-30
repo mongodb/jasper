@@ -42,7 +42,7 @@ func (c *Command) sudoCmd() []string {
 func splitCmdToArgs(cmd string) []string {
 	args, err := shlex.Split(cmd)
 	if err != nil {
-		grip.Error(message.WrapError(err, message.Fields{"input": cmd}))
+		grip.Error(context.Background(), message.WrapError(err, message.Fields{"input": cmd}))
 		return nil
 	}
 	return args
@@ -422,7 +422,7 @@ func (c *Command) setupEnv() {
 // Run starts and then waits on the Command's execution.
 func (c *Command) Run(ctx context.Context) error {
 	if c.opts.Prerequisite != nil && !c.opts.Prerequisite() {
-		grip.Debug(message.Fields{
+		grip.Debug(ctx, message.Fields{
 			"op":  "no-op after prerequisite returned false",
 			"id":  c.opts.ID,
 			"cmd": c.String(),
@@ -759,7 +759,7 @@ func (c *Command) exec(ctx context.Context, opts *options.Create, idx int) error
 		}
 		err = waitCatcher.Resolve()
 		msg["err"] = err
-		grip.Log(c.opts.Priority, writeOutput(msg))
+		grip.Log(ctx, c.opts.Priority, writeOutput(msg))
 	}
 
 	return errors.WithStack(err)

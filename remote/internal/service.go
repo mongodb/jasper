@@ -72,7 +72,7 @@ func (s *jasperService) pruneCache(ctx context.Context) {
 			s.cacheMutex.RLock()
 			if !s.cacheOpts.Disabled {
 				if err := s.cache.Prune(s.cacheOpts.MaxSize, nil, false); err != nil {
-					grip.Error(errors.Wrap(err, "pruning cache"))
+					grip.Error(ctx, errors.Wrap(err, "pruning cache"))
 				}
 			}
 			timer.Reset(s.cacheOpts.PruneDelay)

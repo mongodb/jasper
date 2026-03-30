@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"fmt"
 	"syscall"
 	"time"
@@ -104,7 +105,7 @@ func (j *JobObject) AssignProcess(pid uint) error {
 	}
 	defer func() {
 		if err := NewWindowsError("CloseHandle", CloseHandle(hProcess)); err != nil {
-			grip.Warning(message.WrapError(err, message.Fields{
+			grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 				"message": "failed to close job object handle",
 				"pid":     pid,
 				"op":      "AssignProcess",

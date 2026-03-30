@@ -5,20 +5,20 @@ go 1.24.0
 require (
 	github.com/cheynewallace/tabby v1.1.1
 	github.com/containerd/cgroups/v3 v3.1.2
-	github.com/evergreen-ci/aviation v0.0.0-20260115180700-baca116d6d12
+	github.com/evergreen-ci/aviation v0.0.0-20260326191247-419265529eba
 	github.com/evergreen-ci/baobab v1.0.1-0.20220107150152-03b522479f52
 	github.com/evergreen-ci/birch v0.0.0-20250224221624-64f481f4b888
-	github.com/evergreen-ci/bond v0.0.0-20251209195750-b541586174f7
-	github.com/evergreen-ci/certdepot v0.0.0-20251209180210-3f52e45cc5a2
-	github.com/evergreen-ci/gimlet v0.0.0-20260113164336-bfe84f40e50d
-	github.com/evergreen-ci/lru v0.0.0-20251209201855-89a4cc8d867f
+	github.com/evergreen-ci/bond v0.0.0-20260326192958-a16b1d604e29
+	github.com/evergreen-ci/certdepot v0.0.0-20260326190252-5ab5e35f6cb7
+	github.com/evergreen-ci/gimlet v0.0.0-20260325201542-0eb4bfb95c82
+	github.com/evergreen-ci/lru v0.0.0-20260326190734-0d627bf39810
 	github.com/evergreen-ci/poplar v0.0.0-20251209144431-fdec8d7b2505
 	github.com/evergreen-ci/utility v0.0.0-20251203163234-8a1c0ea8b717
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/mongodb/amboy v0.0.0-20251209174146-73c46bb64973
-	github.com/mongodb/grip v0.0.0-20251203205830-b5c5c666ab94
+	github.com/mongodb/amboy v0.0.0-20260326190628-51c8dde3a7f5
+	github.com/mongodb/grip v0.0.0-20260325175240-dee15316ed15
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
@@ -64,7 +64,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/evergreen-ci/negroni v1.0.1-0.20211028183800-67b6d7c2c035 // indirect
-	github.com/evergreen-ci/pail v0.0.0-20251205190417-84f1b6e2eef6 // indirect
+	github.com/evergreen-ci/pail v0.0.0-20260326185823-a670fac5e872 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect

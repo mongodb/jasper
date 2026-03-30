@@ -53,7 +53,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 		return nil, errors.Wrap(err, "constructing process")
 	}
 
-	grip.Warning(message.WrapError(m.loggers.Put(proc.ID(), &options.CachedLogger{
+	grip.Warning(ctx, message.WrapError(m.loggers.Put(proc.ID(), &options.CachedLogger{
 		ID:        proc.ID(),
 		ManagerID: m.id,
 		Error:     util.ConvertWriter(opts.Output.GetError()),
@@ -72,7 +72,7 @@ func (m *basicProcessManager) CreateProcess(ctx context.Context, opts *options.C
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.Add(proc.Info(ctx)); err != nil {
-			grip.Warning(message.WrapError(err, "adding process to tracker during process creation"))
+			grip.Warning(ctx, message.WrapError(err, "adding process to tracker during process creation"))
 		}
 	}
 
@@ -104,7 +104,7 @@ func (m *basicProcessManager) Register(ctx context.Context, proc Process) error 
 	if m.tracker != nil {
 		// The process may have terminated already, so don't return on error.
 		if err := m.tracker.Add(proc.Info(ctx)); err != nil {
-			grip.Warning(errors.Wrap(err, "adding process to tracker during process registration"))
+			grip.Warning(ctx, errors.Wrap(err, "adding process to tracker during process registration"))
 		}
 	}
 
@@ -170,7 +170,7 @@ func (m *basicProcessManager) Clear(ctx context.Context) {
 	for procID, proc := range m.procs {
 		if proc.Complete(ctx) {
 			delete(m.procs, procID)
-			grip.Warning(message.WrapError(m.loggers.Remove(procID), message.Fields{
+			grip.Warning(ctx, message.WrapError(m.loggers.Remove(procID), message.Fields{
 				"message": "problem clearing caching logger for process",
 				"process": proc.ID(),
 				"manager": m.ID(),
@@ -193,7 +193,7 @@ func (m *basicProcessManager) Close(ctx context.Context) error {
 
 	if m.tracker != nil {
 		if err := m.tracker.Cleanup(); err != nil {
-			grip.Warning(errors.Wrap(err, "cleaning up tracked processes"))
+			grip.Warning(ctx, errors.Wrap(err, "cleaning up tracked processes"))
 		} else {
 			return nil
 		}

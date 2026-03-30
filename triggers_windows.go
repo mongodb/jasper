@@ -1,6 +1,7 @@
 package jasper
 
 import (
+	"context"
 	"syscall"
 
 	"github.com/mongodb/grip"
@@ -20,14 +21,14 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 		if err != nil {
 			// OpenProcess returns errInvalidParameter if the process has already exited.
 			if err == errInvalidParameter {
-				grip.Debug(message.WrapError(err, message.Fields{
+				grip.Debug(context.Background(), message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
 					"source":  cleanTerminationSignalTriggerSource,
 					"message": "did not open process because it has already exited",
 				}))
 			} else {
-				grip.Error(message.WrapError(err, message.Fields{
+				grip.Error(context.Background(), message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
 					"source":  cleanTerminationSignalTriggerSource,
@@ -38,7 +39,7 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 		}
 		defer func() {
 			if err := NewWindowsError("CloseHandle", CloseHandle(proc)); err != nil {
-				grip.Warning(message.WrapError(err, message.Fields{
+				grip.Warning(context.Background(), message.WrapError(err, message.Fields{
 					"message": "failed to close job object handle",
 					"id":      info.ID,
 					"pid":     info.PID,
@@ -51,7 +52,7 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 			// TerminateProcess returns errAccessDenied if the process has
 			// already died.
 			if err != errAccessDenied {
-				grip.Error(message.WrapError(err, message.Fields{
+				grip.Error(context.Background(), message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
 					"source":  cleanTerminationSignalTriggerSource,
@@ -63,7 +64,7 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 			var exitCode uint32
 			err := GetExitCodeProcess(proc, &exitCode)
 			if err != nil {
-				grip.Error(message.WrapError(err, message.Fields{
+				grip.Error(context.Background(), message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
 					"source":  cleanTerminationSignalTriggerSource,
@@ -72,7 +73,7 @@ func makeCleanTerminationSignalTrigger() SignalTrigger {
 				return false
 			}
 			if exitCode == procStillActive {
-				grip.Error(message.WrapError(err, message.Fields{
+				grip.Error(context.Background(), message.WrapError(err, message.Fields{
 					"id":      info.ID,
 					"pid":     info.PID,
 					"source":  cleanTerminationSignalTriggerSource,

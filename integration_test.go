@@ -75,7 +75,7 @@ func setupMongods(numProcs int, mongodPath string) ([]options.Create, []string, 
 
 func removeDBPaths(dbPaths []string) {
 	for _, dbPath := range dbPaths {
-		grip.Error(os.RemoveAll(dbPath))
+		grip.Error(context.Background(), os.RemoveAll(dbPath))
 	}
 }
 

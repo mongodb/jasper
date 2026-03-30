@@ -61,7 +61,7 @@ const (
 
 func makeOptionsCloseTrigger() ProcessTrigger {
 	return func(info ProcessInfo) {
-		grip.Warning(errors.Wrap(info.Options.Close(), "closing creation options"))
+		grip.Warning(context.Background(), errors.Wrap(info.Options.Close(), "closing creation options"))
 	}
 }
 
@@ -86,7 +86,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *options.Create, pa
 
 				p, err := m.CreateProcess(newctx, opt.Copy())
 				if err != nil {
-					grip.Warning(message.WrapError(err, message.Fields{
+					grip.Warning(ctx, message.WrapError(err, message.Fields{
 						"trigger": "on-timeout",
 						"parent":  parentID,
 					}))
@@ -100,7 +100,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *options.Create, pa
 			for _, opt := range opts.OnSuccess {
 				p, err := m.CreateProcess(ctx, opt.Copy())
 				if err != nil {
-					grip.Warning(message.WrapError(err, message.Fields{
+					grip.Warning(ctx, message.WrapError(err, message.Fields{
 						"trigger": "on-success",
 						"parent":  parentID,
 					}))
@@ -113,7 +113,7 @@ func makeDefaultTrigger(ctx context.Context, m Manager, opts *options.Create, pa
 				p, err := m.CreateProcess(ctx, opt.Copy())
 				if err != nil {
 
-					grip.Warning(message.WrapError(err, message.Fields{
+					grip.Warning(ctx, message.WrapError(err, message.Fields{
 						"trigger": "on-failure",
 						"parent":  parentID,
 					}))
